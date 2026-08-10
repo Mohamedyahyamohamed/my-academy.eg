@@ -32,12 +32,15 @@ export async function importStudentsAction(rows: ImportRow[]) {
       continue;
     }
 
+    // ولي الأمر (لو موجود)
     let parentId: string | null = null;
     if (r.parent_name?.trim()) {
       const parts = r.parent_name.trim().split(/\s+/);
-      const pemail = `${(parts[0] || "p").replace(/[^a-zA-Z0-9]/g, "x")}.${i}@parent.local`;
+      // إيميل وهمي فريد (UUID) — مبيتصادمش مع أي ولي أمر موجود
+      const pid = crypto.randomUUID();
+      const pemail = `p.${pid.slice(0, 8)}@parent.local`;
       const parent = {
-        id: crypto.randomUUID(), academy_id: aid, profile_id: null,
+        id: pid, academy_id: aid, profile_id: null,
         first_name: parts[0], last_name: parts.slice(1).join(" ") || "-",
         email: pemail, phone: r.parent_phone?.trim() || null, occupation: null,
         created_at: now, updated_at: now,
@@ -48,6 +51,7 @@ export async function importStudentsAction(rows: ImportRow[]) {
       parentId = parent.id;
     }
 
+    // الطالب
     const student = {
       id: crypto.randomUUID(), academy_id: aid,
       first_name: r.first_name.trim(), last_name: r.last_name.trim(),

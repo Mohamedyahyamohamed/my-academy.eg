@@ -19,24 +19,31 @@ export async function importStudentsAction(rows: ImportRow[]) {
   const client = nodeSupabaseClient();
   if (!client) return { ok: false, error: "Supabase not configured." };
 
+  // ── منع التكرار ──
+  const norm = (s?: string | null) => (s ?? "").trim().toLowerCase();
+  const keyOf = (fn: string, ln: string, ph?: string | null) => `${norm(fn)}|${norm(ln)}|${norm(ph)}`;
+  const { data: existing } = await client.from("students").select("first_name,last_name,phone").eq("academy_id", aid);
+  const seen = new Set((existing ?? []).map((s: any) => keyOf(s.first_name, s.last_name, s.phone)));
+
   const now = new Date().toISOString();
   let created = 0;
+  let skippedDup = 0;
   const errors: string[] = [];
 
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     const rowErr = (m: string) => errors.push(`صف ${i + 2}: ${m}`);
 
-    if (!r.first_name?.trim() || !r.last_name?.trim()) {
-      rowErr("ناقص الاسم");
-      continue;
-    }
+    if (!r.first_name?.trim() || !r.last_name?.trim()) { rowErr("ناقص الاسم"); continue; }
 
-    // ولي الأمر (لو موجود)
+    // فحص التكرار
+    const key = keyOf(r.first_name, r.last_name, r.phone);
+    if (seen.has(key)) { skippedDup++; continue; }
+    seen.add(key);
+
     let parentId: string | null = null;
     if (r.parent_name?.trim()) {
       const parts = r.parent_name.trim().split(/\s+/);
-      // إيميل وهمي فريد (UUID) — مبيتصادمش مع أي ولي أمر موجود
       const pid = crypto.randomUUID();
       const pemail = `p.${pid.slice(0, 8)}@parent.local`;
       const parent = {
@@ -51,7 +58,6 @@ export async function importStudentsAction(rows: ImportRow[]) {
       parentId = parent.id;
     }
 
-    // الطالب
     const student = {
       id: crypto.randomUUID(), academy_id: aid,
       first_name: r.first_name.trim(), last_name: r.last_name.trim(),
@@ -68,5 +74,5 @@ export async function importStudentsAction(rows: ImportRow[]) {
   invalidateStore();
   revalidatePath("/students");
   revalidatePath("/dashboard");
-  return { ok: true, created, errors };
+  return { ok: true, created, skippedDup, errors };
 }

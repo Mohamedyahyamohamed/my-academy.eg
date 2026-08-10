@@ -112,19 +112,28 @@ export function deleteGroup(id: string): boolean {
   return collections().groups.length < before;
 }
 
-export function addStudent(groupId: string, studentId: string): boolean {
+export async function addStudent(
+  groupId: string,
+  studentId: string,
+): Promise<{ ok: boolean; error?: string }> {
   const exists = collections().groupStudents.some(
     (gs) => gs.group_id === groupId && gs.student_id === studentId,
   );
-  if (exists) return false;
-  const row = {
-    group_id: groupId,
-    student_id: studentId,
-    joined_at: new Date().toISOString(),
-  };
-  collections().groupStudents.push(row);
-  void persistInsert("group_students", row);
-  return true;
+  if (exists) return { ok: false, error: "الطالب في الجروب ده بالفعل." };
+  const now = new Date().toISOString();
+  const row = { group_id: groupId, student_id: studentId, joined_at: now };
+  collections().groupStudents.push(row as any);
+  try {
+    const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
+    const client = nodeSupabaseClient();
+    if (client) {
+      const r = await client.from("group_students").insert(row);
+      if (r.error) return { ok: false, error: r.error.message };
+    }
+  } catch (e) {
+    return { ok: false, error: (e as Error)?.message ?? "خطأ غير متوقع" };
+  }
+  return { ok: true };
 }
 
 export function removeStudent(groupId: string, studentId: string): boolean {
@@ -145,12 +154,10 @@ export interface GroupDetail extends Group {
 export async function getGroupDetail(id: string): Promise<GroupDetail | null> {
   const g = await getGroup(id);
   if (!g) return null;
-  // Teachers can only access their own groups.
   const scope = teacherGroupScope();
   if (scope && !scope.has(id)) return null;
   const students = studentsInGroup(id);
   const lessons = lessonsForGroup(id);
-  // attendance rate across the group
   const att = collections().attendance.filter((a) =>
     lessons.some((l) => l.id === a.lesson_id),
   );
@@ -159,7 +166,6 @@ export async function getGroupDetail(id: string): Promise<GroupDetail | null> {
   return { ...g, students, lessons, attendanceRate: rate };
 }
 
-/** Average grade for a group across its exams. */
 export function groupAverageGrade(groupId: string): number {
   const examIds = collections()
     .exams.filter((e) => e.group_id === groupId)

@@ -1,0 +1,73 @@
+import { ScrollText } from "lucide-react";
+import { PageHeader } from "@/components/shared/page-header";
+import { ToolbarRoot, ToolbarSearch } from "@/components/shared/toolbar";
+import { EmptyState } from "@/components/shared/empty-state";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import { requireRole } from "@/services";
+import { listAuditLogs } from "@/services/audit";
+
+export const dynamic = "force-dynamic";
+
+export default async function AuditLogsPage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
+  requireRole("ADMIN");
+  const sp = (k: string) =>
+    Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
+
+  const result = listAuditLogs({
+    search: sp("search"),
+    action: sp("action") ?? "ALL",
+    entity_type: sp("entity") ?? "ALL",
+    page: sp("page") ? Number(sp("page")) : 1,
+    pageSize: 30,
+  });
+
+  const actionColor = (a: string) =>
+    a.includes("create") ? "success" : a.includes("delete") || a.includes("archive") ? "destructive" : a.includes("update") || a.includes("record") || a.includes("save") ? "info" : "secondary";
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Audit Logs" description="تتبّع كل العمليات الحساسة في الأكاديمية." />
+      <div className="card-surface p-4">
+        <ToolbarRoot>
+          <ToolbarSearch placeholder="بحث في السجلات…" />
+        </ToolbarRoot>
+      </div>
+      {result.items.length === 0 ? (
+        <EmptyState icon={ScrollText} title="مفيش سجلات لسه" description="عمليات إنشاء/تعديل الطلاب والمدفوعات والدرجات هتظهر هنا." />
+      ) : (
+        <div className="card-surface overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>العملية</TableHead>
+                <TableHead>النوع</TableHead>
+                <TableHead>المستخدم</TableHead>
+                <TableHead>الوقت</TableHead>
+                <TableHead>IP</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {result.items.map((log) => (
+                <TableRow key={log.id}>
+                  <TableCell><Badge variant={actionColor(log.action) as any}>{log.action}</Badge></TableCell>
+                  <TableCell className="text-sm">{log.entity_type} {log.entity_id ? `· ${log.entity_id.slice(0, 8)}…` : ""}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{log.actor_role ?? "—"}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{new Date(log.created_at).toLocaleString("en-GB")}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{log.ip ?? "—"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}

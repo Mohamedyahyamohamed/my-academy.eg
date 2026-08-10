@@ -1,0 +1,45 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { requireRole, PaymentsService } from "@/services";
+import type { CreatePaymentInput } from "@/services/payments";
+
+export async function createPaymentAction(input: CreatePaymentInput) {
+  const user = requireRole("ADMIN", "TEACHER");
+  const res = await PaymentsService.createPayment(input);
+  if (!res.ok) return res;
+  await import("@/services/audit").then((m) => m.audit(
+    { action: "payment.create", entity_type: "payment", entity_id: res.payment?.id, new_data: { student_id: input.student_id, amount_due: input.amount_due } },
+    user,
+  ));
+  revalidatePath("/payments");
+  revalidatePath(`/students/${input.student_id}`);
+  revalidatePath("/dashboard");
+  return res;
+}
+
+export async function recordPaymentAction(
+  paymentId: string,
+  amount: number,
+  method: string,
+  note?: string,
+) {
+  const user = requireRole("ADMIN", "TEACHER");
+  const res = PaymentsService.recordPayment(paymentId, amount, method, note);
+  if (res.ok) {
+    await import("@/services/audit").then((m) => m.audit(
+      { action: "payment.record", entity_type: "payment", entity_id: paymentId, new_data: { amount, method } },
+      user,
+    ));
+    revalidatePath("/payments");
+    revalidatePath("/dashboard");
+  }
+  return res;
+}
+
+export async function deletePaymentAction(id: string) {
+  requireRole("ADMIN");
+  PaymentsService.deletePayment(id);
+  revalidatePath("/payments");
+  revalidatePath("/dashboard");
+}

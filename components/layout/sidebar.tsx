@@ -1,0 +1,75 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Logo } from "@/components/shared/logo";
+import { cn } from "@/lib/utils";
+import type { NavSection } from "@/lib/nav";
+
+interface SidebarProps {
+  sections: NavSection[];
+  academyName: string;
+}
+
+/** Desktop sidebar — renders the role-based navigation. */
+export function Sidebar({ sections, academyName }: SidebarProps) {
+  const pathname = usePathname();
+
+  return (
+    <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
+      <div className="flex h-16 items-center px-5">
+        <Link href="/dashboard" className="transition-opacity hover:opacity-80">
+          <Logo />
+        </Link>
+      </div>
+
+      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+        {sections.map((section, si) => (
+          <div key={si} className="space-y-1">
+            {section.title && (
+              <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                {section.title}
+              </p>
+            )}
+            {section.items.map((item) => {
+              const active =
+                pathname === item.href ||
+                (item.href !== "/dashboard" &&
+                  pathname?.startsWith(item.href));
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-primary/10 text-primary"
+                      : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      "h-[18px] w-[18px] shrink-0",
+                      active
+                        ? "text-primary"
+                        : "text-muted-foreground group-hover:text-foreground",
+                    )}
+                  />
+                  {item.title}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
+
+      <div className="border-t border-sidebar-border px-5 py-3">
+        <p className="truncate text-xs font-medium text-foreground">
+          {academyName}
+        </p>
+        <p className="text-xs text-muted-foreground">Academy workspace</p>
+      </div>
+    </aside>
+  );
+}

@@ -1,0 +1,380 @@
+/**
+ * Domain types for MY Academy.
+ * These mirror the PostgreSQL schema in /supabase/schema.sql.
+ * Every academy-owned entity carries `academy_id` for multi-tenancy.
+ */
+
+export type UUID = string;
+export type ISODate = string;
+
+export type Role = "ADMIN" | "TEACHER" | "PARENT" | "STUDENT";
+
+export type Gender = "male" | "female";
+
+/** A Supabase auth user's profile (1:1 with auth.users). */
+export interface Profile {
+  id: UUID;
+  academy_id: UUID;
+  email: string;
+  role: Role;
+  full_name: string;
+  phone: string | null;
+  avatar_url: string | null;
+  is_active: boolean;
+  created_at: ISODate;
+  updated_at: ISODate;
+}
+
+/** Authenticated session user (profile + auth metadata). */
+export interface SessionUser {
+  id: UUID;
+  email: string;
+  role: Role;
+  full_name: string;
+  avatar_url: string | null;
+  academy_id: UUID;
+}
+
+export interface Academy {
+  id: UUID;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  country: string | null;
+  currency: string;
+  timezone: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  created_at: ISODate;
+  updated_at: ISODate;
+}
+
+export interface Course {
+  id: UUID;
+  academy_id: UUID;
+  name: string;
+  description: string | null;
+  color: string | null; // tailwind-ish hex for charts/badges
+  created_at: ISODate;
+  updated_at: ISODate;
+}
+
+export interface Teacher {
+  id: UUID;
+  academy_id: UUID;
+  profile_id: UUID | null;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  bio: string | null;
+  is_active: boolean;
+  created_at: ISODate;
+  updated_at: ISODate;
+}
+
+export interface Parent {
+  id: UUID;
+  academy_id: UUID;
+  profile_id: UUID | null;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  occupation: string | null;
+  created_at: ISODate;
+  updated_at: ISODate;
+}
+
+export type StudentStatus = "ACTIVE" | "INACTIVE" | "ARCHIVED";
+
+export interface Student {
+  id: UUID;
+  academy_id: UUID;
+  first_name: string;
+  last_name: string;
+  date_of_birth: ISODate | null;
+  gender: Gender | null;
+  phone: string | null;
+  email: string | null;
+  parent_id: UUID | null;
+  school: string | null;
+  grade: string | null; // e.g. "Grade 9"
+  notes: string | null;
+  status: StudentStatus;
+  consent_given?: boolean;
+  consent_version?: string | null;
+  enrolled_at: ISODate;
+  created_at: ISODate;
+  updated_at: ISODate;
+  // joined relations (optional)
+  parent?: Parent | null;
+  groups?: Group[];
+}
+
+export interface Group {
+  id: UUID;
+  academy_id: UUID;
+  name: string;
+  course_id: UUID;
+  teacher_id: UUID;
+  monthly_fee: number;
+  schedule: string; // human readable e.g. "Sun, Tue, Thu — 4:00 PM"
+  room: string | null;
+  status: "ACTIVE" | "INACTIVE";
+  created_at: ISODate;
+  updated_at: ISODate;
+  // relations
+  course?: Course;
+  teacher?: Teacher;
+  student_count?: number;
+}
+
+export interface GroupStudent {
+  id: UUID;
+  group_id: UUID;
+  student_id: UUID;
+  joined_at: ISODate;
+}
+
+export interface Lesson {
+  id: UUID;
+  academy_id: UUID;
+  group_id: UUID;
+  teacher_id: UUID;
+  date: ISODate;
+  start_time: string; // "16:00"
+  end_time: string; // "17:30"
+  topic: string;
+  description: string | null;
+  notes: string | null;
+  created_at: ISODate;
+  updated_at: ISODate;
+  // relations
+  group?: Group;
+  teacher?: Teacher;
+  attendance_taken?: boolean;
+}
+
+export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE";
+
+export interface AttendanceRecord {
+  id: UUID;
+  lesson_id: UUID;
+  student_id: UUID;
+  status: AttendanceStatus;
+  note: string | null;
+  recorded_at: ISODate;
+  // relations
+  student?: Student;
+}
+
+export type PaymentStatus = "PAID" | "PARTIAL" | "UNPAID";
+
+export interface Payment {
+  id: UUID;
+  academy_id: UUID;
+  student_id: UUID;
+  group_id: UUID | null;
+  month: string; // "2026-08"
+  amount_due: number;
+  amount_paid: number;
+  remaining: number;
+  due_date: ISODate;
+  payment_date: ISODate | null;
+  method: string | null;
+  status: PaymentStatus;
+  notes: string | null;
+  deleted_at?: ISODate | null;
+  created_at: ISODate;
+  updated_at: ISODate;
+  // relations
+  student?: Student;
+  group?: Group;
+}
+
+export interface PaymentTransaction {
+  id: UUID;
+  payment_id: UUID;
+  amount: number;
+  method: string;
+  paid_at: ISODate;
+  note: string | null;
+}
+
+export interface Exam {
+  id: UUID;
+  academy_id: UUID;
+  name: string;
+  course_id: UUID;
+  group_id: UUID;
+  date: ISODate;
+  max_score: number;
+  created_at: ISODate;
+  updated_at: ISODate;
+  course?: Course;
+  group?: Group;
+}
+
+export interface Grade {
+  id: UUID;
+  exam_id: UUID;
+  student_id: UUID;
+  score: number;
+  created_at: ISODate;
+  // computed
+  percentage?: number;
+  level?: string;
+  student?: Student;
+}
+
+export type HomeworkStatus = "PENDING" | "SUBMITTED" | "REVIEWED";
+
+export interface Homework {
+  id: UUID;
+  academy_id: UUID;
+  group_id: UUID;
+  lesson_id: UUID | null;
+  title: string;
+  description: string;
+  deadline: ISODate;
+  attachment_url: string | null;
+  created_at: ISODate;
+  group?: Group;
+  lesson?: Lesson;
+}
+
+export interface HomeworkSubmission {
+  id: UUID;
+  homework_id: UUID;
+  student_id: UUID;
+  content: string | null;
+  file_url: string | null;
+  status: HomeworkStatus;
+  submitted_at: ISODate | null;
+  reviewed_at: ISODate | null;
+  feedback: string | null;
+  grade: number | null;
+  homework?: Homework;
+  student?: Student;
+}
+
+export type NotificationType =
+  | "payment_overdue"
+  | "payment_received"
+  | "homework_assigned"
+  | "homework_reviewed"
+  | "homework_deadline"
+  | "new_grade"
+  | "upcoming_lesson"
+  | "attendance"
+  | "system";
+
+export interface AppNotification {
+  id: UUID;
+  academy_id: UUID;
+  user_id: UUID | null; // profile id; null = broadcast
+  type: NotificationType;
+  title: string;
+  message: string;
+  link: string | null;
+  read: boolean;
+  created_at: ISODate;
+}
+
+export interface Note {
+  id: UUID;
+  academy_id: UUID;
+  student_id: UUID;
+  author_id: UUID | null;
+  author_name: string | null;
+  content: string;
+  created_at: ISODate;
+}
+
+export interface FileRecord {
+  id: UUID;
+  academy_id: UUID;
+  owner_id: UUID | null;
+  name: string;
+  url: string;
+  size: number | null;
+  mime_type: string | null;
+  created_at: ISODate;
+}
+
+/* ------------------------------------------------------------------ */
+/* Aggregated / view models used by the UI                             */
+/* ------------------------------------------------------------------ */
+
+export interface StudentDetail extends Student {
+  parent?: Parent | null;
+  groups?: (Group & { course?: Course })[];
+  stats?: StudentStats;
+}
+
+export interface StudentStats {
+  attendanceRate: number;
+  averageGrade: number;
+  monthlyFee: number;
+  totalPaid: number;
+  outstanding: number;
+  attendanceTrend: { label: string; rate: number }[];
+  gradeTrend: { label: string; score: number }[];
+}
+
+export interface DashboardMetrics {
+  totalStudents: number;
+  activeStudents: number;
+  totalGroups: number;
+  monthlyRevenue: number;
+  collectedThisMonth: number;
+  outstanding: number;
+  attendanceRate: number;
+  averageGrade: number;
+  revenueByMonth: { month: string; revenue: number }[];
+  studentsByCourse: { course: string; students: number; color: string }[];
+  attendanceTrend: { week: string; rate: number }[];
+  gradePerformance: { level: string; count: number }[];
+}
+
+export interface DashboardData extends DashboardMetrics {
+  upcomingLessons: (Lesson & { group?: Group; teacher?: Teacher })[];
+  recentPayments: (Payment & { student?: Student })[];
+  outstandingStudents: (Payment & { student?: Student })[];
+  studentsNeedingAttention: Student[];
+}
+
+export interface AnalyticsData {
+  studentGrowth: { month: string; students: number }[];
+  monthlyRevenue: { month: string; revenue: number; collected: number }[];
+  attendanceTrend: { month: string; rate: number }[];
+  averageGrades: { course: string; average: number }[];
+  retention: { cohort: string; retained: number }[];
+  popularCourses: { course: string; students: number; revenue: number }[];
+  profitableGroups: { group: string; revenue: number; students: number }[];
+}
+
+export interface Pagination {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface PaginatedResult<T> {
+  items: T[];
+  pagination: Pagination;
+}
+
+export interface StudentFilters {
+  search?: string;
+  status?: StudentStatus | "ALL";
+  groupId?: UUID | "ALL";
+  course?: UUID | "ALL";
+  page?: number;
+  pageSize?: number;
+  sortBy?: "name" | "created_at" | "status";
+  sortDir?: "asc" | "desc";
+}

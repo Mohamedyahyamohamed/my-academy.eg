@@ -1,4 +1,5 @@
 "use client";
+
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -15,13 +16,21 @@ const EXAMPLE = "first_name,last_name,phone,grade,school,parent_name,parent_phon
 
 function parseCSV(text: string): ImportRow[] {
   const lines = text.trim().split(/\r?\n/).filter((l) => l.trim());
-  if (!lines.length) return [];
+  if (lines.length === 0) return [];
   let start = 0;
+  // كشف الفاصل: Excel العربي بياخد فاصلة منقوطة ;
+  const detectDelim = (line: string) =>
+    (line.match(/;/g) || []).length > (line.match(/,/g) || []).length ? ";" : ",";
   if (lines[0].toLowerCase().includes("first_name")) start = 1;
+
   const rows: ImportRow[] = [];
   for (let i = start; i < lines.length; i++) {
-    const c = lines[i].split(",").map((x) => x.trim().replace(/^"|"$/g, ""));
-    rows.push({ first_name: c[0]??"", last_name: c[1]??"", phone: c[2]??"", grade: c[3]??"", school: c[4]??"", parent_name: c[5]??"", parent_phone: c[6]??"" });
+    const delim = detectDelim(lines[i]);
+    const cells = lines[i].split(delim).map((c) => c.trim().replace(/^"|"$/g, ""));
+    rows.push({
+      first_name: cells[0] ?? "", last_name: cells[1] ?? "", phone: cells[2] ?? "",
+      grade: cells[3] ?? "", school: cells[4] ?? "", parent_name: cells[5] ?? "", parent_phone: cells[6] ?? "",
+    });
   }
   return rows;
 }
@@ -42,7 +51,7 @@ export function ImportStudents() {
   };
   const doImport = async () => {
     const rows = parseCSV(text);
-    if (!rows.length) { toast.error("مفيش بيانات."); return; }
+    if (rows.length === 0) { toast.error("مفيش بيانات."); return; }
     setLoading(true); setResult(null);
     try {
       const res = await importStudentsAction(rows);
@@ -60,7 +69,7 @@ export function ImportStudents() {
         </div>
         <div className="space-y-1.5">
           <Label>ارفع ملف CSV</Label>
-          <input type="file" accept=".csv" onChange={onFile} className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-primary-foreground" />
+          <input type="file" accept=".csv,text/csv" onChange={onFile} className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-primary-foreground hover:file:bg-primary/90" />
           <p className="text-xs text-muted-foreground">Excel: File → Save As → CSV</p>
         </div>
         <div className="space-y-1.5">
@@ -68,14 +77,19 @@ export function ImportStudents() {
           <Textarea rows={8} value={text} onChange={(e) => setText(e.target.value)} placeholder={EXAMPLE} className="font-mono text-xs" dir="ltr" />
         </div>
         <div className="flex gap-2">
-          <Button onClick={doImport} disabled={loading}>{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} استيراد</Button>
+          <Button onClick={doImport} disabled={loading}>{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} استيراد الطلاب</Button>
           <Button variant="outline" asChild><Link href="/students"><ArrowLeft className="mr-2 h-4 w-4" /> رجوع</Link></Button>
         </div>
       </CardContent></Card>
       {result && (
         <Card><CardContent className="p-5 text-sm">
           <p className="font-semibold text-emerald-600">✅ تم استيراد {result.created} طالب</p>
-          {result.errors.length > 0 && <p className="mt-1 text-xs text-destructive">صفوف مرفوضة: {result.errors.join("، ")}</p>}
+          {result.errors.length > 0 && (
+            <div className="mt-2">
+              <p className="font-medium text-destructive">صفوف مرفوضة ({result.errors.length}):</p>
+              <ul className="mt-1 list-inside list-disc text-xs text-muted-foreground">{result.errors.map((e, i) => <li key={i}>{e}</li>)}</ul>
+            </div>
+          )}
         </CardContent></Card>
       )}
     </div>

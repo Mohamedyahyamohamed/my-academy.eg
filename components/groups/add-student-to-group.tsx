@@ -34,8 +34,15 @@ export function AddStudentToGroupDialog({
     if (!selected.length) return;
     setSaving(true);
     try {
-      for (const id of selected) await addStudentToGroupAction(groupId, id);
-      toast.success(`${selected.length} student(s) added`);
+      let added = 0;
+      const errors: string[] = [];
+      for (const id of selected) {
+        const res = await addStudentToGroupAction(groupId, id);
+        if (res?.ok) added++;
+        else if (res?.error) errors.push(res.error);
+      }
+      if (added > 0) toast.success(`تم إضافة ${added} طالب للجروب`);
+      if (errors.length > 0) toast.error(errors[0]);
       setSelected([]);
       setOpen(false);
       router.refresh();

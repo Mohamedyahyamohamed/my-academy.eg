@@ -58,7 +58,12 @@ export default async function StudentsPage({
         title="Students"
         description="Manage student profiles, enrollments and status across your academy."
       >
-        <AddStudentDialog parents={parents} groups={groups} />
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href="/students/import">استيراد من Excel</Link>
+          </Button>
+          <AddStudentDialog parents={parents} groups={groups} />
+        </div>
       </PageHeader>
 
       <div className="card-surface p-4">

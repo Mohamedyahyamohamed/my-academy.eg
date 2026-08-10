@@ -328,10 +328,27 @@ function uid() {
 
 export async function createStudent(input: StudentInput): Promise<Student> {
   // SaaS usage limit check (server-enforced).
-  const check = canCreate("students");
+    const check = canCreate("students");
   if (!check.allowed) {
     throw new Error(`Limit reached: ${check.current}/${check.limit} students. Upgrade your plan.`);
   }
+
+  // منع التكرار: نفس الاسم + الموبايل في نفس الأكاديمية
+  const aid = currentAcademyId();
+  try {
+    const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
+    const admin = nodeSupabaseClient();
+    if (admin && aid) {
+      const norm = (s?: string | null) => (s ?? "").trim().toLowerCase();
+      const { data: dups } = await admin.from("students").select("first_name,last_name,phone")
+        .eq("academy_id", aid).ilike("first_name", input.first_name.trim()).ilike("last_name", input.last_name.trim());
+      const dup = (dups ?? []).find((s: any) => norm(s.phone) === norm(input.phone));
+      if (dup) throw new Error("طالب موجود بالفعل بنفس الاسم والموبايل في الأكاديمية.");
+    }
+  } catch (e) {
+    if ((e as Error)?.message?.includes("موجود بالفعل")) throw e;
+  }
+
   const { groupIds = [], ...rest } = input;
   const now = new Date().toISOString();
   const student: Student = {

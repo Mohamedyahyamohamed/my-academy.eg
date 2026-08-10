@@ -120,10 +120,6 @@ function getStudentFromCache(id: string): Student | null {
 
 // ─── RLS-ENFORCED QUERIES (production path) ──────────────────────
 
-/**
- * List students — RLS-enforced via the user's Supabase session.
- * RLS automatically filters by academy_id. No app-layer filter needed.
- */
 export async function listStudents(
   filters: StudentFilters = {},
 ): Promise<PaginatedResult<Student>> {
@@ -146,7 +142,6 @@ export async function listStudents(
 
   let query = client.from("students").select("*", { count: "exact" });
 
-  // RLS filters by academy_id automatically.
   if (status !== "ALL") query = query.eq("status", status);
 
   if (search.trim()) {
@@ -156,7 +151,6 @@ export async function listStudents(
     );
   }
 
-  // Group filter: resolve from cache (group_students is Phase 2).
   if (groupId !== "ALL") {
     const ids = collections()
       .groupStudents.filter((gs) => gs.group_id === groupId)
@@ -170,7 +164,6 @@ export async function listStudents(
     query = query.in("id", ids);
   }
 
-  // Sort
   const ascending = sortDir === "asc";
   if (sortBy === "name") {
     query = query.order("first_name", { ascending }).order("last_name", { ascending });
@@ -178,14 +171,12 @@ export async function listStudents(
     query = query.order(sortBy, { ascending });
   }
 
-  // Paginate
   const start = (page - 1) * pageSize;
   query = query.range(start, start + pageSize - 1);
 
   const { data, count, error } = await query;
   if (error) {
     console.error("listStudents RLS error:", error.message);
-    // Fallback to cache on error.
     return listStudentsFromCache(filters);
   }
 
@@ -202,10 +193,6 @@ export async function listStudents(
   };
 }
 
-/**
- * Get student detail — RLS-enforced. If the student belongs to another
- * academy, RLS blocks the read → returns null → 404.
- */
 export async function getStudentDetail(
   id: string,
 ): Promise<StudentDetail | null> {
@@ -223,12 +210,10 @@ export async function getStudentDetail(
     .maybeSingle();
 
   if (error || !data) {
-    // RLS blocked it, or student doesn't exist.
     return null;
   }
 
   const student = data as Student;
-  // Teacher scope check (app-layer, Phase 1 — extra defense).
   const tScope = teacherStudentScope();
   if (tScope && !tScope.has(id)) return null;
 
@@ -238,9 +223,6 @@ export async function getStudentDetail(
   };
 }
 
-/**
- * Get a single student — RLS-enforced.
- */
 export async function getStudent(id: string): Promise<Student | null> {
   if (!isSupabaseConfigured()) {
     return getStudentFromCache(id);
@@ -271,16 +253,11 @@ export function computeStudentStats(studentId: string): StudentStats {
 
   const grades = gradesForStudent(studentId);
   const averageGrade = grades.length
-    ? round(
-        grades.reduce((s, g) => s + (g.percentage ?? 0), 0) / grades.length,
-        1,
-      )
+    ? round(grades.reduce((s, g) => s + (g.percentage ?? 0), 0) / grades.length, 1)
     : 0;
 
   const pays = paymentsForStudent(studentId).map(derivePayment);
-  const monthlyFee = pays.length
-    ? Math.max(...pays.map((p) => p.amount_due))
-    : 0;
+  const monthlyFee = pays.length ? Math.max(...pays.map((p) => p.amount_due)) : 0;
   const totalPaid = pays.reduce((s, p) => s + p.amount_paid, 0);
   const outstanding = pays.reduce((s, p) => s + p.remaining, 0);
 
@@ -327,8 +304,7 @@ function uid() {
 }
 
 export async function createStudent(input: StudentInput): Promise<Student> {
-  // SaaS usage limit check (server-enforced).
-    const check = canCreate("students");
+  const check = canCreate("students");
   if (!check.allowed) {
     throw new Error(`Limit reached: ${check.current}/${check.limit} students. Upgrade your plan.`);
   }
@@ -340,10 +316,16 @@ export async function createStudent(input: StudentInput): Promise<Student> {
     const admin = nodeSupabaseClient();
     if (admin && aid) {
       const norm = (s?: string | null) => (s ?? "").trim().toLowerCase();
-      const { data: dups } = await admin.from("students").select("first_name,last_name,phone")
-        .eq("academy_id", aid).ilike("first_name", input.first_name.trim()).ilike("last_name", input.last_name.trim());
+      const { data: dups } = await admin
+        .from("students")
+        .select("first_name,last_name,phone")
+        .eq("academy_id", aid)
+        .ilike("first_name", input.first_name.trim())
+        .ilike("last_name", input.last_name.trim());
       const dup = (dups ?? []).find((s: any) => norm(s.phone) === norm(input.phone));
-      if (dup) throw new Error("طالب موجود بالفعل بنفس الاسم والموبايل في الأكاديمية.");
+      if (dup) {
+        throw new Error("طالب موجود بالفعل بنفس الاسم والموبايل في الأكاديمية.");
+      }
     }
   } catch (e) {
     if ((e as Error)?.message?.includes("موجود بالفعل")) throw e;
@@ -358,7 +340,6 @@ export async function createStudent(input: StudentInput): Promise<Student> {
     last_name: rest.last_name,
     phone: rest.phone ?? null,
     email: rest.email ?? null,
-    // التغيير هنا: || بدل ?? عشان النص الفاضي ("") يبقى null
     date_of_birth: rest.date_of_birth || null,
     gender: rest.gender ?? null,
     parent_id: rest.parent_id ?? null,
@@ -373,7 +354,10 @@ export async function createStudent(input: StudentInput): Promise<Student> {
     updated_at: now,
   };
   collections().students.push(student);
-  await persistInsert("students", student);
+  const { consent_given: _cg, consent_version: _cv, ...persistRow } = student;
+  void _cg;
+  void _cv;
+  await persistInsert("students", persistRow);
   for (const gid of groupIds) {
     collections().groupStudents.push({
       group_id: gid,
@@ -394,9 +378,9 @@ export function updateStudent(
     ...input,
     updated_at: new Date().toISOString(),
   });
-  const { groupIds: _g, ...patch } = input;
+  const { groupIds: _g, consent_given: _cg, ...patch } = input;
   void _g;
-  // التغيير هنا: حوّل التاريخ الفاضي ("") لـ null عشان الداتابيز يقبلّه
+  void _cg;
   if (patch.date_of_birth === "") patch.date_of_birth = null;
   void persistUpdate("students", id, { ...patch, updated_at: new Date().toISOString() });
   if (input.groupIds) {

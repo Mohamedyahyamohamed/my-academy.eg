@@ -59,6 +59,7 @@ export function HomeworkBadge({ status }: { status: HomeworkStatus }) {
 
 export function RoleBadge({ role }: { role: Role }) {
   const map: Record<Role, "default" | "info" | "warning" | "success"> = {
+    SUPER_ADMIN: "default",
     ADMIN: "default",
     TEACHER: "info",
     PARENT: "warning",

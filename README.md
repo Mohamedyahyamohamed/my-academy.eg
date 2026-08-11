@@ -93,3 +93,4 @@ npm run lint
 
 ## 📊 Seed data
 A small, interconnected development dataset (dates relative to today, so dashboards are never hard-coded): 2 parents, 8 active students, 4 courses, 4 groups, 12 lessons, attendance, 4 months of payments, exams + grades, homework + submissions, notifications. **No fake data is used in production** — see `services/data/seed.ts`.
+ 

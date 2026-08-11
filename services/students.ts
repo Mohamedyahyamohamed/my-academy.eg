@@ -27,6 +27,7 @@ import {
 import { percentage, round } from "@/lib/utils";
 import { isSupabaseConfigured } from "./supabase/config";
 import { canCreate } from "./saas";
+import { STUDENT_DEFAULT_PASSWORD } from "@/lib/auth";
 
 function attachRelations(s: Student): Student {
   return {
@@ -35,8 +36,6 @@ function attachRelations(s: Student): Student {
     groups: groupsForStudent(s.id),
   };
 }
-
-// ─── CACHE FALLBACKS (used when Supabase not configured) ──────────
 
 function listStudentsFromCache(
   filters: StudentFilters = {},
@@ -117,8 +116,6 @@ function getStudentFromCache(id: string): Student | null {
   if (tScope && !tScope.has(id)) return null;
   return attachRelations(s);
 }
-
-// ─── RLS-ENFORCED QUERIES (production path) ──────────────────────
 
 export async function listStudents(
   filters: StudentFilters = {},
@@ -281,8 +278,6 @@ export function computeStudentStats(studentId: string): StudentStats {
   };
 }
 
-// ─── Mutations ────────────────────────────────────────────────────
-
 export interface StudentInput {
   first_name: string;
   last_name: string;
@@ -358,6 +353,45 @@ export async function createStudent(input: StudentInput): Promise<Student> {
   void _cg;
   void _cv;
   await persistInsert("students", persistRow);
+
+  // ── إنشاء حساب دخول للطالب (إيميل + باسورد افتراضي) عشان يقدر يدخل ──
+  try {
+    const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
+    const client = nodeSupabaseClient();
+    if (client) {
+      const loginEmail =
+        (rest.email && rest.email.trim()) ||
+        `${student.first_name}.${student.last_name}`
+          .replace(/[^a-zA-Z0-9.]/g, "")
+          .toLowerCase() + `.${student.id.slice(0, 4)}@student.local`;
+      const { data: aData, error: aErr } = await client.auth.admin.createUser({
+        email: loginEmail,
+        password: STUDENT_DEFAULT_PASSWORD,
+        email_confirm: true,
+        user_metadata: {
+          full_name: `${student.first_name} ${student.last_name}`,
+          role: "STUDENT",
+        },
+      });
+      if (!aErr && aData.user) {
+        await client.from("profiles").upsert({
+          id: aData.user.id,
+          academy_id: aid,
+          email: loginEmail,
+          role: "STUDENT",
+          full_name: `${student.first_name} ${student.last_name}`,
+          is_active: true,
+        });
+        student.email = loginEmail;
+        void persistUpdate("students", student.id, { email: loginEmail });
+      } else if (aErr) {
+        console.error("student login account:", aErr.message);
+      }
+    }
+  } catch (e) {
+    console.error("student login account:", (e as Error)?.message);
+  }
+
   for (const gid of groupIds) {
     collections().groupStudents.push({
       group_id: gid,

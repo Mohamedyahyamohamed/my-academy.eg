@@ -23,6 +23,7 @@ import {
   createStudentAction,
   updateStudentAction,
 } from "@/app/actions/students";
+import { STUDENT_DEFAULT_PASSWORD } from "@/lib/auth";
 import type { Group, Parent } from "@/types";
 
 interface StudentFormProps {
@@ -85,7 +86,6 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
     try {
       let parentId = values.parent_id ?? null;
 
-      // وضع "ولي أمر جديد": أنشئه أولًا واربطه بالطالب وقت الحفظ
       if (parentMode === "new") {
         const fn = newParent.first_name.trim();
         if (!fn) {
@@ -114,7 +114,10 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
         toast.success("Student updated");
       } else {
         const s = await createStudentAction(payload);
-        toast.success(`${s.first_name} ${s.last_name} added`);
+        toast.success(
+          `تم إضافة ${s.first_name} ✅ — حساب الدخول: ${s.email} | الباسورد: ${STUDENT_DEFAULT_PASSWORD}`,
+          { duration: 10000 },
+        );
       }
       onDone?.();
       router.refresh();

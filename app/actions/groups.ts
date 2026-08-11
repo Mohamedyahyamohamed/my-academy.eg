@@ -8,7 +8,7 @@ import { audit } from "@/services/audit";
 export async function createGroupAction(input: GroupInput) {
   requireRole("ADMIN", "TEACHER");
   const g = await GroupsService.createGroup(input);
-  void audit({ action: "group.create" });
+    void audit({ action: "group.create" });
   revalidatePath("/groups");
   revalidatePath("/dashboard");
   return g;
@@ -17,7 +17,7 @@ export async function createGroupAction(input: GroupInput) {
 export async function updateGroupAction(id: string, input: Partial<GroupInput>) {
   requireRole("ADMIN");
   const g = GroupsService.updateGroup(id, input);
-  void audit({ action: "group.update" });
+    void audit({ action: "group.update" });
   revalidatePath("/groups");
   revalidatePath(`/groups/${id}`);
   return g;
@@ -26,7 +26,7 @@ export async function updateGroupAction(id: string, input: Partial<GroupInput>) 
 export async function deleteGroupAction(id: string) {
   requireRole("ADMIN");
   GroupsService.deleteGroup(id);
-  void audit({ action: "group.delete" });
+    void audit({ action: "group.delete" });
   revalidatePath("/groups");
   revalidatePath("/dashboard");
 }
@@ -42,6 +42,6 @@ export async function addStudentToGroupAction(groupId: string, studentId: string
 export async function removeStudentFromGroupAction(groupId: string, studentId: string) {
   requireRole("ADMIN", "TEACHER");
   GroupsService.removeStudent(groupId, studentId);
-  void audit({ action: "group.remove_student" });
+    void audit({ action: "group.remove_student" });
   revalidatePath(`/groups/${groupId}`);
 }

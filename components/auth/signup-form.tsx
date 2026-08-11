@@ -66,6 +66,7 @@ export function SignupForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
+      {/* اختيار الدور */}
       <div className="grid grid-cols-3 gap-1 rounded-lg border border-border p-1">
         {TABS.map((t) => (
           <button
@@ -73,7 +74,9 @@ export function SignupForm() {
             type="button"
             onClick={() => setMode(t.id)}
             className={`rounded-md px-2 py-2 text-xs font-medium transition ${
-              mode === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"
+              mode === t.id
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-accent"
             }`}
           >
             {t.label}
@@ -84,31 +87,68 @@ export function SignupForm() {
       {mode === "owner" ? (
         <div className="space-y-1.5">
           <Label htmlFor="academy">اسم الأكاديمية</Label>
-          <Input id="academy" placeholder="MY Academy" value={form.academyName} onChange={(e) => set("academyName", e.target.value)} />
+          <Input
+            id="academy"
+            placeholder="MY Academy"
+            value={form.academyName}
+            onChange={(e) => set("academyName", e.target.value)}
+          />
         </div>
       ) : (
         <div className="space-y-1.5">
           <Label htmlFor="code">كود الأكاديمية</Label>
-          <Input id="code" placeholder="اكتب كود الأكاديمية" value={form.academyCode} onChange={(e) => set("academyCode", e.target.value)} />
-          <p className="text-xs text-muted-foreground">الكود بييجيك من الأكاديمية.</p>
+          <Input
+            id="code"
+            placeholder="اكتب كود الأكاديمية اللي هتنضم ليها"
+            value={form.academyCode}
+            onChange={(e) => set("academyCode", e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            الكود بييجيك من الأكاديمية (صاحب الأكاديمية بيبعته).
+          </p>
         </div>
       )}
 
       <div className="space-y-1.5">
         <Label htmlFor="name">الاسم</Label>
-        <Input id="name" placeholder="الاسم بالكامل" value={form.fullName} onChange={(e) => set("fullName", e.target.value)} />
+        <Input
+          id="name"
+          placeholder="الاسم بالكامل"
+          value={form.fullName}
+          onChange={(e) => set("fullName", e.target.value)}
+        />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="email">الإيميل</Label>
-        <Input id="email" type="email" placeholder="you@email.com" value={form.email} onChange={(e) => set("email", e.target.value)} />
+        <Input
+          id="email"
+          type="email"
+          placeholder="you@email.com"
+          value={form.email}
+          onChange={(e) => set("email", e.target.value)}
+        />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="password">الباسورد</Label>
-        <Input id="password" type="password" placeholder="6 حروف على الأقل" value={form.password} onChange={(e) => set("password", e.target.value)} />
+        <Input
+          id="password"
+          type="password"
+          placeholder="6 حروف على الأقل"
+          value={form.password}
+          onChange={(e) => set("password", e.target.value)}
+        />
       </div>
 
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? (<><Loader2 className="h-4 w-4 animate-spin" /> جارٍ التسجيل…</>) : (<>{mode === "owner" ? "إنشاء أكاديمية" : "انضمام"} <ArrowRight className="h-4 w-4" /></>)}
+        {loading ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التسجيل…
+          </>
+        ) : (
+          <>
+            {mode === "owner" ? "إنشاء أكاديمية" : "انضمام"} <ArrowRight className="h-4 w-4" />
+          </>
+        )}
       </Button>
     </form>
   );

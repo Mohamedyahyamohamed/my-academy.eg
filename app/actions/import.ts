@@ -3,7 +3,6 @@ import { revalidatePath } from "next/cache";
 import { requireRole, currentAcademyId } from "@/services";
 import { collections, invalidateStore } from "@/services/data/store";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
-import { STUDENT_DEFAULT_PASSWORD } from "@/lib/auth";
 
 export interface ImportRow {
   first_name: string; last_name: string; phone?: string;
@@ -11,7 +10,8 @@ export interface ImportRow {
 }
 
 /**
- * Bulk import students (+ optional parents) with LOGIN ACCOUNTS.
+ * Bulk import students (+ optional parents) from parsed CSV rows.
+ * Uses the service-role client directly so we can check + report errors.
  */
 export async function importStudentsAction(rows: ImportRow[]) {
   const user = requireRole("ADMIN", "TEACHER");
@@ -23,7 +23,7 @@ export async function importStudentsAction(rows: ImportRow[]) {
   const client = nodeSupabaseClient();
   if (!client) return { ok: false, error: "Supabase not configured." };
 
-  // ── منع التكرار ──
+  // ── منع التكرار: جيب الطلاب الموجودين وابني مفتاح فريد لكل واحد ──
   const norm = (s?: string | null) => (s ?? "").trim().toLowerCase();
   const keyOf = (fn: string, ln: string, ph?: string | null) =>
     `${norm(fn)}|${norm(ln)}|${norm(ph)}`;
@@ -37,7 +37,6 @@ export async function importStudentsAction(rows: ImportRow[]) {
 
   const now = new Date().toISOString();
   let created = 0;
-  let accounts = 0;
   let skippedDup = 0;
   const errors: string[] = [];
 
@@ -50,7 +49,7 @@ export async function importStudentsAction(rows: ImportRow[]) {
       continue;
     }
 
-    // فحص التكرار
+    // فحص التكرار (موجود قبل كده أو مكرر جوّه نفس الملف)
     const key = keyOf(r.first_name, r.last_name, r.phone);
     if (seen.has(key)) {
       skippedDup++;
@@ -62,59 +61,54 @@ export async function importStudentsAction(rows: ImportRow[]) {
     let parentId: string | null = null;
     if (r.parent_name?.trim()) {
       const parts = r.parent_name.trim().split(/\s+/);
+      // إيميل وهمي فريد (UUID) — مبيتصادمش مع أي ولي أمر موجود
       const pid = crypto.randomUUID();
       const pemail = `p.${pid.slice(0, 8)}@parent.local`;
       const parent = {
-        id: pid, academy_id: aid, profile_id: null,
-        first_name: parts[0], last_name: parts.slice(1).join(" ") || "-",
-        email: pemail, phone: r.parent_phone?.trim() || null, occupation: null,
-        created_at: now, updated_at: now,
+        id: pid,
+        academy_id: aid,
+        profile_id: null,
+        first_name: parts[0],
+        last_name: parts.slice(1).join(" ") || "-",
+        email: pemail,
+        phone: r.parent_phone?.trim() || null,
+        occupation: null,
+        created_at: now,
+        updated_at: now,
       };
       const pr = await client.from("parents").upsert(parent);
-      if (pr.error) { rowErr(`ولي الأمر: ${pr.error.message}`); continue; }
+      if (pr.error) {
+        rowErr(`ولي الأمر: ${pr.error.message}`);
+        continue;
+      }
       collections().parents.push(parent as any);
       parentId = parent.id;
     }
 
-    // ── حساب الدخول للطالب (إيميل فريد + باسورد افتراضي) ──
-    const sid = crypto.randomUUID();
-    const loginEmail =
-      `${r.first_name.trim()}.${r.last_name.trim()}`.replace(/[^a-zA-Z0-9.]/g, "").toLowerCase() +
-      `.${sid.slice(0, 4)}@student.local`;
-    let authOk = false;
-    try {
-      const { data: aData, error: aErr } = await client.auth.admin.createUser({
-        email: loginEmail,
-        password: STUDENT_DEFAULT_PASSWORD,
-        email_confirm: true,
-        user_metadata: { full_name: `${r.first_name.trim()} ${r.last_name.trim()}`, role: "STUDENT" },
-      });
-      if (!aErr && aData.user) {
-        await client.from("profiles").upsert({
-          id: aData.user.id, academy_id: aid, email: loginEmail, role: "STUDENT",
-          full_name: `${r.first_name.trim()} ${r.last_name.trim()}`, is_active: true,
-        });
-        authOk = true;
-        accounts++;
-      } else if (aErr) {
-        rowErr(`حساب الدخول: ${aErr.message} (الطالب هيتسجّل بدون حساب)`);
-      }
-    } catch (e) {
-      rowErr(`حساب الدخول استثناء: ${(e as Error)?.message}`);
-    }
-
-    // سجل الطالب (بالإيميل عشان الـ portal يربطه)
+    // الطالب
     const student = {
-      id: sid, academy_id: aid,
-      first_name: r.first_name.trim(), last_name: r.last_name.trim(),
+      id: crypto.randomUUID(),
+      academy_id: aid,
+      first_name: r.first_name.trim(),
+      last_name: r.last_name.trim(),
       phone: r.phone?.trim() || null,
-      email: authOk ? loginEmail : null,
-      date_of_birth: null, gender: null, parent_id: parentId,
-      school: r.school?.trim() || null, grade: r.grade?.trim() || null,
-      notes: null, status: "ACTIVE", enrolled_at: now, created_at: now, updated_at: now,
+      email: null,
+      date_of_birth: null,
+      gender: null,
+      parent_id: parentId,
+      school: r.school?.trim() || null,
+      grade: r.grade?.trim() || null,
+      notes: null,
+      status: "ACTIVE",
+      enrolled_at: now,
+      created_at: now,
+      updated_at: now,
     };
     const sr = await client.from("students").upsert(student);
-    if (sr.error) { rowErr(sr.error.message); continue; }
+    if (sr.error) {
+      rowErr(sr.error.message);
+      continue;
+    }
     collections().students.push(student as any);
     created++;
   }
@@ -122,5 +116,5 @@ export async function importStudentsAction(rows: ImportRow[]) {
   invalidateStore();
   revalidatePath("/students");
   revalidatePath("/dashboard");
-  return { ok: true, created, accounts, skippedDup, errors };
+  return { ok: true, created, skippedDup, errors };
 }

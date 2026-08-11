@@ -37,6 +37,8 @@ function attachRelations(s: Student): Student {
   };
 }
 
+// ─── CACHE FALLBACKS (used when Supabase not configured) ──────────
+
 function listStudentsFromCache(
   filters: StudentFilters = {},
 ): PaginatedResult<Student> {
@@ -117,6 +119,12 @@ function getStudentFromCache(id: string): Student | null {
   return attachRelations(s);
 }
 
+// ─── RLS-ENFORCED QUERIES (production path) ──────────────────────
+
+/**
+ * List students — RLS-enforced via the user's Supabase session.
+ * RLS automatically filters by academy_id. No app-layer filter needed.
+ */
 export async function listStudents(
   filters: StudentFilters = {},
 ): Promise<PaginatedResult<Student>> {
@@ -139,6 +147,7 @@ export async function listStudents(
 
   let query = client.from("students").select("*", { count: "exact" });
 
+  // RLS filters by academy_id automatically.
   if (status !== "ALL") query = query.eq("status", status);
 
   if (search.trim()) {
@@ -148,6 +157,7 @@ export async function listStudents(
     );
   }
 
+  // Group filter: resolve from cache (group_students is Phase 2).
   if (groupId !== "ALL") {
     const ids = collections()
       .groupStudents.filter((gs) => gs.group_id === groupId)
@@ -161,6 +171,7 @@ export async function listStudents(
     query = query.in("id", ids);
   }
 
+  // Sort
   const ascending = sortDir === "asc";
   if (sortBy === "name") {
     query = query.order("first_name", { ascending }).order("last_name", { ascending });
@@ -168,12 +179,14 @@ export async function listStudents(
     query = query.order(sortBy, { ascending });
   }
 
+  // Paginate
   const start = (page - 1) * pageSize;
   query = query.range(start, start + pageSize - 1);
 
   const { data, count, error } = await query;
   if (error) {
     console.error("listStudents RLS error:", error.message);
+    // Fallback to cache on error.
     return listStudentsFromCache(filters);
   }
 
@@ -190,6 +203,10 @@ export async function listStudents(
   };
 }
 
+/**
+ * Get student detail — RLS-enforced. If the student belongs to another
+ * academy, RLS blocks the read → returns null → 404.
+ */
 export async function getStudentDetail(
   id: string,
 ): Promise<StudentDetail | null> {
@@ -207,10 +224,12 @@ export async function getStudentDetail(
     .maybeSingle();
 
   if (error || !data) {
+    // RLS blocked it, or student doesn't exist.
     return null;
   }
 
   const student = data as Student;
+  // Teacher scope check (app-layer, Phase 1 — extra defense).
   const tScope = teacherStudentScope();
   if (tScope && !tScope.has(id)) return null;
 
@@ -220,6 +239,9 @@ export async function getStudentDetail(
   };
 }
 
+/**
+ * Get a single student — RLS-enforced.
+ */
 export async function getStudent(id: string): Promise<Student | null> {
   if (!isSupabaseConfigured()) {
     return getStudentFromCache(id);
@@ -250,11 +272,16 @@ export function computeStudentStats(studentId: string): StudentStats {
 
   const grades = gradesForStudent(studentId);
   const averageGrade = grades.length
-    ? round(grades.reduce((s, g) => s + (g.percentage ?? 0), 0) / grades.length, 1)
+    ? round(
+        grades.reduce((s, g) => s + (g.percentage ?? 0), 0) / grades.length,
+        1,
+      )
     : 0;
 
   const pays = paymentsForStudent(studentId).map(derivePayment);
-  const monthlyFee = pays.length ? Math.max(...pays.map((p) => p.amount_due)) : 0;
+  const monthlyFee = pays.length
+    ? Math.max(...pays.map((p) => p.amount_due))
+    : 0;
   const totalPaid = pays.reduce((s, p) => s + p.amount_paid, 0);
   const outstanding = pays.reduce((s, p) => s + p.remaining, 0);
 
@@ -278,6 +305,8 @@ export function computeStudentStats(studentId: string): StudentStats {
   };
 }
 
+// ─── Mutations (unchanged) ────────────────────────────────────────
+
 export interface StudentInput {
   first_name: string;
   last_name: string;
@@ -299,6 +328,7 @@ function uid() {
 }
 
 export async function createStudent(input: StudentInput): Promise<Student> {
+  // SaaS usage limit check (server-enforced).
   const check = canCreate("students");
   if (!check.allowed) {
     throw new Error(`Limit reached: ${check.current}/${check.limit} students. Upgrade your plan.`);
@@ -317,12 +347,15 @@ export async function createStudent(input: StudentInput): Promise<Student> {
         .eq("academy_id", aid)
         .ilike("first_name", input.first_name.trim())
         .ilike("last_name", input.last_name.trim());
-      const dup = (dups ?? []).find((s: any) => norm(s.phone) === norm(input.phone));
+      const dup = (dups ?? []).find(
+        (s: any) => norm(s.phone) === norm(input.phone),
+      );
       if (dup) {
         throw new Error("طالب موجود بالفعل بنفس الاسم والموبايل في الأكاديمية.");
       }
     }
   } catch (e) {
+    // لو الخطأ هو رسالة التكرار نطلّعها، غير كده نكمّل (best-effort)
     if ((e as Error)?.message?.includes("موجود بالفعل")) throw e;
   }
 
@@ -349,6 +382,9 @@ export async function createStudent(input: StudentInput): Promise<Student> {
     updated_at: now,
   };
   collections().students.push(student);
+  // مؤقتًا: شيل حقول consent من الكتابة للـ DB عشان migration الـ phase19
+  // (consent columns) لسه مش متطبّق → الإضافة بتفشل بدونه. علشان تشغّلهم،
+  // شغّل supabase/fix-missing-consent-columns.sql وبعدها ممكن تشيل السطرين دول.
   const { consent_given: _cg, consent_version: _cv, ...persistRow } = student;
   void _cg;
   void _cv;
@@ -359,6 +395,7 @@ export async function createStudent(input: StudentInput): Promise<Student> {
     const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
     const client = nodeSupabaseClient();
     if (client) {
+      // الإيميل: اللي الأدمن كتبه، أو مُولّد من الاسم
       const loginEmail =
         (rest.email && rest.email.trim()) ||
         `${student.first_name}.${student.last_name}`
@@ -382,6 +419,7 @@ export async function createStudent(input: StudentInput): Promise<Student> {
           full_name: `${student.first_name} ${student.last_name}`,
           is_active: true,
         });
+        // خزّن الإيميل على سجل الطالب عشان الـ portal يربطه
         student.email = loginEmail;
         void persistUpdate("students", student.id, { email: loginEmail });
       } else if (aErr) {
@@ -415,6 +453,7 @@ export function updateStudent(
   const { groupIds: _g, consent_given: _cg, ...patch } = input;
   void _g;
   void _cg;
+  // حوّل التاريخ الفاضي ("") لـ null عشان الداتابيز يقبلّه
   if (patch.date_of_birth === "") patch.date_of_birth = null;
   void persistUpdate("students", id, { ...patch, updated_at: new Date().toISOString() });
   if (input.groupIds) {

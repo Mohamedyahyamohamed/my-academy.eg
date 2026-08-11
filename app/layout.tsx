@@ -1,16 +1,11 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import { APP_CONFIG } from "@/lib/constants";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { RealtimeNotifications } from "@/components/layout/realtime-notifications";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  display: "swap",
-});
+// خط النظام بدل next/font/google — عشان يشتغل أوفلاين ومن غير إنترنت لـ Google.
 
 export const metadata: Metadata = {
   title: {
@@ -27,7 +22,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans`}>
+      <body className="font-sans">
         <TooltipProvider delayDuration={200}>
           <RealtimeNotifications />
           {children}

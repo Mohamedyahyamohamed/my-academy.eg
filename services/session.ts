@@ -69,6 +69,8 @@ export function requireUser(): SessionUser {
 /** Require a user AND one of the allowed roles. */
 export function requireRole(...roles: Role[]): SessionUser {
   const user = requireUser();
+  // SUPER_ADMIN يقدر يفتح أي صفحة (صاحب المنصة)
+  if (user.role === "SUPER_ADMIN") return user;
   if (!roles.includes(user.role)) redirect(roleHome(user.role));
   return user;
 }

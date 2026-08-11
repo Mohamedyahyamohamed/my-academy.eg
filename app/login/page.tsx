@@ -76,7 +76,7 @@ export default function LoginPage() {
             </code>
           </p>
           <p className="mt-3 text-center text-sm text-muted-foreground">
-                        جديد عندنا؟{" "}
+            جديد عندنا؟{" "}
             <Link href="/signup" className="font-medium text-primary hover:underline">
               سجّل الآن (أكاديمية / ولي أمر / طالب) →
             </Link>

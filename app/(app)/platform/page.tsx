@@ -47,11 +47,12 @@ export default async function PlatformPage() {
     return { plan, price: plan?.price ?? 0, status: sub?.status ?? "active" };
   };
 
+  // إيرادات الـ SaaS (MRR) = مجموع اشتراكات الأكاديميات النشطة
   const mrr = (subs ?? [])
     .filter((s: any) => s.status === "active" || s.status === "trialing" || !s.status)
     .reduce((sum: number, s: any) => sum + (PLANS[s.plan_id]?.price ?? 0), 0);
 
-  const totalCollected = sumPaid();
+  const totalCollected = sumPaid(); // إجمالي مدفوعات الطلاب على المنصة
   const payingAcademies = (academies ?? []).filter((a: any) => priceFor(a.id).price > 0).length;
 
   return (
@@ -61,6 +62,7 @@ export default async function PlatformPage() {
         description="إنت صاحب الـ SaaS — بتشوف كل الأكاديميات والإيرادات من هنا."
       />
 
+      {/* بطاقات الإيرادات */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="border-emerald-500/30 bg-emerald-500/5">
           <CardContent className="p-5">
@@ -89,6 +91,7 @@ export default async function PlatformPage() {
         </Card>
       </div>
 
+      {/* إحصائيات عامة */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card><CardContent className="flex items-center gap-3 p-5">
           <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600"><Users className="h-5 w-5" /></div>
@@ -104,6 +107,7 @@ export default async function PlatformPage() {
         </CardContent></Card>
       </div>
 
+      {/* قائمة الأكاديميات بالإيراد */}
       <Card>
         <CardContent className="p-0">
           <div className="flex items-center justify-between border-b p-4">

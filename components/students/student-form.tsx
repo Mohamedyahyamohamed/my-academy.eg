@@ -86,6 +86,7 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
     try {
       let parentId = values.parent_id ?? null;
 
+      // وضع "ولي أمر جديد": أنشئه أولًا واربطه بالطالب وقت الحفظ
       if (parentMode === "new") {
         const fn = newParent.first_name.trim();
         if (!fn) {

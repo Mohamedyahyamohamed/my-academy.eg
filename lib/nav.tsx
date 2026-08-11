@@ -14,6 +14,7 @@ import {
   CalendarCheck,
   TrendingUp,
   CalendarClock,
+  Crown,
   type LucideProps,
 } from "lucide-react";
 import type { Role } from "@/types";
@@ -119,8 +120,17 @@ export const STUDENT_NAV: NavSection[] = [
   },
 ];
 
+export const SUPER_ADMIN_NAV: NavSection[] = [
+  {
+    items: [{ title: "المنصة", href: "/platform", icon: Crown }],
+  },
+  ...ADMIN_NAV,
+];
+
 export function navForRole(role: Role): NavSection[] {
   switch (role) {
+    case "SUPER_ADMIN":
+      return SUPER_ADMIN_NAV;
     case "TEACHER":
       return TEACHER_NAV;
     case "PARENT":

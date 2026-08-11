@@ -1,3 +1,7 @@
+/**
+ * Supabase client for Node server contexts (route handlers, server actions).
+ * Adds a `ws` polyfill so supabase-js realtime inits on Node < 22.
+ */
 import {
   isSupabaseConfigured,
   getSupabaseUrl,

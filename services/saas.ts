@@ -23,7 +23,7 @@ export interface Subscription {
 
 /** Default plans (mirrors SQL). Editable from configuration. */
 export const PLANS: Record<string, Plan> = {
-  free: { id: "free", name: "Free", maxStudents: 30000, maxTeachers: 20, maxGroups: 50, price: 0, currency: "EGP" },
+  free: { id: "free", name: "Free", maxStudents: 200, maxTeachers: 50, maxGroups: 100, price: 0, currency: "EGP" },
   basic: { id: "basic", name: "Basic", maxStudents: 100, maxTeachers: 10, maxGroups: 25, price: 299, currency: "EGP" },
   pro: { id: "pro", name: "Pro", maxStudents: 500, maxTeachers: 25, maxGroups: 100, price: 799, currency: "EGP" },
   enterprise: { id: "enterprise", name: "Enterprise", maxStudents: 99999, maxTeachers: 999, maxGroups: 999, price: 1999, currency: "EGP" },

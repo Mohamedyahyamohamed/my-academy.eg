@@ -55,7 +55,7 @@ export interface Course {
   academy_id: UUID;
   name: string;
   description: string | null;
-  color: string | null;
+  color: string | null; // tailwind-ish hex for charts/badges
   created_at: ISODate;
   updated_at: ISODate;
 }
@@ -100,7 +100,7 @@ export interface Student {
   email: string | null;
   parent_id: UUID | null;
   school: string | null;
-  grade: string | null;
+  grade: string | null; // e.g. "Grade 9"
   notes: string | null;
   status: StudentStatus;
   consent_given?: boolean;
@@ -108,6 +108,7 @@ export interface Student {
   enrolled_at: ISODate;
   created_at: ISODate;
   updated_at: ISODate;
+  // joined relations (optional)
   parent?: Parent | null;
   groups?: Group[];
 }
@@ -119,11 +120,12 @@ export interface Group {
   course_id: UUID;
   teacher_id: UUID;
   monthly_fee: number;
-  schedule: string;
+  schedule: string; // human readable e.g. "Sun, Tue, Thu — 4:00 PM"
   room: string | null;
   status: "ACTIVE" | "INACTIVE";
   created_at: ISODate;
   updated_at: ISODate;
+  // relations
   course?: Course;
   teacher?: Teacher;
   student_count?: number;
@@ -142,13 +144,14 @@ export interface Lesson {
   group_id: UUID;
   teacher_id: UUID;
   date: ISODate;
-  start_time: string;
-  end_time: string;
+  start_time: string; // "16:00"
+  end_time: string; // "17:30"
   topic: string;
   description: string | null;
   notes: string | null;
   created_at: ISODate;
   updated_at: ISODate;
+  // relations
   group?: Group;
   teacher?: Teacher;
   attendance_taken?: boolean;
@@ -163,6 +166,7 @@ export interface AttendanceRecord {
   status: AttendanceStatus;
   note: string | null;
   recorded_at: ISODate;
+  // relations
   student?: Student;
 }
 
@@ -173,7 +177,7 @@ export interface Payment {
   academy_id: UUID;
   student_id: UUID;
   group_id: UUID | null;
-  month: string;
+  month: string; // "2026-08"
   amount_due: number;
   amount_paid: number;
   remaining: number;
@@ -185,6 +189,7 @@ export interface Payment {
   deleted_at?: ISODate | null;
   created_at: ISODate;
   updated_at: ISODate;
+  // relations
   student?: Student;
   group?: Group;
 }
@@ -218,6 +223,7 @@ export interface Grade {
   student_id: UUID;
   score: number;
   created_at: ISODate;
+  // computed
   percentage?: number;
   level?: string;
   student?: Student;
@@ -268,7 +274,7 @@ export type NotificationType =
 export interface AppNotification {
   id: UUID;
   academy_id: UUID;
-  user_id: UUID | null;
+  user_id: UUID | null; // profile id; null = broadcast
   type: NotificationType;
   title: string;
   message: string;
@@ -297,6 +303,10 @@ export interface FileRecord {
   mime_type: string | null;
   created_at: ISODate;
 }
+
+/* ------------------------------------------------------------------ */
+/* Aggregated / view models used by the UI                             */
+/* ------------------------------------------------------------------ */
 
 export interface StudentDetail extends Student {
   parent?: Parent | null;

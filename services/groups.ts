@@ -121,12 +121,17 @@ export async function addStudent(
   );
   if (exists) return { ok: false, error: "الطالب في الجروب ده بالفعل." };
   const now = new Date().toISOString();
-  const row = { group_id: groupId, student_id: studentId, joined_at: now };
+  const row = {
+    group_id: groupId,
+    student_id: studentId,
+    joined_at: now,
+  };
   collections().groupStudents.push(row as any);
   try {
     const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
     const client = nodeSupabaseClient();
     if (client) {
+      // insert مباشر (مش upsert) — upsert كان بيتلخبط على group_students
       const r = await client.from("group_students").insert(row);
       if (r.error) return { ok: false, error: r.error.message };
     }
@@ -154,10 +159,12 @@ export interface GroupDetail extends Group {
 export async function getGroupDetail(id: string): Promise<GroupDetail | null> {
   const g = await getGroup(id);
   if (!g) return null;
+  // Teachers can only access their own groups.
   const scope = teacherGroupScope();
   if (scope && !scope.has(id)) return null;
   const students = studentsInGroup(id);
   const lessons = lessonsForGroup(id);
+  // attendance rate across the group
   const att = collections().attendance.filter((a) =>
     lessons.some((l) => l.id === a.lesson_id),
   );
@@ -166,6 +173,7 @@ export async function getGroupDetail(id: string): Promise<GroupDetail | null> {
   return { ...g, students, lessons, attendanceRate: rate };
 }
 
+/** Average grade for a group across its exams. */
 export function groupAverageGrade(groupId: string): number {
   const examIds = collections()
     .exams.filter((e) => e.group_id === groupId)

@@ -107,6 +107,11 @@ export async function signupAction(input: SignupInput) {
   revalidatePath("/dashboard");
   redirect("/onboarding");
 }
+
+/**
+ * Self-signup for a PARENT or STUDENT joining an EXISTING academy by code.
+ * Creates: auth user + profile + (parent | student) record linked to the academy.
+ */
 export async function joinAcademyAction(input: {
   role: "PARENT" | "STUDENT";
   academyCode: string;
@@ -115,27 +120,47 @@ export async function joinAcademyAction(input: {
   password: string;
 }) {
   const rl = await rateLimit(`signup:${input.email.toLowerCase()}`, LIMITS.signup.max, LIMITS.signup.window);
-  if (!rl.allowed) return { ok: false, error: "Too many attempts." };
-  if (!input.email || !input.password || !input.fullName || !input.academyCode)
+  if (!rl.allowed) {
+    return { ok: false, error: "Too many signup attempts. Please try again later." };
+  }
+  if (!input.email || !input.password || !input.fullName || !input.academyCode) {
     return { ok: false, error: "All fields are required." };
-  if (input.password.length < 6) return { ok: false, error: "Password must be at least 6 characters." };
-  if (!isSupabaseConfigured()) return { ok: false, error: "Self-signup requires Supabase." };
+  }
+  if (input.password.length < 6) {
+    return { ok: false, error: "Password must be at least 6 characters." };
+  }
+  if (!isSupabaseConfigured()) {
+    return { ok: false, error: "Self-signup requires Supabase." };
+  }
 
   const client = nodeSupabaseClient();
   if (!client) return { ok: false, error: "Supabase not configured." };
 
+  // 1. Find the academy by its signup code (= slug).
   const code = input.academyCode.trim().toLowerCase();
-  const { data: academy } = await client.from("academies").select("id,name,slug").ilike("slug", code).maybeSingle();
-  if (!academy) return { ok: false, error: "كود أكاديمية غير صحيح." };
+  const { data: academy, error: academyErr } = await client
+    .from("academies")
+    .select("id,name,slug")
+    .ilike("slug", code)
+    .maybeSingle();
+  if (academyErr || !academy) {
+    return { ok: false, error: "Invalid academy code. Ask your academy for the correct code." };
+  }
 
+  // 2. Create the auth user.
   const { data: userData, error: userErr } = await client.auth.admin.createUser({
-    email: input.email, password: input.password, email_confirm: true,
+    email: input.email,
+    password: input.password,
+    email_confirm: true,
     user_metadata: { full_name: input.fullName, role: input.role },
   });
-  if (userErr) return { ok: false, error: userErr.message };
+  if (userErr) {
+    return { ok: false, error: userErr.message };
+  }
   const uid = userData.user.id;
   const now = new Date().toISOString();
 
+  // 3. Profile.
   await client.from("profiles").upsert({
     id: uid, academy_id: academy.id, email: input.email, role: input.role,
     full_name: input.fullName, is_active: true,
@@ -144,23 +169,41 @@ export async function joinAcademyAction(input: {
   const [first, ...rest] = input.fullName.trim().split(/\s+/);
   const last = rest.join(" ") || "-";
 
+  // 4. Parent or Student record (linked so the portal resolves it).
   if (input.role === "PARENT") {
-    const p = { id: crypto.randomUUID(), academy_id: academy.id, profile_id: uid, first_name: first, last_name: last, email: input.email, phone: null, occupation: null, created_at: now, updated_at: now };
+    const p = {
+      id: crypto.randomUUID(), academy_id: academy.id, profile_id: uid,
+      first_name: first, last_name: last, email: input.email,
+      phone: null, occupation: null, created_at: now, updated_at: now,
+    };
     collections().parents.push(p as any);
     await persistInsert("parents", p);
   } else {
-    const s = { id: crypto.randomUUID(), academy_id: academy.id, first_name: first, last_name: last, phone: null, email: input.email, date_of_birth: null, gender: null, parent_id: null, school: null, grade: null, notes: null, status: "ACTIVE", enrolled_at: now, created_at: now, updated_at: now };
+    const s = {
+      id: crypto.randomUUID(), academy_id: academy.id,
+      first_name: first, last_name: last,
+      phone: null, email: input.email, date_of_birth: null, gender: null,
+      parent_id: null, school: null, grade: null, notes: null,
+      status: "ACTIVE", enrolled_at: now, created_at: now, updated_at: now,
+    };
     collections().students.push(s as any);
     await persistInsert("students", s);
   }
 
   invalidateStore();
 
-  const user: SessionUser = { id: uid, email: input.email, role: input.role, full_name: input.fullName, avatar_url: null, academy_id: academy.id };
+  // 5. Session cookie.
+  const user: SessionUser = {
+    id: uid, email: input.email, role: input.role,
+    full_name: input.fullName, avatar_url: null, academy_id: academy.id,
+  };
   const token = Buffer.from(JSON.stringify(user), "utf-8").toString("base64");
-  cookies().set(SESSION_COOKIE, token, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7 });
+  cookies().set(SESSION_COOKIE, token, {
+    httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7,
+  });
 
   void audit({ action: "mutation" });
   void sendWelcomeEmail(input.email, input.fullName, input.role);
+
   redirect(input.role === "PARENT" ? "/parent" : "/student");
 }

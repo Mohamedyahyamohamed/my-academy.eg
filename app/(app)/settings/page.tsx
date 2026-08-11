@@ -42,17 +42,22 @@ export default async function SettingsPage() {
               <AcademySettingsForm academy={academy} />
             </CardContent>
           </Card>
-                    <Card className="mt-4">
+
+          <Card className="mt-4">
             <CardHeader>
               <CardTitle className="text-base">كود انضمام الطلاب وأولياء الأمور</CardTitle>
-              <CardDescription>شارك الكود ده عشان يسجّلوا لوحدهم وينضمّوا لأكاديميتك.</CardDescription>
+              <CardDescription>
+                شارك الكود ده مع الطلاب وأولياء الأمور عشان يسجّلوا لوحدهم وينضمّوا لأكاديميتك.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap items-center gap-3">
                 <code className="rounded-lg border border-border bg-muted px-4 py-2 text-lg font-semibold tracking-wide">
                   {academy.slug ?? "—"}
                 </code>
-                <p className="text-xs text-muted-foreground">الطالب/ولي الأمر بيدخل الكود ده في صفحة /signup.</p>
+                <p className="text-xs text-muted-foreground">
+                  في صفحة التسجيل (/signup)، الطالب/ولي الأمر بيدخل الكود ده + بياناته وينضم تلقائيًا.
+                </p>
               </div>
             </CardContent>
           </Card>

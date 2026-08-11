@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { StudentAvatar } from "@/components/shared/student-avatar";
 import { StudentStatusBadge } from "@/components/shared/badges";
 import { AddStudentDialog, EditStudentDialog } from "@/components/students/student-dialogs";
+import { CreateAccountsButton } from "@/components/students/create-accounts-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import {
   Table,
@@ -62,6 +63,7 @@ export default async function StudentsPage({
           <Button asChild variant="outline">
             <Link href="/students/import">استيراد من Excel</Link>
           </Button>
+          <CreateAccountsButton />
           <AddStudentDialog parents={parents} groups={groups} />
         </div>
       </PageHeader>

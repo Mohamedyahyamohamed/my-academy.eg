@@ -1,49 +1,35 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireRole, StudentsService } from "@/services";
+import { requireRole, StudentsService, currentAcademyId } from "@/services";
 import type { StudentInput } from "@/services/students";
+import { STUDENT_DEFAULT_PASSWORD } from "@/lib/auth";
 
 export async function createStudentAction(input: StudentInput) {
-  console.log("[createStudentAction] START", { first: input.first_name, last: input.last_name, parent_id: input.parent_id });
-  try {
-    const user = requireRole("ADMIN", "TEACHER");
-    console.log("[createStudentAction] user OK:", user.email, "academy:", user.academy_id);
-    const student = await StudentsService.createStudent(input);
-    console.log("[createStudentAction] CREATED OK:", student.id);
-    await import("@/services/audit").then((m) => m.audit(
-      { action: "student.create", entity_type: "student", entity_id: student.id, new_data: { name: `${student.first_name} ${student.last_name}` } },
-      user,
-    ));
-    revalidatePath("/students");
-    revalidatePath("/dashboard");
-    return student;
-  } catch (e) {
-    console.error("[createStudentAction] FAILED:", (e as Error)?.message);
-    throw e;
-  }
+  const user = requireRole("ADMIN", "TEACHER");
+  const student = await StudentsService.createStudent(input);
+  await import("@/services/audit").then((m) => m.audit(
+    { action: "student.create", entity_type: "student", entity_id: student.id, new_data: { name: `${student.first_name} ${student.last_name}` } },
+    user,
+  ));
+  revalidatePath("/students");
+  revalidatePath("/dashboard");
+  return student;
 }
 
 export async function updateStudentAction(id: string, input: Partial<StudentInput>) {
-  console.log("[updateStudentAction] START", { id, first: input.first_name });
-  try {
-    const user = requireRole("ADMIN", "TEACHER");
-    const student = StudentsService.updateStudent(id, input);
-    console.log("[updateStudentAction] UPDATED:", student?.id ?? "NOT FOUND");
-    if (student) {
-      await import("@/services/audit").then((m) => m.audit(
-        { action: "student.update", entity_type: "student", entity_id: id, new_data: input },
-        user,
-      ));
-    }
-    revalidatePath("/students");
-    revalidatePath(`/students/${id}`);
-    revalidatePath("/dashboard");
-    return student;
-  } catch (e) {
-    console.error("[updateStudentAction] FAILED:", (e as Error)?.message);
-    throw e;
+  const user = requireRole("ADMIN", "TEACHER");
+  const student = StudentsService.updateStudent(id, input);
+  if (student) {
+    await import("@/services/audit").then((m) => m.audit(
+      { action: "student.update", entity_type: "student", entity_id: id, new_data: input },
+      user,
+    ));
   }
+  revalidatePath("/students");
+  revalidatePath(`/students/${id}`);
+  revalidatePath("/dashboard");
+  return student;
 }
 
 export async function archiveStudentAction(id: string) {
@@ -62,4 +48,53 @@ export async function restoreStudentAction(id: string) {
   StudentsService.setStudentStatus(id, "ACTIVE");
   revalidatePath("/students");
   revalidatePath(`/students/${id}`);
+}
+
+/**
+ * ينشئ حسابات دخول (إيميل + باسورد افتراضي) لكل الطلاب اللي ممعاهومش حساب.
+ */
+export async function createMissingStudentAccountsAction() {
+  requireRole("ADMIN");
+  const aid = currentAcademyId();
+  const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
+  const client = nodeSupabaseClient();
+  if (!client) return { ok: false, error: "Supabase not configured." };
+
+  const { data: students } = await client
+    .from("students")
+    .select("id,first_name,last_name,email")
+    .eq("academy_id", aid)
+    .or("email.is.null");
+
+  let created = 0;
+  const errors: string[] = [];
+
+  for (const s of students ?? []) {
+    const loginEmail =
+      `${s.first_name}.${s.last_name}`.replace(/[^a-zA-Z0-9.]/g, "").toLowerCase() +
+      `.${s.id.slice(0, 4)}@student.local`;
+    const { data: aData, error: aErr } = await client.auth.admin.createUser({
+      email: loginEmail,
+      password: STUDENT_DEFAULT_PASSWORD,
+      email_confirm: true,
+      user_metadata: { full_name: `${s.first_name} ${s.last_name}`, role: "STUDENT" },
+    });
+    if (aErr) {
+      errors.push(`${s.first_name} ${s.last_name}: ${aErr.message}`);
+      continue;
+    }
+    await client.from("profiles").upsert({
+      id: aData.user!.id,
+      academy_id: aid,
+      email: loginEmail,
+      role: "STUDENT",
+      full_name: `${s.first_name} ${s.last_name}`,
+      is_active: true,
+    });
+    await client.from("students").update({ email: loginEmail }).eq("id", s.id);
+    created++;
+  }
+
+  revalidatePath("/students");
+  return { ok: true, created, errors };
 }

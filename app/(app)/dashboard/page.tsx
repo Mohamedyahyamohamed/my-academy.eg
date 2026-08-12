@@ -22,6 +22,7 @@ import { TrendArea, Donut, LineTrend } from "@/components/charts";
 import { DashboardService, requireRole } from "@/services";
 import { atRiskStudents } from "@/services/insights";
 import { formatCurrency, formatDate, formatTime, initials } from "@/lib/utils";
+import type { DashboardPeriod } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -38,9 +39,25 @@ const GRADE_LEVEL_AR: Record<string, string> = {
   "Needs Improvement": "يحتاج تحسين",
 };
 
-export default async function DashboardPage() {
+const PERIOD_LABELS: Record<DashboardPeriod, string> = {
+  month: "هذا الشهر",
+  quarter: "هذا الربع",
+  year: "هذا العام",
+};
+
+const PERIODS: DashboardPeriod[] = ["month", "quarter", "year"];
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
   requireRole("ADMIN");
-  const d = await DashboardService.getDashboardData();
+  const sp = (k: string) =>
+    Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
+  const period: DashboardPeriod =
+    sp("period") === "quarter" || sp("period") === "year" ? (sp("period") as DashboardPeriod) : "month";
+  const d = await DashboardService.getDashboardData(period);
   const atRisk = (await atRiskStudents()).slice(0, 6);
 
   const collectionTrend = d.collectionTrend ?? 0;
@@ -61,6 +78,23 @@ export default async function DashboardPage() {
         </Button>
       </PageHeader>
 
+      {/* Period filter */}
+      <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 w-fit">
+        {PERIODS.map((p) => (
+          <Link
+            key={p}
+            href={p === "month" ? "/dashboard" : `/dashboard?period=${p}`}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              period === p
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+          >
+            {PERIOD_LABELS[p]}
+          </Link>
+        ))}
+      </div>
+
       {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -78,11 +112,11 @@ export default async function DashboardPage() {
           accent="info"
         />
         <StatCard
-          label="المحصّل هذا الشهر"
-          value={formatCurrency(d.collectedThisMonth)}
+          label={`المحصّل ${PERIOD_LABELS[period]}`}
+          value={formatCurrency(d.collectedForPeriod)}
           icon={Wallet}
           accent="success"
-          trend={{ value: Math.abs(collectionTrend), positive: collectionTrend >= 0, label: "مقارنة بالشهر الماضي" }}
+          trend={period === "month" ? { value: Math.abs(collectionTrend), positive: collectionTrend >= 0, label: "مقارنة بالشهر الماضي" } : undefined}
         />
         <StatCard
           label="المتبقي (المتأخرات)"
@@ -126,7 +160,7 @@ export default async function DashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div>
               <CardTitle>الإيرادات حسب الشهر</CardTitle>
-              <CardDescription>الإيرادات المستحقة خلال آخر 6 أشهر</CardDescription>
+              <CardDescription>الإيرادات المستحقة خلال آخر {period === "year" ? "12" : "6"} أشهر</CardDescription>
             </div>
             <Badge variant="secondary">جنيه</Badge>
           </CardHeader>

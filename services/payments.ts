@@ -203,6 +203,7 @@ export interface PaymentMetrics {
   monthlyRevenue: number; // potential revenue this month
   collectedThisMonth: number;
   outstanding: number;
+  collectedInRange: number; // collected over the requested range
   revenueByMonth: { month: string; revenue: number; collected: number }[];
 }
 
@@ -211,7 +212,7 @@ function currentMonthKey() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export async function getPaymentMetrics(): Promise<PaymentMetrics> {
+export async function getPaymentMetrics(months = 6): Promise<PaymentMetrics> {
   const pays = (await fetchTableRLS<Payment>("payments")).map(derivePayment);
   const cm = currentMonthKey();
   const thisMonth = pays.filter((p) => p.month === cm);
@@ -219,9 +220,9 @@ export async function getPaymentMetrics(): Promise<PaymentMetrics> {
   const collectedThisMonth = thisMonth.reduce((s, p) => s + p.amount_paid, 0);
   const outstanding = pays.reduce((s, p) => s + p.remaining, 0);
 
-  // last 6 months
+  // last `months` months
   const byMonth = new Map<string, { revenue: number; collected: number }>();
-  for (let i = 5; i >= 0; i--) {
+  for (let i = months - 1; i >= 0; i--) {
     const d = new Date();
     d.setMonth(d.getMonth() - i);
     byMonth.set(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, {
@@ -241,6 +242,7 @@ export async function getPaymentMetrics(): Promise<PaymentMetrics> {
     revenue: v.revenue,
     collected: v.collected,
   }));
+  const collectedInRange = revenueByMonth.reduce((s, r) => s + r.collected, 0);
 
-  return { monthlyRevenue, collectedThisMonth, outstanding, revenueByMonth };
+  return { monthlyRevenue, collectedThisMonth, outstanding, collectedInRange, revenueByMonth };
 }

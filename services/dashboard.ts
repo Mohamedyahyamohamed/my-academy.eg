@@ -90,7 +90,9 @@ async function getRLSData() {
   };
 }
 
-export async function getDashboardData(): Promise<DashboardData> {
+export async function getDashboardData(
+  period: "month" | "quarter" | "year" = "month",
+): Promise<DashboardData> {
   const d = await getRLSData();
   const { students, groups, exams, payments, attendance, grades } = d;
 
@@ -98,7 +100,13 @@ export async function getDashboardData(): Promise<DashboardData> {
   const activeStudents = students.filter((s: any) => s.status === "ACTIVE").length;
   const totalGroups = groups.filter((g: any) => g.status === "ACTIVE").length;
 
-  const pay = await getPaymentMetrics();
+  // نطاق الرسم البياني + عدد شهور التحصيل حسب الفترة المختارة.
+  const chartRange = period === "year" ? 12 : 6;
+  const collectedPeriodMonths = period === "month" ? 1 : period === "quarter" ? 3 : 12;
+  const pay = await getPaymentMetrics(chartRange);
+  const collectedForPeriod = pay.revenueByMonth
+    .slice(-collectedPeriodMonths)
+    .reduce((s, r) => s + r.collected, 0);
 
   const cutoff = Date.now() - 30 * 86_400_000;
   const recentAtt = attendance.filter((a: any) => +new Date(a.recorded_at) >= cutoff);
@@ -189,6 +197,8 @@ export async function getDashboardData(): Promise<DashboardData> {
     totalStudents,
     activeStudents,
     totalGroups,
+    period,
+    collectedForPeriod,
     monthlyRevenue: pay.monthlyRevenue,
     collectedThisMonth: pay.collectedThisMonth,
     outstanding: pay.outstanding,

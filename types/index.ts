@@ -340,7 +340,11 @@ export interface DashboardMetrics {
   gradePerformance: { level: string; count: number }[];
 }
 
+export type DashboardPeriod = "month" | "quarter" | "year";
+
 export interface DashboardData extends DashboardMetrics {
+  period: DashboardPeriod;
+  collectedForPeriod: number;
   upcomingLessons: (Lesson & { group?: Group; teacher?: Teacher })[];
   recentPayments: (Payment & { student?: Student })[];
   outstandingStudents: (Payment & { student?: Student })[];

@@ -9,7 +9,6 @@ import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import {
   isWhatsAppConfigured,
   normalizePhoneE164,
-  sendWhatsAppText,
   sendWhatsAppTemplate,
 } from "@/lib/whatsapp";
 
@@ -54,10 +53,13 @@ async function getStudentAndParent(
 
 /**
  * إرسال إشعار واتساب لولي أمر طالب واحد.
- * لو فيه قالب معتمد مضبوط (WHATNOTIFICATION_TEMPLATE) يبعت النص الكامل
- * كمتغير داخل القالب. وإلا يبعت نصًا حرًا (يعمل في نافذة 24 ساعة).
+ * يبعت القالب الافتراضي (academy_notice) باسم الطالب كمتحول {{student_name}}.
+ * القالب ده شامل لكل الإشعارات (درجات/مصاريف/غياب) — واتساب يبعت "تنبيه"
+ * للولي بالدخول للتطبيق للاطلاع على التفاصيل.
  *
- * القالب الموصى به (UTILITY) نصّه:  إشعار من أكاديميتي:\n{{1}}
+ * القالب الموصى به (Utility، عربي):
+ *   لديكم إشعار جديد بخصوص ابنكم {{student_name}} على منصة أكاديميتي.
+ *   برجاء الدخول إلى التطبيق للاطلاع على التفاصيل.
  */
 export async function notifyParentWhatsApp(
   studentId: string,
@@ -66,22 +68,16 @@ export async function notifyParentWhatsApp(
 ): Promise<void> {
   if (!isWhatsAppConfigured()) return;
   try {
-    const { parentPhone } = await getStudentAndParent(studentId);
+    const { parentPhone, studentName } = await getStudentAndParent(studentId);
     if (!parentPhone) return;
     const number = normalizePhoneE164(parentPhone);
     if (!number) return;
 
-    const message = `${title}\n${body}`;
-    const tmpl = defaultTemplate();
-    if (tmpl) {
-      // ابعت القالب مع نص الإشعار كمتحول {{1}} في نص القالب.
-      await sendWhatsAppTemplate(parentPhone, tmpl, defaultLang(), [
-        { type: "body", parameters: [{ type: "text", text: message }] },
-      ]);
-    } else {
-      // نص حر — يعمل فقط إن راسل ولي الأمر الأكاديمية خلال آخر 24 ساعة.
-      await sendWhatsAppText(parentPhone, message);
-    }
+    const tmpl = defaultTemplate() || "academy_notice";
+    // ابعت اسم الطالب كمتغير {{1}} داخل القالب (المتغيرات موضعية).
+    await sendWhatsAppTemplate(parentPhone, tmpl, defaultLang(), [
+      { type: "body", parameters: [{ type: "text", text: studentName || "ابنكم" }] },
+    ]);
   } catch {
     /* silent — best-effort */
   }

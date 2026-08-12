@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import {
   CalendarCheck,
@@ -102,7 +103,6 @@ export default async function StudentProfilePage({
         <EditStudentDialog student={detail} parents={parents} groups={groups} />
       </PageHeader>
 
-      {/* Header card */}
       <Card className="overflow-hidden">
         <div className="h-20 bg-gradient-to-r from-brand-500 to-brand-700" />
         <CardContent className="-mt-12 p-6">
@@ -131,7 +131,7 @@ export default async function StudentProfilePage({
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <InfoItem icon={User} label="Parent" value={detail.parent ? `${detail.parent.first_name} ${detail.parent.last_name}` : "Not linked"} />
+            <InfoItem icon={User} label="Parent" value={detail.parent ? <Link href={`/parents/${detail.parent.id}`} className="text-primary hover:underline">{detail.parent.first_name} {detail.parent.last_name}</Link> : "Not linked"} />
             <InfoItem icon={School} label="School" value={detail.school || "—"} />
             <InfoItem icon={Phone} label="Phone" value={detail.phone || "—"} />
             <InfoItem icon={Mail} label="Email" value={detail.email || "—"} />
@@ -139,7 +139,6 @@ export default async function StudentProfilePage({
         </CardContent>
       </Card>
 
-      {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <MiniStat label="Attendance" value={`${stats.attendanceRate}%`} icon={CalendarCheck} />
         <MiniStat label="Avg. grade" value={`${stats.averageGrade}%`} icon={GraduationCap} />
@@ -374,7 +373,7 @@ export default async function StudentProfilePage({
   );
 }
 
-function InfoItem({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
+function InfoItem({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: ReactNode }) {
   return (
     <div className="flex items-center gap-2.5">
       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">

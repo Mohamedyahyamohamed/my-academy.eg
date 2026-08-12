@@ -19,6 +19,12 @@ import type { NavSection } from "@/lib/nav";
 export function MobileNav({ sections }: { sections: NavSection[] }) {
   const pathname = usePathname();
   const [open, setOpen] = React.useState(false);
+  const [lang, setLang] = React.useState<"ar" | "en">("ar");
+
+  React.useEffect(() => {
+    const stored = localStorage.getItem("ma_lang") || "ar";
+    setLang(stored as "ar" | "en");
+  }, []);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -36,9 +42,9 @@ export function MobileNav({ sections }: { sections: NavSection[] }) {
         <nav className="space-y-6 overflow-y-auto px-3 py-4">
           {sections.map((section, si) => (
             <div key={si} className="space-y-1">
-              {section.title && (
+              {(section.titleAr || section.titleEn) && (
                 <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-                  {section.title}
+                  {lang === "ar" ? section.titleAr : section.titleEn}
                 </p>
               )}
               {section.items.map((item) => {
@@ -59,7 +65,7 @@ export function MobileNav({ sections }: { sections: NavSection[] }) {
                     )}
                   >
                     <Icon className="h-[18px] w-[18px]" />
-                    {item.title}
+                    {lang === "ar" ? item.titleAr : item.titleEn}
                   </Link>
                 );
               })}

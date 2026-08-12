@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/shared/logo";
@@ -14,6 +15,12 @@ interface SidebarProps {
 /** Desktop sidebar — renders the role-based navigation. */
 export function Sidebar({ sections, academyName }: SidebarProps) {
   const pathname = usePathname();
+  const [lang, setLang] = React.useState<"ar" | "en">("ar");
+
+  React.useEffect(() => {
+    const stored = localStorage.getItem("ma_lang") || "ar";
+    setLang(stored as "ar" | "en");
+  }, []);
 
   return (
     <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
@@ -26,9 +33,9 @@ export function Sidebar({ sections, academyName }: SidebarProps) {
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
         {sections.map((section, si) => (
           <div key={si} className="space-y-1">
-            {section.title && (
+            {(section.titleAr || section.titleEn) && (
               <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-                {section.title}
+                {lang === "ar" ? section.titleAr : section.titleEn}
               </p>
             )}
             {section.items.map((item) => {
@@ -56,7 +63,7 @@ export function Sidebar({ sections, academyName }: SidebarProps) {
                         : "text-muted-foreground group-hover:text-foreground",
                     )}
                   />
-                  {item.title}
+                  {lang === "ar" ? item.titleAr : item.titleEn}
                 </Link>
               );
             })}
@@ -64,11 +71,8 @@ export function Sidebar({ sections, academyName }: SidebarProps) {
         ))}
       </nav>
 
-      <div className="border-t border-sidebar-border px-5 py-3">
-        <p className="truncate text-xs font-medium text-foreground">
-          {academyName}
-        </p>
-        <p className="text-xs text-muted-foreground">Academy workspace</p>
+      <div className="border-t border-sidebar-border px-4 py-3">
+        <p className="truncate text-xs text-muted-foreground">{academyName}</p>
       </div>
     </aside>
   );

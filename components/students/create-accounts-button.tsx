@@ -5,7 +5,7 @@ import { UserCog, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { createMissingStudentAccountsAction } from "@/app/actions/students";
-import { createMissingParentAccountsAction } from "@/app/actions/parents";
+import { fixParentAccountsAction } from "@/app/actions/parents";
 import { STUDENT_DEFAULT_PASSWORD, PARENT_DEFAULT_PASSWORD } from "@/lib/auth";
 
 export function CreateAccountsButton() {
@@ -34,12 +34,12 @@ export function CreateAccountsButton() {
   const createParents = async () => {
     setParentLoading(true);
     try {
-      const res = await createMissingParentAccountsAction();
+      const res = await fixParentAccountsAction();
       if (res.ok === false) {
         toast.error(res.error ?? "فشل");
       } else {
         toast.success(
-          `تم إنشاء ${res.created} حساب ولي أمر ✅ — الباسورد: ${PARENT_DEFAULT_PASSWORD}`,
+          `تم تحديث ${res.updated ?? 0} + إنشاء ${res.created ?? 0} حساب ولي أمر ✅ — الباسورد: ${PARENT_DEFAULT_PASSWORD}`,
           { duration: 10000 },
         );
       }

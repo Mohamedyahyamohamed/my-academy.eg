@@ -30,11 +30,17 @@ export async function createParentAction(input: {
   return { ok: true, parent: p };
 }
 
+function parentEmail(p: { first_name: string; last_name: string; id: string }): string {
+  const namePart = `${p.first_name}.${p.last_name}`.replace(/[^a-zA-Z0-9.]/g, "").toLowerCase();
+  return (namePart || `p${p.id.slice(2, 8)}`) + `.${p.id.slice(0, 4)}@parent.local`;
+}
+
 /**
- * ينشئ حسابات دخول لأولياء الأمور اللي ممعاهومش حساب (profile_id = null).
- * بيستخدم الإيميل الموجود على سجل ولي الأمر (p.xxx@parent.local) + باسورد افتراضي.
+ * يصلّح كل حسابات أولياء الأمور: الإيميلات بالاسم (زي الطلاب).
+ * - اللي عنده حساب بالفعل → يحدّث إيميله بالاسم.
+ * - اللي ممعاهومش → ينشئله حساب بالإيميل ده.
  */
-export async function createMissingParentAccountsAction() {
+export async function fixParentAccountsAction() {
   requireRole("ADMIN");
   const aid = currentAcademyId();
   const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
@@ -44,35 +50,42 @@ export async function createMissingParentAccountsAction() {
   const { data: parents } = await client
     .from("parents")
     .select("id,first_name,last_name,email,profile_id")
-    .eq("academy_id", aid)
-    .is("profile_id", null);
+    .eq("academy_id", aid);
 
+  let updated = 0;
   let created = 0;
   const errors: string[] = [];
 
   for (const p of parents ?? []) {
-    const { data: aData, error: aErr } = await client.auth.admin.createUser({
-      email: p.email,
-      password: PARENT_DEFAULT_PASSWORD,
-      email_confirm: true,
-      user_metadata: { full_name: `${p.first_name} ${p.last_name}`, role: "PARENT" },
-    });
-    if (aErr) {
-      errors.push(`${p.first_name} ${p.last_name}: ${aErr.message}`);
-      continue;
+    const nameEmail = parentEmail(p);
+
+    if (p.profile_id) {
+      // عندة حساب → حدّث الإيميل
+      const { error: authErr } = await client.auth.admin.updateUserById(p.profile_id, {
+        email: nameEmail,
+      });
+      if (authErr) { errors.push(`${p.first_name} ${p.last_name}: ${authErr.message}`); continue; }
+      await client.from("parents").update({ email: nameEmail }).eq("id", p.id);
+      await client.from("profiles").update({ email: nameEmail }).eq("id", p.profile_id);
+      updated++;
+    } else {
+      // ممعاهومش → أنشئ حساب بالإيميل الجديد
+      const { data: aData, error: aErr } = await client.auth.admin.createUser({
+        email: nameEmail,
+        password: PARENT_DEFAULT_PASSWORD,
+        email_confirm: true,
+        user_metadata: { full_name: `${p.first_name} ${p.last_name}`, role: "PARENT" },
+      });
+      if (aErr) { errors.push(`${p.first_name} ${p.last_name}: ${aErr.message}`); continue; }
+      await client.from("profiles").upsert({
+        id: aData.user!.id, academy_id: aid, email: nameEmail, role: "PARENT",
+        full_name: `${p.first_name} ${p.last_name}`, is_active: true,
+      });
+      await client.from("parents").update({ email: nameEmail, profile_id: aData.user!.id }).eq("id", p.id);
+      created++;
     }
-    await client.from("profiles").upsert({
-      id: aData.user!.id,
-      academy_id: aid,
-      email: p.email,
-      role: "PARENT",
-      full_name: `${p.first_name} ${p.last_name}`,
-      is_active: true,
-    });
-    await client.from("parents").update({ profile_id: aData.user!.id }).eq("id", p.id);
-    created++;
   }
 
   revalidatePath("/students");
-  return { ok: true, created, errors };
+  return { ok: true, updated, created, errors };
 }

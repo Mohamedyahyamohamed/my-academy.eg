@@ -10,12 +10,7 @@ import { AddStudentDialog, EditStudentDialog } from "@/components/students/stude
 import { CreateAccountsButton } from "@/components/students/create-accounts-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -90,7 +85,6 @@ export default async function StudentsPage({
         />
       ) : (
         <>
-          {/* Desktop table */}
           <div className="card-surface hidden overflow-hidden md:block">
             <Table>
               <TableHeader>
@@ -110,19 +104,21 @@ export default async function StudentsPage({
                       <Link href={`/students/${s.id}`} className="flex items-center gap-3">
                         <StudentAvatar name={`${s.first_name} ${s.last_name}`} size="sm" />
                         <div className="min-w-0">
-                          <p className="truncate font-medium">
-                            {s.first_name} {s.last_name}
-                          </p>
+                          <p className="truncate font-medium">{s.first_name} {s.last_name}</p>
                           <p className="truncate text-xs text-muted-foreground">
                             {s.phone || s.email || s.school || "—"}
                           </p>
                         </div>
                       </Link>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {s.parent
-                        ? `${s.parent.first_name} ${s.parent.last_name}`
-                        : "—"}
+                    <TableCell className="text-sm">
+                      {s.parent ? (
+                        <Link href={`/parents/${s.parent.id}`} className="font-medium text-primary hover:underline">
+                          {s.parent.first_name} {s.parent.last_name}
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm">{s.grade || "—"}</TableCell>
                     <TableCell>
@@ -142,15 +138,11 @@ export default async function StudentsPage({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <StudentStatusBadge status={s.status} />
-                    </TableCell>
+                    <TableCell><StudentStatusBadge status={s.status} /></TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button asChild variant="ghost" size="icon-sm" aria-label="View">
-                          <Link href={`/students/${s.id}`}>
-                            <Eye className="h-4 w-4" />
-                          </Link>
+                          <Link href={`/students/${s.id}`}><Eye className="h-4 w-4" /></Link>
                         </Button>
                         <EditStudentDialog student={s} parents={parents} groups={groups} />
                         {s.status !== "ARCHIVED" && (
@@ -175,7 +167,6 @@ export default async function StudentsPage({
             </Table>
           </div>
 
-          {/* Mobile cards */}
           <div className="space-y-3 md:hidden">
             {result.items.map((s) => (
               <Link key={s.id} href={`/students/${s.id}`} className="card-surface block p-4">
@@ -183,14 +174,10 @@ export default async function StudentsPage({
                   <StudentAvatar name={`${s.first_name} ${s.last_name}`} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="truncate font-medium">
-                        {s.first_name} {s.last_name}
-                      </p>
+                      <p className="truncate font-medium">{s.first_name} {s.last_name}</p>
                       <StudentStatusBadge status={s.status} />
                     </div>
-                    <p className="truncate text-sm text-muted-foreground">
-                      {s.grade || s.school || "—"}
-                    </p>
+                    <p className="truncate text-sm text-muted-foreground">{s.grade || s.school || "—"}</p>
                     {s.parent && (
                       <p className="truncate text-xs text-muted-foreground">
                         Parent: {s.parent.first_name} {s.parent.last_name}

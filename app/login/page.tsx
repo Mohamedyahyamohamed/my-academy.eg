@@ -11,14 +11,14 @@ export default function LoginPage() {
   if (user) redirect(roleHome(user.role));
 
   const features = [
-    "Students, groups & attendance in one place",
-    "Payments, invoices & outstanding tracking",
-    "Grades, homework & progress analytics",
-    "Role-based portals for teachers, parents & students",
+    "الطلاب والمجموعات والحضور في مكان واحد",
+    "المصاريف والفواتير ومتابعة المتأخرات",
+    "الدرجات والواجبات وتحليل التقدّم",
+    "بوابات للمدرّسين وأولياء الأمور والطلاب",
   ];
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen" dir="rtl">
       {/* Brand panel */}
       <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 p-12 text-white lg:flex">
         <div
@@ -36,7 +36,7 @@ export default function LoginPage() {
           <h2 className="text-3xl font-semibold leading-tight">
             {APP_CONFIG.tagline}.
             <br />
-            Beautifully simple academy management.
+            إدارة أكاديميتك ببساطة وأناقة.
           </h2>
           <ul className="space-y-3">
             {features.map((f) => (
@@ -50,7 +50,7 @@ export default function LoginPage() {
           </ul>
         </div>
         <p className="relative text-xs text-white/60">
-          © {new Date().getFullYear()} {APP_CONFIG.name}. All rights reserved.
+          © {new Date().getFullYear()} {APP_CONFIG.name}. جميع الحقوق محفوظة.
         </p>
       </div>
 
@@ -61,16 +61,16 @@ export default function LoginPage() {
             <Logo />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">
-            Welcome back
+            أهلاً بعودتك 👋
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Sign in to your {APP_CONFIG.name} account to continue.
+            سجّل دخولك لحساب {APP_CONFIG.name} للمتابعة.
           </p>
           <div className="mt-6">
             <LoginForm />
           </div>
           <p className="mt-6 text-center text-xs text-muted-foreground">
-            Demo password for all accounts:{" "}
+            كلمة المرور التجريبية لكل الحسابات:{" "}
             <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">
               demo1234
             </code>

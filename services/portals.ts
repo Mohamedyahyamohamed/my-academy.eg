@@ -195,12 +195,26 @@ export async function getParentDashboard(user: SessionUser): Promise<ParentDashb
   if (isSupabaseConfigured()) {
     const { createServerSupabaseClient } = await import("@/lib/supabase/server");
     const client = createServerSupabaseClient();
-    // ولي الأمر
+    // ولي الأمر (بواسطة profile_id — مايكسرش الـ query)
     const { data: parent } = await client
       .from("parents")
       .select("*")
-      .or(`profile_id.eq.${user.id},email.ilike.${user.email}`)
+      .eq("profile_id", user.id)
       .maybeSingle();
+    if (!parent) {
+      const { data: parentByEmail } = await client
+        .from("parents")
+        .select("*")
+        .eq("email", user.email)
+        .maybeSingle();
+      if (parentByEmail) {
+        const { data: children } = await client.from("students").select("*").eq("parent_id", parentByEmail.id);
+        const childrenList = (children ?? []) as any[];
+        const summaries: Record<string, ChildSummary> = {};
+        for (const c of childrenList) summaries[c.id] = await childSummary(c.id);
+        return { children: childrenList, summaries };
+      }
+    }
     if (parent) {
       const { data: children } = await client
         .from("students")

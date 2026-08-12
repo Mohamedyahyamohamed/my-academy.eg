@@ -1,4 +1,4 @@
-import { Building2, Users, GraduationCap, Wallet, Bell, Shield } from "lucide-react";
+import { Building2, Users, GraduationCap, Wallet, Bell, Shield, Lock } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,14 +7,15 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { RoleBadge } from "@/components/shared/badges";
 import { AcademySettingsForm, CoursesManager } from "@/components/settings/settings-forms";
 import { CreateUserDialog } from "@/components/settings/create-user-dialog";
-import { MiscService, requireRole } from "@/services";
+import { ChangePasswordForm } from "@/components/settings/change-password";
+import { MiscService, requireUser } from "@/services";
 import { initials } from "@/lib/utils";
 import { PAYMENT_METHODS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  requireRole("ADMIN");
+  const user = requireUser();
   const academy = MiscService.getAcademy();
   const courses = await MiscService.listCourses();
   const users = MiscService.listProfiles();
@@ -25,11 +26,12 @@ export default async function SettingsPage() {
 
       <Tabs defaultValue="academy">
         <TabsList className="w-full justify-start overflow-x-auto">
-          <TabsTrigger value="academy"><Building2 className="h-4 w-4" /> Academy</TabsTrigger>
-          <TabsTrigger value="users"><Users className="h-4 w-4" /> Users</TabsTrigger>
-          <TabsTrigger value="courses"><GraduationCap className="h-4 w-4" /> Courses</TabsTrigger>
-          <TabsTrigger value="payments"><Wallet className="h-4 w-4" /> Payments</TabsTrigger>
-          <TabsTrigger value="roles"><Shield className="h-4 w-4" /> Roles</TabsTrigger>
+          <TabsTrigger value="academy"><Building2 className="h-4 w-4" /> الأكاديمية</TabsTrigger>
+          <TabsTrigger value="users"><Users className="h-4 w-4" /> المستخدمون</TabsTrigger>
+          <TabsTrigger value="courses"><GraduationCap className="h-4 w-4" /> المواد</TabsTrigger>
+          <TabsTrigger value="payments"><Wallet className="h-4 w-4" /> الدفع</TabsTrigger>
+          <TabsTrigger value="security"><Lock className="h-4 w-4" /> الأمان</TabsTrigger>
+          <TabsTrigger value="roles"><Shield className="h-4 w-4" /> الأدوار</TabsTrigger>
         </TabsList>
 
         <TabsContent value="academy">
@@ -114,6 +116,10 @@ export default async function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="security">
+          <ChangePasswordForm />
         </TabsContent>
 
         <TabsContent value="roles">

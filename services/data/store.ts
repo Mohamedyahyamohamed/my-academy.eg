@@ -37,22 +37,17 @@ export const collections = () => db.data;
 /* Supabase write-through cache                                       */
 /* ----------------------------------------------------------------- */
 
-let loadPromise: Promise<void> | null = null;
-
 /**
- * Ensure the in-memory store has been hydrated from Supabase.
- * Idempotent — safe to await on every request.
+ * Ensure the in-memory store is hydrated from Supabase.
+ * ALWAYS re-hydrates on every request — guarantees fresh data on Vercel.
  */
 export async function ensureStoreLoaded(): Promise<void> {
-  if (!isSupabaseConfigured() || loadPromise) return loadPromise ?? Promise.resolve();
-  loadPromise = hydrateFromSupabase();
-  await loadPromise;
+  if (!isSupabaseConfigured()) return;
+  await hydrateFromSupabase();
 }
 
-/** Force a fresh re-hydrate from Supabase (e.g. after a new academy signs up). */
-export function invalidateStore() {
-  loadPromise = null;
-}
+/** No-op (always re-hydrate now). Kept for backward compat. */
+export function invalidateStore() {}
 
 async function hydrateFromSupabase(): Promise<void> {
   try {

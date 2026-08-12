@@ -1,7 +1,7 @@
 "use server";
 import { audit } from "@/services/audit";
 
-import { logout as doLogout, loginAsDemo, requestPasswordReset } from "@/services/session";
+import { logout as doLogout, loginAsDemo, requestPasswordReset, requireUser } from "@/services/session";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 
@@ -25,6 +25,28 @@ export async function requestPasswordResetAction(email: string) {
     void sendPasswordResetEmail(email, res.user.full_name);
   }
   return res;
+}
+
+/**
+ * تغيير الباسورد — للمستخدم الحالي.
+ */
+export async function changePasswordAction(currentPassword: string, newPassword: string) {
+  const user = requireUser();
+  if (!newPassword || newPassword.length < 6) {
+    return { ok: false, error: "الباسورد الجديد لازم 6 حروف على الأقل." };
+  }
+  try {
+    const { createServerSupabaseClient } = await import("@/lib/supabase/server");
+    const client = createServerSupabaseClient();
+    const { error } = await client.auth.updateUser({ password: newPassword });
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+    void audit({ action: "auth.password_change" });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: (e as Error)?.message ?? "خطأ غير متوقع" };
+  }
 }
 
 // Audit all actions in this file.

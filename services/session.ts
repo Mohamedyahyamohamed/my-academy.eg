@@ -137,6 +137,13 @@ export async function loginAsDemo(email: string): Promise<LoginResult> {
 
 /** Clear the session. */
 export async function logout(): Promise<void> {
+  try {
+    if (isSupabaseConfigured()) {
+      const { createServerSupabaseClient } = await import("@/lib/supabase/server");
+      const client = createServerSupabaseClient();
+      await client.auth.signOut();
+    }
+  } catch {}
   cookies().delete(SESSION_COOKIE);
 }
 

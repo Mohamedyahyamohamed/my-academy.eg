@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Check } from "lucide-react";
 import { LoginForm } from "@/components/auth/login-form";
 import { Logo } from "@/components/shared/logo";
+import { LanguageToggle } from "@/components/layout/language-toggle";
 import { APP_CONFIG } from "@/lib/constants";
 import { getCurrentUser, roleHome } from "@/services";
 import { redirect } from "next/navigation";
@@ -55,7 +56,10 @@ export default function LoginPage() {
       </div>
 
       {/* Form panel */}
-      <div className="flex w-full flex-col items-center justify-center px-6 py-12 lg:w-1/2">
+      <div className="relative flex w-full flex-col items-center justify-center px-6 py-12 lg:w-1/2">
+        <div className="absolute right-4 top-4">
+          <LanguageToggle />
+        </div>
         <div className="w-full max-w-sm">
           <div className="mb-8 lg:hidden">
             <Logo />

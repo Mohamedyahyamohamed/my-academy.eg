@@ -81,7 +81,7 @@ export default async function GroupDetailPage({
         ]}
       >
         <Button asChild variant="outline">
-          <Link href="/groups"><ArrowLeft className="h-4 w-4" /> Back</Link>
+          <Link href="/groups"><ArrowLeft className="h-4 w-4" /> رجوع</Link>
         </Button>
         <EditGroupDialog
           group={detail}
@@ -112,7 +112,7 @@ export default async function GroupDetailPage({
         {/* Students */}
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">Enrolled students</CardTitle>
+            <CardTitle className="text-base">الطلاب المسجّلون</CardTitle>
             <AddStudentToGroupDialog groupId={params.id} availableStudents={availableStudents} />
           </CardHeader>
           <CardContent className="p-0">
@@ -120,18 +120,18 @@ export default async function GroupDetailPage({
               <div className="p-5">
                 <EmptyState
                   icon={Users}
-                  title="No students enrolled"
-                  description="Add students to this group to start tracking."
+                  title="لا يوجد طلاب مسجّلون"
+                  description="أضف طلابًا لهذه المجموعة لبدء المتابعة."
                 />
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>Grade</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>الطالب</TableHead>
+                    <TableHead>الصف الدراسي</TableHead>
+                    <TableHead>الحالة</TableHead>
+                    <TableHead className="text-left">إجراءات</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -145,16 +145,16 @@ export default async function GroupDetailPage({
                       </TableCell>
                       <TableCell className="text-sm">{s.grade || "—"}</TableCell>
                       <TableCell><StudentStatusBadge status={s.status} /></TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-left">
                         <ConfirmDialog
                           trigger={
-                            <Button variant="ghost" size="icon-sm" aria-label="Remove">
+                            <Button variant="ghost" size="icon-sm" aria-label="إزالة">
                               <UserMinus className="h-4 w-4" />
                             </Button>
                           }
-                          title="Remove student?"
-                          description={`Remove ${s.first_name} ${s.last_name} from this group?`}
-                          confirmLabel="Remove"
+                          title="إزالة الطالب؟"
+                          description={`إزالة ${s.first_name} ${s.last_name} من هذه المجموعة؟`}
+                          confirmLabel="إزالة"
                           destructive
                           onConfirm={removeStudentFromGroupAction.bind(null, params.id, s.id)}
                         />
@@ -169,22 +169,22 @@ export default async function GroupDetailPage({
 
         {/* Schedule + info */}
         <Card>
-          <CardHeader><CardTitle className="text-base">Details</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">التفاصيل</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Row label="Course" value={detail.course?.name ?? "—"} />
-            <Row label="Teacher" value={detail.teacher ? `${detail.teacher.first_name} ${detail.teacher.last_name}` : "—"} />
-            <Row label="Schedule" value={detail.schedule} />
-            <Row label="Room" value={detail.room ?? "—"} />
+            <Row label="المادة" value={detail.course?.name ?? "—"} />
+            <Row label="المدرّس" value={detail.teacher ? `${detail.teacher.first_name} ${detail.teacher.last_name}` : "—"} />
+            <Row label="الجدول" value={detail.schedule} />
+            <Row label="القاعة" value={detail.room ?? "—"} />
             <Row label='الرسوم الشهرية' value={formatCurrency(detail.monthly_fee)} />
             <div className="flex flex-wrap gap-2 pt-1">
               <Button asChild className="flex-1" variant="soft">
                 <Link href={`/attendance?group=${params.id}`}>
-                  <CalendarCheck className="h-4 w-4" /> Take attendance
+                  <CalendarCheck className="h-4 w-4" /> تسجيل الحضور
                 </Link>
               </Button>
               <Button asChild className="flex-1" variant="outline">
                 <Link href={`/lessons/new?group=${params.id}`}>
-                  <Plus className="h-4 w-4" /> Create lesson
+                  <Plus className="h-4 w-4" /> إنشاء حصة
                 </Link>
               </Button>
             </div>
@@ -194,8 +194,8 @@ export default async function GroupDetailPage({
         {/* Assistants */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Assistants</CardTitle>
-            <p className="text-xs text-muted-foreground">Co-teachers who can access this group.</p>
+            <CardTitle className="text-base">المساعدون</CardTitle>
+            <p className="text-xs text-muted-foreground">مدرّسون مشاركون يمكنهم الوصول إلى هذه المجموعة.</p>
           </CardHeader>
           <CardContent>
             <AssistantsManager
@@ -216,24 +216,24 @@ export default async function GroupDetailPage({
       {/* Lessons */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base">Recent lessons</CardTitle>
+          <CardTitle className="text-base">الحصص الأخيرة</CardTitle>
           <Button asChild variant="ghost" size="sm">
-            <Link href={`/lessons?group=${params.id}`}>View all</Link>
+            <Link href={`/lessons?group=${params.id}`}>عرض الكل</Link>
           </Button>
         </CardHeader>
         <CardContent className="p-0">
           {detail.lessons.length === 0 ? (
             <div className="p-5">
-              <EmptyState icon={CalendarDays} title="مفيش حصص بعد" description="Create your first lesson for this group." />
+              <EmptyState icon={CalendarDays} title="لا توجد حصص بعد" description="أنشئ أول حصة لهذه المجموعة." />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Topic</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>التاريخ</TableHead>
+                  <TableHead>الموضوع</TableHead>
+                  <TableHead>الوقت</TableHead>
+                  <TableHead>الحالة</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -246,7 +246,7 @@ export default async function GroupDetailPage({
                     <TableCell className="text-sm text-muted-foreground">{l.start_time} – {l.end_time}</TableCell>
                     <TableCell>
                       <Badge variant={l.attendance_taken ? "success" : "outline"}>
-                        {l.attendance_taken ? "Attendance taken" : "معلّق"}
+                        {l.attendance_taken ? "تم تسجيل الحضور" : "معلّق"}
                       </Badge>
                     </TableCell>
                   </TableRow>

@@ -48,28 +48,28 @@ export default async function PaymentsPage({
     <div className="space-y-6">
       <PageHeader
         title="المصاريف"
-        description="Track tuition fees, record payments and follow up on outstanding balances."
+        description="تابع المصاريف المدرسية، سجّل المدفوعات، وتابع المتأخرات."
       >
         <CreatePaymentDialog students={students} groups={groups} />
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Collected (this month)" value={formatCurrency(metrics.collectedThisMonth)} icon={Banknote} accent="success" />
-        <StatCard label="Billed (this month)" value={formatCurrency(metrics.monthlyRevenue)} icon={Wallet} accent="primary" />
-        <StatCard label='المتبقي' value={formatCurrency(metrics.outstanding)} icon={TrendingDown} accent="warning" />
+        <StatCard label="المحصّل (الشهر الحالي)" value={formatCurrency(metrics.collectedThisMonth)} icon={Banknote} accent="success" />
+        <StatCard label="المستحق (الشهر الحالي)" value={formatCurrency(metrics.monthlyRevenue)} icon={Wallet} accent="primary" />
+        <StatCard label="المتبقي (المتأخرات)" value={formatCurrency(metrics.outstanding)} icon={TrendingDown} accent="warning" />
       </div>
 
       <div className="card-surface p-4">
         <ToolbarRoot>
-          <ToolbarSearch placeholder="Search by student name…" />
+          <ToolbarSearch placeholder="ابحث باسم الطالب…" />
           <ToolbarSelect paramKey="status" label="تصفية بالحالة" options={[
             { value: "ALL", label: "كل الحالات" },
             { value: "PAID", label: "مدفوع" },
-            { value: "PARTIAL", label: "Partially paid" },
+            { value: "PARTIAL", label: "مدفوع جزئيًا" },
             { value: "UNPAID", label: "غير مدفوع" },
           ]} />
-          <ToolbarSelect paramKey="month" label="Filter by month" options={[
-            { value: "ALL", label: "All months" },
+          <ToolbarSelect paramKey="month" label="تصفية بالشهر" options={[
+            { value: "ALL", label: "كل الشهور" },
             ...months.map((m) => ({ value: m, label: m })),
           ]} />
         </ToolbarRoot>
@@ -78,8 +78,8 @@ export default async function PaymentsPage({
       {result.items.length === 0 ? (
         <EmptyState
           icon={Wallet}
-          title="No payments found"
-          description="Add a payment record to start tracking tuition."
+          title="لا توجد مدفوعات بعد"
+          description="أضف سجل دفعة لبدء تتبّع المصاريف."
           action={<CreatePaymentDialog students={students} groups={groups} />}
         />
       ) : (
@@ -89,13 +89,13 @@ export default async function PaymentsPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Month</TableHead>
-                  <TableHead>Due</TableHead>
-                  <TableHead>Paid</TableHead>
-                  <TableHead>Remaining</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  <TableHead>الطالب</TableHead>
+                  <TableHead>الشهر</TableHead>
+                  <TableHead>المستحق</TableHead>
+                  <TableHead>المدفوع</TableHead>
+                  <TableHead>المتبقي</TableHead>
+                  <TableHead>الحالة</TableHead>
+                  <TableHead className="text-left">إجراء</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -112,7 +112,7 @@ export default async function PaymentsPage({
                     <TableCell>{formatCurrency(p.amount_paid)}</TableCell>
                     <TableCell className={p.remaining > 0 ? "font-medium text-rose-600" : ""}>{formatCurrency(p.remaining)}</TableCell>
                     <TableCell><PaymentStatusBadge status={p.status} /></TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-left">
                       <RecordPaymentDialog payment={p} students={students} />
                     </TableCell>
                   </TableRow>
@@ -137,7 +137,7 @@ export default async function PaymentsPage({
                     <PaymentStatusBadge status={p.status} />
                   </div>
                   <div className="mt-3 flex items-center justify-between border-t pt-3 text-sm">
-                    <span className="text-muted-foreground">Remaining: <span className="font-medium text-rose-600">{formatCurrency(p.remaining)}</span></span>
+                    <span className="text-muted-foreground">المتبقي: <span className="font-medium text-rose-600">{formatCurrency(p.remaining)}</span></span>
                     <RecordPaymentDialog payment={p} students={students} />
                   </div>
                 </CardContent>

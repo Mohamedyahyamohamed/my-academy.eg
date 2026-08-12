@@ -46,11 +46,11 @@ export default async function LessonDetailPage({
         breadcrumbs={[{ label: "الحصص", href: "/lessons" }, { label: lesson.topic }]}
       >
         <Button asChild variant="outline">
-          <Link href="/lessons"><ArrowLeft className="h-4 w-4" /> Back</Link>
+          <Link href="/lessons"><ArrowLeft className="h-4 w-4" /> رجوع</Link>
         </Button>
         <Button asChild variant="soft">
           <Link href={`/attendance?group=${lesson.group_id}&lesson=${lesson.id}`}>
-            <CalendarCheck className="h-4 w-4" /> {lesson.attendance_taken ? "Edit attendance" : "تسجيل الحضور"}
+            <CalendarCheck className="h-4 w-4" /> {lesson.attendance_taken ? "تعديل الحضور" : "تسجيل الحضور"}
           </Link>
         </Button>
       </PageHeader>
@@ -65,22 +65,22 @@ export default async function LessonDetailPage({
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">Attendance</CardTitle>
+            <CardTitle className="text-base">الحضور</CardTitle>
             <Badge variant={lesson.attendance_taken ? "success" : "outline"}>
-              {lesson.attendance_taken ? "Recorded" : "Not taken"}
+              {lesson.attendance_taken ? "مسجّل" : "لم يُسجّل"}
             </Badge>
           </CardHeader>
           <CardContent className="p-0">
             {sheet.length === 0 ? (
               <div className="p-5">
-                <EmptyState icon={Users} title="No students in this group" description="Enroll students to track attendance." />
+                <EmptyState icon={Users} title="لا يوجد طلاب في هذه المجموعة" description="سجّل طلابًا لتتبّع الحضور." />
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>الطالب</TableHead>
+                    <TableHead>الحالة</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -105,27 +105,27 @@ export default async function LessonDetailPage({
 
         <div className="space-y-4">
           <Card>
-            <CardHeader><CardTitle className="text-base">Teaching notes</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">ملاحظات الشرح</CardTitle></CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              {lesson.notes || "No notes added for this lesson."}
+              {lesson.notes || "لا توجد ملاحظات لهذه الحصة."}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle className="flex items-center gap-2 text-base">
-                <ClipboardList className="h-4 w-4 text-primary" /> Homework
+                <ClipboardList className="h-4 w-4 text-primary" /> الواجبات
               </CardTitle>
             </CardHeader>
             <CardContent>
               {homework.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No homework linked to this lesson.</p>
+                <p className="text-sm text-muted-foreground">لا توجد واجبات مرتبطة بهذه الحصة.</p>
               ) : (
                 <div className="space-y-2">
                   {homework.map((h) => (
                     <Link key={h.id} href={`/homework`} className="block rounded-lg border border-border p-3 hover:bg-accent/50">
                       <p className="text-sm font-medium">{h.title}</p>
-                      <p className="text-xs text-muted-foreground">Due {formatDate(h.deadline)}</p>
+                      <p className="text-xs text-muted-foreground">التسليم: {formatDate(h.deadline)}</p>
                     </Link>
                   ))}
                 </div>

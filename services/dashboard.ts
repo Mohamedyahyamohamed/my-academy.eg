@@ -27,7 +27,7 @@ import { currentAcademyId } from "./session";
 
 function monthLabel(key: string) {
   const [y, m] = key.split("-").map(Number);
-  return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short" });
+  return new Date(y, m - 1, 1).toLocaleDateString("ar-EG", { month: "long" });
 }
 
 function averageGradePercent(
@@ -177,6 +177,14 @@ export async function getDashboardData(): Promise<DashboardData> {
     if (rate < 70 || overdue || lowGrade) needing.push(s);
   }
 
+  // نسبة التغيّر الحقيقية في التحصيل (الشهر الحالي مقابل الشهر السابق).
+  const months = pay.revenueByMonth;
+  const thisCollected = months[months.length - 1]?.collected ?? 0;
+  const lastCollected = months[months.length - 2]?.collected ?? 0;
+  const collectionTrend = lastCollected > 0
+    ? Math.round(((thisCollected - lastCollected) / lastCollected) * 100)
+    : 0;
+
   return {
     totalStudents,
     activeStudents,
@@ -186,7 +194,8 @@ export async function getDashboardData(): Promise<DashboardData> {
     outstanding: pay.outstanding,
     attendanceRate,
     averageGrade: averageGradePercent(grades, exams),
-    revenueByMonth: pay.revenueByMonth.map((r: any) => ({ month: monthLabel(r.month), revenue: r.revenue })),
+    collectionTrend,
+    revenueByMonth: pay.revenueByMonth.map((r: any) => ({ month: monthLabel(r.month), revenue: r.revenue, collected: r.collected })),
     studentsByCourse,
     attendanceTrend,
     gradePerformance,

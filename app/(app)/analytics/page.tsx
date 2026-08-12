@@ -17,55 +17,55 @@ export default async function AnalyticsPage() {
     <div className="space-y-6">
       <PageHeader
         title="التحليلات"
-        description="Trends and insights that answer real questions about your academy."
+        description="اتجاهات ورؤى تجيب عن أسئلة حقيقية حول أكاديميتك."
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total students" value={d.totalStudents} hint="Enrolled overall" icon={Users} accent="primary" />
-        <StatCard label="Active groups" value={d.totalGroups} icon={BarChart3} accent="info" />
-        <StatCard label="Attendance rate" value={`${d.attendanceRate}%`} icon={TrendingUp} accent="success" />
-        <StatCard label='المتبقي' value={formatCurrency(d.outstanding)} icon={Wallet} accent="warning" />
+        <StatCard label="إجمالي الطلاب" value={d.totalStudents} hint="المسجلون إجمالًا" icon={Users} accent="primary" />
+        <StatCard label="المجموعات النشطة" value={d.totalGroups} icon={BarChart3} accent="info" />
+        <StatCard label="نسبة الحضور" value={`${d.attendanceRate}%`} icon={TrendingUp} accent="success" />
+        <StatCard label="المتبقي (المتأخرات)" value={formatCurrency(d.outstanding)} icon={Wallet} accent="warning" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Student growth</CardTitle>
-            <CardDescription>Cumulative enrolled students over time</CardDescription>
+            <CardTitle className="text-base">نمو الطلاب</CardTitle>
+            <CardDescription>عدد الطلاب المسجلين تراكميًا عبر الزمن</CardDescription>
           </CardHeader>
           <CardContent><TrendArea data={a.studentGrowth} dataKey="students" xKey="month" color="#7c5cfc" /></CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Revenue: billed vs collected</CardTitle>
-            <CardDescription>Are collections keeping up with billing?</CardDescription>
+            <CardTitle className="text-base">الإيرادات: المستحق مقابل المحصّل</CardTitle>
+            <CardDescription>هل التحصيل يواكب الفوترة؟</CardDescription>
           </CardHeader>
           <CardContent>
             <GroupedBars
               data={a.monthlyRevenue}
               xKey="month"
               keys={[
-                { key: "revenue", label: "Billed", color: "#c4b5fd" },
-                { key: "collected", label: "Collected", color: "#7c5cfc" },
+                { key: "revenue", label: "المستحق", color: "#c4b5fd" },
+                { key: "collected", label: "المحصّل", color: "#7c5cfc" },
               ]}
             />
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Attendance trend</CardTitle>
-            <CardDescription>Present+late rate by month</CardDescription>
+            <CardTitle className="text-base">اتجاه الحضور</CardTitle>
+            <CardDescription>نسبة الحضور والتأخير حسب الشهر</CardDescription>
           </CardHeader>
           <CardContent><LineTrend data={a.attendanceTrend} dataKey="rate" xKey="month" color="#10b981" /></CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Average grade by course</CardTitle>
-            <CardDescription>Where are students strongest?</CardDescription>
+            <CardTitle className="text-base">متوسط الدرجات حسب المادة</CardTitle>
+            <CardDescription>أين يتفوق الطلاب أكثر؟</CardDescription>
           </CardHeader>
           <CardContent>
             {a.averageGrades.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">No grade data yet.</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">لا توجد درجات بعد.</p>
             ) : (
               <Bars data={a.averageGrades} dataKey="average" xKey="course" color="#0ea5e9" />
             )}
@@ -75,10 +75,10 @@ export default async function AnalyticsPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle className="text-base">Most popular courses</CardTitle><CardDescription>By enrollment</CardDescription></CardHeader>
+          <CardHeader><CardTitle className="text-base">أكثر المواد شهرة</CardTitle><CardDescription>حسب عدد المسجلين</CardDescription></CardHeader>
           <CardContent className="space-y-3">
             {a.popularCourses.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">No data.</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">لا توجد بيانات.</p>
             ) : (
               a.popularCourses.map((c) => {
                 const max = Math.max(...a.popularCourses.map((x) => x.students));
@@ -86,7 +86,7 @@ export default async function AnalyticsPage() {
                   <div key={c.course} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">{c.course}</span>
-                      <span className="font-medium">{c.students} students · {formatCurrency(c.revenue)}</span>
+                      <span className="font-medium">{c.students} طالب · {formatCurrency(c.revenue)}</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-muted">
                       <div className="h-full rounded-full bg-primary" style={{ width: `${(c.students / max) * 100}%` }} />
@@ -98,10 +98,10 @@ export default async function AnalyticsPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle className="text-base">Most profitable groups</CardTitle><CardDescription>By collected revenue</CardDescription></CardHeader>
+          <CardHeader><CardTitle className="text-base">أكثر المجموعات ربحًا</CardTitle><CardDescription>حسب الإيراد المحصّل</CardDescription></CardHeader>
           <CardContent className="space-y-3">
             {a.profitableGroups.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">No data.</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">لا توجد بيانات.</p>
             ) : (
               a.profitableGroups.map((g) => {
                 const max = Math.max(...a.profitableGroups.map((x) => x.revenue));

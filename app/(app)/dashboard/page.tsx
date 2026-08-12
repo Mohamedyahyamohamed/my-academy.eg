@@ -25,23 +25,38 @@ import { formatCurrency, formatDate, formatTime, initials } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
+const SEVERITY_AR: Record<string, string> = {
+  high: "مرتفع",
+  medium: "متوسط",
+  low: "منخفض",
+};
+
+const GRADE_LEVEL_AR: Record<string, string> = {
+  Excellent: "ممتاز",
+  "Very Good": "جيد جدًا",
+  Good: "جيد",
+  "Needs Improvement": "يحتاج تحسين",
+};
+
 export default async function DashboardPage() {
   requireRole("ADMIN");
   const d = await DashboardService.getDashboardData();
   const atRisk = (await atRiskStudents()).slice(0, 6);
 
+  const collectionTrend = d.collectionTrend ?? 0;
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="لوحة التحكم"
-        description="A live overview of your academy — students, revenue, attendance and performance."
+        description="نظرة حيّة على أكاديميتك — الطلاب، الإيرادات، الحضور، والأداء."
       >
         <Button asChild variant="outline">
-          <Link href="/reports">View reports</Link>
+          <Link href="/reports">عرض التقارير</Link>
         </Button>
         <Button asChild>
           <Link href="/students">
-            Add student <ArrowRight className="h-4 w-4" />
+            إضافة طالب <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>
       </PageHeader>
@@ -49,28 +64,28 @@ export default async function DashboardPage() {
       {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Total Students"
+          label="إجمالي الطلاب"
           value={d.totalStudents}
-          hint={`${d.activeStudents} active`}
+          hint={`${d.activeStudents} نشط`}
           icon={Users}
           accent="primary"
         />
         <StatCard
-          label="Active Groups"
+          label="المجموعات النشطة"
           value={d.totalGroups}
-          hint="Currently teaching"
+          hint="قيد التدريس حاليًا"
           icon={UsersRound}
           accent="info"
         />
         <StatCard
-          label="Collected (this month)"
+          label="المحصّل هذا الشهر"
           value={formatCurrency(d.collectedThisMonth)}
           icon={Wallet}
           accent="success"
-          trend={{ value: 12, positive: true, label: "vs last month" }}
+          trend={{ value: Math.abs(collectionTrend), positive: collectionTrend >= 0, label: "مقارنة بالشهر الماضي" }}
         />
         <StatCard
-          label='المتبقي'
+          label="المتبقي (المتأخرات)"
           value={formatCurrency(d.outstanding)}
           icon={TrendingDown}
           accent="warning"
@@ -80,25 +95,25 @@ export default async function DashboardPage() {
       {/* Secondary metrics */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Monthly Revenue"
+          label="الإيراد الشهري"
           value={formatCurrency(d.monthlyRevenue)}
           icon={Wallet}
           accent="primary"
         />
         <StatCard
-          label="Active Students"
+          label="الطلاب النشطون"
           value={d.activeStudents}
           icon={UserCheck}
           accent="success"
         />
         <StatCard
-          label="Attendance Rate"
+          label="نسبة الحضور"
           value={`${d.attendanceRate}%`}
           icon={CalendarCheck}
           accent="info"
         />
         <StatCard
-          label="Average Grade"
+          label="متوسط الدرجات"
           value={`${d.averageGrade}%`}
           icon={GraduationCap}
           accent="warning"
@@ -110,10 +125,10 @@ export default async function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div>
-              <CardTitle>Revenue by Month</CardTitle>
-              <CardDescription>Billed revenue over the last 6 months</CardDescription>
+              <CardTitle>الإيرادات حسب الشهر</CardTitle>
+              <CardDescription>الإيرادات المستحقة خلال آخر 6 أشهر</CardDescription>
             </div>
-            <Badge variant="secondary">EGP</Badge>
+            <Badge variant="secondary">جنيه</Badge>
           </CardHeader>
           <CardContent>
             <TrendArea
@@ -127,8 +142,8 @@ export default async function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Students by Course</CardTitle>
-            <CardDescription>Enrollment distribution</CardDescription>
+            <CardTitle>الطلاب حسب المادة</CardTitle>
+            <CardDescription>توزيع التسجيل</CardDescription>
           </CardHeader>
           <CardContent>
             <Donut
@@ -138,7 +153,7 @@ export default async function DashboardPage() {
                 color: s.color,
               }))}
               centerValue={String(d.totalStudents)}
-              centerLabel="students"
+              centerLabel="طالب"
             />
             <div className="mt-3 space-y-1.5">
               {d.studentsByCourse.map((s) => (
@@ -162,8 +177,8 @@ export default async function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Attendance Trend</CardTitle>
-            <CardDescription>Present + late rate across recent lessons</CardDescription>
+            <CardTitle>اتجاه الحضور</CardTitle>
+            <CardDescription>نسبة الحضور والتأخير عبر أحدث الحصص</CardDescription>
           </CardHeader>
           <CardContent>
             <LineTrend data={d.attendanceTrend} dataKey="rate" xKey="week" color="#10b981" />
@@ -171,8 +186,8 @@ export default async function DashboardPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Grade Performance</CardTitle>
-            <CardDescription>Distribution of recent results</CardDescription>
+            <CardTitle>أداء الدرجات</CardTitle>
+            <CardDescription>توزيع أحدث النتائج</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -190,7 +205,7 @@ export default async function DashboardPage() {
                 return (
                   <div key={g.level} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">{g.level}</span>
+                      <span className="text-muted-foreground">{GRADE_LEVEL_AR[g.level] ?? g.level}</span>
                       <span className="font-medium">{g.count}</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-muted">
@@ -212,15 +227,15 @@ export default async function DashboardPage() {
         {/* Upcoming lessons */}
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle>Upcoming Lessons</CardTitle>
+            <CardTitle>الحصص القادمة</CardTitle>
             <Button asChild variant="ghost" size="sm">
-              <Link href="/lessons">View all</Link>
+              <Link href="/lessons">عرض الكل</Link>
             </Button>
           </CardHeader>
           <CardContent className="space-y-1">
             {d.upcomingLessons.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                No upcoming lessons scheduled.
+                لا توجد حصص قادمة مجدولة.
               </p>
             ) : (
               d.upcomingLessons.map((l) => (
@@ -257,14 +272,14 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-500" /> Smart Insights — At Risk
+              <AlertTriangle className="h-4 w-4 text-amber-500" /> تنبيهات ذكية — في خطر
             </CardTitle>
-            <CardDescription>Auto-detected students who may need intervention</CardDescription>
+            <CardDescription>طلاب تم رصدهم تلقائيًا قد يحتاجون تدخلًا</CardDescription>
           </CardHeader>
           <CardContent className="space-y-1">
             {atRisk.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                No students at risk — everyone is on track 🎉
+                لا يوجد طلاب في خطر — الجميع على المسار 🎉
               </p>
             ) : (
               atRisk.map((r) => (
@@ -278,7 +293,7 @@ export default async function DashboardPage() {
                     <p className="truncate text-xs text-muted-foreground">{r.reasons.join(" · ")}</p>
                   </div>
                   <Badge variant={r.severity === "high" ? "destructive" : r.severity === "medium" ? "warning" : "secondary"}>
-                    {r.severity}
+                    {SEVERITY_AR[r.severity] ?? r.severity}
                   </Badge>
                 </Link>
               ))
@@ -291,15 +306,15 @@ export default async function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle>Recent Payments</CardTitle>
+            <CardTitle>أحدث المدفوعات</CardTitle>
             <Button asChild variant="ghost" size="sm">
-              <Link href="/payments">View all</Link>
+              <Link href="/payments">عرض الكل</Link>
             </Button>
           </CardHeader>
           <CardContent className="space-y-1">
             {d.recentPayments.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                No payments recorded yet.
+                لا توجد مدفوعات مسجلة بعد.
               </p>
             ) : (
               d.recentPayments.map((p) => (
@@ -310,7 +325,7 @@ export default async function DashboardPage() {
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="text-[11px]">
-                        {p.student ? initials(`${p.student.first_name} ${p.student.last_name}`) : "?"}
+                        {p.student ? initials(`${p.student.first_name} ${p.student.last_name}`) : "؟"}
                       </AvatarFallback>
                     </Avatar>
                     <div>
@@ -334,13 +349,13 @@ export default async function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Outstanding This Month</CardTitle>
-            <CardDescription>Unpaid or partially paid</CardDescription>
+            <CardTitle>المتأخرات هذا الشهر</CardTitle>
+            <CardDescription>غير مدفوعة أو مدفوعة جزئيًا</CardDescription>
           </CardHeader>
           <CardContent className="space-y-1">
             {d.outstandingStudents.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                No outstanding payments this month 🎉
+                لا توجد متأخرات هذا الشهر 🎉
               </p>
             ) : (
               d.outstandingStudents.map((p) => (

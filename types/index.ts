@@ -333,7 +333,8 @@ export interface DashboardMetrics {
   outstanding: number;
   attendanceRate: number;
   averageGrade: number;
-  revenueByMonth: { month: string; revenue: number }[];
+  collectionTrend: number;
+  revenueByMonth: { month: string; revenue: number; collected: number }[];
   studentsByCourse: { course: string; students: number; color: string }[];
   attendanceTrend: { week: string; rate: number }[];
   gradePerformance: { level: string; count: number }[];

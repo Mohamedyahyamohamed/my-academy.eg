@@ -2,6 +2,7 @@ import { FileText } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { ToolbarRoot, ToolbarSearch, ToolbarSelect, ToolbarActions } from "@/components/shared/toolbar";
 import { PrintButton } from "@/components/shared/print-button";
+import { ExportCSV } from "@/components/shared/export-csv";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -16,6 +17,13 @@ import { APP_CONFIG, performanceLevel, performanceColor } from "@/lib/constants"
 import { formatCurrency, formatDate, fullName, percentage } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+const GRADE_LEVEL_AR: Record<string, string> = {
+  Excellent: "ممتاز",
+  "Very Good": "جيد جدًا",
+  Good: "جيد",
+  "Needs Improvement": "يحتاج تحسين",
+};
 
 export default async function ReportsPage({
   searchParams,
@@ -42,14 +50,33 @@ export default async function ReportsPage({
   const collected = payments.reduce((s, p) => s + p.amount_paid, 0);
   const outstanding = payments.reduce((s, p) => s + p.remaining, 0);
 
+  // بيانات تصدير كشف الطلاب إلى Excel.
+  const exportRows = students.map((s) => ({
+    name: fullName(s),
+    grade: s.grade ?? "",
+    status: s.status,
+    groups: (s.groups ?? []).map((g) => g.name.split(" — ")[0]).join("، ") || "",
+  }));
+
   return (
     <div className="space-y-6">
       <div className="no-print">
         <PageHeader
           title="التقارير"
-          description="Generate and print academy reports. Use filters to focus on a group."
+          description="أنشئ واطبع تقارير الأكاديمية. استخدم الفلاتر للتركيز على مجموعة محددة."
         >
-          <PrintButton label="Print report" />
+          <PrintButton label="طباعة التقرير" />
+          <ExportCSV
+            filename={`تقرير-الطلاب-${new Date().toISOString().slice(0, 10)}`}
+            rows={exportRows}
+            columns={[
+              { key: "name", label: "الطالب" },
+              { key: "grade", label: "الصف الدراسي" },
+              { key: "status", label: "الحالة" },
+              { key: "groups", label: "المجموعات" },
+            ]}
+            label="تصدير Excel"
+          />
         </PageHeader>
         <div className="card-surface p-4">
           <ToolbarRoot>
@@ -68,7 +95,7 @@ export default async function ReportsPage({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">{academy.name}</p>
-                <CardTitle>Monthly Academy Report</CardTitle>
+                <CardTitle>تقرير الأكاديمية الشهري</CardTitle>
               </div>
               <p className="text-sm text-muted-foreground">{formatDate(new Date())}</p>
             </div>
@@ -76,22 +103,22 @@ export default async function ReportsPage({
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <ReportStat label="الطلاب" value={String(students.length)} />
-              <ReportStat label="Active groups" value={String(d.totalGroups)} />
-              <ReportStat label="Collected" value={formatCurrency(collected)} />
-              <ReportStat label='المتبقي' value={formatCurrency(outstanding)} />
-              <ReportStat label="Attendance rate" value={`${d.attendanceRate}%`} />
-              <ReportStat label="Average grade" value={`${d.averageGrade}%`} />
-              <ReportStat label="Monthly revenue" value={formatCurrency(d.monthlyRevenue)} />
-              <ReportStat label="Upcoming lessons" value={String(d.upcomingLessons.length)} />
+              <ReportStat label="المجموعات النشطة" value={String(d.totalGroups)} />
+              <ReportStat label="المحصّل" value={formatCurrency(collected)} />
+              <ReportStat label="المتبقي" value={formatCurrency(outstanding)} />
+              <ReportStat label="نسبة الحضور" value={`${d.attendanceRate}%`} />
+              <ReportStat label="متوسط الدرجات" value={`${d.averageGrade}%`} />
+              <ReportStat label="الإيراد الشهري" value={formatCurrency(d.monthlyRevenue)} />
+              <ReportStat label="الحصص القادمة" value={String(d.upcomingLessons.length)} />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">Students roster</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">كشف الطلاب</CardTitle></CardHeader>
           <CardContent className="p-0">
             <Table>
-              <TableHeader><TableRow><TableHead>Student</TableHead><TableHead>Grade</TableHead><TableHead>Status</TableHead><TableHead>Groups</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>الطالب</TableHead><TableHead>الصف الدراسي</TableHead><TableHead>الحالة</TableHead><TableHead>المجموعات</TableHead></TableRow></TableHeader>
               <TableBody>
                 {students.map((s) => (
                   <TableRow key={s.id}>
@@ -108,17 +135,17 @@ export default async function ReportsPage({
 
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
-            <CardHeader><CardTitle className="text-base">Payments summary</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">ملخص المدفوعات</CardTitle></CardHeader>
             <CardContent className="p-0">
               <Table>
-                <TableHeader><TableRow><TableHead>Month</TableHead><TableHead>Billed</TableHead><TableHead>Collected</TableHead><TableHead>Outstanding</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>الشهر</TableHead><TableHead>المستحق</TableHead><TableHead>المحصّل</TableHead><TableHead>المتبقي</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {d.revenueByMonth.map((r) => (
                     <TableRow key={r.month}>
                       <TableCell className="font-medium">{r.month}</TableCell>
                       <TableCell>{formatCurrency(r.revenue)}</TableCell>
-                      <TableCell>{formatCurrency(Math.round(r.revenue * 0.82))}</TableCell>
-                      <TableCell>{formatCurrency(Math.round(r.revenue * 0.18))}</TableCell>
+                      <TableCell>{formatCurrency(r.collected)}</TableCell>
+                      <TableCell>{formatCurrency(r.revenue - r.collected)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -127,14 +154,14 @@ export default async function ReportsPage({
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="text-base">Grade performance</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">أداء الدرجات</CardTitle></CardHeader>
             <CardContent className="p-0">
               <Table>
-                <TableHeader><TableRow><TableHead>Level</TableHead><TableHead>Count</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>المستوى</TableHead><TableHead>العدد</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {d.gradePerformance.map((g) => (
                     <TableRow key={g.level}>
-                      <TableCell className="font-medium">{g.level}</TableCell>
+                      <TableCell className="font-medium">{GRADE_LEVEL_AR[g.level] ?? g.level}</TableCell>
                       <TableCell>{g.count}</TableCell>
                     </TableRow>
                   ))}

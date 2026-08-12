@@ -150,6 +150,16 @@ BEGIN
   FROM group_students gs WHERE gs.group_id = v_g1
   ON CONFLICT DO NOTHING;
 
+  -----------------------------------------------------------------
+  -- 9) توحيد صياغة الصفوف الدراسية (Grade normalization)
+  -----------------------------------------------------------------
+  UPDATE students SET grade='الصف الأول الثانوي'   WHERE academy_id=v_academy AND (grade ILIKE '%اول%ثانو%' OR grade ILIKE '%أول%ثانو%' OR grade ILIKE '%اول%بكالور%' OR grade ILIKE '%أول%بكالور%');
+  UPDATE students SET grade='الصف الثاني الثانوي' WHERE academy_id=v_academy AND (grade ILIKE '%تاني%ثانو%' OR grade ILIKE '%ثاني%ثانو%' OR grade ILIKE '%تاني%بكالور%' OR grade ILIKE '%ثاني%بكالور%');
+  UPDATE students SET grade='الصف الثالث الثانوي'  WHERE academy_id=v_academy AND (grade ILIKE '%تالت%ثانو%' OR grade ILIKE '%ثالث%ثانو%' OR grade ILIKE '%تالت%بكالور%' OR grade ILIKE '%ثالث%بكالور%');
+  UPDATE students SET grade='الصف الأول الإعدادي'  WHERE academy_id=v_academy AND (grade ILIKE '%اول%اعداد%' OR grade ILIKE '%أول%اعداد%');
+  UPDATE students SET grade='الصف الثاني الإعدادي' WHERE academy_id=v_academy AND (grade ILIKE '%تاني%اعداد%' OR grade ILIKE '%ثاني%اعداد%');
+  UPDATE students SET grade='الصف الثالث الإعدادي'  WHERE academy_id=v_academy AND (grade ILIKE '%تالت%اعداد%' OR grade ILIKE '%ثالث%اعداد%');
+
 END $$;
 
 -- رسالة تأكيد

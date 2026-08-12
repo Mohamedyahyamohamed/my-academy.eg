@@ -29,12 +29,12 @@ export function AddGroupDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button><Plus className="h-4 w-4" /> New group</Button>
+        <Button><Plus className="h-4 w-4" /> مجموعة جديدة</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create a group</DialogTitle>
-          <DialogDescription>Group students by course, teacher and schedule.</DialogDescription>
+          <DialogTitle>إنشاء مجموعة</DialogTitle>
+          <DialogDescription>نظّم الطلاب حسب المادة والمدرّس والجدول.</DialogDescription>
         </DialogHeader>
         <GroupForm
           courses={courses}

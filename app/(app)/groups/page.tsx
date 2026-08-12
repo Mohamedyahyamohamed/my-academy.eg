@@ -22,7 +22,7 @@ export default async function GroupsPage() {
     <div className="space-y-6">
       <PageHeader
         title="المجموعات"
-        description="Organize students into groups by course, teacher and schedule."
+        description="نظّم الطلاب في مجموعات حسب المادة والمدرّس والجدول."
       >
         <AddGroupDialog
           courses={courses}
@@ -35,8 +35,8 @@ export default async function GroupsPage() {
       {groups.length === 0 ? (
         <EmptyState
           icon={UsersRound}
-          title="مفيش مجموعات بعد"
-          description="Create your first group to start scheduling lessons and tracking attendance."
+          title="لا توجد مجموعات بعد"
+          description="أنشئ أول مجموعة لبدء جدولة الحصص ومتابعة الحضور."
           action={<AddGroupDialog courses={courses} teachers={teachers} />}
         />
       ) : (
@@ -62,7 +62,7 @@ export default async function GroupsPage() {
                   </div>
                   <div className="mt-4 flex flex-wrap gap-3 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1.5">
-                      <UsersRound className="h-4 w-4" /> {g.student_count} students
+                      <UsersRound className="h-4 w-4" /> {g.student_count} طالب
                     </span>
                     <span className="flex items-center gap-1.5">
                       <Calendar className="h-4 w-4" /> {g.schedule}
@@ -70,12 +70,12 @@ export default async function GroupsPage() {
                   </div>
                   <div className="mt-4 flex items-center justify-between border-t pt-3">
                     <span className="text-sm">
-                      Teacher:{" "}
+                      المدرّس:{" "}
                       <span className="font-medium text-foreground">
                         {g.teacher ? `${g.teacher.first_name} ${g.teacher.last_name}` : "—"}
                       </span>
                     </span>
-                    <Badge variant="secondary">{formatCurrency(g.monthly_fee)}/mo</Badge>
+                    <Badge variant="secondary">{formatCurrency(g.monthly_fee)}/شهر</Badge>
                   </div>
                 </CardContent>
               </Card>

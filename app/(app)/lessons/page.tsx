@@ -38,18 +38,18 @@ export default async function LessonsPage({
     <div className="space-y-6">
       <PageHeader
         title="الحصص"
-        description="Schedule and track lessons across all your groups."
+        description="جدوِل وتابع الحصص عبر كل مجموعاتك."
       >
-        <Button asChild><Link href="/lessons/new"><Plus className="h-4 w-4" /> New lesson</Link></Button>
+        <Button asChild><Link href="/lessons/new"><Plus className="h-4 w-4" /> إضافة حصة</Link></Button>
       </PageHeader>
 
       <div className="card-surface p-4">
         <ToolbarRoot>
-          <ToolbarSearch placeholder="Search lessons by topic…" />
-          <ToolbarSelect paramKey="tab" label="Filter by time" options={[
-            { value: "ALL", label: "All lessons" },
-            { value: "upcoming", label: "Upcoming" },
-            { value: "past", label: "Past" },
+          <ToolbarSearch placeholder="ابحث في موضوعات الحصص…" />
+          <ToolbarSelect paramKey="tab" label="تصفية حسب الوقت" options={[
+            { value: "ALL", label: "كل الحصص" },
+            { value: "upcoming", label: "القادمة" },
+            { value: "past", label: "السابقة" },
           ]} />
         </ToolbarRoot>
       </div>
@@ -57,9 +57,9 @@ export default async function LessonsPage({
       {result.items.length === 0 ? (
         <EmptyState
           icon={BookOpen}
-          title="No lessons found"
-          description="Schedule your first lesson to take attendance and assign homework."
-          action={<Button asChild><Link href="/lessons/new"><Plus className="h-4 w-4" /> New lesson</Link></Button>}
+          title="لا توجد حصص بعد"
+          description="أضف أول حصة لتسجيل الحضور وتكليف الواجبات."
+          action={<Button asChild><Link href="/lessons/new"><Plus className="h-4 w-4" /> إضافة حصة</Link></Button>}
         />
       ) : (
         <>
@@ -67,11 +67,11 @@ export default async function LessonsPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Topic</TableHead>
-                  <TableHead>Group</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Attendance</TableHead>
+                  <TableHead>الموضوع</TableHead>
+                  <TableHead>المجموعة</TableHead>
+                  <TableHead>التاريخ</TableHead>
+                  <TableHead>الوقت</TableHead>
+                  <TableHead>الحضور</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -85,7 +85,7 @@ export default async function LessonsPage({
                     <TableCell className="text-sm">{formatTime(`${l.date.slice(0, 10)}T${l.start_time}:00`)}</TableCell>
                     <TableCell>
                       <Badge variant={l.attendance_taken ? "success" : "outline"}>
-                        {l.attendance_taken ? "Taken" : "معلّق"}
+                        {l.attendance_taken ? "تم تسجيله" : "معلّق"}
                       </Badge>
                     </TableCell>
                   </TableRow>
@@ -100,7 +100,7 @@ export default async function LessonsPage({
                 <div className="flex items-center justify-between">
                   <p className="font-medium">{l.topic}</p>
                   <Badge variant={l.attendance_taken ? "success" : "outline"}>
-                    {l.attendance_taken ? "Taken" : "معلّق"}
+                    {l.attendance_taken ? "تم تسجيله" : "معلّق"}
                   </Badge>
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{l.group?.name}</p>

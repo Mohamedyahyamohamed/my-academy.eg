@@ -206,6 +206,12 @@ export async function getParentDashboard(user: SessionUser): Promise<ParentDashb
           .select("*")
           .eq("parent_id", parent.id);
         const childrenList = (children ?? []) as any[];
+        // أربط groups + parent لكل طالب (عشان الصفحات اللي بتستخدمهم)
+        const { groupsForStudent } = await import("./_shared");
+        for (const c of childrenList) {
+          try { c.groups = groupsForStudent(c.id); } catch { c.groups = []; }
+          c.parent = parent;
+        }
         const summaries: Record<string, ChildSummary> = {};
         for (const c of childrenList) {
           try { summaries[c.id] = await childSummary(c.id); } catch {}

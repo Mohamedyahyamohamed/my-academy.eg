@@ -22,7 +22,7 @@ export default async function ParentChildrenPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {children.map((c) => {
-            const s = summaries[c.id];
+            const s = summaries[c.id] ?? {} as any;
             return (
               <Link key={c.id} href={`/parent/children/${c.id}`}>
                 <Card className="h-full transition-shadow hover:shadow-elevated">
@@ -35,7 +35,7 @@ export default async function ParentChildrenPage() {
                       </div>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      {c.groups.map((g) => <Badge key={g.id} variant="secondary">{g.name.split(" — ")[0]}</Badge>)}
+                      {(c.groups ?? []).map((g) => <Badge key={g.id} variant="secondary">{g.name.split(" — ")[0]}</Badge>)}
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-3 border-t pt-3 text-sm">
                       <div><p className="text-xs text-muted-foreground">Attendance</p><p className="font-semibold">{s.attendanceRate}%</p></div>

@@ -31,9 +31,10 @@ export default async function ParentDashboard() {
   const totals = children.reduce(
     (acc, c) => {
       const s = summaries[c.id];
-      acc.outstanding += s.outstanding;
-      acc.pending += s.pendingHomework;
-      acc.grade += s.averageGrade;
+      if (!s) return acc;
+      acc.outstanding += s.outstanding ?? 0;
+      acc.pending += s.pendingHomework ?? 0;
+      acc.grade += s.averageGrade ?? 0;
       return acc;
     },
     { outstanding: 0, pending: 0, grade: 0 },
@@ -55,7 +56,7 @@ export default async function ParentDashboard() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {children.map((c) => {
-          const s = summaries[c.id];
+          const s = summaries[c.id] ?? { attendanceRate: 0, averageGrade: 0, outstanding: 0, upcomingLesson: null } as any;
           return (
             <Link key={c.id} href={`/parent/children/${c.id}`}>
               <Card className="h-full transition-shadow hover:shadow-elevated">
@@ -64,7 +65,7 @@ export default async function ParentDashboard() {
                     <StudentAvatar name={`${c.first_name} ${c.last_name}`} size="lg" />
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold">{c.first_name} {c.last_name}</p>
-                      <p className="text-sm text-muted-foreground">{c.grade} · {c.groups.length} group(s)</p>
+                      <p className="text-sm text-muted-foreground">{c.grade} · {(c.groups ?? []).length} group(s)</p>
                     </div>
                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
                   </div>

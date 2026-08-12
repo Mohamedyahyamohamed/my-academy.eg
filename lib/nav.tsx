@@ -32,34 +32,34 @@ export interface NavSection {
 
 export const ADMIN_NAV: NavSection[] = [
   {
-    items: [{ title: "Dashboard", href: "/dashboard", icon: LayoutDashboard }],
+    items: [{ title: "لوحة التحكم", href: "/dashboard", icon: LayoutDashboard }],
   },
   {
-    title: "Manage",
+    title: "الإدارة",
     items: [
-      { title: "Students", href: "/students", icon: Users },
-      { title: "Groups", href: "/groups", icon: UsersRound },
-      { title: "Lessons", href: "/lessons", icon: BookOpen },
-      { title: "Attendance", href: "/attendance", icon: CalendarCheck },
-      { title: "Payments", href: "/payments", icon: Wallet },
-      { title: "Grades", href: "/grades", icon: GraduationCap },
-      { title: "Homework", href: "/homework", icon: ClipboardList },
+      { title: "الطلاب", href: "/students", icon: Users },
+      { title: "المجموعات", href: "/groups", icon: UsersRound },
+      { title: "الحصص", href: "/lessons", icon: BookOpen },
+      { title: "الحضور", href: "/attendance", icon: CalendarCheck },
+      { title: "المصاريف", href: "/payments", icon: Wallet },
+      { title: "الدرجات", href: "/grades", icon: GraduationCap },
+      { title: "الواجبات", href: "/homework", icon: ClipboardList },
     ],
   },
   {
-    title: "Insights",
+    title: "التقارير",
     items: [
-      { title: "Reports", href: "/reports", icon: CalendarDays },
-      { title: "Analytics", href: "/analytics", icon: BarChart3 },
+      { title: "التقارير", href: "/reports", icon: CalendarDays },
+      { title: "التحليلات", href: "/analytics", icon: BarChart3 },
     ],
   },
   {
-    title: "System",
+    title: "النظام",
     items: [
-      { title: "Settings", href: "/settings", icon: Settings },
-      { title: "Billing", href: "/billing", icon: BarChart3 },
-      { title: "Audit Logs", href: "/audit", icon: BarChart3 },
-      { title: "Privacy", href: "/privacy", icon: Settings },
+      { title: "الإعدادات", href: "/settings", icon: Settings },
+      { title: "الاشتراكات", href: "/billing", icon: BarChart3 },
+      { title: "سجل العمليات", href: "/audit", icon: BarChart3 },
+      { title: "الخصوصية", href: "/privacy", icon: Settings },
     ],
   },
 ];
@@ -67,55 +67,55 @@ export const ADMIN_NAV: NavSection[] = [
 export const TEACHER_NAV: NavSection[] = [
   {
     items: [
-      { title: "Dashboard", href: "/teacher", icon: LayoutDashboard },
+      { title: "لوحة التحكم", href: "/teacher", icon: LayoutDashboard },
     ],
   },
   {
-    title: "Teaching",
+    title: "التدريس",
     items: [
-      { title: "My Groups", href: "/groups", icon: UsersRound },
-      { title: "Students", href: "/students", icon: Users },
-      { title: "Lessons", href: "/lessons", icon: BookOpen },
-      { title: "Attendance", href: "/attendance", icon: CalendarCheck },
-      { title: "Grades", href: "/grades", icon: GraduationCap },
-      { title: "Homework", href: "/homework", icon: ClipboardList },
-      { title: "Assistants", href: "/teacher/assistants", icon: UsersRound },
-      { title: "Messages", href: "/messages", icon: Bell },
+      { title: "مجموعاتي", href: "/groups", icon: UsersRound },
+      { title: "الطلاب", href: "/students", icon: Users },
+      { title: "الحصص", href: "/lessons", icon: BookOpen },
+      { title: "الحضور", href: "/attendance", icon: CalendarCheck },
+      { title: "الدرجات", href: "/grades", icon: GraduationCap },
+      { title: "الواجبات", href: "/homework", icon: ClipboardList },
+      { title: "المساعدون", href: "/teacher/assistants", icon: UsersRound },
+      { title: "الرسائل", href: "/messages", icon: Bell },
     ],
   },
 ];
 
 export const PARENT_NAV: NavSection[] = [
   {
-    items: [{ title: "Dashboard", href: "/parent", icon: LayoutDashboard }],
+    items: [{ title: "لوحة التحكم", href: "/parent", icon: LayoutDashboard }],
   },
   {
-    title: "My Children",
+    title: "أبنائي",
     items: [
-      { title: "Children", href: "/parent/children", icon: Users },
-      { title: "Messages", href: "/messages", icon: Bell },
-      { title: "Attendance", href: "/parent/attendance", icon: CalendarCheck },
-      { title: "Grades", href: "/parent/grades", icon: GraduationCap },
-      { title: "Homework", href: "/parent/homework", icon: ClipboardList },
-      { title: "Payments", href: "/parent/payments", icon: Wallet },
-      { title: "Notifications", href: "/notifications", icon: Bell },
+      { title: "الأبناء", href: "/parent/children", icon: Users },
+      { title: "الرسائل", href: "/messages", icon: Bell },
+      { title: "الحضور", href: "/parent/attendance", icon: CalendarCheck },
+      { title: "الدرجات", href: "/parent/grades", icon: GraduationCap },
+      { title: "الواجبات", href: "/parent/homework", icon: ClipboardList },
+      { title: "المصاريف", href: "/parent/payments", icon: Wallet },
+      { title: "الإشعارات", href: "/notifications", icon: Bell },
     ],
   },
 ];
 
 export const STUDENT_NAV: NavSection[] = [
   {
-    items: [{ title: "Dashboard", href: "/student", icon: LayoutDashboard }],
+    items: [{ title: "لوحة التحكم", href: "/student", icon: LayoutDashboard }],
   },
   {
-    title: "Learning",
+    title: "التعلم",
     items: [
-      { title: "My Classes", href: "/student/classes", icon: BookOpen },
-      { title: "Lessons", href: "/student/lessons", icon: CalendarClock },
-      { title: "Homework", href: "/student/homework", icon: ClipboardList },
-      { title: "Grades", href: "/student/grades", icon: GraduationCap },
-      { title: "Progress", href: "/student/progress", icon: TrendingUp },
-      { title: "Notifications", href: "/notifications", icon: Bell },
+      { title: "فصولي", href: "/student/classes", icon: BookOpen },
+      { title: "الحصص", href: "/student/lessons", icon: CalendarClock },
+      { title: "الواجبات", href: "/student/homework", icon: ClipboardList },
+      { title: "الدرجات", href: "/student/grades", icon: GraduationCap },
+      { title: "تقدّمي", href: "/student/progress", icon: TrendingUp },
+      { title: "الإشعارات", href: "/notifications", icon: Bell },
     ],
   },
 ];

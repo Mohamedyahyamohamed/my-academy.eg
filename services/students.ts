@@ -190,8 +190,20 @@ export async function listStudents(
     return listStudentsFromCache(filters);
   }
 
-  const total = count ?? 0;
-  const items = (data ?? []).map((s) => attachRelations(s as Student));
+      const total = count ?? 0;
+  const parentIds = [...new Set((data ?? []).map((s: any) => s.parent_id).filter(Boolean))];
+  const { data: parentsData } = parentIds.length
+    ? await client.from("parents").select("*").in("id", parentIds)
+    : { data: [] };
+  const parentsMap = new Map((parentsData ?? []).map((p: any) => [p.id, p]));
+  const items = (data ?? []).map((s) => {
+    const student = attachRelations(s as Student);
+    const sp = s as any;
+    if ((!student.parent || !student.parent?.id) && sp.parent_id && parentsMap.has(sp.parent_id)) {
+      student.parent = parentsMap.get(sp.parent_id);
+    }
+    return student;
+  });
   return {
     items,
     pagination: {

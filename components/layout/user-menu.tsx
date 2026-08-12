@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { LogOut, User as UserIcon, Settings } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,7 @@ import type { SessionUser } from "@/types";
 
 export function UserMenu({ user }: { user: SessionUser }) {
   const router = useRouter();
+  const canManageAcademy = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -45,13 +46,14 @@ export function UserMenu({ user }: { user: SessionUser }) {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => router.push("/settings")}>
-          <Settings className="h-4 w-4" /> Settings
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => router.push("/settings?tab=profile")}>
-          <UserIcon className="h-4 w-4" /> My profile
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
+        {canManageAcademy && (
+          <>
+            <DropdownMenuItem onClick={() => router.push("/settings")}>
+              <Settings className="h-4 w-4" /> الإعدادات
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
         <DropdownMenuItem
           className="text-destructive focus:text-destructive"
           onClick={async () => {

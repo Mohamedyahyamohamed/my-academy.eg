@@ -45,6 +45,21 @@ test.describe("Security E2E", () => {
     await expect(teacherPage).not.toHaveURL(/\/billing/);
   });
 
+  test("(escalation) teacher cannot access academy payments", async ({ teacherPage }) => {
+    await teacherPage.goto("/payments");
+    await expect(teacherPage).toHaveURL(/\/teacher/);
+  });
+
+  test("(escalation) teacher cannot access academy settings", async ({ teacherPage }) => {
+    await teacherPage.goto("/settings");
+    await expect(teacherPage).toHaveURL(/\/teacher/);
+  });
+
+  test("(escalation) parent cannot access academy payments", async ({ parentPage }) => {
+    await parentPage.goto("/payments");
+    await expect(parentPage).toHaveURL(/\/parent/);
+  });
+
   // ─── Unauthorized API ─────────────────────────────────────────────
   test("(api) search requires auth", async ({ page }) => {
     const res = await page.request.get("/api/search?q=test");
@@ -106,6 +121,6 @@ test.describe("Security E2E", () => {
   // ─── Signup Rate Limiting ─────────────────────────────────────────
   test("(signup) signup page is accessible", async ({ page }) => {
     await page.goto("/signup");
-    await expect(page.locator("h1")).toContainText("academy");
+    await expect(page.locator("h1")).toContainText("أكاديميتك");
   });
 });

@@ -5,7 +5,7 @@ import { requireRole, PaymentsService } from "@/services";
 import type { CreatePaymentInput } from "@/services/payments";
 
 export async function createPaymentAction(input: CreatePaymentInput) {
-  const user = requireRole("ADMIN", "TEACHER");
+  const user = requireRole("ADMIN");
   const res = await PaymentsService.createPayment(input);
   if (!res.ok) return res;
   await import("@/services/audit").then((m) => m.audit(
@@ -24,7 +24,7 @@ export async function recordPaymentAction(
   method: string,
   note?: string,
 ) {
-  const user = requireRole("ADMIN", "TEACHER");
+  const user = requireRole("ADMIN");
   const res = PaymentsService.recordPayment(paymentId, amount, method, note);
   if (res.ok) {
     await import("@/services/audit").then((m) => m.audit(

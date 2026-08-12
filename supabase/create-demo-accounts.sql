@@ -35,11 +35,24 @@ BEGIN
 
   INSERT INTO profiles (id, academy_id, email, role, full_name, phone, avatar_url, is_active, created_at, updated_at)
   VALUES (v_t, v_academy, 'teacher@myacademy.edu', 'TEACHER', 'أحمد المدرّس', '01000000001', NULL, true, now(), now())
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET
+    academy_id = EXCLUDED.academy_id,
+    email = EXCLUDED.email,
+    role = EXCLUDED.role,
+    full_name = EXCLUDED.full_name,
+    phone = EXCLUDED.phone,
+    is_active = true,
+    updated_at = now();
 
   INSERT INTO teachers (id, academy_id, profile_id, first_name, last_name, email, phone, bio, is_active, created_at, updated_at)
   VALUES (gen_random_uuid(), v_academy, v_t, 'أحمد','المدرّس','teacher@myacademy.edu','01000000001', NULL, true, now(), now())
-  ON CONFLICT (academy_id, email) DO NOTHING;
+  ON CONFLICT (academy_id, email) DO UPDATE SET
+    profile_id = EXCLUDED.profile_id,
+    first_name = EXCLUDED.first_name,
+    last_name = EXCLUDED.last_name,
+    phone = EXCLUDED.phone,
+    is_active = true,
+    updated_at = now();
 
   ----------------------------- ٢) ولي الأمر -----------------------------
   SELECT id INTO v_p FROM auth.users WHERE email = 'parent@myacademy.edu';
@@ -60,12 +73,24 @@ BEGIN
 
   INSERT INTO profiles (id, academy_id, email, role, full_name, phone, avatar_url, is_active, created_at, updated_at)
   VALUES (v_p, v_academy, 'parent@myacademy.edu', 'PARENT', 'محمد ولي الأمر', '01000000002', NULL, true, now(), now())
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET
+    academy_id = EXCLUDED.academy_id,
+    email = EXCLUDED.email,
+    role = EXCLUDED.role,
+    full_name = EXCLUDED.full_name,
+    phone = EXCLUDED.phone,
+    is_active = true,
+    updated_at = now();
 
   -- سجل ولي الأمر (parents) — نجلب معرّفه سواء كان جديدًا أو موجودًا
   INSERT INTO parents (id, academy_id, profile_id, first_name, last_name, email, phone, occupation, created_at, updated_at)
   VALUES (gen_random_uuid(), v_academy, v_p, 'محمد','ولي الأمر','parent@myacademy.edu','01000000002', NULL, now(), now())
-  ON CONFLICT (academy_id, email) DO NOTHING;
+  ON CONFLICT (academy_id, email) DO UPDATE SET
+    profile_id = EXCLUDED.profile_id,
+    first_name = EXCLUDED.first_name,
+    last_name = EXCLUDED.last_name,
+    phone = EXCLUDED.phone,
+    updated_at = now();
 
   SELECT id INTO v_parent_rec FROM parents WHERE academy_id = v_academy AND email = 'parent@myacademy.edu';
 
@@ -88,17 +113,31 @@ BEGIN
 
   INSERT INTO profiles (id, academy_id, email, role, full_name, phone, avatar_url, is_active, created_at, updated_at)
   VALUES (v_s, v_academy, 'student@myacademy.edu', 'STUDENT', 'سارة التجريبية', '01000000003', NULL, true, now(), now())
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET
+    academy_id = EXCLUDED.academy_id,
+    email = EXCLUDED.email,
+    role = EXCLUDED.role,
+    full_name = EXCLUDED.full_name,
+    phone = EXCLUDED.phone,
+    is_active = true,
+    updated_at = now();
 
-  -- سجل الطالب مربوط بولي الأمر (لو مش موجود)
-  IF NOT EXISTS (SELECT 1 FROM students WHERE academy_id = v_academy AND email = 'student@myacademy.edu') THEN
-    INSERT INTO students
-      (id, academy_id, first_name, last_name, email, parent_id, school, grade, gender, status, enrolled_at, created_at, updated_at)
-    VALUES
-      (gen_random_uuid(), v_academy, 'سارة','التجريبية','student@myacademy.edu',
-       v_parent_rec, 'مدرسة النور التجريبية', 'الصف الأول الثانوي', 'female',
-       'ACTIVE', now(), now(), now());
-  END IF;
+  -- سجل الطالب مربوط بولي الأمر، ويُحدّث عند إعادة تشغيل التهيئة.
+  INSERT INTO students
+    (id, academy_id, first_name, last_name, email, parent_id, school, grade, gender, status, enrolled_at, created_at, updated_at)
+  VALUES
+    (gen_random_uuid(), v_academy, 'سارة','التجريبية','student@myacademy.edu',
+     v_parent_rec, 'مدرسة النور التجريبية', 'الصف الأول الثانوي', 'female',
+     'ACTIVE', now(), now(), now())
+  ON CONFLICT (academy_id, email) DO UPDATE SET
+    parent_id = EXCLUDED.parent_id,
+    first_name = EXCLUDED.first_name,
+    last_name = EXCLUDED.last_name,
+    school = EXCLUDED.school,
+    grade = EXCLUDED.grade,
+    gender = EXCLUDED.gender,
+    status = 'ACTIVE',
+    updated_at = now();
 END $$;
 
 -- تأكيد

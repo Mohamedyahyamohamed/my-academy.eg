@@ -24,7 +24,7 @@ export default async function PaymentsPage({
 }: {
   searchParams: Record<string, string | string[] | undefined>;
 }) {
-  requireRole("ADMIN", "TEACHER");
+  requireRole("ADMIN");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
 

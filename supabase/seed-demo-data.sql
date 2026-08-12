@@ -11,7 +11,8 @@ DECLARE
   v_math uuid; v_physics uuid; v_arabic uuid; v_english uuid; v_chem uuid;
   v_t1 uuid; v_t2 uuid; v_t3 uuid;
   v_g1 uuid; v_g2 uuid; v_g3 uuid;
-  v_exam uuid;
+  v_demo_teacher uuid; v_demo_student uuid;
+  v_exam uuid; v_demo_homework uuid;
   v_cm text := to_char(now(), 'YYYY-MM');
   v_today date := now()::date;
 BEGIN
@@ -64,7 +65,25 @@ BEGIN
     VALUES(v_academy,'اللغة العربية — الصف الأول الثانوي',v_arabic,v_t3,450,'الاثنين والخميس ٥:٠٠ م','قاعة ٣') RETURNING id INTO v_g3; END IF;
 
   -----------------------------------------------------------------
-  -- 4) تسجيل الطلاب في المجموعات (Enrollment)
+  -- 4) ربط حسابات العرض التجريبي بالمحتوى المرئي في البوابات
+  --    المدرّس يشرف على مجموعة الرياضيات، والطالبة وولي أمرها يريان بياناتها.
+  -----------------------------------------------------------------
+  SELECT id INTO v_demo_teacher FROM teachers
+    WHERE academy_id=v_academy AND email='teacher@myacademy.edu';
+  SELECT id INTO v_demo_student FROM students
+    WHERE academy_id=v_academy AND email='student@myacademy.edu';
+
+  IF v_demo_teacher IS NOT NULL THEN
+    UPDATE groups SET teacher_id=v_demo_teacher WHERE id=v_g1;
+  END IF;
+  IF v_demo_student IS NOT NULL THEN
+    INSERT INTO group_students(group_id, student_id)
+    VALUES(v_g1, v_demo_student)
+    ON CONFLICT DO NOTHING;
+  END IF;
+
+  -----------------------------------------------------------------
+  -- 5) تسجيل الطلاب في المجموعات (Enrollment)
   --    توزيع الطلاب النشطين على المجموعات الثلاث.
   -----------------------------------------------------------------
   INSERT INTO group_students(group_id, student_id)
@@ -105,8 +124,13 @@ BEGIN
     (v_academy,v_g3,v_t3,v_today+4 ,'17:00','18:30','الأسلوب الخبري والإنشائي')
   ON CONFLICT DO NOTHING;
 
+  -- اجعل الحصص الظاهرة للمجموعة مرتبطة بالمدرّس التجريبي بعد إنشائها.
+  IF v_demo_teacher IS NOT NULL THEN
+    UPDATE lessons SET teacher_id=v_demo_teacher WHERE group_id=v_g1 AND academy_id=v_academy;
+  END IF;
+
   -----------------------------------------------------------------
-  -- 6) الحضور (Attendance) — للحصص الماضية فقط
+  -- 7) الحضور (Attendance) — للحصص الماضية فقط
   -----------------------------------------------------------------
   INSERT INTO attendance(lesson_id, student_id, status)
   SELECT l.id, gs.student_id,
@@ -117,7 +141,7 @@ BEGIN
   ON CONFLICT DO NOTHING;
 
   -----------------------------------------------------------------
-  -- 7) المدفوعات (Payments) — الشهر الحالي لكل طالب في مجموعته
+  -- 8) المدفوعات (Payments) — الشهر الحالي لكل طالب في مجموعته
   --    مزيج: مدفوع بالكامل / جزئي / متأخر
   -----------------------------------------------------------------
   INSERT INTO payments(academy_id, student_id, group_id, month, amount_due, amount_paid, due_date, payment_date, method, status)
@@ -136,7 +160,7 @@ BEGIN
   ON CONFLICT (student_id, group_id, month) DO NOTHING;
 
   -----------------------------------------------------------------
-  -- 8) امتحان + درجات (Exam & Grades) لمجموعة الرياضيات
+  -- 9) امتحان + درجات (Exam & Grades) لمجموعة الرياضيات
   -----------------------------------------------------------------
   SELECT id INTO v_exam FROM exams WHERE academy_id=v_academy AND group_id=v_g1 AND name='امتحان منتصف الفصل';
   IF v_exam IS NULL THEN
@@ -151,7 +175,31 @@ BEGIN
   ON CONFLICT DO NOTHING;
 
   -----------------------------------------------------------------
-  -- 9) توحيد صياغة الصفوف الدراسية (Grade normalization)
+  -- 10) واجب وتسليم نموذجي للطالبة التجريبية
+  -----------------------------------------------------------------
+  IF v_demo_student IS NOT NULL THEN
+    SELECT id INTO v_demo_homework FROM homework
+      WHERE academy_id=v_academy AND group_id=v_g1 AND title='تدريب التكامل بالتعويض';
+    IF v_demo_homework IS NULL THEN
+      INSERT INTO homework(academy_id, group_id, title, description, deadline)
+      VALUES(
+        v_academy, v_g1, 'تدريب التكامل بالتعويض',
+        'حل مسائل ١ إلى ٨ مع كتابة خطوات الحل كاملة.', now() + interval '3 days'
+      )
+      RETURNING id INTO v_demo_homework;
+    END IF;
+
+    INSERT INTO homework_submissions(homework_id, student_id, content, status, submitted_at)
+    VALUES(
+      v_demo_homework, v_demo_student, 'تم حل المسائل ١ إلى ٨ وإرفاق خطوات الحل.',
+      'SUBMITTED', now() - interval '2 hours'
+    )
+    ON CONFLICT (homework_id, student_id) DO UPDATE SET
+      content=EXCLUDED.content, status=EXCLUDED.status, submitted_at=EXCLUDED.submitted_at;
+  END IF;
+
+  -----------------------------------------------------------------
+  -- 11) توحيد صياغة الصفوف الدراسية (Grade normalization)
   -----------------------------------------------------------------
   UPDATE students SET grade='الصف الأول الثانوي'   WHERE academy_id=v_academy AND (grade ILIKE '%اول%ثانو%' OR grade ILIKE '%أول%ثانو%' OR grade ILIKE '%اول%بكالور%' OR grade ILIKE '%أول%بكالور%');
   UPDATE students SET grade='الصف الثاني الثانوي' WHERE academy_id=v_academy AND (grade ILIKE '%تاني%ثانو%' OR grade ILIKE '%ثاني%ثانو%' OR grade ILIKE '%تاني%بكالور%' OR grade ILIKE '%ثاني%بكالور%');

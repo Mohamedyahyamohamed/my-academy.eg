@@ -9,14 +9,14 @@ import { AcademySettingsForm, CoursesManager } from "@/components/settings/setti
 import { AcademyBranding } from "@/components/settings/academy-branding";
 import { CreateUserDialog } from "@/components/settings/create-user-dialog";
 import { ChangePasswordForm } from "@/components/settings/change-password";
-import { MiscService, requireUser } from "@/services";
+import { MiscService, requireRole } from "@/services";
 import { initials } from "@/lib/utils";
 import { PAYMENT_METHODS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const user = requireUser();
+  requireRole("ADMIN");
   const academy = MiscService.getAcademy();
   const courses = await MiscService.listCourses();
   const users = MiscService.listProfiles();

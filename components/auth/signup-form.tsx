@@ -53,11 +53,11 @@ export function SignupForm() {
         });
       }
       if (res && res.ok === false) {
-        toast.error(res.error ?? "Signup failed");
+        toast.error(res.error ?? "فشل التسجيل");
         setLoading(false);
         return;
       }
-      toast.success(mode === "owner" ? "Welcome to your academy!" : "تم التسجيل! 🎉");
+      toast.success(mode === "owner" ? "أهلًا بأكاديميتك! 🎉" : "تم التسجيل! 🎉");
       router.refresh();
     } catch {
       // redirect() throws on the client; ignore.
@@ -83,6 +83,13 @@ export function SignupForm() {
           </button>
         ))}
       </div>
+      <p className="text-xs text-muted-foreground">
+        {mode === "owner"
+          ? "ستنشئ أكاديمية جديدة وتكون مديرها — تحكّم كامل في الطلاب والمدرّسين والمصاريف والتقارير."
+          : mode === "parent"
+            ? "انضم لبوابة أولياء الأمور لمتابعة درجات ابنك وحضوره ومصاريفه. (تحتاج كود الأكاديمية)"
+            : "انضم لبوابة الطلاب للاطّلاع على جدولك وواجباتك ودرجاتك. (تحتاج كود الأكاديمية)"}
+      </p>
 
       {mode === "owner" ? (
         <div className="space-y-1.5">
@@ -119,7 +126,7 @@ export function SignupForm() {
         />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="email">الإيميل</Label>
+        <Label htmlFor="email">البريد الإلكتروني</Label>
         <Input
           id="email"
           type="email"
@@ -129,7 +136,7 @@ export function SignupForm() {
         />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="password">الباسورد</Label>
+        <Label htmlFor="password">كلمة المرور</Label>
         <Input
           id="password"
           type="password"

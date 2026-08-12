@@ -18,19 +18,19 @@ export default function SignupPage() {
         </div>
         <div className="card-surface p-8">
           <h1 className="text-xl font-semibold tracking-tight">
-            Start your academy
+            ابدأ أكاديميتك
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Create a new academy workspace. You&apos;ll be the admin.
+            أنشئ مساحة عمل لأكاديميتك. ستكون أنت المدير (Admin) وتتحكّم في كل شيء.
           </p>
           <div className="mt-6">
             <SignupForm />
           </div>
         </div>
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
+          عندك حساب بالفعل؟{" "}
           <Link href="/login" className="font-medium text-primary hover:underline">
-            Sign in
+            تسجيل الدخول
           </Link>
         </p>
       </div>

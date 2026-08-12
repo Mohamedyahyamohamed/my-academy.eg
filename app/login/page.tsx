@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { LoginForm } from "@/components/auth/login-form";
+import { DemoLoginButton } from "@/components/auth/demo-login-button";
 import { Logo } from "@/components/shared/logo";
 import { LanguageToggle } from "@/components/layout/language-toggle";
 import { APP_CONFIG } from "@/lib/constants";
@@ -73,12 +74,32 @@ export default function LoginPage() {
           <div className="mt-6">
             <LoginForm />
           </div>
-          <p className="mt-6 text-center text-xs text-muted-foreground">
-            كلمة المرور التجريبية لكل الحسابات:{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">
-              demo1234
-            </code>
-          </p>
+          <div className="mt-6 rounded-lg border border-dashed border-border bg-muted/40 p-4 text-center">
+            <p className="text-xs font-medium text-muted-foreground">
+              جربة المنصة بحساب تجريبي مباشرًا
+            </p>
+            <div className="mt-1.5 space-y-0.5 text-xs text-muted-foreground">
+              <p>
+                البريد:{" "}
+                <code className="rounded bg-background px-1.5 py-0.5 font-mono text-[11px]">
+                  admin@myacademy.edu
+                </code>
+              </p>
+              <p>
+                كلمة المرور:{" "}
+                <code className="rounded bg-background px-1.5 py-0.5 font-mono text-[11px]">
+                  demo1234
+                </code>
+              </p>
+            </div>
+            <DemoLoginButton
+              email="admin@myacademy.edu"
+              password="demo1234"
+              label="دخول تجريبي كأدمن"
+              fullWidth
+              className="mt-3"
+            />
+          </div>
           <p className="mt-3 text-center text-sm text-muted-foreground">
             جديد عندنا؟{" "}
             <Link href="/signup" className="font-medium text-primary hover:underline">

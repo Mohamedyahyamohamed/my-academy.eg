@@ -18,7 +18,7 @@ export async function requestPasswordResetAction(email: string) {
   // Rate limit: prevent abuse.
   const rl = await rateLimit(`reset:${email.toLowerCase()}`, LIMITS.resetPassword.max, LIMITS.resetPassword.window);
   if (!rl.allowed) {
-    return { ok: false, error: "Too many reset attempts. Please try again later." };
+    return { ok: false, error: "محاولات كتير. حاول مرة تانية بعد شوية." };
   }
   const res = await requestPasswordReset(email);
   if (res.ok && res.user) {

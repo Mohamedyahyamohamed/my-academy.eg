@@ -28,6 +28,9 @@ export async function saveGradesAction(
       { action: "grades.save", entity_type: "exam", entity_id: examId, new_data: { count: entries.length } },
       user,
     ));
+    // إشعار Push لأولياء الأمور
+    const { notifyAcademy } = await import("@/services/push");
+    void notifyAcademy(user.academy_id, "📊 درجات جديدة", `تم تسجيل درجات ${entries.length} طالب في الامتحان.`);
     revalidatePath("/grades");
     revalidatePath(`/exams/${examId}`);
     revalidatePath("/dashboard");

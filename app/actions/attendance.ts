@@ -46,6 +46,10 @@ export async function saveAttendanceAction(
   const user = requireRole("ADMIN", "TEACHER");
   await AttendanceService.saveAttendance(lessonId, entries);
     void audit({ action: "attendance.save" }, user);
+  // إشعار Push لأولياء الأمور
+  const { notifyAcademy } = await import("@/services/push");
+  const absent = entries.filter((e) => e.status === "ABSENT").length;
+  void notifyAcademy(user.academy_id, "✅ تم تسجيل الحضور", `تم تسجيل حضور ${entries.length} طالب.${absent > 0 ? ` (${absent} غائب)` : ""}`);
   revalidatePath(`/lessons/${lessonId}`);
   revalidatePath(`/groups/${groupId}`);
   revalidatePath("/dashboard");

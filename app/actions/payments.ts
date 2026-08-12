@@ -31,6 +31,9 @@ export async function recordPaymentAction(
       { action: "payment.record", entity_type: "payment", entity_id: paymentId, new_data: { amount, method } },
       user,
     ));
+    // إشعار Push لأولياء الأمور
+    const { notifyAcademy } = await import("@/services/push");
+    void notifyAcademy(user.academy_id, "💰 دفعة مسجّلة", `تم تسجيل دفعة بقيمة ${amount} جنيه.`);
     revalidatePath("/payments");
     revalidatePath("/dashboard");
   }

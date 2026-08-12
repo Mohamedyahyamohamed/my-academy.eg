@@ -56,8 +56,8 @@ export default async function StudentsPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Students"
-        description="Manage student profiles, enrollments and status across your academy."
+        title="الطلاب"
+        description="إدارة ملفات الطلاب والتسجيل والحالة في أكاديميتك."
       >
         <div className="flex gap-2">
           <Button asChild variant="outline">

@@ -18,7 +18,7 @@ export default async function ParentDashboard() {
   if (children.length === 0) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Dashboard" description={`Welcome, ${user.full_name}.`} />
+        <PageHeader title="لوحة التحكم" description={`Welcome, ${user.full_name}.`} />
         <EmptyState
           icon={Users}
           title="No children linked yet"
@@ -43,7 +43,7 @@ export default async function ParentDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Dashboard"
+        title="لوحة التحكم"
         description={`Welcome back, ${user.full_name.split(" ")[0]}. Here's how your children are doing.`}
       />
 
@@ -70,7 +70,7 @@ export default async function ParentDashboard() {
                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="mt-4 grid grid-cols-3 gap-3 text-center">
-                    <Metric icon={CalendarCheck} label="Attendance" value={`${s.attendanceRate}%`} />
+                    <Metric icon={CalendarCheck} label="الحضور" value={`${s.attendanceRate}%`} />
                     <Metric icon={GraduationCap} label="Avg grade" value={`${s.averageGrade}%`} />
                     <Metric icon={Wallet} label="Outstanding" value={formatCurrency(s.outstanding)} />
                   </div>

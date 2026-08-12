@@ -40,7 +40,7 @@ export default async function HomeworkPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Homework"
+        title="الواجبات"
         description="Assign homework to groups and review student submissions."
       >
         <CreateHomeworkDialog groups={groups} />

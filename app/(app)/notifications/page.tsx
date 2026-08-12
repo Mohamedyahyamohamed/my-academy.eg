@@ -27,7 +27,7 @@ export default async function NotificationsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Notifications" description="All your recent updates and alerts.">
+      <PageHeader title="الإشعارات" description="كل تحديثاتك وتنبيهاتك الأخيرة.">
         <MarkAllReadButton />
       </PageHeader>
       {items.length === 0 ? (

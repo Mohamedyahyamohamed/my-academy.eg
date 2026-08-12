@@ -23,7 +23,7 @@ export default async function StudentGradesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Grades" description="Your exam results and performance." />
+      <PageHeader title="الدرجات" description="نتائج امتحاناتك ومستوى أدائك." />
       {grades.length === 0 ? (
         <EmptyState icon={GraduationCap} title="No grades yet" description="Your results will appear here once published." />
       ) : (

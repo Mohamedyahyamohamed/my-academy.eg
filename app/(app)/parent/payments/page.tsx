@@ -25,7 +25,7 @@ export default async function ParentPaymentsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Payments" description="Tuition records and balances for your children." />
+      <PageHeader title="المصاريف" description="سجلات الرسوم والأرصدة لأبنائك." />
       {children.length === 0 ? (
         <EmptyState icon={Wallet} title="No data" description="No children linked." />
       ) : (

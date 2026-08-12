@@ -47,7 +47,7 @@ export default async function PaymentsPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Payments"
+        title="المصاريف"
         description="Track tuition fees, record payments and follow up on outstanding balances."
       >
         <CreatePaymentDialog students={students} groups={groups} />

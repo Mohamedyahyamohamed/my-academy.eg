@@ -30,7 +30,7 @@ export default async function ExamGradePage({ params }: { params: { id: string }
       <PageHeader
         title={exam.name}
         description={`${exam.course?.name} · ${exam.group?.name} · ${formatDate(exam.date)}`}
-        breadcrumbs={[{ label: "Grades", href: "/grades" }, { label: exam.name }]}
+        breadcrumbs={[{ label: "الدرجات", href: "/grades" }, { label: exam.name }]}
       >
         <Button asChild variant="outline">
           <Link href="/grades"><ArrowLeft className="h-4 w-4" /> Back</Link>

@@ -82,9 +82,9 @@ export default async function StudentProfilePage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Student profile"
+        title="ملف الطالب"
         breadcrumbs={[
-          { label: "Students", href: "/students" },
+          { label: "الطلاب", href: "/students" },
           { label: `${detail.first_name} ${detail.last_name}` },
         ]}
       >
@@ -142,7 +142,7 @@ export default async function StudentProfilePage({
 
       {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <MiniStat label="Attendance" value={`${stats.attendanceRate}%`} icon={CalendarCheck} />
+        <MiniStat label="الحضور" value={`${stats.attendanceRate}%`} icon={CalendarCheck} />
         <MiniStat label="Avg. grade" value={`${stats.averageGrade}%`} icon={GraduationCap} />
         <MiniStat label="Monthly fee" value={formatCurrency(stats.monthlyFee)} icon={Wallet} />
         <MiniStat label="Paid" value={formatCurrency(stats.totalPaid)} icon={Wallet} accent="success" />

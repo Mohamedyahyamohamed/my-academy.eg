@@ -43,7 +43,7 @@ export default async function LessonDetailPage({
       <PageHeader
         title={lesson.topic}
         description={lesson.description ?? undefined}
-        breadcrumbs={[{ label: "Lessons", href: "/lessons" }, { label: lesson.topic }]}
+        breadcrumbs={[{ label: "الحصص", href: "/lessons" }, { label: lesson.topic }]}
       >
         <Button asChild variant="outline">
           <Link href="/lessons"><ArrowLeft className="h-4 w-4" /> Back</Link>
@@ -59,7 +59,7 @@ export default async function LessonDetailPage({
         <InfoCard icon={Users} label="Group" value={lesson.group?.name ?? "—"} />
         <InfoCard icon={Calendar} label="Date" value={formatDate(lesson.date)} />
         <InfoCard icon={Clock} label="Time" value={`${lesson.start_time} – ${lesson.end_time}`} />
-        <InfoCard icon={Users} label="Students" value={String(roster.length)} />
+        <InfoCard icon={Users} label="الطلاب" value={String(roster.length)} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">

@@ -22,7 +22,7 @@ export default async function NewLessonPage({
       <PageHeader
         title="New lesson"
         description="Schedule a lesson for a group."
-        breadcrumbs={[{ label: "Lessons", href: "/lessons" }, { label: "New" }]}
+        breadcrumbs={[{ label: "الحصص", href: "/lessons" }, { label: "New" }]}
       />
       <Card>
         <CardHeader>

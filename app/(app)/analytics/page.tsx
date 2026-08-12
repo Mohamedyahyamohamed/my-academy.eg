@@ -16,7 +16,7 @@ export default async function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Analytics"
+        title="التحليلات"
         description="Trends and insights that answer real questions about your academy."
       />
 

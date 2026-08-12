@@ -15,7 +15,7 @@ export default async function MessagesRoute() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Messages" description="Communicate with teachers and parents." />
+      <PageHeader title="الرسائل" description="تواصل مع المدرّسين وأولياء الأمور." />
       {contacts.length === 0 ? (
         <EmptyState icon={MessageSquare} title="No contacts yet" description="Contacts appear once users are created." />
       ) : (

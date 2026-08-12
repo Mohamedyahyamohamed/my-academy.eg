@@ -63,7 +63,7 @@ export default async function ParentChildPage({ params }: { params: { id: string
         <CardContent className="flex flex-col items-start gap-6 p-6 sm:flex-row sm:items-center">
           <StudentAvatar name={fullName(child)} size="lg" />
           <div className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
-            <Mini label="Attendance" value={`${summary.attendanceRate}%`} />
+            <Mini label="الحضور" value={`${summary.attendanceRate}%`} />
             <Mini label="Avg. grade" value={`${summary.averageGrade}%`} />
             <Mini label="Pending HW" value={String(summary.pendingHomework)} />
             <Mini label="Outstanding" value={formatCurrency(summary.outstanding)} />

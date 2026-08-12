@@ -21,7 +21,7 @@ export default async function TeacherDashboard() {
   if (!d) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Dashboard" description={`Welcome, ${user.full_name}.`} />
+        <PageHeader title="لوحة التحكم" description={`Welcome, ${user.full_name}.`} />
         <EmptyState
           icon={UsersRound}
           title="No teacher profile linked"

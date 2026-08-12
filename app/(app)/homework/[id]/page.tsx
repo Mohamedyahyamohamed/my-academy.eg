@@ -23,7 +23,7 @@ export default async function HomeworkDetailPage({ params }: { params: { id: str
     <div className="space-y-6">
       <PageHeader
         title={hw.title}
-        breadcrumbs={[{ label: "Homework", href: "/homework" }, { label: hw.title }]}
+        breadcrumbs={[{ label: "الواجبات", href: "/homework" }, { label: hw.title }]}
       >
         <Button asChild variant="outline">
           <Link href="/homework"><ArrowLeft className="h-4 w-4" /> Back</Link>

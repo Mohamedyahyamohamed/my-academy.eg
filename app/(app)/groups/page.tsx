@@ -21,7 +21,7 @@ export default async function GroupsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Groups"
+        title="المجموعات"
         description="Organize students into groups by course, teacher and schedule."
       >
         <AddGroupDialog

@@ -22,7 +22,7 @@ export default async function StudentDashboard() {
   if (!d) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Dashboard" description={`Welcome, ${user.full_name}.`} />
+        <PageHeader title="لوحة التحكم" description={`Welcome, ${user.full_name}.`} />
         <EmptyState icon={BookOpen} title="Profile not linked" description="Your account isn't linked to a student record. Contact the academy." />
       </div>
     );
@@ -47,7 +47,7 @@ export default async function StudentDashboard() {
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Attendance" value={`${d.attendanceRate}%`} icon={CalendarCheck} accent="success" />
+        <StatCard label="الحضور" value={`${d.attendanceRate}%`} icon={CalendarCheck} accent="success" />
         <StatCard label="Average grade" value={`${d.averageGrade}%`} icon={GraduationCap} accent="primary" />
         <StatCard label="Active groups" value={d.groups.length} icon={BookOpen} accent="info" />
         <StatCard label="Pending homework" value={d.pendingHomework.length} icon={ClipboardList} accent="warning" />

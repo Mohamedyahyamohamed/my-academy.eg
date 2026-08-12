@@ -21,7 +21,7 @@ export default async function ParentGradesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Grades" description="Exam results for all your children." />
+      <PageHeader title="الدرجات" description="نتائج الامتحانات لكل أبنائك." />
       {children.length === 0 ? (
         <EmptyState icon={GraduationCap} title="No data" description="No children linked." />
       ) : (

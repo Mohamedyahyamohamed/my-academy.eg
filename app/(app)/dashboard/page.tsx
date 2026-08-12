@@ -33,7 +33,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Dashboard"
+        title="لوحة التحكم"
         description="A live overview of your academy — students, revenue, attendance and performance."
       >
         <Button asChild variant="outline">

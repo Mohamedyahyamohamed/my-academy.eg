@@ -20,7 +20,7 @@ export default async function ParentHomeworkPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Homework" description="Homework assignments for all your children." />
+      <PageHeader title="الواجبات" description="الواجبات المُكلَّفة لكل أبنائك." />
       {children.length === 0 ? (
         <EmptyState icon={ClipboardList} title="No data" description="No children linked." />
       ) : (

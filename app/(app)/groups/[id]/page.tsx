@@ -64,9 +64,9 @@ export default async function GroupDetailPage({
   const avgGrade = GroupsService.groupAverageGrade(params.id);
 
   const stats = [
-    { label: "Students", value: detail.students.length, icon: Users },
-    { label: "Lessons", value: detail.lessons.length, icon: BookOpen },
-    { label: "Attendance", value: `${detail.attendanceRate}%`, icon: CalendarCheck },
+    { label: "الطلاب", value: detail.students.length, icon: Users },
+    { label: "الحصص", value: detail.lessons.length, icon: BookOpen },
+    { label: "الحضور", value: `${detail.attendanceRate}%`, icon: CalendarCheck },
     { label: "Avg. grade", value: `${avgGrade}%`, icon: GraduationCap },
   ];
 
@@ -76,7 +76,7 @@ export default async function GroupDetailPage({
         title={detail.name}
         description={`${detail.course?.name} · ${detail.schedule}`}
         breadcrumbs={[
-          { label: "Groups", href: "/groups" },
+          { label: "المجموعات", href: "/groups" },
           { label: detail.name },
         ]}
       >

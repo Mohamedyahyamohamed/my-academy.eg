@@ -19,7 +19,7 @@ export default async function ParentAttendancePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Attendance" description="Attendance records for all your children." />
+      <PageHeader title="الحضور" description="سجلات الحضور لكل أبنائك." />
       {children.length === 0 ? (
         <EmptyState icon={CalendarCheck} title="No data" description="No children linked." />
       ) : (

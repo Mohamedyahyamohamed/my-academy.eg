@@ -40,7 +40,7 @@ export default async function TeacherAssistantsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="My assistants"
+        title="مساعدوني"
         description="Assistants log in with their own email and share access to your groups."
       >
         <CreateAssistantDialog groups={accessibleGroups} />

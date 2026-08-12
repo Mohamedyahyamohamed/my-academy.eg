@@ -22,7 +22,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Settings" description="Manage your academy, users, courses and configuration." />
+      <PageHeader title="الإعدادات" description="إدارة أكاديميتك: المستخدمين والمواد والإعدادات." />
 
       <Tabs defaultValue="academy">
         <TabsList className="w-full justify-start overflow-x-auto">

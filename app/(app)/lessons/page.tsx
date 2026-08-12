@@ -37,7 +37,7 @@ export default async function LessonsPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Lessons"
+        title="الحصص"
         description="Schedule and track lessons across all your groups."
       >
         <Button asChild><Link href="/lessons/new"><Plus className="h-4 w-4" /> New lesson</Link></Button>

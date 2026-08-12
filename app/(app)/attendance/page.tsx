@@ -21,7 +21,7 @@ export default async function AttendancePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Attendance"
+        title="الحضور"
         description="Pick a group and lesson, then mark every student in seconds."
       >
         <Button asChild variant="outline">

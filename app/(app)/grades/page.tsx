@@ -22,7 +22,7 @@ export default async function GradesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Grades"
+        title="الدرجات"
         description="Create exams and record student grades to track performance."
       >
         <CreateExamDialog courses={courses} groups={groups} />

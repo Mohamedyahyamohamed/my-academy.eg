@@ -18,9 +18,9 @@ export default async function BillingPage() {
   const sub = getSubscriptionStatus();
 
   const usageItems = [
-    { label: "Students", current: usage.students, limit: currentPlan.maxStudents },
+    { label: "الطلاب", current: usage.students, limit: currentPlan.maxStudents },
     { label: "Teachers", current: usage.teachers, limit: currentPlan.maxTeachers },
-    { label: "Groups", current: usage.groups, limit: currentPlan.maxGroups },
+    { label: "المجموعات", current: usage.groups, limit: currentPlan.maxGroups },
   ];
 
   return (

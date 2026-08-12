@@ -20,7 +20,7 @@ export default async function StudentLessonsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Lessons" description="Your lesson schedule and history." />
+      <PageHeader title="الحصص" description="جدول حصصك وسجلها." />
       {lessons.length === 0 ? (
         <EmptyState icon={CalendarClock} title="No lessons" description="No lessons scheduled for your groups." />
       ) : (

@@ -46,7 +46,7 @@ export default async function ReportsPage({
     <div className="space-y-6">
       <div className="no-print">
         <PageHeader
-          title="Reports"
+          title="التقارير"
           description="Generate and print academy reports. Use filters to focus on a group."
         >
           <PrintButton label="Print report" />
@@ -75,7 +75,7 @@ export default async function ReportsPage({
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <ReportStat label="Students" value={String(students.length)} />
+              <ReportStat label="الطلاب" value={String(students.length)} />
               <ReportStat label="Active groups" value={String(d.totalGroups)} />
               <ReportStat label="Collected" value={formatCurrency(collected)} />
               <ReportStat label="Outstanding" value={formatCurrency(outstanding)} />

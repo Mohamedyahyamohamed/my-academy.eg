@@ -16,7 +16,7 @@ export default async function StudentHomeworkPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Homework" description="Your assignments. Submit your work before the deadline." />
+      <PageHeader title="الواجبات" description="واجباتك. سلّم شغلك قبل الموعد النهائي." />
       {homework.length === 0 ? (
         <EmptyState icon={ClipboardList} title="No homework" description="Nothing assigned to you right now." />
       ) : (

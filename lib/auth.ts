@@ -10,6 +10,9 @@ export const DEMO_PASSWORD = "demo1234";
 /** الباسورد الافتراضي لحسابات الطلاب لما الأدمن يضيفهم (الطالب يغيّره بعدين). */
 export const STUDENT_DEFAULT_PASSWORD = "student1234";
 
+/** الباسورد الافتراضي لحسابات أولياء الأمور (الأدمن بيعملهم). */
+export const PARENT_DEFAULT_PASSWORD = "parent1234";
+
 export const DEMO_ACCOUNTS: { email: string; role: Role; name: string }[] = [
   { email: "admin@myacademy.edu", role: "ADMIN", name: "Yasmin Hassan" },
   { email: "teacher@myacademy.edu", role: "TEACHER", name: "Omar Khaled" },

@@ -6,10 +6,10 @@
 export const APP_CONFIG = {
   name: "MY Academy",
   shortName: "MY Academy",
-  tagline: "Run your academy in one place",
+  tagline: "أدر أكاديميتك في مكان واحد",
   description:
-    "A modern platform to manage students, groups, attendance, payments and grades — beautifully.",
-  locale: "en-US",
+    "منصة متكاملة لإدارة الطلاب والمجموعات والحضور والمصاريف والدرجات في الأكاديميات — مع بوابات للمدرّسين وأولياء الأمور والطلاب.",
+  locale: "ar-EG",
   currency: "EGP",
   defaultPageSize: 10,
 } as const;
@@ -27,11 +27,11 @@ export type Role = (typeof ROLES)[keyof typeof ROLES];
 
 /** Human-readable role labels. */
 export const ROLE_LABELS: Record<Role, string> = {
-  SUPER_ADMIN: "Super Admin",
-  ADMIN: "Admin",
-  TEACHER: "Teacher",
-  PARENT: "Parent",
-  STUDENT: "Student",
+  SUPER_ADMIN: "مدير عام",
+  ADMIN: "مدير",
+  TEACHER: "مدرّس",
+  PARENT: "ولي أمر",
+  STUDENT: "طالب",
 };
 
 /** Sidebar sections grouped by role. */

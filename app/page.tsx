@@ -192,6 +192,56 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Testimonials */}
+      <section className="border-t border-border bg-muted/30 py-16">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight">قالوا عنّا</h2>
+            <p className="mt-3 text-muted-foreground">آراء أكاديميات بتستخدم {APP_CONFIG.name} كل يوم.</p>
+          </div>
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {[
+              { name: "أ. منى عبد الله", role: "مديرة أكاديمية النخبة", text: "وفّرت ساعات يوميًا في تسجيل الحضور والمصاريف. أولياء الأمور مبسوطين بالإشعارات." },
+              { name: "م. خالد فؤاد", role: "صاحب أكاديمية المستقبل", text: "التقارير والتحليلات بتساعدني أفهم أداء الأكاديمية وآخد قرارات أحسن." },
+              { name: "أ. سارة إبراهيم", role: "مدرّسة لغة إنجليزية", text: "بوابة المدرّس سهّلت عليّ إدارة مجموعاتي وتسجيل الدرجات بسرعة." },
+            ].map((t) => (
+              <div key={t.name} className="rounded-xl border border-border bg-card p-6">
+                <p className="text-sm leading-relaxed text-foreground/90">&ldquo;{t.text}&rdquo;</p>
+                <div className="mt-4 border-t border-border pt-4">
+                  <p className="font-semibold">{t.name}</p>
+                  <p className="text-xs text-muted-foreground">{t.role}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-16">
+        <div className="mx-auto max-w-3xl px-4">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight">أسئلة شائعة</h2>
+          </div>
+          <div className="mt-10 space-y-3">
+            {[
+              { q: "هل أحتاج بطاقة ائتمان للبدء؟", a: "لا. تنشئ حسابك وتبدأ مجانًا بدون أي بطاقة أو التزام." },
+              { q: "إزاي أولياء الأمور يتابعوا أبناءهم؟", a: "كل ولي أمر بيحصل على بوابة مخصصة يشوف فيها الدرجات والحضور والمصاريف، ويتوصّل إشعارات واتساب تلقائية." },
+              { q: "هل أقدر أستورد طلاب من Excel؟", a: "أيوه، تقدر تستورد كشف طلاب كامل من ملف Excel مع إنشاء حسابات تلقائية للطلاب وأولياء الأمور." },
+              { q: "هل بياناتي آمنة؟", a: "كل البيانات محميّة بنظام RLS على مستوى قاعدة البيانات، وكل صلاحية بتمر بفحص أمني من السيرفر." },
+            ].map((f) => (
+              <details key={f.q} className="group rounded-lg border border-border bg-card p-4">
+                <summary className="flex cursor-pointer items-center justify-between font-medium">
+                  {f.q}
+                  <span className="text-muted-foreground transition group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-3 text-sm text-muted-foreground">{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="px-4 py-16">
         <div className="mx-auto max-w-4xl overflow-hidden rounded-2xl bg-gradient-to-bl from-brand-600 to-brand-800 px-6 py-12 text-center text-white">

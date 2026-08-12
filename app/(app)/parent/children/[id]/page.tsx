@@ -25,12 +25,18 @@ export const dynamic = "force-dynamic";
 
 export default async function ParentChildPage({ params }: { params: { id: string } }) {
   const user = requireRole("PARENT");
-  // Authorization: child must belong to this parent.
-  const parent = resolveParent(user);
-  const child = collections().students.find((s) => s.id === params.id);
-  if (!child || !parent || child.parent_id !== parent.id) notFound();
+  // Authorization via DB (مش الكاش)
+  const { createServerSupabaseClient } = await import("@/lib/supabase/server");
+  const client = createServerSupabaseClient();
+  const { data: parent } = await client
+    .from("parents").select("*").eq("email", user.email).maybeSingle();
+  const { data: childDB } = await client
+    .from("students").select("*").eq("id", params.id).maybeSingle();
+  if (!childDB || !parent || childDB.parent_id !== parent.id) notFound();
+  const child = childDB as any;
 
-  const summary = await childSummary(child.id);
+  let summary: any;
+  try { summary = await childSummary(child.id); } catch { summary = {}; }
   const groups = (collections().groups.filter((g) =>
     collections().groupStudents.some((gs) => gs.group_id === g.id && gs.student_id === child.id),
   ));

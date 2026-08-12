@@ -14,7 +14,6 @@ import {
   isWhatsAppConfigured,
   normalizePhoneE164,
   sendWhatsAppTemplate,
-  sendWhatsAppText,
 } from "@/lib/whatsapp";
 
 export async function GET(req: NextRequest) {
@@ -44,23 +43,12 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const templateName = process.env.WHATSAPP_NOTIFICATION_TEMPLATE;
+  const templateName = process.env.WHATSAPP_NOTIFICATION_TEMPLATE || "academy_notice";
   const lang = process.env.WHATSAPP_TEMPLATE_LANG || "ar";
 
-  if (templateName) {
-    // استخدم القالب المعتمد مع نص تجريبي كمتحول {{1}}.
-    const res = await sendWhatsAppTemplate(to, templateName, lang, [
-      { type: "body", parameters: [{ type: "text", text: "رسالة تجريبية من أكاديميتي ✅" }] },
-    ]);
-    return NextResponse.json({ to: number, template: templateName, ...res });
-  }
-
-  // نص حر — يعمل فقط ضمن نافذة 24 ساعة (أو مع رقم اختبار معتمد).
-  const res = await sendWhatsAppText(to, "رسالة تجريبية من أكاديميتي ✅");
-  return NextResponse.json({
-    to: number,
-    mode: "free_text",
-    note: "Free-form text only works within 24h window or to approved test numbers. Set WHATSAPP_NOTIFICATION_TEMPLATE for production.",
-    ...res,
-  });
+  // استخدم القالب المعتمد مع اسم تجريبي كمتحول {{1}}.
+  const res = await sendWhatsAppTemplate(to, templateName, lang, [
+    { type: "body", parameters: [{ type: "text", text: "رسالة تجريبية" }] },
+  ]);
+  return NextResponse.json({ to: number, template: templateName, ...res });
 }

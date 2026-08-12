@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const templateName = process.env.WHATSAPP_NOTIFICATION_TEMPLATE || "academy_notice";
+  const templateName = process.env.WHATSAPP_NOTIFICATION_TEMPLATE || "academy_notification";
   const lang = process.env.WHATSAPP_TEMPLATE_LANG || "ar";
 
   // استخدم القالب المعتمد مع اسم تجريبي كمتحول {{1}}.

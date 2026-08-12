@@ -73,7 +73,7 @@ export async function notifyParentWhatsApp(
     const number = normalizePhoneE164(parentPhone);
     if (!number) return;
 
-    const tmpl = defaultTemplate() || "academy_notice";
+    const tmpl = defaultTemplate() || "academy_notification";
     // ابعت اسم الطالب كمتغير {{1}} داخل القالب (المتغيرات موضعية).
     await sendWhatsAppTemplate(parentPhone, tmpl, defaultLang(), [
       { type: "body", parameters: [{ type: "text", text: studentName || "ابنكم" }] },

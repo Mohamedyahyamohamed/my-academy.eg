@@ -54,7 +54,10 @@ async function getStudentAndParent(
 
 /**
  * إرسال إشعار واتساب لولي أمر طالب واحد.
- * يستخدم القالب الافتراضي إن وُجد، وإلا نصًا حرًا (يعمل في نافذة 24 ساعة).
+ * لو فيه قالب معتمد مضبوط (WHATNOTIFICATION_TEMPLATE) يبعت النص الكامل
+ * كمتغير داخل القالب. وإلا يبعت نصًا حرًا (يعمل في نافذة 24 ساعة).
+ *
+ * القالب الموصى به (UTILITY) نصّه:  إشعار من أكاديميتي:\n{{1}}
  */
 export async function notifyParentWhatsApp(
   studentId: string,
@@ -68,12 +71,16 @@ export async function notifyParentWhatsApp(
     const number = normalizePhoneE164(parentPhone);
     if (!number) return;
 
+    const message = `${title}\n${body}`;
     const tmpl = defaultTemplate();
     if (tmpl) {
-      await sendWhatsAppTemplate(parentPhone, tmpl, defaultLang());
+      // ابعت القالب مع نص الإشعار كمتحول {{1}} في نص القالب.
+      await sendWhatsAppTemplate(parentPhone, tmpl, defaultLang(), [
+        { type: "body", parameters: [{ type: "text", text: message }] },
+      ]);
     } else {
       // نص حر — يعمل فقط إن راسل ولي الأمر الأكاديمية خلال آخر 24 ساعة.
-      await sendWhatsAppText(parentPhone, `${title}\n${body}`);
+      await sendWhatsAppText(parentPhone, message);
     }
   } catch {
     /* silent — best-effort */

@@ -1,7 +1,12 @@
 /**
  * GET /api/whatsapp/test?to=2010xxxxxxxx
- * يرسل رسالة واتساب تجريبية (قالب hello_world) للتحقق من ضبط المفاتيح.
+ * يرسل رسالة واتساب تجريبية للتحقق من ضبط المفاتيح.
+ * - لو مضبوط WHATSAPP_NOTIFICATION_TEMPLATE → يبعت القالب بنص تجريبي.
+ * - وإلا → يبعت نصًا حرًا (يعمل ضمن نافذة 24 ساعة أو لرقم الاختبار المعتمد).
  * يتطلب صلاحية ADMIN.
+ *
+ * ملاحظة: قالب hello_world يعمل فقط من رقم الاختبار العام (Public Test Number)،
+ * ولذلك لن يعمل من رقم الإنتاج المسجّل.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/services";
@@ -9,6 +14,7 @@ import {
   isWhatsAppConfigured,
   normalizePhoneE164,
   sendWhatsAppTemplate,
+  sendWhatsAppText,
 } from "@/lib/whatsapp";
 
 export async function GET(req: NextRequest) {
@@ -38,6 +44,23 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const res = await sendWhatsAppTemplate(to, "hello_world", "en_US");
-  return NextResponse.json({ to: number, ...res });
+  const templateName = process.env.WHATSAPP_NOTIFICATION_TEMPLATE;
+  const lang = process.env.WHATSAPP_TEMPLATE_LANG || "ar";
+
+  if (templateName) {
+    // استخدم القالب المعتمد مع نص تجريبي كمتحول {{1}}.
+    const res = await sendWhatsAppTemplate(to, templateName, lang, [
+      { type: "body", parameters: [{ type: "text", text: "رسالة تجريبية من أكاديميتي ✅" }] },
+    ]);
+    return NextResponse.json({ to: number, template: templateName, ...res });
+  }
+
+  // نص حر — يعمل فقط ضمن نافذة 24 ساعة (أو مع رقم اختبار معتمد).
+  const res = await sendWhatsAppText(to, "رسالة تجريبية من أكاديميتي ✅");
+  return NextResponse.json({
+    to: number,
+    mode: "free_text",
+    note: "Free-form text only works within 24h window or to approved test numbers. Set WHATSAPP_NOTIFICATION_TEMPLATE for production.",
+    ...res,
+  });
 }

@@ -84,7 +84,7 @@ export default async function StudentsPage({
       {result.items.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="مفيش طلاب بعد"
+          title="لا يوجد طلاب بعد"
           description="أضف أول طالب لبدء متابعة الحضور والمصاريف والدرجات."
           action={<AddStudentDialog parents={parents} groups={groups} />}
         />
@@ -95,12 +95,12 @@ export default async function StudentsPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Parent</TableHead>
-                  <TableHead>Grade</TableHead>
-                  <TableHead>Groups</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>الطالب</TableHead>
+                  <TableHead>ولي الأمر</TableHead>
+                  <TableHead>الصف الدراسي</TableHead>
+                  <TableHead>المجموعات</TableHead>
+                  <TableHead>الحالة</TableHead>
+                  <TableHead className="text-left">إجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -114,7 +114,7 @@ export default async function StudentsPage({
                             {s.first_name} {s.last_name}
                           </p>
                           <p className="truncate text-xs text-muted-foreground">
-                            {s.phone || s.email || s.school || "—"}
+                            {s.phone || s.school || "—"}
                           </p>
                         </div>
                       </Link>
@@ -149,9 +149,9 @@ export default async function StudentsPage({
                     <TableCell>
                       <StudentStatusBadge status={s.status} />
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button asChild variant="ghost" size="icon-sm" aria-label="View">
+                    <TableCell className="text-left">
+                      <div className="flex items-center justify-start gap-1">
+                        <Button asChild variant="ghost" size="icon-sm" aria-label="عرض">
                           <Link href={`/students/${s.id}`}>
                             <Eye className="h-4 w-4" />
                           </Link>
@@ -161,13 +161,13 @@ export default async function StudentsPage({
                           <ConfirmDialog
                             destructive
                             trigger={
-                              <Button variant="ghost" size="icon-sm" aria-label="Archive">
-                                <span className="sr-only">Archive</span>
+                              <Button variant="ghost" size="icon-sm" aria-label="أرشفة">
+                                <span className="sr-only">أرشفة</span>
                               </Button>
                             }
-                            title="Archive student?"
-                            description={`${s.first_name} ${s.last_name} will be hidden from active lists but their data is kept.`}
-                            confirmLabel="Archive"
+                            title="أرشفة الطالب؟"
+                            description={`سيُخفى ${s.first_name} ${s.last_name} من القوائم النشطة مع الاحتفاظ ببياناته.`}
+                            confirmLabel="أرشفة"
                             onConfirm={archiveStudentAction.bind(null, s.id)}
                           />
                         )}
@@ -197,7 +197,7 @@ export default async function StudentsPage({
                     </p>
                     {s.parent && (
                       <p className="truncate text-xs text-muted-foreground">
-                        Parent: {s.parent.first_name} {s.parent.last_name}
+                        ولي الأمر: {s.parent.first_name} {s.parent.last_name}
                       </p>
                     )}
                   </div>

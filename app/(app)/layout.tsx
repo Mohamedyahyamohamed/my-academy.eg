@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
+import { DemoBanner } from "@/components/layout/demo-banner";
 import { getCurrentUser, MiscService } from "@/services";
 import { ensureStoreLoaded } from "@/services/data/store";
 
@@ -16,8 +17,11 @@ export default async function AuthenticatedLayout({
   const academy = MiscService.getAcademy();
 
   return (
-    <AppShell user={user} academyName={academy.name}>
-      {children}
-    </AppShell>
+    <>
+      <DemoBanner user={user} />
+      <AppShell user={user} academyName={academy.name}>
+        {children}
+      </AppShell>
+    </>
   );
 }

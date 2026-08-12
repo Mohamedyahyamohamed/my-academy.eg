@@ -76,7 +76,7 @@ export default function LoginPage() {
           </div>
           <div className="mt-6 rounded-lg border border-dashed border-border bg-muted/40 p-4 text-center">
             <p className="text-xs font-medium text-muted-foreground">
-              جربة المنصة بحساب تجريبي مباشرًا
+              جرّب المنصة بحساب تجريبي مباشر
             </p>
             <div className="mt-1.5 space-y-0.5 text-xs text-muted-foreground">
               <p>

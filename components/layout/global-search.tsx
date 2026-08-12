@@ -87,19 +87,19 @@ export function GlobalSearch() {
           }
           if (e.key === "Escape") setOpen(false);
         }}
-        placeholder="Search students, groups, lessons…"
+        placeholder="ابحث عن طلاب، مجموعات، حصص…"
         className="pl-9 pr-4"
-        aria-label="Global search"
+        aria-label="بحث عام"
       />
       {open && (query.trim().length > 0) && (
         <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-lg border border-border bg-popover shadow-elevated">
           {loading ? (
             <div className="px-3 py-4 text-sm text-muted-foreground">
-              Searching…
+              جارٍ البحث…
             </div>
           ) : results.length === 0 ? (
             <div className="px-3 py-4 text-sm text-muted-foreground">
-              No results for “{query}”.
+              لا توجد نتائج لـ «{query}».
             </div>
           ) : (
             <ul className="max-h-80 overflow-y-auto p-1">

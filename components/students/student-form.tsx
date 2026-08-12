@@ -258,9 +258,9 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="INACTIVE">Inactive</SelectItem>
-                  <SelectItem value="ARCHIVED">Archived</SelectItem>
+                  <SelectItem value="ACTIVE">نشط</SelectItem>
+                  <SelectItem value="INACTIVE">غير نشط</SelectItem>
+                  <SelectItem value="ARCHIVED">مؤرشف</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -331,7 +331,7 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
         )}
         <Button type="submit" disabled={saving}>
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-          {student ? "حفظ التعديلات" : "Add student"}
+          {student ? "حفظ التعديلات" : "إضافة طالب"}
         </Button>
       </div>
     </form>

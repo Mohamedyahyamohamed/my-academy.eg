@@ -26,14 +26,14 @@ export function AddStudentDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
-          <Plus className="h-4 w-4" /> Add student
+          <Plus className="h-4 w-4" /> إضافة طالب
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Add new student</DialogTitle>
+          <DialogTitle>إضافة طالب جديد</DialogTitle>
           <DialogDescription>
-            Create a student profile and enroll them into groups.
+            أنشئ ملف طالب وسجّله في المجموعات.
           </DialogDescription>
         </DialogHeader>
         <StudentForm
@@ -59,15 +59,15 @@ export function EditStudentDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label="Edit student">
+        <Button variant="ghost" size="icon-sm" aria-label="تعديل الطالب">
           <Pencil className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Edit student</DialogTitle>
+          <DialogTitle>تعديل بيانات الطالب</DialogTitle>
           <DialogDescription>
-            Update {student.first_name}&apos;s information and enrollments.
+            تحديث بيانات {student.first_name} وتسجيلاته في المجموعات.
           </DialogDescription>
         </DialogHeader>
         <StudentForm

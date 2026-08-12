@@ -1,92 +1,106 @@
+import { AlertTriangle } from "lucide-react";
 import { APP_CONFIG } from "@/lib/constants";
 
-export const metadata = { title: "Privacy Policy" };
+export const metadata = { title: "سياسة الخصوصية" };
 
 export default function PrivacyPage() {
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div dir="rtl" className="mx-auto max-w-3xl space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Privacy Policy</h1>
+        <h1 className="text-2xl font-semibold">سياسة الخصوصية</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Last updated: {new Date().toLocaleDateString("en-GB")}
+          آخر تحديث: {new Date().toLocaleDateString("ar-EG")}
         </p>
       </div>
 
-      <Section title="1. Data We Collect">
-        <p>We collect the following personal data to provide academy management services:</p>
-        <ul className="ml-4 list-disc space-y-1 text-sm text-muted-foreground">
-          <li><strong>Student data:</strong> name, date of birth, gender, phone, email, school, grade, parent/guardian link.</li>
-          <li><strong>Parent data:</strong> name, email, phone, occupation.</li>
-          <li><strong>Teacher data:</strong> name, email, phone, bio.</li>
-          <li><strong>Academic data:</strong> attendance records, exam grades, homework submissions.</li>
-          <li><strong>Financial data:</strong> payment records (amounts, dates, methods). We do NOT store credit card numbers.</li>
-          <li><strong>Usage data:</strong> audit logs (actions, IP, timestamps) for security.</li>
+      {/* تنبيه قانوني */}
+      <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+        <p>
+          هذه السياسة مسودة أولية لأغراض العرض، ويجب مراجعتها مع مختص قانوني قبل اعتمادها
+          كنص نهائي — خصوصًا فيما يتعلق بقانون حماية البيانات المصري ولائحته التنفيذية.
+        </p>
+      </div>
+
+      <Section title="١. البيانات التي نجمعها">
+        <p>نجمع البيانات الشخصية التالية لتقديم خدمات إدارة الأكاديمية:</p>
+        <ul className="list-disc space-y-1 pr-5 text-sm text-muted-foreground">
+          <li><strong>بيانات الطلاب:</strong> الاسم، تاريخ الميلاد، النوع، رقم الهاتف، البريد الإلكتروني، المدرسة، الصف الدراسي، وارتباط بولي الأمر.</li>
+          <li><strong>بيانات أولياء الأمور:</strong> الاسم، البريد الإلكتروني، رقم الهاتف، الوظيفة.</li>
+          <li><strong>بيانات المدرّسين:</strong> الاسم، البريد الإلكتروني، رقم الهاتف، نبذة تعريفية.</li>
+          <li><strong>البيانات الأكاديمية:</strong> سجلات الحضور، درجات الامتحانات، تسليمات الواجبات.</li>
+          <li><strong>البيانات المالية:</strong> سجلات المدفوعات (المبالغ، التواريخ، طرق الدفع). <strong>لا نخزّن</strong> أرقام بطاقات الائتمان.</li>
+          <li><strong>بيانات الاستخدام:</strong> سجلات التدقيق (الإجراءات، عنوان IP، التوقيتات) لأغراض الأمان.</li>
         </ul>
       </Section>
 
-      <Section title="2. How We Use Your Data">
-        <p>Data is used exclusively for:</p>
-        <ul className="ml-4 list-disc space-y-1 text-sm text-muted-foreground">
-          <li>Managing student enrollment, attendance, grades, and payments.</li>
-          <li>Communicating with parents about their children's progress.</li>
-          <li>Generating reports and analytics for academy administrators.</li>
-          <li>Security auditing and fraud prevention.</li>
+      <Section title="٢. كيف نستخدم بياناتك">
+        <p>تُستخدم البيانات حصريًا في:</p>
+        <ul className="list-disc space-y-1 pr-5 text-sm text-muted-foreground">
+          <li>إدارة تسجيل الطلاب والحضور والدرجات والمدفوعات.</li>
+          <li>التواصل مع أولياء الأمور بشأن تقدّم أبنائهم.</li>
+          <li>إنشاء التقارير والتحليلات لمديري الأكاديمية.</li>
+          <li>تدقيق الأمان ومنع الاحتيال.</li>
         </ul>
-        <p>We do <strong>not</strong> sell, rent, or share data with third parties.</p>
+        <p>نحن <strong>لا</strong> نبيع أو نؤجّر أو نشارك البيانات مع أطراف ثالثة.</p>
       </Section>
 
-      <Section title="3. Who Can Access Data">
-        <ul className="ml-4 list-disc space-y-1 text-sm text-muted-foreground">
-          <li><strong>Academy Admin:</strong> full access within their academy.</li>
-          <li><strong>Teachers:</strong> access only to students in their assigned groups.</li>
-          <li><strong>Parents:</strong> access only to their own children's data.</li>
-          <li><strong>Students:</strong> access only to their own data.</li>
+      <Section title="٣. من يمكنه الوصول إلى البيانات">
+        <ul className="list-disc space-y-1 pr-5 text-sm text-muted-foreground">
+          <li><strong>مدير الأكاديمية:</strong> وصول كامل ضمن نطاق أكاديميته.</li>
+          <li><strong>المدرّسون:</strong> وصول لطلاب مجموعاتهم المخصصة فقط.</li>
+          <li><strong>أولياء الأمور:</strong> وصول لبيانات أبنائهم فقط.</li>
+          <li><strong>الطلاب:</strong> وصول لبياناتهم الشخصية فقط.</li>
         </ul>
-        <p>Access is enforced via database-level Row Level Security (RLS).</p>
+        <p>يُطبَّق الوصول عبر نظام أمان على مستوى قاعدة البيانات (Row Level Security).</p>
       </Section>
 
-      <Section title="4. Data Retention">
-        <ul className="ml-4 list-disc space-y-1 text-sm text-muted-foreground">
-          <li><strong>Active students:</strong> data retained while enrolled.</li>
-          <li><strong>Archived students:</strong> data retained for <strong>1 academic year</strong> after archiving, then permanently deleted.</li>
-          <li><strong>Payments & grades:</strong> never hard-deleted (soft-deleted with timestamp) for financial/academic integrity.</li>
-          <li><strong>Audit logs:</strong> retained for 90 days.</li>
-        </ul>
-      </Section>
-
-      <Section title="5. Data Subject Rights">
-        <p>Under Egyptian Law 151 of 2020 and GDPR, users have the right to:</p>
-        <ul className="ml-4 list-disc space-y-1 text-sm text-muted-foreground">
-          <li><strong>Access:</strong> request a copy of their data.</li>
-          <li><strong>Correction:</strong> request correction of inaccurate data.</li>
-          <li><strong>Export:</strong> download all data as JSON/CSV.</li>
-          <li><strong>Erasure:</strong> request deletion (subject to financial record retention).</li>
-        </ul>
-        <p>To exercise these rights, contact the academy administrator.</p>
-      </Section>
-
-      <Section title="6. Minor's Data (Students Under 18)">
-        <ul className="ml-4 list-disc space-y-1 text-sm text-muted-foreground">
-          <li>Student data is collected with <strong>explicit parent/guardian consent</strong>.</li>
-          <li>Parents can access, export, or request deletion of their child's data at any time.</li>
-          <li>Student accounts are read-only — they cannot modify official grades or attendance.</li>
-          <li>Biometric data is <strong>never</strong> collected. QR codes contain only a student ID.</li>
+      <Section title="٤. الاحتفاظ بالبيانات">
+        <ul className="list-disc space-y-1 pr-5 text-sm text-muted-foreground">
+          <li><strong>الطلاب النشطون:</strong> تُحفظ بياناتهم أثناء فترة التسجيل.</li>
+          <li><strong>الطلاب المؤرشفون:</strong> تُحفظ بياناتهم لمدة <strong>عام دراسي واحد</strong> بعد الأرشفة، ثم تُحذف نهائيًا.</li>
+          <li><strong>المدفوعات والدرجات:</strong> لا تُحذف نهائيًا (حذف ناعم مع ختم زمني) للحفاظ على السلامة المالية والأكاديمية.</li>
+          <li><strong>سجلات التدقيق:</strong> تُحفظ لمدة 90 يومًا.</li>
         </ul>
       </Section>
 
-      <Section title="7. Data Security">
-        <ul className="ml-4 list-disc space-y-1 text-sm text-muted-foreground">
-          <li>All data is encrypted in transit (HTTPS/TLS).</li>
-          <li>Row Level Security (RLS) on all database tables.</li>
-          <li>Rate limiting on authentication and API endpoints.</li>
-          <li>Audit logging on all sensitive operations.</li>
-          <li>Service role keys are server-only (never exposed to client).</li>
+      <Section title="٥. حقوق صاحب البيانات">
+        <p>وفقًا لقانون حماية البيانات المصري رقم 151 لسنة 2020 ولائحته، يتمتع المستخدمون بالحقوق التالية:</p>
+        <ul className="list-disc space-y-1 pr-5 text-sm text-muted-foreground">
+          <li><strong>الوصول:</strong> طلب نسخة من بياناتهم.</li>
+          <li><strong>التصحيح:</strong> طلب تصحيح البيانات غير الدقيقة.</li>
+          <li><strong>التصدير:</strong> تنزيل جميع البيانات بصيغة JSON/CSV.</li>
+          <li><strong>الحذف:</strong> طلب الحذف (مع مراعاة الاحتفاظ بالسجلات المالية).</li>
+        </ul>
+        <p>لممارسة هذه الحقوق، يُرجى التواصل مع مدير الأكاديمية.</p>
+      </Section>
+
+      <Section title="٦. بيانات القاصرين (الطلاب دون 18 عامًا)">
+        <ul className="list-disc space-y-1 pr-5 text-sm text-muted-foreground">
+          <li>تُجمع بيانات الطلاب بموافقة صريحة من <strong>ولي الأمر</strong>.</li>
+          <li>يمكن لأولياء الأمور الوصول إلى بيانات أبنائهم أو تصديرها أو طلب حذفها في أي وقت.</li>
+          <li>حسابات الطلاب للقراءة فقط — لا يمكنهم تعديل الدرجات أو الحضور الرسمية.</li>
+          <li>لا تُجمع <strong>أي بيانات حيوية</strong>. رموز QR تحتوي على رقم الطالب فقط.</li>
         </ul>
       </Section>
 
-      <Section title="8. Contact">
-        <p>For privacy questions or data requests, contact your academy administrator.</p>
+      <Section title="٧. أمان البيانات">
+        <ul className="list-disc space-y-1 pr-5 text-sm text-muted-foreground">
+          <li>تُشفّر جميع البيانات أثناء النقل (HTTPS/TLS).</li>
+          <li>نظام أمان على مستوى الصفوف (RLS) في جميع جداول قاعدة البيانات.</li>
+          <li>تحديد لمعدل الطلبات على نقاط المصادقة وواجهات API.</li>
+          <li>تسجيل تدقيق لجميع العمليات الحساسة.</li>
+          <li>مفاتيح الخدمة مخصّصة للخادم فقط ولا تُكشف للعميل أبدًا.</li>
+        </ul>
       </Section>
+
+      <Section title="٨. التواصل">
+        <p>لأي استفسارات متعلقة بالخصوصية أو طلبات البيانات، يُرجى التواصل مع مدير الأكاديمية.</p>
+      </Section>
+
+      <p className="text-center text-xs text-muted-foreground">
+        {APP_CONFIG.name} — سياسة الخصوصية (نسخة تجريبية، قابلة للمراجعة).
+      </p>
     </div>
   );
 }
@@ -95,7 +109,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <div className="space-y-2">
       <h2 className="text-lg font-semibold">{title}</h2>
-      <div className="text-sm text-foreground space-y-2">{children}</div>
+      <div className="space-y-2 text-sm text-foreground">{children}</div>
     </div>
   );
 }

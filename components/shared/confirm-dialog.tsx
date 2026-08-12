@@ -29,7 +29,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  cancelLabel = "إلغاء",
   destructive,
   onConfirm,
 }: ConfirmDialogProps) {

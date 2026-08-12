@@ -32,7 +32,7 @@ export default async function ParentPaymentsPage() {
         <>
           <div className="grid gap-4 sm:grid-cols-3">
             <StatCard label="Paid (total)" value={formatCurrency(collected)} icon={Wallet} accent="success" />
-            <StatCard label="Outstanding" value={formatCurrency(outstanding)} icon={Wallet} accent="warning" />
+            <StatCard label='المتبقي' value={formatCurrency(outstanding)} icon={Wallet} accent="warning" />
             <StatCard label="Records" value={allPayments.length} icon={Wallet} accent="primary" />
           </div>
           <div className="space-y-6">

@@ -132,22 +132,22 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="First name" error={errors.first_name?.message} required>
+        <Field label="الاسم الأول" error={errors.first_name?.message} required>
           <Input {...register("first_name")} placeholder="Ahmed" />
         </Field>
-        <Field label="Last name" error={errors.last_name?.message} required>
+        <Field label="اسم العائلة" error={errors.last_name?.message} required>
           <Input {...register("last_name")} placeholder="Ali" />
         </Field>
-        <Field label="Phone" error={errors.phone?.message}>
+        <Field label="الموبايل" error={errors.phone?.message}>
           <Input {...register("phone")} placeholder="+20 100 000 0000" />
         </Field>
-        <Field label="Email" error={errors.email?.message}>
+        <Field label="البريد الإلكتروني" error={errors.email?.message}>
           <Input type="email" {...register("email")} placeholder="student@email.com" />
         </Field>
-        <Field label="Date of birth">
+        <Field label="تاريخ الميلاد">
           <Input type="date" {...register("date_of_birth")} />
         </Field>
-        <Field label="Gender">
+        <Field label="النوع">
           <Controller
             control={control}
             name="gender"
@@ -157,7 +157,7 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
                 onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select" />
+                  <SelectValue placeholder="اختر" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">Not specified</SelectItem>
@@ -168,10 +168,10 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
             )}
           />
         </Field>
-        <Field label="Grade / Level">
+        <Field label="الصف / المستوى">
           <Input {...register("grade")} placeholder="Grade 9" />
         </Field>
-        <Field label="School">
+        <Field label="المدرسة">
           <Input {...register("school")} placeholder="School name" />
         </Field>
         <Field label="Parent / Guardian" required error={errors.parent_id?.message}>
@@ -227,18 +227,18 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
             <div className="space-y-2">
               <div className="grid grid-cols-2 gap-2">
                 <Input
-                  placeholder="Parent first name"
+                  placeholder="اسم ولي الأمر الأول"
                   value={newParent.first_name}
                   onChange={(e) => setNewParent((p) => ({ ...p, first_name: e.target.value }))}
                 />
                 <Input
-                  placeholder="Parent last name"
+                  placeholder="اسم عائلة ولي الأمر"
                   value={newParent.last_name}
                   onChange={(e) => setNewParent((p) => ({ ...p, last_name: e.target.value }))}
                 />
               </div>
               <Input
-                placeholder="Parent phone (optional)"
+                placeholder="موبايل ولي الأمر (اختياري)"
                 value={newParent.phone}
                 onChange={(e) => setNewParent((p) => ({ ...p, phone: e.target.value }))}
               />
@@ -248,7 +248,7 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
             </div>
           )}
         </Field>
-        <Field label="Status">
+        <Field label="الحالة">
           <Controller
             control={control}
             name="status"
@@ -299,8 +299,8 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
         />
       </Field>
 
-      <Field label="Notes" error={errors.notes?.message}>
-        <Textarea {...register("notes")} placeholder="Internal notes about the student…" />
+      <Field label="ملاحظات" error={errors.notes?.message}>
+        <Textarea {...register("notes")} placeholder="ملاحظات داخلية عن الطالب…" />
       </Field>
 
       <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
@@ -331,7 +331,7 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
         )}
         <Button type="submit" disabled={saving}>
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-          {student ? "Save changes" : "Add student"}
+          {student ? "حفظ التعديلات" : "Add student"}
         </Button>
       </div>
     </form>

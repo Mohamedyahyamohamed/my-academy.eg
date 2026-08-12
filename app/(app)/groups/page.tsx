@@ -35,7 +35,7 @@ export default async function GroupsPage() {
       {groups.length === 0 ? (
         <EmptyState
           icon={UsersRound}
-          title="No groups yet"
+          title="مفيش مجموعات بعد"
           description="Create your first group to start scheduling lessons and tracking attendance."
           action={<AddGroupDialog courses={courses} teachers={teachers} />}
         />

@@ -67,7 +67,7 @@ export default async function GroupDetailPage({
     { label: "الطلاب", value: detail.students.length, icon: Users },
     { label: "الحصص", value: detail.lessons.length, icon: BookOpen },
     { label: "الحضور", value: `${detail.attendanceRate}%`, icon: CalendarCheck },
-    { label: "Avg. grade", value: `${avgGrade}%`, icon: GraduationCap },
+    { label: "متوسط الدرجات", value: `${avgGrade}%`, icon: GraduationCap },
   ];
 
   return (
@@ -175,7 +175,7 @@ export default async function GroupDetailPage({
             <Row label="Teacher" value={detail.teacher ? `${detail.teacher.first_name} ${detail.teacher.last_name}` : "—"} />
             <Row label="Schedule" value={detail.schedule} />
             <Row label="Room" value={detail.room ?? "—"} />
-            <Row label="Monthly fee" value={formatCurrency(detail.monthly_fee)} />
+            <Row label='الرسوم الشهرية' value={formatCurrency(detail.monthly_fee)} />
             <div className="flex flex-wrap gap-2 pt-1">
               <Button asChild className="flex-1" variant="soft">
                 <Link href={`/attendance?group=${params.id}`}>
@@ -224,7 +224,7 @@ export default async function GroupDetailPage({
         <CardContent className="p-0">
           {detail.lessons.length === 0 ? (
             <div className="p-5">
-              <EmptyState icon={CalendarDays} title="No lessons yet" description="Create your first lesson for this group." />
+              <EmptyState icon={CalendarDays} title="مفيش حصص بعد" description="Create your first lesson for this group." />
             </div>
           ) : (
             <Table>
@@ -246,7 +246,7 @@ export default async function GroupDetailPage({
                     <TableCell className="text-sm text-muted-foreground">{l.start_time} – {l.end_time}</TableCell>
                     <TableCell>
                       <Badge variant={l.attendance_taken ? "success" : "outline"}>
-                        {l.attendance_taken ? "Attendance taken" : "Pending"}
+                        {l.attendance_taken ? "Attendance taken" : "معلّق"}
                       </Badge>
                     </TableCell>
                   </TableRow>

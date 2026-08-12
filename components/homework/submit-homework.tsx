@@ -71,7 +71,7 @@ export function SubmitHomework({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" disabled={disabled}>
-          <Upload className="h-3.5 w-3.5" /> {disabled ? "Submitted" : "Submit"}
+          <Upload className="h-3.5 w-3.5" /> {disabled ? "مُسلَّم" : "Submit"}
         </Button>
       </DialogTrigger>
       <DialogContent>

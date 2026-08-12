@@ -25,7 +25,7 @@ export default async function BillingPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Billing & Plans" description="Manage your subscription and usage limits." />
+      <PageHeader title="الاشتراكات والخطط" description="إدارة اشتراكك وحدود الاستخدام." />
 
       <Card>
         <CardHeader>
@@ -66,7 +66,7 @@ export default async function BillingPage() {
                   {p.id === "pro" && <Sparkles className="h-4 w-4 text-amber-500" />}
                 </div>
                 <p className="mt-2 text-2xl font-bold">
-                  {p.price === 0 ? "Free" : formatCurrency(p.price)}
+                  {p.price === 0 ? "مجاني" : formatCurrency(p.price)}
                   {p.price > 0 && <span className="text-sm font-normal text-muted-foreground">/mo</span>}
                 </p>
                 <ul className="mt-4 space-y-2 text-sm">

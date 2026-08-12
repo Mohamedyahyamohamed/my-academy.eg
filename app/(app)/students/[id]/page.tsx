@@ -132,10 +132,10 @@ export default async function StudentProfilePage({
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <InfoItem icon={User} label="Parent" value={detail.parent ? <Link href={`/parents/${detail.parent.id}`} className="text-primary hover:underline">{detail.parent.first_name} {detail.parent.last_name}</Link> : "Not linked"} />
-            <InfoItem icon={School} label="School" value={detail.school || "—"} />
-            <InfoItem icon={Phone} label="Phone" value={detail.phone || "—"} />
-            <InfoItem icon={Mail} label="Email" value={detail.email || "—"} />
+            <InfoItem icon={User} label="ولي الأمر" value={detail.parent ? <Link href={`/parents/${detail.parent.id}`} className="text-primary hover:underline">{detail.parent.first_name} {detail.parent.last_name}</Link> : "Not linked"} />
+            <InfoItem icon={School} label="المدرسة" value={detail.school || "—"} />
+            <InfoItem icon={Phone} label="الموبايل" value={detail.phone || "—"} />
+            <InfoItem icon={Mail} label="البريد الإلكتروني" value={detail.email || "—"} />
           </div>
         </CardContent>
       </Card>
@@ -143,10 +143,10 @@ export default async function StudentProfilePage({
       {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <MiniStat label="الحضور" value={`${stats.attendanceRate}%`} icon={CalendarCheck} />
-        <MiniStat label="Avg. grade" value={`${stats.averageGrade}%`} icon={GraduationCap} />
-        <MiniStat label="Monthly fee" value={formatCurrency(stats.monthlyFee)} icon={Wallet} />
-        <MiniStat label="Paid" value={formatCurrency(stats.totalPaid)} icon={Wallet} accent="success" />
-        <MiniStat label="Outstanding" value={formatCurrency(stats.outstanding)} icon={TrendingDown} accent="warning" />
+        <MiniStat label="متوسط الدرجات" value={`${stats.averageGrade}%`} icon={GraduationCap} />
+        <MiniStat label='الرسوم الشهرية' value={formatCurrency(stats.monthlyFee)} icon={Wallet} />
+        <MiniStat label="مدفوع" value={formatCurrency(stats.totalPaid)} icon={Wallet} accent="success" />
+        <MiniStat label='المتبقي' value={formatCurrency(stats.outstanding)} icon={TrendingDown} accent="warning" />
       </div>
 
       <StudentProfileTabs
@@ -184,9 +184,9 @@ export default async function StudentProfilePage({
           <Card>
             <CardContent className="p-0">
               <div className="grid grid-cols-3 gap-4 border-b p-4 text-center">
-                <CountStat label="Present" value={attendance.present} className="text-emerald-600" />
-                <CountStat label="Late" value={attendance.late} className="text-amber-600" />
-                <CountStat label="Absent" value={attendance.absent} className="text-rose-600" />
+                <CountStat label="حاضر" value={attendance.present} className="text-emerald-600" />
+                <CountStat label="متأخر" value={attendance.late} className="text-amber-600" />
+                <CountStat label="غائب" value={attendance.absent} className="text-rose-600" />
               </div>
               <Table>
                 <TableHeader>

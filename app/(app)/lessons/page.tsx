@@ -85,7 +85,7 @@ export default async function LessonsPage({
                     <TableCell className="text-sm">{formatTime(`${l.date.slice(0, 10)}T${l.start_time}:00`)}</TableCell>
                     <TableCell>
                       <Badge variant={l.attendance_taken ? "success" : "outline"}>
-                        {l.attendance_taken ? "Taken" : "Pending"}
+                        {l.attendance_taken ? "Taken" : "معلّق"}
                       </Badge>
                     </TableCell>
                   </TableRow>
@@ -100,7 +100,7 @@ export default async function LessonsPage({
                 <div className="flex items-center justify-between">
                   <p className="font-medium">{l.topic}</p>
                   <Badge variant={l.attendance_taken ? "success" : "outline"}>
-                    {l.attendance_taken ? "Taken" : "Pending"}
+                    {l.attendance_taken ? "Taken" : "معلّق"}
                   </Badge>
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{l.group?.name}</p>

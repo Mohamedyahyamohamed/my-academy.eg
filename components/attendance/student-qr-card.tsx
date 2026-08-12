@@ -59,7 +59,7 @@ export function StudentQrCard({
       ctx.fillText(name.slice(0, 22), 300, 540);
       ctx.fillStyle = "#64748b";
       ctx.font = "24px sans-serif";
-      ctx.fillText(grade ?? "Student", 300, 580);
+      ctx.fillText(grade ?? "الطالب", 300, 580);
       ctx.font = "18px sans-serif";
       ctx.fillText("Show this to your teacher to check in", 300, 660);
       const a = document.createElement("a");
@@ -90,7 +90,7 @@ export function StudentQrCard({
             <QRCodeSVG value={value} size={200} level="M" />
           </div>
           <p className="text-sm font-semibold">{name}</p>
-          <p className="text-xs text-muted-foreground">{grade ?? "Student"}</p>
+          <p className="text-xs text-muted-foreground">{grade ?? "الطالب"}</p>
         </div>
         <p className="text-xs text-muted-foreground">
           احفظ الصورة أو صورها سكرين شوت وابعتها على الواتساب. اعرضها للمعلّم عند الحضور.

@@ -70,7 +70,7 @@ export default async function DashboardPage() {
           trend={{ value: 12, positive: true, label: "vs last month" }}
         />
         <StatCard
-          label="Outstanding"
+          label='المتبقي'
           value={formatCurrency(d.outstanding)}
           icon={TrendingDown}
           accent="warning"

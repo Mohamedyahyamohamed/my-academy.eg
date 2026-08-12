@@ -55,10 +55,10 @@ export function AcademySettingsForm({ academy }: { academy: Academy }) {
         <Field label="Currency" error={errors.currency?.message}>
           <Input {...register("currency")} />
         </Field>
-        <Field label="Email" error={errors.email?.message}>
+        <Field label="البريد الإلكتروني" error={errors.email?.message}>
           <Input {...register("email")} />
         </Field>
-        <Field label="Phone">
+        <Field label="الموبايل">
           <Input {...register("phone")} />
         </Field>
         <Field label="Country">

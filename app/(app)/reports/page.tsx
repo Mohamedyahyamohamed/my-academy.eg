@@ -53,8 +53,8 @@ export default async function ReportsPage({
         </PageHeader>
         <div className="card-surface p-4">
           <ToolbarRoot>
-            <ToolbarSelect paramKey="group" label="Filter by group" options={[
-              { value: "ALL", label: "All groups" },
+            <ToolbarSelect paramKey="group" label="تصفية بمجموعة" options={[
+              { value: "ALL", label: "كل المجموعات" },
               ...groups.map((g) => ({ value: g.id, label: g.name })),
             ]} />
           </ToolbarRoot>
@@ -78,7 +78,7 @@ export default async function ReportsPage({
               <ReportStat label="الطلاب" value={String(students.length)} />
               <ReportStat label="Active groups" value={String(d.totalGroups)} />
               <ReportStat label="Collected" value={formatCurrency(collected)} />
-              <ReportStat label="Outstanding" value={formatCurrency(outstanding)} />
+              <ReportStat label='المتبقي' value={formatCurrency(outstanding)} />
               <ReportStat label="Attendance rate" value={`${d.attendanceRate}%`} />
               <ReportStat label="Average grade" value={`${d.averageGrade}%`} />
               <ReportStat label="Monthly revenue" value={formatCurrency(d.monthlyRevenue)} />

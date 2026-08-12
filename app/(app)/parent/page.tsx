@@ -21,7 +21,7 @@ export default async function ParentDashboard() {
         <PageHeader title="لوحة التحكم" description={`Welcome, ${user.full_name}.`} />
         <EmptyState
           icon={Users}
-          title="No children linked yet"
+          title="مفيش أبناء مربوطين بعد"
           description="Your account isn't linked to any students yet. Please contact the academy."
         />
       </div>
@@ -48,10 +48,10 @@ export default async function ParentDashboard() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Children" value={children.length} icon={Users} accent="primary" />
-        <StatCard label="Avg. grade" value={`${Math.round(totals.grade / children.length)}%`} icon={GraduationCap} accent="info" />
-        <StatCard label="Outstanding" value={formatCurrency(totals.outstanding)} icon={Wallet} accent="warning" />
-        <StatCard label="Pending homework" value={totals.pending} icon={ClipboardList} accent="destructive" />
+        <StatCard label="الأبناء" value={children.length} icon={Users} accent="primary" />
+        <StatCard label="متوسط الدرجات" value={`${Math.round(totals.grade / children.length)}%`} icon={GraduationCap} accent="info" />
+        <StatCard label='المتبقي' value={formatCurrency(totals.outstanding)} icon={Wallet} accent="warning" />
+        <StatCard label="الواجبات المعلّقة" value={totals.pending} icon={ClipboardList} accent="destructive" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -72,7 +72,7 @@ export default async function ParentDashboard() {
                   <div className="mt-4 grid grid-cols-3 gap-3 text-center">
                     <Metric icon={CalendarCheck} label="الحضور" value={`${s.attendanceRate}%`} />
                     <Metric icon={GraduationCap} label="Avg grade" value={`${s.averageGrade}%`} />
-                    <Metric icon={Wallet} label="Outstanding" value={formatCurrency(s.outstanding)} />
+                    <Metric icon={Wallet} label='المتبقي' value={formatCurrency(s.outstanding)} />
                   </div>
                   {s.upcomingLesson && (
                     <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted p-2.5 text-xs">

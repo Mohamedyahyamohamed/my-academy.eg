@@ -50,7 +50,7 @@ export default async function StudentDashboard() {
         <StatCard label="الحضور" value={`${d.attendanceRate}%`} icon={CalendarCheck} accent="success" />
         <StatCard label="Average grade" value={`${d.averageGrade}%`} icon={GraduationCap} accent="primary" />
         <StatCard label="Active groups" value={d.groups.length} icon={BookOpen} accent="info" />
-        <StatCard label="Pending homework" value={d.pendingHomework.length} icon={ClipboardList} accent="warning" />
+        <StatCard label="الواجبات المعلّقة" value={d.pendingHomework.length} icon={ClipboardList} accent="warning" />
       </div>
 
       {/* Gamification */}

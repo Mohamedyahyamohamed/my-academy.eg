@@ -64,9 +64,9 @@ export default async function ParentChildPage({ params }: { params: { id: string
           <StudentAvatar name={fullName(child)} size="lg" />
           <div className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
             <Mini label="الحضور" value={`${summary.attendanceRate}%`} />
-            <Mini label="Avg. grade" value={`${summary.averageGrade}%`} />
+            <Mini label="متوسط الدرجات" value={`${summary.averageGrade}%`} />
             <Mini label="Pending HW" value={String(summary.pendingHomework)} />
-            <Mini label="Outstanding" value={formatCurrency(summary.outstanding)} />
+            <Mini label='المتبقي' value={formatCurrency(summary.outstanding)} />
           </div>
         </CardContent>
       </Card>
@@ -76,7 +76,7 @@ export default async function ParentChildPage({ params }: { params: { id: string
           <Card>
             <CardHeader><CardTitle className="text-base">Snapshot</CardTitle></CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              {summary.upcomingLesson ? <>Next lesson: <span className="font-medium text-foreground">{summary.upcomingLesson}</span></> : "No upcoming lessons."}
+              {summary.upcomingLesson ? <>Next lesson: <span className="font-medium text-foreground">{summary.upcomingLesson}</span></> : "مفيش حصص قادمة."}
             </CardContent>
           </Card>
         }

@@ -50,15 +50,15 @@ export default async function LessonDetailPage({
         </Button>
         <Button asChild variant="soft">
           <Link href={`/attendance?group=${lesson.group_id}&lesson=${lesson.id}`}>
-            <CalendarCheck className="h-4 w-4" /> {lesson.attendance_taken ? "Edit attendance" : "Take attendance"}
+            <CalendarCheck className="h-4 w-4" /> {lesson.attendance_taken ? "Edit attendance" : "تسجيل الحضور"}
           </Link>
         </Button>
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <InfoCard icon={Users} label="Group" value={lesson.group?.name ?? "—"} />
-        <InfoCard icon={Calendar} label="Date" value={formatDate(lesson.date)} />
-        <InfoCard icon={Clock} label="Time" value={`${lesson.start_time} – ${lesson.end_time}`} />
+        <InfoCard icon={Users} label="المجموعة" value={lesson.group?.name ?? "—"} />
+        <InfoCard icon={Calendar} label="التاريخ" value={formatDate(lesson.date)} />
+        <InfoCard icon={Clock} label="الوقت" value={`${lesson.start_time} – ${lesson.end_time}`} />
         <InfoCard icon={Users} label="الطلاب" value={String(roster.length)} />
       </div>
 

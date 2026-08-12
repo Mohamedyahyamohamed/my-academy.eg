@@ -175,7 +175,7 @@ export function GroupForm({
         {onDone && <Button type="button" variant="outline" onClick={onDone}>Cancel</Button>}
         <Button type="submit" disabled={saving}>
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-          {group ? "Save changes" : "Create group"}
+          {group ? "حفظ التعديلات" : "Create group"}
         </Button>
       </div>
     </form>

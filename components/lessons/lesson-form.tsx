@@ -79,7 +79,7 @@ export function LessonForm({ lesson, groups, teachers, defaultGroupId, onDone }:
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Group" error={errors.group_id?.message} required>
+        <Field label="المجموعة" error={errors.group_id?.message} required>
           <Controller
             control={control}
             name="group_id"
@@ -116,7 +116,7 @@ export function LessonForm({ lesson, groups, teachers, defaultGroupId, onDone }:
             )}
           />
         </Field>
-        <Field label="Date" error={errors.date?.message} required>
+        <Field label="التاريخ" error={errors.date?.message} required>
           <Input type="date" {...register("date")} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
@@ -128,20 +128,20 @@ export function LessonForm({ lesson, groups, teachers, defaultGroupId, onDone }:
           </Field>
         </div>
       </div>
-      <Field label="Topic" error={errors.topic?.message} required>
+      <Field label="الموضوع" error={errors.topic?.message} required>
         <Input {...register("topic")} placeholder="e.g. Linear Equations" />
       </Field>
       <Field label="Description">
         <Textarea {...register("description")} placeholder="What will be covered in this lesson?" />
       </Field>
-      <Field label="Notes">
+      <Field label="ملاحظات">
         <Textarea {...register("notes")} placeholder="Private teaching notes…" />
       </Field>
       <div className="flex justify-end gap-2 pt-2">
         {onDone && <Button type="button" variant="outline" onClick={onDone}>Cancel</Button>}
         <Button type="submit" disabled={saving}>
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-          {lesson ? "Save changes" : "Create lesson"}
+          {lesson ? "حفظ التعديلات" : "إنشاء حصة"}
         </Button>
       </div>
     </form>

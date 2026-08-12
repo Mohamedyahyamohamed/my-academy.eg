@@ -49,7 +49,7 @@ export default async function StudentsPage({
   const parents = await MiscService.listParents();
 
   const groupOptions = [
-    { value: "ALL", label: "All groups" },
+    { value: "ALL", label: "كل المجموعات" },
     ...groups.map((g) => ({ value: g.id, label: g.name })),
   ];
 
@@ -70,22 +70,22 @@ export default async function StudentsPage({
 
       <div className="card-surface p-4">
         <ToolbarRoot>
-          <ToolbarSearch placeholder="Search by name, phone, school…" />
-          <ToolbarSelect paramKey="status" label="Filter by status" options={[
-            { value: "ALL", label: "All statuses" },
-            { value: "ACTIVE", label: "Active" },
-            { value: "INACTIVE", label: "Inactive" },
-            { value: "ARCHIVED", label: "Archived" },
+          <ToolbarSearch placeholder="بحث بالاسم أو الموبايل أو المدرسة…" />
+          <ToolbarSelect paramKey="status" label="تصفية بالحالة" options={[
+            { value: "ALL", label: "كل الحالات" },
+            { value: "ACTIVE", label: "نشط" },
+            { value: "INACTIVE", label: "غير نشط" },
+            { value: "ARCHIVED", label: "مؤرشف" },
           ]} />
-          <ToolbarSelect paramKey="group" label="Filter by group" options={groupOptions} />
+          <ToolbarSelect paramKey="group" label="تصفية بمجموعة" options={groupOptions} />
         </ToolbarRoot>
       </div>
 
       {result.items.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="No students yet"
-          description="Add your first student to start tracking attendance, payments and grades."
+          title="مفيش طلاب بعد"
+          description="أضف أول طالب لبدء متابعة الحضور والمصاريف والدرجات."
           action={<AddStudentDialog parents={parents} groups={groups} />}
         />
       ) : (

@@ -84,7 +84,7 @@ export default async function SettingsPage() {
                       <p className="truncate text-xs text-muted-foreground">{u.email}</p>
                     </div>
                     <RoleBadge role={u.role} />
-                    <Badge variant={u.is_active ? "success" : "secondary"}>{u.is_active ? "Active" : "Disabled"}</Badge>
+                    <Badge variant={u.is_active ? "success" : "secondary"}>{u.is_active ? "نشط" : "Disabled"}</Badge>
                   </div>
                 ))}
               </div>

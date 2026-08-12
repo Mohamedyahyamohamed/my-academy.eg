@@ -49,8 +49,8 @@ export default async function HomeworkPage({
       <div className="card-surface p-4">
         <ToolbarRoot>
           <ToolbarSearch placeholder="Search homework…" />
-          <ToolbarSelect paramKey="group" label="Filter by group" options={[
-            { value: "ALL", label: "All groups" },
+          <ToolbarSelect paramKey="group" label="تصفية بمجموعة" options={[
+            { value: "ALL", label: "كل المجموعات" },
             ...groups.map((g) => ({ value: g.id, label: g.name })),
           ]} />
         </ToolbarRoot>

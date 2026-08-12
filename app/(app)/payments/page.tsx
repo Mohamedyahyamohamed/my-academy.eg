@@ -56,17 +56,17 @@ export default async function PaymentsPage({
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Collected (this month)" value={formatCurrency(metrics.collectedThisMonth)} icon={Banknote} accent="success" />
         <StatCard label="Billed (this month)" value={formatCurrency(metrics.monthlyRevenue)} icon={Wallet} accent="primary" />
-        <StatCard label="Outstanding" value={formatCurrency(metrics.outstanding)} icon={TrendingDown} accent="warning" />
+        <StatCard label='المتبقي' value={formatCurrency(metrics.outstanding)} icon={TrendingDown} accent="warning" />
       </div>
 
       <div className="card-surface p-4">
         <ToolbarRoot>
           <ToolbarSearch placeholder="Search by student name…" />
-          <ToolbarSelect paramKey="status" label="Filter by status" options={[
-            { value: "ALL", label: "All statuses" },
-            { value: "PAID", label: "Paid" },
+          <ToolbarSelect paramKey="status" label="تصفية بالحالة" options={[
+            { value: "ALL", label: "كل الحالات" },
+            { value: "PAID", label: "مدفوع" },
             { value: "PARTIAL", label: "Partially paid" },
-            { value: "UNPAID", label: "Unpaid" },
+            { value: "UNPAID", label: "غير مدفوع" },
           ]} />
           <ToolbarSelect paramKey="month" label="Filter by month" options={[
             { value: "ALL", label: "All months" },

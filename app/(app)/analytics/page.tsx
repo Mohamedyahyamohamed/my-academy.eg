@@ -24,7 +24,7 @@ export default async function AnalyticsPage() {
         <StatCard label="Total students" value={d.totalStudents} hint="Enrolled overall" icon={Users} accent="primary" />
         <StatCard label="Active groups" value={d.totalGroups} icon={BarChart3} accent="info" />
         <StatCard label="Attendance rate" value={`${d.attendanceRate}%`} icon={TrendingUp} accent="success" />
-        <StatCard label="Outstanding" value={formatCurrency(d.outstanding)} icon={Wallet} accent="warning" />
+        <StatCard label='المتبقي' value={formatCurrency(d.outstanding)} icon={Wallet} accent="warning" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

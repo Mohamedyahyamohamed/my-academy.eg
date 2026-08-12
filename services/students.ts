@@ -190,7 +190,8 @@ export async function listStudents(
     return listStudentsFromCache(filters);
   }
 
-      const total = count ?? 0;
+  const total = count ?? 0;
+  // جيب أولياء الأمور من الداتابيز (RLS) مباشرة مش من الكاش — عشان يظهروا دايماً
   const parentIds = [...new Set((data ?? []).map((s: any) => s.parent_id).filter(Boolean))];
   const { data: parentsData } = parentIds.length
     ? await client.from("parents").select("*").in("id", parentIds)

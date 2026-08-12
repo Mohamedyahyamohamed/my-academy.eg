@@ -32,6 +32,7 @@ export async function createParentAction(input: {
 
 /**
  * ينشئ حسابات دخول لأولياء الأمور اللي ممعاهومش حساب (profile_id = null).
+ * بيستخدم الإيميل الموجود على سجل ولي الأمر (p.xxx@parent.local) + باسورد افتراضي.
  */
 export async function createMissingParentAccountsAction() {
   requireRole("ADMIN");

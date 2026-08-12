@@ -63,7 +63,11 @@ export default async function ParentDetailPage({
         <CardContent className="p-0">
           <div className="divide-y">
             {(children ?? []).map((c: any) => (
-              <Link key={c.id} href={`/students/${c.id}`} className="flex items-center gap-3 p-4 hover:bg-accent/50">
+              <Link
+                key={c.id}
+                href={`/students/${c.id}`}
+                className="flex items-center gap-3 p-4 hover:bg-accent/50"
+              >
                 <StudentAvatar name={`${c.first_name} ${c.last_name}`} size="sm" />
                 <div className="flex-1">
                   <p className="font-medium">{c.first_name} {c.last_name}</p>

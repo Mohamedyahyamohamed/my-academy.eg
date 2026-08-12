@@ -103,6 +103,7 @@ export default async function StudentProfilePage({
         <EditStudentDialog student={detail} parents={parents} groups={groups} />
       </PageHeader>
 
+      {/* Header card */}
       <Card className="overflow-hidden">
         <div className="h-20 bg-gradient-to-r from-brand-500 to-brand-700" />
         <CardContent className="-mt-12 p-6">
@@ -139,6 +140,7 @@ export default async function StudentProfilePage({
         </CardContent>
       </Card>
 
+      {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <MiniStat label="Attendance" value={`${stats.attendanceRate}%`} icon={CalendarCheck} />
         <MiniStat label="Avg. grade" value={`${stats.averageGrade}%`} icon={GraduationCap} />

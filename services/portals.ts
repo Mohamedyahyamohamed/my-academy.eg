@@ -3,6 +3,7 @@
  * ALL data access is RLS-backed via fetchTableRLS (user session).
  */
 import type { SessionUser, Student, Parent } from "@/types";
+import { isSupabaseConfigured } from "./supabase/config";
 import { collections } from "./data/store";
 import {
   groupsForStudent,
@@ -190,6 +191,28 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
 }
 
 export async function getParentDashboard(user: SessionUser): Promise<ParentDashboardData> {
+  // اقرا من الداتابيز (RLS) مباشرة مش من الكاش — عشان تشتغل على Vercel
+  if (isSupabaseConfigured()) {
+    const { createServerSupabaseClient } = await import("@/lib/supabase/server");
+    const client = createServerSupabaseClient();
+    // ولي الأمر
+    const { data: parent } = await client
+      .from("parents")
+      .select("*")
+      .or(`profile_id.eq.${user.id},email.ilike.${user.email}`)
+      .maybeSingle();
+    if (parent) {
+      const { data: children } = await client
+        .from("students")
+        .select("*")
+        .eq("parent_id", parent.id);
+      const childrenList = (children ?? []) as any[];
+      const summaries: Record<string, ChildSummary> = {};
+      for (const c of childrenList) summaries[c.id] = await childSummary(c.id);
+      return { children: childrenList, summaries };
+    }
+  }
+  // fallback للكاش
   const children = getMyChildren(user);
   const summaries: Record<string, ChildSummary> = {};
   for (const c of children) summaries[c.id] = await childSummary(c.id);

@@ -31,6 +31,13 @@ export async function saveGradesAction(
     // إشعار Push لأولياء الأمور
     const { notifyAcademy } = await import("@/services/push");
     void notifyAcademy(user.academy_id, "📊 درجات جديدة", `تم تسجيل درجات ${entries.length} طالب في الامتحان.`);
+    // إشعار واتساب لأولياء أمور الطلاب المُقيّمة درجاتهم
+    const { notifyParentsWhatsApp } = await import("@/services/whatsapp");
+    void notifyParentsWhatsApp(
+      entries.map((e) => e.studentId),
+      "📊 درجات جديدة",
+      () => "تم تسجيل درجات جديدة لابنك. برجاء متابعة بوابة أولياء الأمور.",
+    );
     revalidatePath("/grades");
     revalidatePath(`/exams/${examId}`);
     revalidatePath("/dashboard");

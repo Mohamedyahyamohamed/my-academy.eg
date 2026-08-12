@@ -34,6 +34,18 @@ export async function recordPaymentAction(
     // إشعار Push لأولياء الأمور
     const { notifyAcademy } = await import("@/services/push");
     void notifyAcademy(user.academy_id, "💰 دفعة مسجّلة", `تم تسجيل دفعة بقيمة ${amount} جنيه.`);
+    // إشعار واتساب لولي أمر الطالب صاحب الدفعة
+    void (async () => {
+      const { getStudentIdByPayment, notifyParentWhatsApp } = await import("@/services/whatsapp");
+      const studentId = await getStudentIdByPayment(paymentId);
+      if (studentId) {
+        await notifyParentWhatsApp(
+          studentId,
+          "💰 دفعة مسجّلة",
+          `تم تسجيل دفعة بقيمة ${amount} جنيه. شكرًا لكم.`,
+        );
+      }
+    })();
     revalidatePath("/payments");
     revalidatePath("/dashboard");
   }

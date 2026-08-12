@@ -50,6 +50,13 @@ export async function saveAttendanceAction(
   const { notifyAcademy } = await import("@/services/push");
   const absent = entries.filter((e) => e.status === "ABSENT").length;
   void notifyAcademy(user.academy_id, "✅ تم تسجيل الحضور", `تم تسجيل حضور ${entries.length} طالب.${absent > 0 ? ` (${absent} غائب)` : ""}`);
+  // إشعار واتساب لأولياء أمور الطلاب الغائبين
+  const { notifyParentsWhatsApp } = await import("@/services/whatsapp");
+  void notifyParentsWhatsApp(
+    entries.filter((e) => e.status === "ABSENT").map((e) => e.studentId),
+    "⚠️ تنبيه غياب",
+    () => "نود إعلامكم بغياب ابنكم عن الحصة اليوم. برجاء المتابعة.",
+  );
   revalidatePath(`/lessons/${lessonId}`);
   revalidatePath(`/groups/${groupId}`);
   revalidatePath("/dashboard");

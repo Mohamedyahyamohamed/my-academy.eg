@@ -11,6 +11,7 @@ import {
   School,
   User,
   ArrowLeft,
+  FileText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
@@ -101,6 +102,11 @@ export default async function StudentProfilePage({
           trigger={<Button variant="outline">QR card</Button>}
         />
         <EditStudentDialog student={detail} parents={parents} groups={groups} />
+        <Button asChild variant="outline">
+          <Link href={`/students/${params.id}/report`} target="_blank">
+            <FileText className="h-4 w-4" /> كشف درجات
+          </Link>
+        </Button>
       </PageHeader>
 
       {/* Header card */}

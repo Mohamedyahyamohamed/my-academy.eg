@@ -10,6 +10,8 @@ export const academySchema = z.object({
   address: z.string().max(200).optional(),
   country: z.string().max(60).optional(),
   currency: z.string().max(10).optional(),
+  primary_color: z.string().max(9).optional(),
+  logo_url: z.string().max(500).optional(),
 });
 export type AcademyValues = z.infer<typeof academySchema>;
 

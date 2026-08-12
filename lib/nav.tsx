@@ -54,6 +54,7 @@ export const ADMIN_NAV: NavSection[] = [
     items: [
       { titleAr: "التقارير", titleEn: "Reports", href: "/reports", icon: CalendarDays },
       { titleAr: "التحليلات", titleEn: "Analytics", href: "/analytics", icon: BarChart3 },
+      { titleAr: "التقويم", titleEn: "Calendar", href: "/calendar", icon: CalendarCheck },
     ],
   },
   {

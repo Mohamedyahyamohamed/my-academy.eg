@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { RoleBadge } from "@/components/shared/badges";
 import { AcademySettingsForm, CoursesManager } from "@/components/settings/settings-forms";
+import { AcademyBranding } from "@/components/settings/academy-branding";
 import { CreateUserDialog } from "@/components/settings/create-user-dialog";
 import { ChangePasswordForm } from "@/components/settings/change-password";
 import { MiscService, requireUser } from "@/services";
@@ -44,6 +45,8 @@ export default async function SettingsPage() {
               <AcademySettingsForm academy={academy} />
             </CardContent>
           </Card>
+
+          <AcademyBranding academy={academy} />
 
           <Card className="mt-4">
             <CardHeader>

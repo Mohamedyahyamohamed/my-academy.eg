@@ -11,6 +11,7 @@ export * as PaymentsService from "./payments";
 export * as GradesService from "./grades";
 export * as HomeworkService from "./homework";
 export * as DashboardService from "./dashboard";
+export * as LifecycleAnalyticsService from "./lifecycle-analytics";
 export * as NotificationsService from "./notifications";
 export * from "./portals";
 export * as MiscService from "./misc";

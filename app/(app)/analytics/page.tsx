@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { StatCard } from "@/components/shared/stat-card";
 import { TrendArea, GroupedBars, LineTrend, Bars } from "@/components/charts";
-import { DashboardService, requireRole } from "@/services";
+import { DashboardService, LifecycleAnalyticsService, requireRole } from "@/services";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +12,7 @@ export default async function AnalyticsPage() {
   requireRole("ADMIN");
   const a = await DashboardService.getAnalytics();
   const d = await DashboardService.getDashboardData();
+  const lifecycle = await LifecycleAnalyticsService.getLifecycleAnalytics();
 
   return (
     <div className="space-y-6">
@@ -26,6 +27,30 @@ export default async function AnalyticsPage() {
         <StatCard label="نسبة الحضور" value={`${d.attendanceRate}%`} icon={TrendingUp} accent="success" />
         <StatCard label="المتبقي (المتأخرات)" value={formatCurrency(d.outstanding)} icon={Wallet} accent="warning" />
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">مسار النمو والاشتراكات</CardTitle>
+          <CardDescription>قياس التسجيل والدعوات والتحويلات داخل أكاديميتك.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ["تسجيلات الأكاديميات", lifecycle.signups],
+            ["دعوات منشأة", lifecycle.invitesCreated],
+            ["دعوات مقبولة", `${lifecycle.invitesAccepted} (${lifecycle.inviteAcceptanceRate}%)`],
+            ["تحويلات مدفوعة", `${lifecycle.paidConversions} (${lifecycle.conversionRate}%)`],
+            ["اشتراكات نشطة", lifecycle.activeSubscriptions],
+            ["إلغاءات", lifecycle.cancellations],
+            ["بدايات الدفع", lifecycle.checkoutsStarted],
+            ["Onboarding مكتمل", lifecycle.onboardingCompleted],
+          ].map(([label, value]) => (
+            <div key={String(label)} className="rounded-lg border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">{label}</p>
+              <p className="mt-1 text-xl font-semibold">{value}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

@@ -13,6 +13,12 @@ export async function updateAcademyAction(input: AcademyValues) {
   revalidatePath("/dashboard");
 }
 
+export async function completeOnboardingAction(metadata: { hasAcademy: boolean; hasCourse: boolean; hasGroup: boolean; importedStudents?: number }) {
+  const user = await requireScopedRole("ADMIN");
+  void audit({ action: "onboarding.complete", entity_type: "academy", metadata });
+  return { ok: true, userId: user.id };
+}
+
 export async function createCourseAction(input: CourseValues) {
   await requireScopedRole("ADMIN", "TEACHER");
   const c = await MiscService.createCourse(input);

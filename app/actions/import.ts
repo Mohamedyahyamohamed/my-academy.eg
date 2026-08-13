@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { requireScopedRole, currentAcademyId } from "@/services";
 import { collections, invalidateStore } from "@/services/data/store";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
+import { audit } from "@/services/audit";
 
 export interface ImportRow {
   first_name: string; last_name: string; phone?: string;
@@ -19,6 +20,7 @@ export async function importStudentsAction(rows: ImportRow[]) {
   const aid = currentAcademyId();
   if (!aid) return { ok: false, error: "لا توجد أكاديمية." };
   if (!rows || rows.length === 0) return { ok: false, error: "مفيش بيانات للاستيراد." };
+  if (rows.length > 1000) return { ok: false, error: "الحد الأقصى للاستيراد في المرة الواحدة هو 1000 طالب." };
 
   const client = nodeSupabaseClient();
   if (!client) return { ok: false, error: "Supabase not configured." };
@@ -34,6 +36,19 @@ export async function importStudentsAction(rows: ImportRow[]) {
   const seen = new Set(
     (existing ?? []).map((s: any) => keyOf(s.first_name, s.last_name, s.phone)),
   );
+
+  const { data: existingParents } = await client
+    .from("parents")
+    .select("id,first_name,last_name,phone")
+    .eq("academy_id", aid)
+    .limit(2000);
+  const parentCache = new Map<string, string>();
+  for (const parent of existingParents ?? []) {
+    const phoneKey = norm(parent.phone);
+    const nameKey = `${norm(parent.first_name)}|${norm(parent.last_name)}`;
+    if (phoneKey) parentCache.set(`phone:${phoneKey}`, parent.id);
+    if (nameKey) parentCache.set(`name:${nameKey}`, parent.id);
+  }
 
   const now = new Date().toISOString();
   let created = 0;
@@ -61,28 +76,36 @@ export async function importStudentsAction(rows: ImportRow[]) {
     let parentId: string | null = null;
     if (r.parent_name?.trim()) {
       const parts = r.parent_name.trim().split(/\s+/);
-      // إيميل وهمي فريد (UUID) — مبيتصادمش مع أي ولي أمر موجود
-      const pid = crypto.randomUUID();
-      const pemail = `p.${pid.slice(0, 8)}@parent.local`;
-      const parent = {
-        id: pid,
-        academy_id: aid,
-        profile_id: null,
-        first_name: parts[0],
-        last_name: parts.slice(1).join(" ") || "-",
-        email: pemail,
-        phone: r.parent_phone?.trim() || null,
-        occupation: null,
-        created_at: now,
-        updated_at: now,
-      };
-      const pr = await client.from("parents").upsert(parent);
-      if (pr.error) {
-        rowErr(`ولي الأمر: ${pr.error.message}`);
-        continue;
+      const firstName = parts[0];
+      const lastName = parts.slice(1).join(" ") || "-";
+      const phoneKey = norm(r.parent_phone);
+      const nameKey = `${norm(firstName)}|${norm(lastName)}`;
+      parentId = (phoneKey && parentCache.get(`phone:${phoneKey}`)) || parentCache.get(`name:${nameKey}`) || null;
+
+      if (!parentId) {
+        const pid = crypto.randomUUID();
+        const parent = {
+          id: pid,
+          academy_id: aid,
+          profile_id: null,
+          first_name: firstName,
+          last_name: lastName,
+          email: `p.${pid.slice(0, 8)}@parent.local`,
+          phone: r.parent_phone?.trim() || null,
+          occupation: null,
+          created_at: now,
+          updated_at: now,
+        };
+        const pr = await client.from("parents").insert(parent);
+        if (pr.error) {
+          rowErr(`ولي الأمر: ${pr.error.message}`);
+          continue;
+        }
+        collections().parents.push(parent as any);
+        parentId = parent.id;
+        if (phoneKey) parentCache.set(`phone:${phoneKey}`, parent.id);
+        parentCache.set(`name:${nameKey}`, parent.id);
       }
-      collections().parents.push(parent as any);
-      parentId = parent.id;
     }
 
     // الطالب
@@ -116,5 +139,11 @@ export async function importStudentsAction(rows: ImportRow[]) {
   invalidateStore();
   revalidatePath("/students");
   revalidatePath("/dashboard");
+  void audit({
+    action: "student.import",
+    entity_type: "student",
+    metadata: { created, skipped_duplicates: skippedDup, error_count: errors.length },
+  });
+  revalidatePath("/analytics");
   return { ok: true, created, skippedDup, errors };
 }

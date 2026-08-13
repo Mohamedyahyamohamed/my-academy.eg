@@ -19,17 +19,29 @@ const EXAMPLE =
 function parseCSV(text: string): ImportRow[] {
   const lines = text.trim().split(/\r?\n/).filter((l) => l.trim());
   if (lines.length === 0) return [];
-  // شيل صف العناوين لو موجود
   let start = 0;
-  // كشف الفاصل: بعض نسخ Excel (عربي) بتحفظ CSV بفاصلة منقوطة ;
   const detectDelim = (line: string) =>
     (line.match(/;/g) || []).length > (line.match(/,/g) || []).length ? ";" : ",";
+  const parseLine = (line: string, delim: string) => {
+    const cells: string[] = [];
+    let cell = "";
+    let quoted = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"' && line[i + 1] === '"' && quoted) { cell += '"'; i++; continue; }
+      if (ch === '"') { quoted = !quoted; continue; }
+      if (ch === delim && !quoted) { cells.push(cell.trim()); cell = ""; continue; }
+      cell += ch;
+    }
+    cells.push(cell.trim());
+    return cells;
+  };
   if (lines[0].toLowerCase().includes("first_name")) start = 1;
 
   const rows: ImportRow[] = [];
   for (let i = start; i < lines.length; i++) {
     const delim = detectDelim(lines[i]);
-    const cells = lines[i].split(delim).map((c) => c.trim().replace(/^"|"$/g, ""));
+    const cells = parseLine(lines[i], delim);
     rows.push({
       first_name: cells[0] ?? "",
       last_name: cells[1] ?? "",
@@ -113,7 +125,7 @@ export function ImportStudents() {
               className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-primary-foreground hover:file:bg-primary/90"
             />
             <p className="text-xs text-muted-foreground">
-              في Excel: File → Save As → CSV (Comma delimited) (*.csv)
+              في Excel: File → Save As → CSV (Comma delimited) (*.csv). الحد الأقصى 1000 طالب في العملية الواحدة.
             </p>
           </div>
 

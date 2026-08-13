@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, CheckCircle2, Building2, BookOpen, Users, Rocket } from "lucide-react";
 import { toast } from "sonner";
@@ -40,7 +41,13 @@ export default function OnboardingPage() {
           await createGroupAction({ name: group.name, course_id: c?.id ?? "", teacher_id: "", monthly_fee: Number(group.fee) || 0, schedule: group.schedule });
         }
       }
-      toast.success("Onboarding complete!");
+      const { completeOnboardingAction } = await import("@/app/actions/settings");
+      await completeOnboardingAction({
+        hasAcademy: Boolean(academy.name),
+        hasCourse: Boolean(course.name),
+        hasGroup: Boolean(group.name),
+      });
+      toast.success("تم تجهيز الأكاديمية بنجاح");
       router.push("/dashboard");
     } catch {
       toast.error("Something went wrong. You can finish later.");
@@ -100,7 +107,8 @@ export default function OnboardingPage() {
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <CheckCircle2 className="h-12 w-12 text-emerald-500" />
             <h2 className="text-lg font-semibold">You&apos;re all set! 🚀</h2>
-            <p className="text-sm text-muted-foreground">Your academy is ready. Add students, take attendance, and start teaching.</p>
+            <p className="text-sm text-muted-foreground">أكاديميتك جاهزة. أضف الطلاب، سجّل الحضور، وابدأ التدريس.</p>
+            <Button variant="outline" size="sm" asChild><Link href="/students/import">استيراد الطلاب من CSV</Link></Button>
           </div>
         )}
       </CardContent></Card>

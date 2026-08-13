@@ -3,34 +3,34 @@ import { test, expect } from "./helpers";
 test.describe("Teacher Journey", () => {
   test("login → teacher dashboard", async ({ teacherPage }) => {
     await expect(teacherPage).toHaveURL(/\/teacher/);
-    await expect(teacherPage.locator("text=My groups")).toBeVisible({ timeout: 10_000 });
+    await expect(teacherPage.getByText("My groups").first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("sees only own groups (not all)", async ({ teacherPage }) => {
     await teacherPage.goto("/groups");
     // Omar owns Math/Physics/Chemistry — should NOT see English Conversation.
     await expect(teacherPage.locator("text=English Conversation")).not.toBeVisible({ timeout: 5_000 });
-    await expect(teacherPage.locator("text=Math")).toBeVisible({ timeout: 5_000 });
+    await expect(teacherPage.getByText("Grade 9 — Math A").first()).toBeVisible({ timeout: 5_000 });
   });
 
   test("can access attendance", async ({ teacherPage }) => {
     await teacherPage.goto("/attendance");
-    await expect(teacherPage.locator("h1")).toContainText("Attendance");
+    await expect(teacherPage.locator("h1")).toContainText("الحضور");
   });
 
   test("can access grades", async ({ teacherPage }) => {
     await teacherPage.goto("/grades");
-    await expect(teacherPage.locator("h1")).toContainText("Grades");
+    await expect(teacherPage.locator("h1")).toContainText("الدرجات");
   });
 
   test("can access homework", async ({ teacherPage }) => {
     await teacherPage.goto("/homework");
-    await expect(teacherPage.locator("h1")).toContainText("Homework");
+    await expect(teacherPage.locator("h1")).toContainText("الواجبات");
   });
 
   test("can access assistants", async ({ teacherPage }) => {
     await teacherPage.goto("/teacher/assistants");
-    await expect(teacherPage.locator("text=assistants")).toBeVisible({ timeout: 5_000 });
+    await expect(teacherPage.getByRole("heading", { name: "No assistants yet" }).or(teacherPage.getByText("Assistants log in with their own email")).first()).toBeVisible({ timeout: 5_000 });
   });
 
   test("cannot access admin settings", async ({ teacherPage }) => {

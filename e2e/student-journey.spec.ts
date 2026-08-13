@@ -8,24 +8,22 @@ test.describe("Student Journey", () => {
 
   test("can view classes", async ({ studentPage }) => {
     await studentPage.goto("/student/classes");
-    await expect(studentPage.locator("h1")).toContainText("Classes");
+    await expect(studentPage.locator("h1")).toContainText("My Classes");
   });
 
   test("can view lessons", async ({ studentPage }) => {
     await studentPage.goto("/student/lessons");
-    await expect(studentPage.locator("h1")).toContainText("Lessons");
+    await expect(studentPage.locator("h1")).toContainText("الحصص");
   });
 
   test("can view homework", async ({ studentPage }) => {
     await studentPage.goto("/student/homework");
-    await expect(studentPage.locator("h1")).toContainText("Homework");
+    await expect(studentPage.locator("h1")).toContainText("الواجبات");
   });
 
   test("can view grades", async ({ studentPage }) => {
     await studentPage.goto("/student/grades");
-    await expect(
-      studentPage.locator("h1").or(studentPage.locator("text=grades").or(studentPage.locator("text=Grades"))),
-    ).toBeVisible({ timeout: 5_000 });
+    await expect(studentPage.getByRole("heading", { name: "الدرجات" })).toBeVisible({ timeout: 5_000 });
   });
 
   test("can view progress", async ({ studentPage }) => {

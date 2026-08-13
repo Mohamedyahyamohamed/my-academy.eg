@@ -14,17 +14,17 @@ test.describe("Parent Journey", () => {
 
   test("can view attendance", async ({ parentPage }) => {
     await parentPage.goto("/parent/attendance");
-    await expect(parentPage.locator("h1")).toContainText("Attendance");
+    await expect(parentPage.locator("h1")).toContainText("الحضور");
   });
 
   test("can view grades", async ({ parentPage }) => {
     await parentPage.goto("/parent/grades");
-    await expect(parentPage.locator("h1")).toContainText("Grades");
+    await expect(parentPage.locator("h1")).toContainText("الدرجات");
   });
 
   test("can view payments", async ({ parentPage }) => {
     await parentPage.goto("/parent/payments");
-    await expect(parentPage.locator("h1")).toContainText("Payments");
+    await expect(parentPage.locator("h1")).toContainText("المصاريف");
   });
 
   test("cannot access admin dashboard", async ({ parentPage }) => {

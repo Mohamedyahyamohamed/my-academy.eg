@@ -29,13 +29,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Rate limit: prevent brute-force.
-  const rl = await rateLimit(`login:${email.toLowerCase()}`, LIMITS.login.max, LIMITS.login.window);
-  if (!rl.allowed) {
-    return NextResponse.json(
-      { ok: false, error: "Too many attempts. Please try again in a minute." },
-      { status: 429 },
-    );
+  // Rate limit: prevent brute-force in real environments. The local E2E
+  // fixture deliberately skips this so a full role suite can log in more than
+  // ten times without masking product failures; production never sets this flag.
+  if (!useE2eDemoFixture) {
+    const rl = await rateLimit(`login:${email.toLowerCase()}`, LIMITS.login.max, LIMITS.login.window);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { ok: false, error: "Too many attempts. Please try again in a minute." },
+        { status: 429 },
+      );
+    }
   }
 
   await ensureStoreLoaded();

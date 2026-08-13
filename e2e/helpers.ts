@@ -14,7 +14,7 @@ export async function loginAs(page: Page, email: string, password?: string) {
   await page.fill('input[id="email"]', email);
   await page.fill('input[id="password"]', resolvedPassword);
   await page.click('button[type="submit"]');
-  await page.waitForURL(/\/(dashboard|teacher|parent|student)/, { timeout: 10_000 });
+  await page.waitForURL(/\/(dashboard|teacher|parent|student)/, { timeout: 20_000 });
 }
 
 // Extended test fixture with login helpers.

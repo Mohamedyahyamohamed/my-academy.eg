@@ -8,9 +8,12 @@ import { currentAcademyId } from "./session";
 export interface Plan {
   id: string;
   name: string;
+  description: string;
   maxStudents: number;
   maxTeachers: number;
   maxGroups: number;
+  maxAcademies: number;
+  maxStorageMb: number;
   price: number;
   currency: string;
 }
@@ -23,10 +26,54 @@ export interface Subscription {
 
 /** Default plans (mirrors SQL). Editable from configuration. */
 export const PLANS: Record<string, Plan> = {
-  free: { id: "free", name: "Free", maxStudents: 200, maxTeachers: 50, maxGroups: 100, price: 0, currency: "EGP" },
-  basic: { id: "basic", name: "Basic", maxStudents: 100, maxTeachers: 10, maxGroups: 25, price: 299, currency: "EGP" },
-  pro: { id: "pro", name: "Pro", maxStudents: 500, maxTeachers: 25, maxGroups: 100, price: 799, currency: "EGP" },
-  enterprise: { id: "enterprise", name: "Enterprise", maxStudents: 99999, maxTeachers: 999, maxGroups: 999, price: 1999, currency: "EGP" },
+  free: {
+    id: "free",
+    name: "مجاني",
+    description: "لبدء تجربة الأكاديمية وإدارة فريق صغير.",
+    maxStudents: 50,
+    maxTeachers: 3,
+    maxGroups: 5,
+    maxAcademies: 1,
+    maxStorageMb: 250,
+    price: 0,
+    currency: "EGP",
+  },
+  basic: {
+    id: "basic",
+    name: "أساسي",
+    description: "للأكاديميات الصغيرة التي بدأت تستقبل طلابًا فعليين.",
+    maxStudents: 200,
+    maxTeachers: 10,
+    maxGroups: 25,
+    maxAcademies: 1,
+    maxStorageMb: 2048,
+    price: 399,
+    currency: "EGP",
+  },
+  pro: {
+    id: "pro",
+    name: "احترافي",
+    description: "للأكاديميات النامية مع فريق أكبر وتقارير متقدمة.",
+    maxStudents: 750,
+    maxTeachers: 35,
+    maxGroups: 100,
+    maxAcademies: 3,
+    maxStorageMb: 10240,
+    price: 899,
+    currency: "EGP",
+  },
+  enterprise: {
+    id: "enterprise",
+    name: "مؤسسات",
+    description: "للمجموعات التعليمية والفروع المتعددة باحتياجات مخصصة.",
+    maxStudents: 5000,
+    maxTeachers: 200,
+    maxGroups: 500,
+    maxAcademies: 10,
+    maxStorageMb: 51200,
+    price: 2499,
+    currency: "EGP",
+  },
 };
 
 export function listPlans(): Plan[] {

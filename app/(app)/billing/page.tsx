@@ -1,4 +1,3 @@
-import { Check, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +6,7 @@ import { requireRole } from "@/services";
 import { listPlans, getPlan, getUsage, getSubscriptionStatus } from "@/services/saas";
 import { formatCurrency } from "@/lib/utils";
 import { PlanCheckoutButton } from "@/components/billing/plan-checkout-button";
+import { Check, Sparkles } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -23,9 +23,11 @@ export default async function BillingPage() {
     { label: "المجموعات", current: usage.groups, limit: currentPlan.maxGroups },
   ];
 
+  const formatStorage = (mb: number) => mb >= 1024 ? `${mb / 1024} GB` : `${mb} MB`;
+
   return (
     <div className="space-y-6">
-      <PageHeader title="الاشتراكات والخطط" description="إدارة اشتراكك وحدود الاستخدام." />
+      <PageHeader title="الاشتراكات والخطط" description="أسعار بسيطة بالـ EGP وحدود واضحة تنمو مع أكاديميتك." />
 
       <Card>
         <CardHeader>
@@ -69,18 +71,27 @@ export default async function BillingPage() {
                   {p.price === 0 ? "مجاني" : formatCurrency(p.price)}
                   {p.price > 0 && <span className="text-sm font-normal text-muted-foreground"> / شهريًا</span>}
                 </p>
+                <p className="mt-2 min-h-10 text-sm leading-6 text-muted-foreground">{p.description}</p>
                 <ul className="mt-4 space-y-2 text-sm">
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-emerald-500" />
-                    {p.maxStudents === 99999 ? "عدد غير محدود" : p.maxStudents} طالب
+                    حتى {p.maxStudents.toLocaleString("ar-EG")} طالب
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-emerald-500" />
-                    {p.maxTeachers === 999 ? "عدد غير محدود" : p.maxTeachers} مدرس
+                    حتى {p.maxTeachers.toLocaleString("ar-EG")} مدرس
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-emerald-500" />
-                    {p.maxGroups === 999 ? "عدد غير محدود" : p.maxGroups} مجموعة
+                    حتى {p.maxGroups.toLocaleString("ar-EG")} مجموعة
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-emerald-500" />
+                    حتى {p.maxAcademies.toLocaleString("ar-EG")} أكاديمية
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-emerald-500" />
+                    تخزين حتى {formatStorage(p.maxStorageMb)}
                   </li>
                 </ul>
                 <PlanCheckoutButton planId={p.id} isCurrent={isCurrent} isFree={p.price === 0} />

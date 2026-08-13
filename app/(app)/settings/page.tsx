@@ -10,14 +10,16 @@ import { AcademyBranding } from "@/components/settings/academy-branding";
 import { InviteManager } from "@/components/settings/invite-manager";
 import { listAcademyInvites } from "@/app/actions/invites";
 import { ChangePasswordForm } from "@/components/settings/change-password";
-import { MiscService, requireRole } from "@/services";
+import { MiscService, requireScopedRole } from "@/services";
 import { initials } from "@/lib/utils";
 import { PAYMENT_METHODS, paymentMethodLabel } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  requireRole("ADMIN");
+  // صفحات App Router قد تُرسم بالتوازي مع التخطيط؛ نُحمّل لقطة المستأجر
+  // صراحةً قبل أي قراءة متزامنة من المخزن حتى لا تفشل جلسة صحيحة مؤقتًا.
+  await requireScopedRole("ADMIN");
   const academy = MiscService.getAcademy();
   const courses = await MiscService.listCourses();
   const users = MiscService.listProfiles();

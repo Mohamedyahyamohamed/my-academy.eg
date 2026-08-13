@@ -12,7 +12,7 @@ export function cn(...inputs: ClassValue[]) {
 export function formatCurrency(
   amount: number,
   currency: string = "EGP",
-  locale: string = "en-US",
+  locale: string = "ar-EG",
 ) {
   return new Intl.NumberFormat(locale, {
     style: "currency",
@@ -36,7 +36,7 @@ export function formatDate(
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
   if (Number.isNaN(d.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("ar-EG", {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -49,7 +49,7 @@ export function formatTime(date: string | Date | null | undefined) {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
   if (Number.isNaN(d.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("ar-EG", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
@@ -62,7 +62,7 @@ export function formatRelative(date: string | Date | null | undefined) {
   const d = typeof date === "string" ? new Date(date) : date;
   const diff = d.getTime() - Date.now();
   const abs = Math.abs(diff);
-  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+  const rtf = new Intl.RelativeTimeFormat("ar-EG", { numeric: "auto" });
   const min = 60_000,
     hr = 3_600_000,
     day = 86_400_000;

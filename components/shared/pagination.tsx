@@ -14,6 +14,7 @@ export function PaginationBar({ pagination }: { pagination: Pagination }) {
   if (total === 0) return null;
   const from = (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
+  const formatNumber = (value: number) => new Intl.NumberFormat("ar-EG").format(value);
 
   const go = (p: number) => {
     const next = new URLSearchParams(params.toString());
@@ -24,9 +25,9 @@ export function PaginationBar({ pagination }: { pagination: Pagination }) {
   return (
     <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
       <p className="text-sm text-muted-foreground">
-        Showing <span className="font-medium text-foreground">{from}</span>–
-        <span className="font-medium text-foreground">{to}</span> of{" "}
-        <span className="font-medium text-foreground">{total}</span>
+        عرض <span className="font-medium text-foreground">{formatNumber(from)}</span>–
+        <span className="font-medium text-foreground">{formatNumber(to)}</span> من{" "}
+        <span className="font-medium text-foreground">{formatNumber(total)}</span>
       </p>
       <div className="flex items-center gap-1">
         <Button
@@ -48,7 +49,7 @@ export function PaginationBar({ pagination }: { pagination: Pagination }) {
                 className="h-8 w-8"
                 onClick={() => go(p)}
               >
-                {p}
+                {formatNumber(p)}
               </Button>
             );
           })}
@@ -59,7 +60,7 @@ export function PaginationBar({ pagination }: { pagination: Pagination }) {
           onClick={() => go(page + 1)}
           disabled={page >= totalPages}
         >
-          Next <ChevronRight className="h-4 w-4" />
+          التالي <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
     </div>

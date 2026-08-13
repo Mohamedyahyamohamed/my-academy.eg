@@ -102,8 +102,11 @@ export function invalidateStore(academyId = activeAcademyId() ?? undefined) {
 
 async function hydrateFromSupabase(academyId: string): Promise<SeedData | null> {
   try {
-    const client = getAdminClient();
-    if (!client) return null;
+    // Prefer the service-role client for complete academy hydration. If the
+    // service key is not present, fall back to the request-bound user client;
+    // this still enforces Supabase RLS and avoids a false empty snapshot.
+    const client = getAdminClient() ??
+      (await import("@/lib/supabase/server")).createServerSupabaseClient();
 
     const { data: academy, error: academyError } = await client
       .from("academies")

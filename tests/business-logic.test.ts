@@ -14,7 +14,7 @@ import {
 describe("Payment remaining & status", () => {
   function derive(amountDue: number, amountPaid: number) {
     const remaining = Math.max(0, amountDue - amountPaid);
-    let status = PAYMENT_STATUS.UNPAID;
+    let status: string = PAYMENT_STATUS.UNPAID;
     if (amountPaid >= amountDue && amountDue > 0) status = PAYMENT_STATUS.PAID;
     else if (amountPaid > 0) status = PAYMENT_STATUS.PARTIAL;
     return { remaining, status };

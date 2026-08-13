@@ -22,10 +22,12 @@ export function Sidebar({ sections, academyName }: SidebarProps) {
     setLang(stored as "ar" | "en");
   }, []);
 
+  const homeHref = sections[0]?.items[0]?.href || "/dashboard";
+
   return (
     <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
       <div className="flex h-16 items-center px-5">
-        <Link href="/dashboard" className="transition-opacity hover:opacity-80">
+        <Link href={homeHref} className="transition-opacity hover:opacity-80">
           <Logo />
         </Link>
       </div>

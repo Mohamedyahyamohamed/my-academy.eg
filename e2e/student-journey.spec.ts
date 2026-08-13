@@ -23,7 +23,9 @@ test.describe("Student Journey", () => {
 
   test("can view grades", async ({ studentPage }) => {
     await studentPage.goto("/student/grades");
-    await expect(studentPage.locator("h1")).toContainText("Grades").or(studentPage.locator("text=grades").or(studentPage.locator("text=Grades"))).toBeVisible({ timeout: 5_000 });
+    await expect(
+      studentPage.locator("h1").or(studentPage.locator("text=grades").or(studentPage.locator("text=Grades"))),
+    ).toBeVisible({ timeout: 5_000 });
   });
 
   test("can view progress", async ({ studentPage }) => {

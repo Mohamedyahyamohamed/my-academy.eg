@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StudentAvatar } from "@/components/shared/student-avatar";
 import { saveGradesAction } from "@/app/actions/grades";
-import { performanceLevel, performanceColor } from "@/lib/constants";
+import { performanceLevel, performanceColor, performanceLabel } from "@/lib/constants";
 import { fullName, round } from "@/lib/utils";
 
 interface GradeEntryProps {
@@ -45,18 +45,18 @@ export function GradeEntry({ examId, maxScore, roster }: GradeEntryProps) {
       if (raw === "" || raw == null) continue;
       const n = Number(raw);
       if (Number.isNaN(n)) {
-        toast.error(`Invalid score for ${r.name}.`);
+        toast.error(`درجة غير صالحة للطالب ${r.name}.`);
         return;
       }
-      if (n < 0) { toast.error(`Scores cannot be negative.`); return; }
-      if (n > maxScore) { toast.error(`Score exceeds maximum (${maxScore}) for ${r.name}.`); return; }
+      if (n < 0) { toast.error(`لا يمكن أن تكون الدرجات سالبة.`); return; }
+      if (n > maxScore) { toast.error(`تتجاوز درجة ${r.name} الحد الأقصى (${maxScore}).`); return; }
       entries.push({ studentId: r.studentId, score: n });
     }
     setSaving(true);
     try {
       const res = await saveGradesAction(examId, entries);
-      if (!res.ok) { toast.error(res.error ?? "Failed"); return; }
-      toast.success(`${entries.length} grades saved`);
+      if (!res.ok) { toast.error(res.error ?? "تعذّر حفظ الدرجات."); return; }
+      toast.success(`تم حفظ درجات ${entries.length} طالب.`);
       router.refresh();
     } finally {
       setSaving(false);
@@ -66,11 +66,11 @@ export function GradeEntry({ examId, maxScore, roster }: GradeEntryProps) {
   return (
     <>
       <div className="mb-4 flex items-center gap-3">
-        <Badge variant="secondary">Class average</Badge>
+        <Badge variant="secondary">متوسط المجموعة</Badge>
         <span className="text-lg font-semibold">{avg}%</span>
-        <Badge className={performanceColor(performanceLevel(avg))}>{performanceLevel(avg)}</Badge>
+        <Badge className={performanceColor(performanceLevel(avg))}>{performanceLabel(performanceLevel(avg))}</Badge>
         <Button onClick={save} disabled={saving} className="ml-auto">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save grades
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} حفظ الدرجات
         </Button>
       </div>
       <Card>
@@ -86,7 +86,7 @@ export function GradeEntry({ examId, maxScore, roster }: GradeEntryProps) {
                   <StudentAvatar name={r.name} size="sm" />
                   <div>
                     <p className="text-sm font-medium">{r.name}</p>
-                    {level && <Badge className={`mt-0.5 ${performanceColor(level)}`}>{level} · {pct}%</Badge>}
+                    {level && <Badge className={`mt-0.5 ${performanceColor(level)}`}>{performanceLabel(level)} · {pct}%</Badge>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

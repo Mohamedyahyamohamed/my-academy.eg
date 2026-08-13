@@ -65,11 +65,11 @@ export function EditGroupDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm"><Pencil className="h-4 w-4" /> Edit</Button>
+        <Button variant="outline" size="sm"><Pencil className="h-4 w-4" /> تعديل</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit group</DialogTitle>
+          <DialogTitle>تعديل المجموعة</DialogTitle>
         </DialogHeader>
         <GroupForm
           group={group}

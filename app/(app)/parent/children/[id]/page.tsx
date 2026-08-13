@@ -19,7 +19,7 @@ import {
 } from "@/services";
 import { collections } from "@/services/data/store";
 import { formatCurrency, formatDate, fullName } from "@/lib/utils";
-import { performanceLevel, performanceColor } from "@/lib/constants";
+import { performanceLevel, performanceColor, performanceLabel } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -51,8 +51,8 @@ export default async function ParentChildPage({ params }: { params: { id: string
     <div className="space-y-6">
       <PageHeader
         title={`${child.first_name} ${child.last_name}`}
-        description={`${child.grade} · ${groups.map((g) => g.name.split(" — ")[0]).join(", ") || "No groups"}`}
-        breadcrumbs={[{ label: "My Children", href: "/parent/children" }, { label: fullName(child) }]}
+        description={`${child.grade} · ${groups.map((g) => g.name.split(" — ")[0]).join(", ") || "لا توجد مجموعات"}`}
+        breadcrumbs={[{ label: "أبنائي", href: "/parent/children" }, { label: fullName(child) }]}
       >
         <div className="flex gap-2">
           <Button asChild variant="outline">
@@ -70,7 +70,7 @@ export default async function ParentChildPage({ params }: { params: { id: string
           <div className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
             <Mini label="الحضور" value={`${summary.attendanceRate}%`} />
             <Mini label="متوسط الدرجات" value={`${summary.averageGrade}%`} />
-            <Mini label="Pending HW" value={String(summary.pendingHomework)} />
+            <Mini label="واجبات معلّقة" value={String(summary.pendingHomework)} />
             <Mini label='المتبقي' value={formatCurrency(summary.outstanding)} />
           </div>
         </CardContent>
@@ -79,16 +79,16 @@ export default async function ParentChildPage({ params }: { params: { id: string
       <StudentProfileTabs
         overview={
           <Card>
-            <CardHeader><CardTitle className="text-base">Snapshot</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">ملخص الأداء</CardTitle></CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              {summary.upcomingLesson ? <>Next lesson: <span className="font-medium text-foreground">{summary.upcomingLesson}</span></> : "مفيش حصص قادمة."}
+              {summary.upcomingLesson ? <>الحصة القادمة: <span className="font-medium text-foreground">{summary.upcomingLesson}</span></> : "مفيش حصص قادمة."}
             </CardContent>
           </Card>
         }
         attendance={
           <Card><CardContent className="p-0">
             <Table>
-              <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Group</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>التاريخ</TableHead><TableHead>المجموعة</TableHead><TableHead>الحالة</TableHead></TableRow></TableHeader>
               <TableBody>
                 {att.byLesson.slice().reverse().map((a) => {
                   const lesson = collections().lessons.find((l) => l.id === a.lesson_id);
@@ -101,7 +101,7 @@ export default async function ParentChildPage({ params }: { params: { id: string
                     </TableRow>
                   );
                 })}
-                {att.byLesson.length === 0 && <TableRow><TableCell colSpan={3} className="py-8 text-center text-sm text-muted-foreground">No attendance yet.</TableCell></TableRow>}
+                {att.byLesson.length === 0 && <TableRow><TableCell colSpan={3} className="py-8 text-center text-sm text-muted-foreground">لا يوجد سجل حضور بعد.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </CardContent></Card>
@@ -109,7 +109,7 @@ export default async function ParentChildPage({ params }: { params: { id: string
         payments={
           <Card><CardContent className="p-0">
             <Table>
-              <TableHeader><TableRow><TableHead>Month</TableHead><TableHead>Due</TableHead><TableHead>Paid</TableHead><TableHead>Remaining</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>الشهر</TableHead><TableHead>المستحق</TableHead><TableHead>المدفوع</TableHead><TableHead>المتبقي</TableHead><TableHead>الحالة</TableHead></TableRow></TableHeader>
               <TableBody>
                 {payments.map((p) => (
                   <TableRow key={p.id}>
@@ -120,7 +120,7 @@ export default async function ParentChildPage({ params }: { params: { id: string
                     <TableCell><PaymentStatusBadge status={p.status} /></TableCell>
                   </TableRow>
                 ))}
-                {payments.length === 0 && <TableRow><TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">No payments.</TableCell></TableRow>}
+                {payments.length === 0 && <TableRow><TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">لا توجد مصروفات.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </CardContent></Card>
@@ -128,7 +128,7 @@ export default async function ParentChildPage({ params }: { params: { id: string
         grades={
           <Card><CardContent className="p-0">
             <Table>
-              <TableHeader><TableRow><TableHead>Exam</TableHead><TableHead>Score</TableHead><TableHead>%</TableHead><TableHead>Level</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>الاختبار</TableHead><TableHead>الدرجة</TableHead><TableHead>%</TableHead><TableHead>التقدير</TableHead></TableRow></TableHeader>
               <TableBody>
                 {grades.map((g) => {
                   const exam = collections().exams.find((e) => e.id === g.exam_id);
@@ -138,27 +138,27 @@ export default async function ParentChildPage({ params }: { params: { id: string
                       <TableCell className="font-medium">{exam?.name ?? "—"}</TableCell>
                       <TableCell>{g.score}/{exam?.max_score}</TableCell>
                       <TableCell>{Math.round(g.percentage ?? 0)}%</TableCell>
-                      <TableCell><Badge className={performanceColor(lvl)}>{lvl}</Badge></TableCell>
+                      <TableCell><Badge className={performanceColor(lvl)}>{performanceLabel(lvl)}</Badge></TableCell>
                     </TableRow>
                   );
                 })}
-                {grades.length === 0 && <TableRow><TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">No grades yet.</TableCell></TableRow>}
+                {grades.length === 0 && <TableRow><TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">لا توجد درجات بعد.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </CardContent></Card>
         }
         homework={
           <div className="space-y-3">
-            {homework.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No homework assigned.</p>}
+            {homework.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">لا توجد واجبات مسندة.</p>}
             {homework.map((s) => (
               <Card key={s.id}><CardContent className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-medium">{s.homework?.title}</p>
                     <p className="text-sm text-muted-foreground">{s.homework?.description}</p>
-                    {s.feedback && <p className="mt-2 rounded-md bg-muted p-2 text-xs"><span className="font-medium">Teacher feedback:</span> {s.feedback}</p>}
+                    {s.feedback && <p className="mt-2 rounded-md bg-muted p-2 text-xs"><span className="font-medium">ملاحظات المعلّم:</span> {s.feedback}</p>}
                   </div>
-                  <div className="text-right"><HomeworkBadge status={s.status} /><p className="mt-1 text-xs text-muted-foreground">Due {formatDate(s.homework?.deadline)}</p></div>
+                  <div className="text-right"><HomeworkBadge status={s.status} /><p className="mt-1 text-xs text-muted-foreground">موعد التسليم: {formatDate(s.homework?.deadline)}</p></div>
                 </div>
               </CardContent></Card>
             ))}
@@ -167,7 +167,7 @@ export default async function ParentChildPage({ params }: { params: { id: string
         lessons={
           <Card><CardContent className="p-0">
             <Table>
-              <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Topic</TableHead><TableHead>Group</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>التاريخ</TableHead><TableHead>الموضوع</TableHead><TableHead>المجموعة</TableHead></TableRow></TableHeader>
               <TableBody>
                 {lessons.map((l) => (
                   <TableRow key={l.id}>
@@ -176,7 +176,7 @@ export default async function ParentChildPage({ params }: { params: { id: string
                     <TableCell className="text-sm text-muted-foreground">{l.group?.name}</TableCell>
                   </TableRow>
                 ))}
-                {lessons.length === 0 && <TableRow><TableCell colSpan={3} className="py-8 text-center text-sm text-muted-foreground">No lessons.</TableCell></TableRow>}
+                {lessons.length === 0 && <TableRow><TableCell colSpan={3} className="py-8 text-center text-sm text-muted-foreground">لا توجد حصص.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </CardContent></Card>

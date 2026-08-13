@@ -12,7 +12,7 @@ import { listAcademyInvites } from "@/app/actions/invites";
 import { ChangePasswordForm } from "@/components/settings/change-password";
 import { MiscService, requireRole } from "@/services";
 import { initials } from "@/lib/utils";
-import { PAYMENT_METHODS } from "@/lib/constants";
+import { PAYMENT_METHODS, paymentMethodLabel } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -40,8 +40,8 @@ export default async function SettingsPage() {
         <TabsContent value="academy">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Academy information</CardTitle>
-              <CardDescription>This appears across the product and on reports.</CardDescription>
+              <CardTitle className="text-base">بيانات الأكاديمية</CardTitle>
+              <CardDescription>تظهر هذه البيانات في جميع أجزاء المنصة والتقارير.</CardDescription>
             </CardHeader>
             <CardContent>
               <AcademySettingsForm academy={academy} />
@@ -67,8 +67,8 @@ export default async function SettingsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <div>
-                <CardTitle className="text-base">Users & access</CardTitle>
-                <CardDescription>People with accounts in your academy.</CardDescription>
+                <CardTitle className="text-base">المستخدمون والصلاحيات</CardTitle>
+                <CardDescription>الأشخاص الذين لديهم حسابات في أكاديميتك.</CardDescription>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -81,7 +81,7 @@ export default async function SettingsPage() {
                       <p className="truncate text-xs text-muted-foreground">{u.email}</p>
                     </div>
                     <RoleBadge role={u.role} />
-                    <Badge variant={u.is_active ? "success" : "secondary"}>{u.is_active ? "نشط" : "Disabled"}</Badge>
+                    <Badge variant={u.is_active ? "success" : "secondary"}>{u.is_active ? "نشط" : "غير نشط"}</Badge>
                   </div>
                 ))}
               </div>
@@ -95,8 +95,8 @@ export default async function SettingsPage() {
         <TabsContent value="courses">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Courses</CardTitle>
-              <CardDescription>Subjects offered by your academy.</CardDescription>
+              <CardTitle className="text-base">المواد الدراسية</CardTitle>
+              <CardDescription>المواد التي تقدمها أكاديميتك.</CardDescription>
             </CardHeader>
             <CardContent>
               <CoursesManager courses={courses} />
@@ -107,12 +107,12 @@ export default async function SettingsPage() {
         <TabsContent value="payments">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Payment methods</CardTitle>
-              <CardDescription>Accepted payment methods.</CardDescription>
+              <CardTitle className="text-base">طرق الدفع</CardTitle>
+              <CardDescription>طرق الدفع المقبولة.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {PAYMENT_METHODS.map((m) => <Badge key={m} variant="secondary">{m}</Badge>)}
+                {PAYMENT_METHODS.map((m) => <Badge key={m} variant="secondary">{paymentMethodLabel(m)}</Badge>)}
               </div>
             </CardContent>
           </Card>
@@ -125,15 +125,15 @@ export default async function SettingsPage() {
         <TabsContent value="roles">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Roles & permissions</CardTitle>
+              <CardTitle className="text-base">الأدوار والصلاحيات</CardTitle>
               <CardDescription>How role-based access control works in {academy.name}.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {[
-                { role: "ADMIN", desc: "Full access to everything in the academy." },
-                { role: "TEACHER", desc: "Manage assigned groups, lessons, attendance, grades and homework." },
-                { role: "PARENT", desc: "View only their own children's data." },
-                { role: "STUDENT", desc: "View only their own records; cannot modify grades or attendance." },
+                { role: "ADMIN", desc: "صلاحية كاملة لكل أقسام وبيانات الأكاديمية." },
+                { role: "TEACHER", desc: "إدارة المجموعات والحصص والحضور والدرجات والواجبات المسندة إليه." },
+                { role: "PARENT", desc: "عرض بيانات أبنائهم فقط." },
+                { role: "STUDENT", desc: "عرض سجلاتهم الخاصة فقط، دون تعديل الدرجات أو الحضور." },
               ].map((r) => (
                 <div key={r.role} className="flex items-start gap-3 rounded-lg border border-border p-3">
                   <RoleBadge role={r.role as any} />
@@ -143,7 +143,7 @@ export default async function SettingsPage() {
               <div className="flex items-start gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
                 <Shield className="h-4 w-4 shrink-0 text-primary" />
                 Authorization is enforced on the server for every action. UI hiding is never the only protection.
-                In production, Row Level Security on PostgreSQL (see <code>supabase/schema.sql</code>) guards every table.
+                في بيئة الإنتاج، تحمي سياسات أمان الصفوف في PostgreSQL (راجِع <code>supabase/schema.sql</code>) كل جدول.
               </div>
             </CardContent>
           </Card>

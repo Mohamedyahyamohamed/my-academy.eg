@@ -28,8 +28,8 @@ export function CreateAssistantDialog({ groups }: { groups: Group[] }) {
     setSaving(true);
     try {
       const res = await createAssistantAction({ ...form, groupIds: selected });
-      if (!res.ok) { toast.error(res.error ?? "Failed"); return; }
-      toast.success("Assistant account created");
+      if (!res.ok) { toast.error(res.error ?? "تعذّر إنشاء حساب المساعد."); return; }
+      toast.success("تم إنشاء حساب المساعد.");
       setForm({ full_name: "", email: "", password: "" });
       setSelected([]);
       setOpen(false);
@@ -42,11 +42,11 @@ export function CreateAssistantDialog({ groups }: { groups: Group[] }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button><UserPlus className="h-4 w-4" /> Add assistant</Button>
+        <Button><UserPlus className="h-4 w-4" /> إضافة مساعد</Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Create an assistant</DialogTitle>
+          <DialogTitle>إنشاء مساعد</DialogTitle>
           <DialogDescription>
             An assistant logs in with this email and gets the same access as you on the selected groups.
           </DialogDescription>
@@ -54,16 +54,16 @@ export function CreateAssistantDialog({ groups }: { groups: Group[] }) {
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Full name</Label>
-              <Input value={form.full_name} onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))} placeholder="Sara Mohamed" />
+              <Label>الاسم بالكامل</Label>
+              <Input value={form.full_name} onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))} placeholder="مثال: سارة محمد" />
             </div>
             <div className="space-y-1.5">
-              <Label>Email (login)</Label>
+              <Label>البريد الإلكتروني (لتسجيل الدخول)</Label>
               <Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="assistant@academy.edu" />
             </div>
             <div className="space-y-1.5">
-              <Label>Password</Label>
-              <Input value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} placeholder="min 6 chars" />
+              <Label>كلمة المرور</Label>
+              <Input value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} placeholder="6 أحرف على الأقل" />
             </div>
           </div>
           <div className="space-y-1.5">
@@ -79,7 +79,7 @@ export function CreateAssistantDialog({ groups }: { groups: Group[] }) {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => setOpen(false)}>إلغاء</Button>
           <Button onClick={submit} disabled={saving}>
             {saving && <Loader2 className="h-4 w-4 animate-spin" />} Create
           </Button>

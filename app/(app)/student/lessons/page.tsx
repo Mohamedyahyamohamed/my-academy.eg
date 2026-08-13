@@ -22,14 +22,14 @@ export default async function StudentLessonsPage() {
     <div className="space-y-6">
       <PageHeader title="الحصص" description="جدول حصصك وسجلها." />
       {lessons.length === 0 ? (
-        <EmptyState icon={CalendarClock} title="No lessons" description="No lessons scheduled for your groups." />
+        <EmptyState icon={CalendarClock} title="لا توجد حصص" description="لا توجد حصص مجدولة لمجموعاتك." />
       ) : (
         <>
           <Card>
             <CardContent className="p-0">
-              <div className="border-b px-4 py-3"><Badge variant="info">Upcoming ({upcoming.length})</Badge></div>
+              <div className="border-b px-4 py-3"><Badge variant="info">الحصص القادمة ({upcoming.length})</Badge></div>
               <Table>
-                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Topic</TableHead><TableHead>Group</TableHead><TableHead>Time</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>التاريخ</TableHead><TableHead>الموضوع</TableHead><TableHead>المجموعة</TableHead><TableHead>الوقت</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {upcoming.map((l) => (
                     <TableRow key={l.id}>
@@ -39,7 +39,7 @@ export default async function StudentLessonsPage() {
                       <TableCell className="text-sm">{formatTime(`${l.date.slice(0, 10)}T${l.start_time}:00`)}</TableCell>
                     </TableRow>
                   ))}
-                  {upcoming.length === 0 && <TableRow><TableCell colSpan={4} className="py-6 text-center text-sm text-muted-foreground">No upcoming lessons.</TableCell></TableRow>}
+                  {upcoming.length === 0 && <TableRow><TableCell colSpan={4} className="py-6 text-center text-sm text-muted-foreground">لا توجد حصص قادمة.</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </CardContent>
@@ -47,9 +47,9 @@ export default async function StudentLessonsPage() {
 
           <Card>
             <CardContent className="p-0">
-              <div className="border-b px-4 py-3"><Badge variant="secondary">Past ({past.length})</Badge></div>
+              <div className="border-b px-4 py-3"><Badge variant="secondary">الحصص السابقة ({past.length})</Badge></div>
               <Table>
-                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Topic</TableHead><TableHead>Group</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>التاريخ</TableHead><TableHead>الموضوع</TableHead><TableHead>المجموعة</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {past.slice(0, 10).map((l) => (
                     <TableRow key={l.id}>

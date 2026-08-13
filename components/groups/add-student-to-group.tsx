@@ -60,8 +60,8 @@ export function AddStudentToGroupDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add students to group</DialogTitle>
-          <DialogDescription>Select students to enroll.</DialogDescription>
+          <DialogTitle>إضافة طلاب إلى المجموعة</DialogTitle>
+          <DialogDescription>اختر الطلاب المطلوب تسجيلهم.</DialogDescription>
         </DialogHeader>
         {availableStudents.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">
@@ -96,7 +96,7 @@ export function AddStudentToGroupDialog({
           </div>
         )}
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => setOpen(false)}>إلغاء</Button>
           <Button onClick={submit} disabled={saving || !selected.length}>
             {saving && <Loader2 className="h-4 w-4 animate-spin" />} Add
           </Button>

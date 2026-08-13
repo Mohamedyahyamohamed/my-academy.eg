@@ -59,10 +59,10 @@ export function GroupForm({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return toast.error("Group name is required.");
-    if (!courseName.trim()) return toast.error("Course is required.");
-    if (!teacherId) return toast.error("Teacher is required.");
-    if (!schedule.trim()) return toast.error("Schedule is required.");
+    if (!name.trim()) return toast.error("اسم المجموعة مطلوب.");
+    if (!courseName.trim()) return toast.error("المادة مطلوبة.");
+    if (!teacherId) return toast.error("المعلّم مطلوب.");
+    if (!schedule.trim()) return toast.error("الموعد مطلوب.");
 
     setSaving(true);
     try {
@@ -89,15 +89,15 @@ export function GroupForm({
       };
       if (group) {
         await updateGroupAction(group.id, payload);
-        toast.success("Group updated");
+        toast.success("تم تحديث المجموعة.");
       } else {
         await createGroupAction(payload);
-        toast.success("Group created");
+        toast.success("تم إنشاء المجموعة.");
       }
       onDone?.();
       router.refresh();
     } catch (err) {
-      toast.error((err as Error).message || "Something went wrong");
+      toast.error((err as Error).message || "حدث خطأ غير متوقع.");
     } finally {
       setSaving(false);
     }
@@ -106,18 +106,18 @@ export function GroupForm({
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
       <div className="space-y-1.5">
-        <Label>Group name *</Label>
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Grade 9 — Math A" />
+        <Label>اسم المجموعة *</Label>
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: الصف الثالث الإعدادي — رياضيات أ" />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Course: free text the first time, autocomplete afterwards */}
         <div className="space-y-1.5">
-          <Label>Course *</Label>
+          <Label>المادة *</Label>
           <Input
             list="courses-list"
             value={courseName}
             onChange={(e) => setCourseName(e.target.value)}
-            placeholder="Type a new course or pick one"
+            placeholder="اكتب مادة جديدة أو اختر مادة"
           />
           <datalist id="courses-list">
             {courses.map((c) => (
@@ -143,12 +143,12 @@ export function GroupForm({
 
         {/* Teacher: auto = you when a teacher creates the group */}
         <div className="space-y-1.5">
-          <Label>Teacher *</Label>
+          <Label>المعلّم *</Label>
           {lockedTeacher ? (
             <Input value={lockedTeacherName} disabled className="bg-muted" />
           ) : (
             <Select value={teacherId} onValueChange={setTeacherId}>
-              <SelectTrigger><SelectValue placeholder="Select teacher" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="اختر المعلّم" /></SelectTrigger>
               <SelectContent>
                 {teachers.map((t) => (
                   <SelectItem key={t.id} value={t.id}>{t.first_name} {t.last_name}</SelectItem>
@@ -159,20 +159,20 @@ export function GroupForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label>Monthly fee</Label>
+          <Label>الاشتراك الشهري</Label>
           <Input type="number" min={0} step="any" value={fee} onChange={(e) => setFee(e.target.value)} placeholder="1200" />
         </div>
         <div className="space-y-1.5">
-          <Label>Room</Label>
-          <Input value={room} onChange={(e) => setRoom(e.target.value)} placeholder="Room 101" />
+          <Label>القاعة</Label>
+          <Input value={room} onChange={(e) => setRoom(e.target.value)} placeholder="مثال: قاعة 101" />
         </div>
       </div>
       <div className="space-y-1.5">
-        <Label>Schedule *</Label>
-        <Input value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="Sun, Tue, Thu — 4:00 PM" />
+        <Label>الموعد *</Label>
+        <Input value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="الأحد والثلاثاء والخميس — 4:00 مساءً" />
       </div>
       <div className="flex justify-end gap-2 pt-2">
-        {onDone && <Button type="button" variant="outline" onClick={onDone}>Cancel</Button>}
+        {onDone && <Button type="button" variant="outline" onClick={onDone}>إلغاء</Button>}
         <Button type="submit" disabled={saving}>
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
           {group ? "حفظ التعديلات" : "Create group"}

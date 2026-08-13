@@ -16,13 +16,13 @@ export function StudentProfileTabs(props: StudentProfileTabsProps) {
   return (
     <Tabs defaultValue="overview">
       <TabsList className="w-full justify-start overflow-x-auto sm:w-auto">
-        <TabsTrigger value="overview">Overview</TabsTrigger>
-        <TabsTrigger value="attendance">Attendance</TabsTrigger>
-        <TabsTrigger value="payments">Payments</TabsTrigger>
-        <TabsTrigger value="grades">Grades</TabsTrigger>
-        <TabsTrigger value="homework">Homework</TabsTrigger>
-        <TabsTrigger value="lessons">Lessons</TabsTrigger>
-        <TabsTrigger value="notes">Notes</TabsTrigger>
+        <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
+        <TabsTrigger value="attendance">الحضور</TabsTrigger>
+        <TabsTrigger value="payments">المصروفات</TabsTrigger>
+        <TabsTrigger value="grades">الدرجات</TabsTrigger>
+        <TabsTrigger value="homework">الواجبات</TabsTrigger>
+        <TabsTrigger value="lessons">الحصص</TabsTrigger>
+        <TabsTrigger value="notes">الملاحظات</TabsTrigger>
       </TabsList>
       <TabsContent value="overview">{props.overview}</TabsContent>
       <TabsContent value="attendance">{props.attendance}</TabsContent>

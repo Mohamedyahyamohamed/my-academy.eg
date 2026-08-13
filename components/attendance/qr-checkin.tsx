@@ -43,11 +43,11 @@ export function QrCheckin({ lessonId }: { lessonId: string }) {
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v && !token) generate(); }}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm"><QrCode className="h-4 w-4" /> QR check-in</Button>
+        <Button variant="outline" size="sm"><QrCode className="h-4 w-4" /> تسجيل الحضور بالـ QR</Button>
       </DialogTrigger>
       <DialogContent className="max-w-sm text-center">
         <DialogHeader>
-          <DialogTitle>Secure QR Attendance</DialogTitle>
+          <DialogTitle>حضور آمن بالـ QR</DialogTitle>
           <DialogDescription>
             Token expires in {remaining > 0 ? `${remaining}s` : "—"}. Students scan to check in.
           </DialogDescription>
@@ -67,7 +67,7 @@ export function QrCheckin({ lessonId }: { lessonId: string }) {
             </div>
           </div>
         ) : (
-          <Button onClick={generate}><RefreshCw className="h-4 w-4" /> Generate QR</Button>
+          <Button onClick={generate}><RefreshCw className="h-4 w-4" /> إنشاء رمز QR</Button>
         )}
         <Button variant="outline" onClick={() => setOpen(false)}>
           <X className="h-4 w-4" /> Close

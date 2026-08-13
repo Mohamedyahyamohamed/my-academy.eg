@@ -30,7 +30,7 @@ test.describe("Teacher Journey", () => {
 
   test("can access assistants", async ({ teacherPage }) => {
     await teacherPage.goto("/teacher/assistants");
-    await expect(teacherPage.getByRole("heading", { name: "No assistants yet" }).or(teacherPage.getByText("Assistants log in with their own email")).first()).toBeVisible({ timeout: 5_000 });
+    await expect(teacherPage.getByText("يسجّل المساعدون الدخول ببريدهم الخاص")).toBeVisible({ timeout: 5_000 });
   });
 
   test("cannot access admin settings", async ({ teacherPage }) => {

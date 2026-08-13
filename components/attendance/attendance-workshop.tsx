@@ -87,13 +87,13 @@ export function AttendanceWorkshop({
       .map((s) => ({ studentId: s.id, status: statuses[s.id] }))
       .filter((e): e is { studentId: string; status: AttendanceStatus } => Boolean(e.status));
     if (entries.length < roster.length) {
-      toast.error("Please mark every student before saving.");
+      toast.error("حدّد حالة الحضور لكل طالب قبل الحفظ.");
       return;
     }
     setSaving(true);
     try {
       await saveAttendanceAction(groupId, lessonId, entries);
-      toast.success(`Attendance saved for ${entries.length} students`);
+      toast.success(`تم حفظ حضور ${entries.length} طالب.`);
       router.refresh();
     } finally {
       setSaving(false);
@@ -106,7 +106,7 @@ export function AttendanceWorkshop({
       <Card>
         <CardContent className="grid gap-4 p-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">1. Select group</label>
+            <label className="text-sm font-medium">1. اختر المجموعة</label>
             <select
               value={groupId}
               onChange={(e) => {
@@ -117,12 +117,12 @@ export function AttendanceWorkshop({
               }}
               className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
-              <option value="">Choose a group…</option>
+              <option value="">اختر مجموعة…</option>
               {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">2. Select lesson</label>
+            <label className="text-sm font-medium">2. اختر الحصة</label>
             <select
               value={lessonId}
               onChange={(e) => {
@@ -133,7 +133,7 @@ export function AttendanceWorkshop({
               disabled={!groupId}
               className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
             >
-              <option value="">Choose a lesson…</option>
+              <option value="">اختر حصة…</option>
               {groupLessons.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.topic} — {new Date(l.date).toLocaleDateString()}
@@ -147,11 +147,11 @@ export function AttendanceWorkshop({
       {!groupId || !lessonId ? (
         <EmptyState
           icon={CalendarCheck}
-          title="Pick a group and lesson"
-          description="Select a group, then a lesson to start marking attendance."
+          title="اختر مجموعة وحصة"
+          description="اختر المجموعة ثم الحصة لبدء تسجيل الحضور."
         />
       ) : roster.length === 0 ? (
-        <EmptyState icon={Users} title="No students in this group" description="Enroll students first." />
+        <EmptyState icon={Users} title="لا يوجد طلاب في هذه المجموعة" description="سجّل الطلاب أولًا." />
       ) : (
         <>
           {/* Summary + bulk actions */}

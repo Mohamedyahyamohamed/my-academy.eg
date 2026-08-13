@@ -21,7 +21,7 @@ export default async function ParentAttendancePage() {
     <div className="space-y-6">
       <PageHeader title="الحضور" description="سجلات الحضور لكل أبنائك." />
       {children.length === 0 ? (
-        <EmptyState icon={CalendarCheck} title="No data" description="No children linked." />
+        <EmptyState icon={CalendarCheck} title="لا توجد بيانات" description="لا يوجد أبناء مرتبطون بالحساب." />
       ) : (
         <div className="space-y-6">
           {children.map((c) => {
@@ -35,10 +35,10 @@ export default async function ParentAttendancePage() {
                       <p className="font-semibold">{fullName(c)}</p>
                     </div>
                     <AttendanceBadge status={att.present > att.absent ? "PRESENT" : "ABSENT"} />
-                    <span className="text-sm text-muted-foreground">{percentage(att.present + att.late, att.total)}% present</span>
+                    <span className="text-sm text-muted-foreground">{percentage(att.present + att.late, att.total)}% حضور</span>
                   </div>
                   <Table>
-                    <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Group</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                    <TableHeader><TableRow><TableHead>التاريخ</TableHead><TableHead>المجموعة</TableHead><TableHead>الحالة</TableHead></TableRow></TableHeader>
                     <TableBody>
                       {att.byLesson.slice().reverse().slice(0, 8).map((a) => {
                         const lesson = collections().lessons.find((l) => l.id === a.lesson_id);
@@ -51,7 +51,7 @@ export default async function ParentAttendancePage() {
                           </TableRow>
                         );
                       })}
-                      {att.byLesson.length === 0 && <TableRow><TableCell colSpan={3} className="py-6 text-center text-sm text-muted-foreground">No records.</TableCell></TableRow>}
+                      {att.byLesson.length === 0 && <TableRow><TableCell colSpan={3} className="py-6 text-center text-sm text-muted-foreground">لا توجد سجلات.</TableCell></TableRow>}
                     </TableBody>
                   </Table>
                 </CardContent>

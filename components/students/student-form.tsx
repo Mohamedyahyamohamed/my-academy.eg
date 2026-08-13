@@ -90,7 +90,7 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
       if (parentMode === "new") {
         const fn = newParent.first_name.trim();
         if (!fn) {
-          toast.error("Parent first name is required");
+          toast.error("الاسم الأول لولي الأمر مطلوب.");
           return;
         }
         const { createParentAction } = await import("@/app/actions/parents");
@@ -100,19 +100,19 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
           phone: newParent.phone.trim() || undefined,
         });
         if (!res.ok) {
-          toast.error(res.error ?? "Could not add parent");
+          toast.error(res.error ?? "تعذّر إضافة ولي الأمر.");
           return;
         }
         parentId = res.parent!.id;
       } else if (!parentId) {
-        toast.error("Please select a parent or add a new one");
+        toast.error("اختر ولي أمر أو أضف ولي أمر جديدًا.");
         return;
       }
 
       const payload = { ...values, parent_id: parentId };
       if (student) {
         await updateStudentAction(student.id, payload);
-        toast.success("Student updated");
+        toast.success("تم تحديث بيانات الطالب.");
       } else {
         const s = await createStudentAction(payload);
         toast.success(
@@ -123,7 +123,7 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
       onDone?.();
       router.refresh();
     } catch {
-      toast.error("Something went wrong");
+      toast.error("حدث خطأ غير متوقع.");
     } finally {
       setSaving(false);
     }
@@ -160,21 +160,21 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
                   <SelectValue placeholder="اختر" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">Not specified</SelectItem>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="__none__">غير محدد</SelectItem>
+                  <SelectItem value="male">ذكر</SelectItem>
+                  <SelectItem value="female">أنثى</SelectItem>
                 </SelectContent>
               </Select>
             )}
           />
         </Field>
         <Field label="الصف / المستوى">
-          <Input {...register("grade")} placeholder="Grade 9" />
+          <Input {...register("grade")} placeholder="مثال: الصف الثالث الإعدادي" />
         </Field>
         <Field label="المدرسة">
-          <Input {...register("school")} placeholder="School name" />
+          <Input {...register("school")} placeholder="اسم المدرسة" />
         </Field>
-        <Field label="Parent / Guardian" required error={errors.parent_id?.message}>
+        <Field label="ولي الأمر أو الوصي" required error={errors.parent_id?.message}>
           <div className="mb-2 flex gap-1 rounded-lg border border-border p-1">
             <button
               type="button"
@@ -210,10 +210,10 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
                   onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a parent" />
+                    <SelectValue placeholder="اختر ولي الأمر" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">No parent linked</SelectItem>
+                    <SelectItem value="__none__">لا يوجد ولي أمر مرتبط</SelectItem>
                     {parents.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.first_name} {p.last_name}
@@ -268,7 +268,7 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
         </Field>
       </div>
 
-      <Field label="Groups" hint="Enroll this student into one or more groups">
+      <Field label="المجموعات" hint="سجّل الطالب في مجموعة واحدة أو أكثر">
         <Controller
           control={control}
           name="groupIds"
@@ -315,9 +315,9 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
           )}
         />
         <div className="text-sm">
-          <span className="font-medium">Parent/guardian consent *</span>
+          <span className="font-medium">موافقة ولي الأمر أو الوصي *</span>
           <p className="text-xs text-muted-foreground">
-            I confirm that the parent/guardian has consented to the collection and processing of this student's data in accordance with the <a href="/privacy" className="text-primary underline">Privacy Policy</a>.
+            أقرّ بأن ولي الأمر أو الوصي وافق على جمع بيانات هذا الطالب ومعالجتها وفقًا لـ <a href="/privacy" className="text-primary underline">سياسة الخصوصية</a>.
           </p>
         </div>
       </label>

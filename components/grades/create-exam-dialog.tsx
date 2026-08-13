@@ -30,7 +30,7 @@ export function CreateExamDialog({ courses, groups }: { courses: Course[]; group
     setSaving(true);
     try {
       const e = await createExamAction(values);
-      toast.success("Exam created");
+      toast.success("تم إنشاء الاختبار.");
       setOpen(false);
       router.push(`/grades/${e.id}`);
       router.refresh();
@@ -41,48 +41,48 @@ export function CreateExamDialog({ courses, groups }: { courses: Course[]; group
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button><Plus className="h-4 w-4" /> New exam</Button></DialogTrigger>
+      <DialogTrigger asChild><Button><Plus className="h-4 w-4" /> اختبار جديد</Button></DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create exam</DialogTitle>
-          <DialogDescription>Define an exam so you can enter grades for a group.</DialogDescription>
+          <DialogTitle>إنشاء اختبار</DialogTitle>
+          <DialogDescription>حدّد اختبارًا لإدخال درجات طلاب المجموعة.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           <div className="space-y-1.5">
-            <Label>Exam name *</Label>
-            <Input {...register("name")} placeholder="Algebra Midterm" />
+            <Label>اسم الاختبار *</Label>
+            <Input {...register("name")} placeholder="مثال: اختبار الجبر النصفي" />
             {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Course *</Label>
+              <Label>المادة *</Label>
               <select {...register("course_id")} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                <option value="">Select…</option>
+                <option value="">اختر…</option>
                 {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               {errors.course_id && <p className="text-xs text-destructive">{errors.course_id.message}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label>Group *</Label>
+              <Label>المجموعة *</Label>
               <select {...register("group_id")} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                <option value="">Select…</option>
+                <option value="">اختر…</option>
                 {groups.filter((g) => !courseId || g.course_id === courseId).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
               {errors.group_id && <p className="text-xs text-destructive">{errors.group_id.message}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label>Date *</Label>
+              <Label>التاريخ *</Label>
               <Input type="date" {...register("date")} />
             </div>
             <div className="space-y-1.5">
-              <Label>Max score *</Label>
+              <Label>الدرجة النهائية *</Label>
               <Input type="number" min={1} step="any" {...register("max_score")} />
               {errors.max_score && <p className="text-xs text-destructive">{errors.max_score.message}</p>}
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={saving}>{saving && <Loader2 className="h-4 w-4 animate-spin" />} Create</Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>إلغاء</Button>
+            <Button type="submit" disabled={saving}>{saving && <Loader2 className="h-4 w-4 animate-spin" />} إنشاء</Button>
           </DialogFooter>
         </form>
       </DialogContent>

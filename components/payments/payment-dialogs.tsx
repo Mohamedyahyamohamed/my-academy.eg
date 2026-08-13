@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { recordPaymentSchema, type RecordPaymentValues, paymentSchema, type PaymentValues } from "@/schemas";
 import { recordPaymentAction, createPaymentAction } from "@/app/actions/payments";
-import { PAYMENT_METHODS } from "@/lib/constants";
+import { PAYMENT_METHODS, paymentMethodLabel } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 import type { Group, Payment, Student } from "@/types";
 
@@ -40,17 +40,17 @@ export function RecordPaymentDialog({
 
   const onSubmit = async (values: RecordPaymentValues) => {
     if (values.amount > payment.remaining) {
-      toast.error(`Amount exceeds remaining balance (${formatCurrency(payment.remaining)}).`);
+      toast.error(`المبلغ أكبر من الرصيد المتبقي (${formatCurrency(payment.remaining)}).`);
       return;
     }
     setSaving(true);
     try {
       const res = await recordPaymentAction(payment.id, values.amount, values.method, values.note);
       if (!res.ok) {
-        toast.error(res.error ?? "Failed");
+        toast.error(res.error ?? "تعذّر إتمام العملية.");
         return;
       }
-      toast.success(`Recorded ${formatCurrency(values.amount)}`);
+      toast.success(`تم تسجيل ${formatCurrency(values.amount)}`);
       setOpen(false);
       router.refresh();
     } finally {
@@ -62,41 +62,41 @@ export function RecordPaymentDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" variant="soft" disabled={payment.remaining <= 0}>
-          <Wallet className="h-3.5 w-3.5" /> Record
+          <Wallet className="h-3.5 w-3.5" /> تسجيل
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Record payment</DialogTitle>
+          <DialogTitle>تسجيل دفعة</DialogTitle>
           <DialogDescription>
             {student ? `${student.first_name} ${student.last_name} · ${payment.month}` : payment.month}
           </DialogDescription>
         </DialogHeader>
         <div className="rounded-lg bg-muted p-3 text-sm">
-          <div className="flex justify-between"><span className="text-muted-foreground">Remaining</span><span className="font-semibold text-rose-600">{formatCurrency(payment.remaining)}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">المتبقي</span><span className="font-semibold text-rose-600">{formatCurrency(payment.remaining)}</span></div>
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           <div className="space-y-1.5">
-            <Label>Amount received</Label>
+            <Label>المبلغ المستلم</Label>
             <Input type="number" min={1} max={payment.remaining} step="any" {...register("amount")} />
             {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
           </div>
           <div className="space-y-1.5">
-            <Label>Method</Label>
+            <Label>طريقة الدفع</Label>
             <Input defaultValue="Cash" {...register("method")} list="methods" />
-            <datalist id="methods">{PAYMENT_METHODS.map((m) => <option key={m} value={m} />)}</datalist>
+            <datalist id="methods">{PAYMENT_METHODS.map((m) => <option key={m} value={m} label={paymentMethodLabel(m)} />)}</datalist>
           </div>
           <div className="space-y-1.5">
-            <Label>Note (optional)</Label>
+            <Label>ملاحظة (اختياري)</Label>
             <Input {...register("note")} />
           </div>
           {amount > 0 && (
-            <p className="text-sm text-muted-foreground">New remaining: <span className="font-medium text-foreground">{formatCurrency(Math.max(0, payment.remaining - amount))}</span></p>
+            <p className="text-sm text-muted-foreground">المتبقي الجديد: <span className="font-medium text-foreground">{formatCurrency(Math.max(0, payment.remaining - amount))}</span></p>
           )}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>إلغاء</Button>
             <Button type="submit" disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 animate-spin" />} Confirm
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />} تأكيد
             </Button>
           </DialogFooter>
         </form>
@@ -123,8 +123,8 @@ export function CreatePaymentDialog({
   const [method, setMethod] = React.useState("Cash");
 
   const submit = async () => {
-    if (!studentId) { toast.error("Select a student."); return; }
-    if (amountDue <= 0) { toast.error("Amount due must be positive."); return; }
+    if (!studentId) { toast.error("اختر طالبًا أولًا."); return; }
+    if (amountDue <= 0) { toast.error("يجب أن يكون المبلغ المستحق أكبر من صفر."); return; }
     setSaving(true);
     try {
       const res = await createPaymentAction({
@@ -135,8 +135,8 @@ export function CreatePaymentDialog({
         amount_paid: amountPaid,
         method,
       });
-      if (!res.ok) { toast.error(res.error ?? "Failed"); return; }
-      toast.success("Payment created");
+      if (!res.ok) { toast.error(res.error ?? "تعذّر إتمام العملية."); return; }
+      toast.success("تم إنشاء سجل الدفعة.");
       setOpen(false);
       router.refresh();
     } finally {
@@ -147,57 +147,57 @@ export function CreatePaymentDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button><Plus className="h-4 w-4" /> Add payment</Button>
+        <Button><Plus className="h-4 w-4" /> إضافة دفعة</Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add payment record</DialogTitle>
-          <DialogDescription>Create a billing record for a student.</DialogDescription>
+          <DialogTitle>إضافة سجل دفعة</DialogTitle>
+          <DialogDescription>أنشئ سجل دفعة لطالب.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Student *</Label>
+              <Label>الطالب *</Label>
               <select value={studentId} onChange={(e) => setStudentId(e.target.value)} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                <option value="">Select…</option>
+                <option value="">اختر…</option>
                 {students.map((s) => <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>)}
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label>Group</Label>
+              <Label>المجموعة</Label>
               <select value={groupId} onChange={(e) => { setGroupId(e.target.value); const g = groups.find((x) => x.id === e.target.value); if (g) setAmountDue(g.monthly_fee); }} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                <option value="">None</option>
+                <option value="">لا يوجد</option>
                 {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label>Month</Label>
+              <Label>الشهر</Label>
               <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label>Method</Label>
+              <Label>طريقة الدفع</Label>
               <select value={method} onChange={(e) => setMethod(e.target.value)} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+                {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{paymentMethodLabel(m)}</option>)}
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label>Amount due *</Label>
+              <Label>المبلغ المستحق *</Label>
               <Input type="number" min={0} step="any" value={amountDue || ""} onChange={(e) => setAmountDue(Number(e.target.value))} />
             </div>
             <div className="space-y-1.5">
-              <Label>Amount paid</Label>
+              <Label>المبلغ المدفوع</Label>
               <Input type="number" min={0} max={amountDue} step="any" value={amountPaid || ""} onChange={(e) => setAmountPaid(Number(e.target.value))} />
             </div>
           </div>
           <div className="flex items-center justify-between rounded-lg bg-muted p-3 text-sm">
-            <span className="text-muted-foreground">Remaining will be</span>
+            <span className="text-muted-foreground">المتبقي سيكون</span>
             <span className="font-semibold">{formatCurrency(Math.max(0, amountDue - amountPaid))}</span>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => setOpen(false)}>إلغاء</Button>
           <Button onClick={submit} disabled={saving}>
-            {saving && <Loader2 className="h-4 w-4 animate-spin" />} Create
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />} إنشاء
           </Button>
         </DialogFooter>
       </DialogContent>

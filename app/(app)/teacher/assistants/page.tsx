@@ -41,15 +41,15 @@ export default async function TeacherAssistantsPage() {
     <div className="space-y-6">
       <PageHeader
         title="مساعدوني"
-        description="Assistants log in with their own email and share access to your groups."
+        description="يسجّل المساعدون الدخول ببريدهم الخاص ويشاركونك الوصول إلى مجموعاتك."
       >
         <CreateAssistantDialog groups={accessibleGroups} />
       </PageHeader>
 
       {accessibleGroups.length === 0 ? (
-        <EmptyState icon={UsersRound} title="مفيش جروبات معاك صلاحية عليها" description="علشان تضيف assistant لازم تكون صاحب/مساعد في جروب واحد على الأقل. كلّم الأدمن يخصّص لك جروب." />
+        <EmptyState icon={UsersRound} title="مفيش جروبات معاك صلاحية عليها" description="لإضافة مساعد، يجب أن تكون مالكًا أو مساعدًا في مجموعة واحدة على الأقل. تواصل مع المدير لتخصيص مجموعة لك." />
       ) : assistants.length === 0 ? (
-        <EmptyState icon={UsersRound} title="No assistants yet" description="Create an assistant to share access to your groups." action={<CreateAssistantDialog groups={accessibleGroups} />} />
+        <EmptyState icon={UsersRound} title="لا يوجد مساعدون بعد" description="أنشئ مساعدًا لمشاركة الوصول إلى مجموعاتك." action={<CreateAssistantDialog groups={accessibleGroups} />} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {assistants.map((a) => (

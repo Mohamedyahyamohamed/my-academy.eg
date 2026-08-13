@@ -9,7 +9,7 @@ test.describe("Parent Journey", () => {
 
   test("can view children list", async ({ parentPage }) => {
     await parentPage.goto("/parent/children");
-    await expect(parentPage.locator("text=Children")).toBeVisible({ timeout: 5_000 });
+    await expect(parentPage.getByRole("heading", { name: "أبنائي" })).toBeVisible({ timeout: 5_000 });
   });
 
   test("can view attendance", async ({ parentPage }) => {

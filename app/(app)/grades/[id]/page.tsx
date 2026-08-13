@@ -21,7 +21,7 @@ export default async function ExamGradePage({ params }: { params: { id: string }
     return {
       studentId: r.studentId,
       score: r.score,
-      name: s ? fullName(s) : "Unknown",
+      name: s ? fullName(s) : "غير معروف",
     };
   });
 
@@ -33,7 +33,7 @@ export default async function ExamGradePage({ params }: { params: { id: string }
         breadcrumbs={[{ label: "الدرجات", href: "/grades" }, { label: exam.name }]}
       >
         <Button asChild variant="outline">
-          <Link href="/grades"><ArrowLeft className="h-4 w-4" /> Back</Link>
+          <Link href="/grades"><ArrowLeft className="h-4 w-4" /> رجوع</Link>
         </Button>
       </PageHeader>
 

@@ -28,7 +28,7 @@ export function StudentNotes({
     try {
       await addNoteAction(studentId, content.trim());
       setContent("");
-      toast.success("Note added");
+      toast.success("تمت إضافة الملاحظة.");
       router.refresh();
     } finally {
       setSaving(false);
@@ -41,7 +41,7 @@ export function StudentNotes({
         <Textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Add a note about this student…"
+          placeholder="أضف ملاحظة عن هذا الطالب…"
           rows={3}
         />
         <div className="mt-2 flex justify-end">
@@ -54,8 +54,8 @@ export function StudentNotes({
       {notes.length === 0 ? (
         <EmptyState
           icon={StickyNote}
-          title="No notes yet"
-          description="Add reminders or observations about this student."
+          title="لا توجد ملاحظات بعد"
+          description="أضف تذكيرات أو ملاحظات عن هذا الطالب."
         />
       ) : (
         <div className="space-y-2">
@@ -71,10 +71,10 @@ export function StudentNotes({
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label="Delete note"
+                  aria-label="حذف الملاحظة"
                   onClick={async () => {
                     await deleteNoteAction(studentId, n.id);
-                    toast.success("Note deleted");
+                    toast.success("تم حذف الملاحظة.");
                     router.refresh();
                   }}
                 >

@@ -39,7 +39,7 @@ export function AcademySettingsForm({ academy }: { academy: Academy }) {
     setSaving(true);
     try {
       await updateAcademyAction(values);
-      toast.success("Academy settings saved");
+      toast.success("تم حفظ إعدادات الأكاديمية.");
       router.refresh();
     } finally {
       setSaving(false);
@@ -49,10 +49,10 @@ export function AcademySettingsForm({ academy }: { academy: Academy }) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Academy name" error={errors.name?.message}>
+        <Field label="اسم الأكاديمية" error={errors.name?.message}>
           <Input {...register("name")} />
         </Field>
-        <Field label="Currency" error={errors.currency?.message}>
+        <Field label="العملة" error={errors.currency?.message}>
           <Input {...register("currency")} />
         </Field>
         <Field label="البريد الإلكتروني" error={errors.email?.message}>
@@ -61,10 +61,10 @@ export function AcademySettingsForm({ academy }: { academy: Academy }) {
         <Field label="الموبايل">
           <Input {...register("phone")} />
         </Field>
-        <Field label="Country">
+        <Field label="الدولة">
           <Input {...register("country")} />
         </Field>
-        <Field label="Address">
+        <Field label="العنوان">
           <Input {...register("address")} />
         </Field>
       </div>
@@ -84,11 +84,11 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
   const [saving, setSaving] = React.useState(false);
 
   const create = async () => {
-    if (!name.trim()) { toast.error("Name is required."); return; }
+    if (!name.trim()) { toast.error("الاسم مطلوب."); return; }
     setSaving(true);
     try {
       await createCourseAction({ name: name.trim(), description: desc.trim(), color });
-      toast.success("Course created");
+      toast.success("تم إنشاء المادة.");
       setName(""); setDesc(""); setColor(COLORS[0]); setOpen(false);
       router.refresh();
     } finally {
@@ -100,13 +100,13 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
     <div className="space-y-4">
       <div className="flex justify-end">
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4" /> Add course</Button></DialogTrigger>
+          <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4" /> إضافة مادة</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>New course</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>مادة جديدة</DialogTitle></DialogHeader>
             <div className="space-y-4">
-              <Field label="Name"><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Biology" /></Field>
-              <Field label="Description"><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={2} /></Field>
-              <Field label="Color">
+              <Field label="الاسم"><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: أحياء" /></Field>
+              <Field label="الوصف"><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={2} /></Field>
+              <Field label="اللون">
                 <div className="flex flex-wrap gap-2">
                   {COLORS.map((c) => (
                     <button key={c} type="button" onClick={() => setColor(c)} className={`h-8 w-8 rounded-full border-2 ${color === c ? "border-foreground" : "border-transparent"}`} style={{ background: c }} aria-label={c} />
@@ -115,8 +115,8 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
               </Field>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick={create} disabled={saving}>{saving && <Loader2 className="h-4 w-4 animate-spin" />} Create</Button>
+              <Button variant="outline" onClick={() => setOpen(false)}>إلغاء</Button>
+              <Button onClick={create} disabled={saving}>{saving && <Loader2 className="h-4 w-4 animate-spin" />} إنشاء</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -132,10 +132,10 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label="Delete course"
+              aria-label="حذف المادة"
               onClick={async () => {
                 await deleteCourseAction(c.id);
-                toast.success("Course deleted");
+                toast.success("تم حذف المادة.");
                 router.refresh();
               }}
             >

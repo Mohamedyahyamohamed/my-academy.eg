@@ -32,7 +32,7 @@ export function SubmissionReview({ submissions }: { submissions: HomeworkSubmiss
     setSaving(true);
     try {
       await reviewSubmissionAction(id, feedback, grade ? Number(grade) : undefined);
-      toast.success("Submission reviewed");
+      toast.success("تمت مراجعة التسليم.");
       setOpenId(null);
       router.refresh();
     } finally {
@@ -41,7 +41,7 @@ export function SubmissionReview({ submissions }: { submissions: HomeworkSubmiss
   };
 
   if (submissions.length === 0) {
-    return <p className="py-8 text-center text-sm text-muted-foreground">No students in this group yet.</p>;
+    return <p className="py-8 text-center text-sm text-muted-foreground">لا يوجد طلاب في هذه المجموعة بعد.</p>;
   }
 
   return (
@@ -55,11 +55,11 @@ export function SubmissionReview({ submissions }: { submissions: HomeworkSubmiss
                 {s.content ? (
                   <p className="mt-1 rounded-md bg-muted p-2 text-sm">{s.content}</p>
                 ) : (
-                  <p className="mt-1 text-sm text-muted-foreground">No submission yet.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">لا يوجد تسليم بعد.</p>
                 )}
                 {s.feedback && openId !== s.id && (
                   <p className="mt-2 text-xs text-muted-foreground">
-                    <span className="font-medium">Feedback:</span> {s.feedback}
+                    <span className="font-medium">ملاحظات المعلّم:</span> {s.feedback}
                   </p>
                 )}
               </div>
@@ -75,18 +75,18 @@ export function SubmissionReview({ submissions }: { submissions: HomeworkSubmiss
               openId === s.id ? (
                 <div className="mt-3 space-y-3 border-t pt-3">
                   <div className="space-y-1.5">
-                    <Label>Feedback</Label>
-                    <Textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={2} placeholder="Write feedback for the student…" />
+                    <Label>ملاحظات المعلّم</Label>
+                    <Textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={2} placeholder="اكتب ملاحظاتك للطالب…" />
                   </div>
                   <div className="flex items-end gap-3">
                     <div className="w-32 space-y-1.5">
-                      <Label>Grade /10</Label>
+                      <Label>الدرجة /10</Label>
                       <Input type="number" min={0} max={10} value={grade} onChange={(e) => setGrade(e.target.value)} />
                     </div>
                     <Button onClick={() => save(s.id)} disabled={saving} className="ml-auto">
                       {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save review
                     </Button>
-                    <Button variant="ghost" onClick={() => setOpenId(null)}>Cancel</Button>
+                    <Button variant="ghost" onClick={() => setOpenId(null)}>إلغاء</Button>
                   </div>
                 </div>
               ) : (

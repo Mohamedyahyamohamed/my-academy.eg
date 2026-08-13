@@ -58,7 +58,7 @@ export function UserMenu({ user }: { user: SessionUser }) {
           className="text-destructive focus:text-destructive"
           onClick={async () => {
             await logoutAction();
-            toast.success("Signed out");
+            toast.success("تم تسجيل الخروج.");
             router.push("/login");
             router.refresh();
           }}

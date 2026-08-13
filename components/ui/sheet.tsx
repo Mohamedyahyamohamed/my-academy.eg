@@ -59,7 +59,7 @@ const SheetContent = React.forwardRef<
       {children}
       <DialogPrimitive.Close className="absolute right-4 top-4 rounded-md opacity-70 transition-opacity hover:opacity-100 focus:outline-none">
         <X className="h-5 w-5" />
-        <span className="sr-only">Close</span>
+        <span className="sr-only">إغلاق</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
   </SheetPortal>

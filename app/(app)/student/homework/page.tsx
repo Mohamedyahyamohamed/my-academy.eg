@@ -18,7 +18,7 @@ export default async function StudentHomeworkPage() {
     <div className="space-y-6">
       <PageHeader title="الواجبات" description="واجباتك. سلّم شغلك قبل الموعد النهائي." />
       {homework.length === 0 ? (
-        <EmptyState icon={ClipboardList} title="No homework" description="Nothing assigned to you right now." />
+        <EmptyState icon={ClipboardList} title="لا توجد واجبات" description="لا توجد واجبات مسندة إليك حاليًا." />
       ) : (
         <div className="space-y-3">
           {homework.map((s) => (
@@ -32,22 +32,22 @@ export default async function StudentHomeworkPage() {
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">{s.homework?.description}</p>
                     <p className="mt-2 text-xs text-muted-foreground">
-                      {s.homework?.group?.name} · Due {formatDate(s.homework?.deadline)}
+                      {s.homework?.group?.name} · موعد التسليم: {formatDate(s.homework?.deadline)}
                     </p>
                     {s.content && (
                       <p className="mt-2 rounded-md bg-muted p-2 text-xs">
-                        <span className="font-medium">Your submission:</span> {s.content}
+                        <span className="font-medium">تسليمك:</span> {s.content}
                       </p>
                     )}
                     {s.file_url && (
                       <a href={s.file_url} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-                        <Paperclip className="h-3.5 w-3.5" /> View attached file
+                        <Paperclip className="h-3.5 w-3.5" /> عرض الملف المرفق
                       </a>
                     )}
                     {s.feedback && (
                       <p className="mt-2 rounded-md bg-emerald-50 p-2 text-xs text-emerald-800">
-                        <span className="font-medium">Teacher feedback:</span> {s.feedback}
-                        {s.grade != null && <> · Grade: {s.grade}/10</>}
+                        <span className="font-medium">ملاحظات المعلّم:</span> {s.feedback}
+                        {s.grade != null && <> · الدرجة: {s.grade}/10</>}
                       </p>
                     )}
                   </div>

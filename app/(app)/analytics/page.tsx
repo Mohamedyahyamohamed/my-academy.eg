@@ -42,7 +42,7 @@ export default async function AnalyticsPage() {
             ["اشتراكات نشطة", lifecycle.activeSubscriptions],
             ["إلغاءات", lifecycle.cancellations],
             ["بدايات الدفع", lifecycle.checkoutsStarted],
-            ["Onboarding مكتمل", lifecycle.onboardingCompleted],
+            ["إعداد أولي مكتمل", lifecycle.onboardingCompleted],
           ].map(([label, value]) => (
             <div key={String(label)} className="rounded-lg border bg-muted/30 p-3">
               <p className="text-xs text-muted-foreground">{label}</p>

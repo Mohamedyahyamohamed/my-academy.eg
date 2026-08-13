@@ -46,7 +46,7 @@ import {
 import { groupsForStudent } from "@/services/_shared";
 import { collections } from "@/services/data/store";
 import { formatCurrency, formatDate, formatTime } from "@/lib/utils";
-import { performanceLevel, performanceColor } from "@/lib/constants";
+import { performanceLevel, performanceColor, performanceLabel } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -91,7 +91,7 @@ export default async function StudentProfilePage({
       >
         <Button asChild variant="outline">
           <Link href="/students">
-            <ArrowLeft className="h-4 w-4" /> Back
+            <ArrowLeft className="h-4 w-4" /> رجوع
           </Link>
         </Button>
         <StudentQrCard
@@ -99,7 +99,7 @@ export default async function StudentProfilePage({
           name={`${detail.first_name} ${detail.last_name}`}
           grade={detail.grade}
           academyName={MiscService.getAcademy().name}
-          trigger={<Button variant="outline">QR card</Button>}
+          trigger={<Button variant="outline">بطاقة QR</Button>}
         />
         <EditStudentDialog student={detail} parents={parents} groups={groups} />
         <Button asChild variant="outline">
@@ -138,7 +138,7 @@ export default async function StudentProfilePage({
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <InfoItem icon={User} label="ولي الأمر" value={detail.parent ? <Link href={`/parents/${detail.parent.id}`} className="text-primary hover:underline">{detail.parent.first_name} {detail.parent.last_name}</Link> : "Not linked"} />
+            <InfoItem icon={User} label="ولي الأمر" value={detail.parent ? <Link href={`/parents/${detail.parent.id}`} className="text-primary hover:underline">{detail.parent.first_name} {detail.parent.last_name}</Link> : "غير مرتبط"} />
             <InfoItem icon={School} label="المدرسة" value={detail.school || "—"} />
             <InfoItem icon={Phone} label="الموبايل" value={detail.phone || "—"} />
             <InfoItem icon={Mail} label="البريد الإلكتروني" value={detail.email || "—"} />
@@ -160,27 +160,27 @@ export default async function StudentProfilePage({
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Attendance trend</CardTitle>
-                <CardDescription>Per recent lesson</CardDescription>
+                <CardTitle className="text-base">تطور الحضور</CardTitle>
+                <CardDescription>وفقًا لأحدث الحصص</CardDescription>
               </CardHeader>
               <CardContent>
                 {stats.attendanceTrend.length ? (
                   <LineTrend data={stats.attendanceTrend} dataKey="rate" xKey="label" color="#10b981" height={200} />
                 ) : (
-                  <p className="py-8 text-center text-sm text-muted-foreground">No attendance records yet.</p>
+                  <p className="py-8 text-center text-sm text-muted-foreground">لا توجد سجلات حضور بعد.</p>
                 )}
               </CardContent>
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Grade trend</CardTitle>
-                <CardDescription>Score % per exam</CardDescription>
+                <CardTitle className="text-base">تطور الدرجات</CardTitle>
+                <CardDescription>نسبة الدرجة في كل اختبار</CardDescription>
               </CardHeader>
               <CardContent>
                 {stats.gradeTrend.length ? (
                   <TrendArea data={stats.gradeTrend} dataKey="score" xKey="label" color="#7c5cfc" height={200} />
                 ) : (
-                  <p className="py-8 text-center text-sm text-muted-foreground">No grades recorded yet.</p>
+                  <p className="py-8 text-center text-sm text-muted-foreground">لا توجد درجات مسجّلة بعد.</p>
                 )}
               </CardContent>
             </Card>
@@ -197,9 +197,9 @@ export default async function StudentProfilePage({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Lesson date</TableHead>
-                    <TableHead>Group</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>تاريخ الحصة</TableHead>
+                    <TableHead>المجموعة</TableHead>
+                    <TableHead>الحالة</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -221,7 +221,7 @@ export default async function StudentProfilePage({
                   {attendance.byLesson.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={3} className="py-8 text-center text-sm text-muted-foreground">
-                        No attendance recorded.
+                        لا توجد سجلات حضور.
                       </TableCell>
                     </TableRow>
                   )}
@@ -236,11 +236,11 @@ export default async function StudentProfilePage({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Month</TableHead>
-                    <TableHead>Due</TableHead>
-                    <TableHead>Paid</TableHead>
-                    <TableHead>Remaining</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>الشهر</TableHead>
+                    <TableHead>المستحق</TableHead>
+                    <TableHead>المدفوع</TableHead>
+                    <TableHead>المتبقي</TableHead>
+                    <TableHead>الحالة</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -258,7 +258,7 @@ export default async function StudentProfilePage({
                   {payments.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
-                        No payments recorded.
+                        لا توجد مدفوعات مسجّلة.
                       </TableCell>
                     </TableRow>
                   )}
@@ -273,11 +273,11 @@ export default async function StudentProfilePage({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Exam</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Score</TableHead>
+                    <TableHead>الاختبار</TableHead>
+                    <TableHead>التاريخ</TableHead>
+                    <TableHead>الدرجة</TableHead>
                     <TableHead>%</TableHead>
-                    <TableHead>Level</TableHead>
+                    <TableHead>التقدير</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -291,7 +291,7 @@ export default async function StudentProfilePage({
                         <TableCell>{Math.round(g.percentage ?? 0)}%</TableCell>
                         <TableCell>
                           <Badge className={performanceColor(g.level ?? performanceLevel(g.percentage ?? 0))}>
-                            {g.level ?? performanceLevel(g.percentage ?? 0)}
+                            {performanceLabel(g.level ?? performanceLevel(g.percentage ?? 0))}
                           </Badge>
                         </TableCell>
                       </TableRow>
@@ -300,7 +300,7 @@ export default async function StudentProfilePage({
                   {grades.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
-                        No grades recorded.
+                        لا توجد درجات مسجّلة.
                       </TableCell>
                     </TableRow>
                   )}
@@ -312,7 +312,7 @@ export default async function StudentProfilePage({
         homework={
           <div className="space-y-3">
             {homework.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">No homework assigned yet.</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">لا توجد واجبات مسندة بعد.</p>
             ) : (
               homework.map((s) => (
                 <Card key={s.id}>
@@ -323,14 +323,14 @@ export default async function StudentProfilePage({
                         <p className="text-sm text-muted-foreground">{s.homework?.description}</p>
                         {s.feedback && (
                           <p className="mt-2 rounded-md bg-muted p-2 text-xs">
-                            <span className="font-medium">Feedback:</span> {s.feedback}
+                            <span className="font-medium">ملاحظات المعلّم:</span> {s.feedback}
                           </p>
                         )}
                       </div>
                       <div className="text-right">
                         <HomeworkBadge status={s.status} />
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Due {formatDate(s.homework?.deadline)}
+                          موعد التسليم: {formatDate(s.homework?.deadline)}
                         </p>
                       </div>
                     </div>
@@ -346,10 +346,10 @@ export default async function StudentProfilePage({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Topic</TableHead>
-                    <TableHead>Group</TableHead>
-                    <TableHead>Time</TableHead>
+                    <TableHead>التاريخ</TableHead>
+                    <TableHead>الموضوع</TableHead>
+                    <TableHead>المجموعة</TableHead>
+                    <TableHead>الوقت</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -366,7 +366,7 @@ export default async function StudentProfilePage({
                   {lessons.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
-                        No lessons scheduled.
+                        لا توجد حصص مجدولة.
                       </TableCell>
                     </TableRow>
                   )}

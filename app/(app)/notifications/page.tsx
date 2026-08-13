@@ -31,7 +31,7 @@ export default async function NotificationsPage() {
         <MarkAllReadButton />
       </PageHeader>
       {items.length === 0 ? (
-        <EmptyState icon={Bell} title="No notifications" description="You'll see updates here as they happen." />
+        <EmptyState icon={Bell} title="لا توجد إشعارات" description="ستظهر التحديثات هنا فور حدوثها." />
       ) : (
         <Card>
           <CardContent className="divide-y p-0">

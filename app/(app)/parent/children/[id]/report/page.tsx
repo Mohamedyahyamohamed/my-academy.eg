@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { AttendanceService, GradesService, PaymentsService, currentAcademyId, requireRole } from "@/services";
 import { collections } from "@/services/data/store";
 import { formatCurrency, formatDate, fullName } from "@/lib/utils";
-import { performanceLevel } from "@/lib/constants";
+import { performanceLevel, performanceLabel } from "@/lib/constants";
 import { PrintReportButton } from "@/components/shared/print-report-button";
 
 export const dynamic = "force-dynamic";
@@ -87,7 +87,7 @@ export default async function ParentStudentReportPage({ params }: { params: { id
             <tbody>{gradesPage.items.map((grade) => {
               const exam = collections().exams.find((item) => item.id === grade.exam_id);
               const percentage = Math.round(grade.percentage ?? 0);
-              return <tr className="border-t" key={grade.id}><td className="p-3">{exam?.name ?? "—"}</td><td className="p-3 text-center">{grade.score}/{exam?.max_score ?? "—"}</td><td className="p-3 text-center">{percentage}%</td><td className="p-3 text-center">{grade.level ?? performanceLevel(percentage)}</td></tr>;
+              return <tr className="border-t" key={grade.id}><td className="p-3">{exam?.name ?? "—"}</td><td className="p-3 text-center">{grade.score}/{exam?.max_score ?? "—"}</td><td className="p-3 text-center">{percentage}%</td><td className="p-3 text-center">{performanceLabel(grade.level ?? performanceLevel(percentage))}</td></tr>;
             })}{gradesPage.items.length === 0 && <tr><td className="p-5 text-center text-gray-500" colSpan={4}>لا توجد درجات مسجلة حتى الآن.</td></tr>}</tbody>
           </table>
         </div>

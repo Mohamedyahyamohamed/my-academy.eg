@@ -22,7 +22,7 @@ export default async function ParentHomeworkPage() {
     <div className="space-y-6">
       <PageHeader title="الواجبات" description="الواجبات المُكلَّفة لكل أبنائك." />
       {children.length === 0 ? (
-        <EmptyState icon={ClipboardList} title="No data" description="No children linked." />
+        <EmptyState icon={ClipboardList} title="لا توجد بيانات" description="لا يوجد أبناء مرتبطون بالحساب." />
       ) : (
         <div className="space-y-6">
           {children.map((c, idx) => {
@@ -35,7 +35,7 @@ export default async function ParentHomeworkPage() {
                     <p className="font-semibold">{fullName(c)}</p>
                   </div>
                   {hw.length === 0 ? (
-                    <p className="py-4 text-center text-sm text-muted-foreground">No homework assigned.</p>
+                    <p className="py-4 text-center text-sm text-muted-foreground">لا توجد واجبات مسندة.</p>
                   ) : (
                     <div className="space-y-2">
                       {hw.map((s: any) => (
@@ -43,11 +43,11 @@ export default async function ParentHomeworkPage() {
                           <div className="min-w-0">
                             <p className="text-sm font-medium">{s.homework?.title}</p>
                             <p className="truncate text-xs text-muted-foreground">{s.homework?.description}</p>
-                            {s.feedback && <p className="mt-1 text-xs"><span className="font-medium">Feedback:</span> {s.feedback}</p>}
+                            {s.feedback && <p className="mt-1 text-xs"><span className="font-medium">ملاحظات المعلّم:</span> {s.feedback}</p>}
                           </div>
                           <div className="text-right shrink-0">
                             <HomeworkBadge status={s.status} />
-                            <p className="mt-1 text-xs text-muted-foreground">Due {formatDate(s.homework?.deadline)}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">موعد التسليم: {formatDate(s.homework?.deadline)}</p>
                           </div>
                         </div>
                       ))}

@@ -14,17 +14,17 @@ export const dynamic = "force-dynamic";
 export default async function ParentDashboard() {
   const user = requireRole("PARENT");
   const { children = [], summaries = {} } = await getParentDashboard(user);
-  const displayName = user.full_name?.trim() || user.email || "User";
+  const displayName = user.full_name?.trim() || user.email || "ولي الأمر";
   const firstName = displayName.split(/\s+/)[0] || displayName;
 
   if (children.length === 0) {
     return (
       <div className="space-y-6">
-        <PageHeader title="لوحة التحكم" description={`Welcome, ${displayName}.`} />
+        <PageHeader title="لوحة التحكم" description={`أهلاً، ${displayName}.`} />
         <EmptyState
           icon={Users}
           title="مفيش أبناء مربوطين بعد"
-          description="Your account isn't linked to any students yet. Please contact the academy."
+          description="حسابك غير مرتبط بأي طالب حتى الآن. يُرجى التواصل مع الأكاديمية."
         />
       </div>
     );
@@ -46,7 +46,7 @@ export default async function ParentDashboard() {
     <div className="space-y-6">
       <PageHeader
         title="لوحة التحكم"
-        description={`Welcome back, ${firstName}. Here's how your children are doing.`}
+        description={`أهلاً، ${firstName}. إليك آخر أخبار أبنائك.`}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -67,19 +67,19 @@ export default async function ParentDashboard() {
                     <StudentAvatar name={`${c.first_name} ${c.last_name}`} size="lg" />
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold">{c.first_name} {c.last_name}</p>
-                      <p className="text-sm text-muted-foreground">{c.grade} · {(c.groups ?? []).length} group(s)</p>
+                      <p className="text-sm text-muted-foreground">{c.grade} · {(c.groups ?? []).length} مجموعة</p>
                     </div>
                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="mt-4 grid grid-cols-3 gap-3 text-center">
                     <Metric icon={CalendarCheck} label="الحضور" value={`${s.attendanceRate}%`} />
-                    <Metric icon={GraduationCap} label="Avg grade" value={`${s.averageGrade}%`} />
+                    <Metric icon={GraduationCap} label="متوسط الدرجات" value={`${s.averageGrade}%`} />
                     <Metric icon={Wallet} label='المتبقي' value={formatCurrency(s.outstanding)} />
                   </div>
                   {s.upcomingLesson && (
                     <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted p-2.5 text-xs">
                       <CalendarCheck className="h-3.5 w-3.5 text-primary" />
-                      <span className="text-muted-foreground">Next:</span> <span className="font-medium">{s.upcomingLesson}</span>
+                      <span className="text-muted-foreground">القادم:</span> <span className="font-medium">{s.upcomingLesson}</span>
                     </div>
                   )}
                 </CardContent>

@@ -22,7 +22,7 @@ export default async function AttendancePage() {
     <div className="space-y-6">
       <PageHeader
         title="الحضور"
-        description="Pick a group and lesson, then mark every student in seconds."
+        description="اختر المجموعة والحصة، ثم سجّل حضور كل طالب خلال ثوانٍ."
       >
         <Button asChild variant="outline">
           <Link href="/attendance/scan"><ScanLine className="h-4 w-4" /> امسح أكواد الطلاب (QR)</Link>

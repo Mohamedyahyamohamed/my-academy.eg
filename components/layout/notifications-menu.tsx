@@ -53,7 +53,7 @@ export function NotificationsMenu() {
           variant="ghost"
           size="icon"
           className="relative"
-          aria-label="Notifications"
+          aria-label="الإشعارات"
         >
           <Bell className="h-[18px] w-[18px]" />
           {unread > 0 && (
@@ -65,7 +65,7 @@ export function NotificationsMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80 p-0">
         <div className="flex items-center justify-between px-3 py-2.5">
-          <span className="text-sm font-semibold">Notifications</span>
+          <span className="text-sm font-semibold">الإشعارات</span>
           {unread > 0 && (
             <button
               onClick={async () => {

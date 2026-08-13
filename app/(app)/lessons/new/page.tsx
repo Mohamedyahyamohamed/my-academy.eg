@@ -20,16 +20,16 @@ export default async function NewLessonPage({
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <PageHeader
-        title="New lesson"
-        description="Schedule a lesson for a group."
-        breadcrumbs={[{ label: "الحصص", href: "/lessons" }, { label: "New" }]}
+        title="حصة جديدة"
+        description="حدّد موعد حصة لإحدى المجموعات."
+        breadcrumbs={[{ label: "الحصص", href: "/lessons" }, { label: "جديد" }]}
       />
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <BookOpen className="h-4 w-4 text-primary" /> Lesson details
           </CardTitle>
-          <CardDescription>Filling a group auto-selects its teacher.</CardDescription>
+          <CardDescription>اختيار المجموعة يحدد معلّمها تلقائيًا.</CardDescription>
         </CardHeader>
         <CardContent>
           <LessonForm groups={groups} teachers={teachers} defaultGroupId={defaultGroup} />

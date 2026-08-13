@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { getParentDashboard, GradesService, requireRole } from "@/services";
 import { collections } from "@/services/data/store";
 import { fullName } from "@/lib/utils";
-import { performanceLevel, performanceColor } from "@/lib/constants";
+import { performanceLevel, performanceColor, performanceLabel } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ export default async function ParentGradesPage() {
     <div className="space-y-6">
       <PageHeader title="الدرجات" description="نتائج الامتحانات لكل أبنائك." />
       {children.length === 0 ? (
-        <EmptyState icon={GraduationCap} title="No data" description="No children linked." />
+        <EmptyState icon={GraduationCap} title="لا توجد بيانات" description="لا يوجد أبناء مرتبطون بالحساب." />
       ) : (
         <div className="space-y-6">
           {children.map((c, idx) => {
@@ -36,7 +36,7 @@ export default async function ParentGradesPage() {
                     <p className="font-semibold">{fullName(c)}</p>
                   </div>
                   <Table>
-                    <TableHeader><TableRow><TableHead>Exam</TableHead><TableHead>Score</TableHead><TableHead>%</TableHead><TableHead>Level</TableHead></TableRow></TableHeader>
+                    <TableHeader><TableRow><TableHead>الاختبار</TableHead><TableHead>الدرجة</TableHead><TableHead>%</TableHead><TableHead>التقدير</TableHead></TableRow></TableHeader>
                     <TableBody>
                       {grades.map((g) => {
                         const exam = collections().exams.find((e) => e.id === g.exam_id);
@@ -46,11 +46,11 @@ export default async function ParentGradesPage() {
                             <TableCell className="font-medium">{exam?.name ?? "—"}</TableCell>
                             <TableCell>{g.score}/{exam?.max_score}</TableCell>
                             <TableCell>{Math.round(g.percentage ?? 0)}%</TableCell>
-                            <TableCell><Badge className={performanceColor(lvl)}>{lvl}</Badge></TableCell>
+                            <TableCell><Badge className={performanceColor(lvl)}>{performanceLabel(lvl)}</Badge></TableCell>
                           </TableRow>
                         );
                       })}
-                      {grades.length === 0 && <TableRow><TableCell colSpan={4} className="py-6 text-center text-sm text-muted-foreground">No grades yet.</TableCell></TableRow>}
+                      {grades.length === 0 && <TableRow><TableCell colSpan={4} className="py-6 text-center text-sm text-muted-foreground">لا توجد درجات بعد.</TableCell></TableRow>}
                     </TableBody>
                   </Table>
                 </CardContent>

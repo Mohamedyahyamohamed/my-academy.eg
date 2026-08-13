@@ -41,14 +41,14 @@ export default async function HomeworkPage({
     <div className="space-y-6">
       <PageHeader
         title="الواجبات"
-        description="Assign homework to groups and review student submissions."
+        description="حدّد واجبات للمجموعات وراجع تسليمات الطلاب."
       >
         <CreateHomeworkDialog groups={groups} />
       </PageHeader>
 
       <div className="card-surface p-4">
         <ToolbarRoot>
-          <ToolbarSearch placeholder="Search homework…" />
+          <ToolbarSearch placeholder="ابحث في الواجبات…" />
           <ToolbarSelect paramKey="group" label="تصفية بمجموعة" options={[
             { value: "ALL", label: "كل المجموعات" },
             ...groups.map((g) => ({ value: g.id, label: g.name })),
@@ -59,8 +59,8 @@ export default async function HomeworkPage({
       {result.items.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
-          title="No homework yet"
-          description="Assign your first homework to a group."
+          title="لا توجد واجبات بعد"
+          description="حدّد أول واجب لإحدى المجموعات."
           action={<CreateHomeworkDialog groups={groups} />}
         />
       ) : (

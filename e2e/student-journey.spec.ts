@@ -8,7 +8,7 @@ test.describe("Student Journey", () => {
 
   test("can view classes", async ({ studentPage }) => {
     await studentPage.goto("/student/classes");
-    await expect(studentPage.locator("h1")).toContainText("My Classes");
+    await expect(studentPage.locator("h1")).toContainText("حصصي");
   });
 
   test("can view lessons", async ({ studentPage }) => {
@@ -28,7 +28,7 @@ test.describe("Student Journey", () => {
 
   test("can view progress", async ({ studentPage }) => {
     await studentPage.goto("/student/progress");
-    await expect(studentPage.locator("h1")).toContainText("Progress");
+    await expect(studentPage.locator("h1")).toContainText("التقدم");
   });
 
   test("has QR card button", async ({ studentPage }) => {

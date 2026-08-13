@@ -82,7 +82,7 @@ export function StudentQrCard({
       </DialogTrigger>
       <DialogContent className="max-w-sm text-center">
         <DialogHeader>
-          <DialogTitle>Student QR card</DialogTitle>
+          <DialogTitle>بطاقة QR للطالب</DialogTitle>
         </DialogHeader>
         <div ref={cardRef} className="mx-auto w-full max-w-[260px] rounded-xl border border-border p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">{academyName}</p>

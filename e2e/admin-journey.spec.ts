@@ -44,7 +44,7 @@ test.describe("Admin Journey", () => {
 
   test("navigate to audit logs", async ({ adminPage }) => {
     await adminPage.goto("/audit");
-    await expect(adminPage.locator("h1")).toContainText("Audit");
+    await expect(adminPage.locator("h1")).toContainText("سجل العمليات");
   });
 
   test("navigate to messages", async ({ adminPage }) => {

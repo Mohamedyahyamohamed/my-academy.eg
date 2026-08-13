@@ -25,7 +25,7 @@ function CheckInInner() {
           body: JSON.stringify({ token, lessonId: lessonIdParam }),
         }).then((r) => r.json());
         if (res.ok) { setState("ok"); }
-        else { setState("err"); setMsg(res.error || "Check-in failed."); }
+        else { setState("err"); setMsg(res.error || "تعذّر تسجيل الحضور."); }
       } catch {
         setState("err"); setMsg("Network error.");
       }
@@ -39,7 +39,7 @@ function CheckInInner() {
         {state === "loading" && (
           <>
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Checking you in…</p>
+            <p className="text-sm text-muted-foreground">جارٍ تسجيل حضورك…</p>
           </>
         )}
         {state === "ok" && (
@@ -47,8 +47,8 @@ function CheckInInner() {
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
               <CheckCircle2 className="h-8 w-8" />
             </div>
-            <h1 className="text-lg font-semibold">You&apos;re checked in! 🎉</h1>
-            <p className="text-sm text-muted-foreground">Your attendance was recorded as Present.</p>
+            <h1 className="text-lg font-semibold">تم تسجيل حضورك بنجاح! 🎉</h1>
+            <p className="text-sm text-muted-foreground">تم تسجيل حضورك كحاضر.</p>
           </>
         )}
         {state === "err" && (
@@ -56,7 +56,7 @@ function CheckInInner() {
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-600">
               <XCircle className="h-8 w-8" />
             </div>
-            <h1 className="text-lg font-semibold">Check-in failed</h1>
+            <h1 className="text-lg font-semibold">تعذّر تسجيل الحضور</h1>
             <p className="text-sm text-muted-foreground">{msg}</p>
             {msg.includes("expired") && (
               <p className="flex items-center gap-1 text-xs text-amber-600">

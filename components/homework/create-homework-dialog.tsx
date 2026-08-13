@@ -34,7 +34,7 @@ export function CreateHomeworkDialog({ groups }: { groups: Group[] }) {
     setSaving(true);
     try {
       await createHomeworkAction({ ...values, deadline: new Date(values.deadline).toISOString() });
-      toast.success("Homework assigned");
+      toast.success("تمت إضافة الواجب.");
       setOpen(false);
       router.refresh();
     } finally {
@@ -44,41 +44,41 @@ export function CreateHomeworkDialog({ groups }: { groups: Group[] }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button><Plus className="h-4 w-4" /> Assign homework</Button></DialogTrigger>
+      <DialogTrigger asChild><Button><Plus className="h-4 w-4" /> إضافة واجب</Button></DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Assign homework</DialogTitle>
-          <DialogDescription>Create an assignment for a group. Students will see it instantly.</DialogDescription>
+          <DialogTitle>إضافة واجب</DialogTitle>
+          <DialogDescription>أنشئ واجبًا للمجموعة؛ وسيظهر للطلاب فورًا.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           <div className="space-y-1.5">
-            <Label>Title *</Label>
-            <Input {...register("title")} placeholder="Quadratics Worksheet" />
+            <Label>العنوان *</Label>
+            <Input {...register("title")} placeholder="مثال: ورقة عمل المعادلات التربيعية" />
             {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
           </div>
           <div className="space-y-1.5">
-            <Label>Group *</Label>
+            <Label>المجموعة *</Label>
             <Controller control={control} name="group_id" render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger><SelectValue placeholder="Select group" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="اختر المجموعة" /></SelectTrigger>
                 <SelectContent>{groups.map((g) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}</SelectContent>
               </Select>
             )} />
             {errors.group_id && <p className="text-xs text-destructive">{errors.group_id.message}</p>}
           </div>
           <div className="space-y-1.5">
-            <Label>Description *</Label>
-            <Textarea {...register("description")} placeholder="Solve problems 1–12 on graphing quadratics." />
+            <Label>الوصف *</Label>
+            <Textarea {...register("description")} placeholder="حلّ التمارين من 1 إلى 12 حول تمثيل المعادلات التربيعية." />
             {errors.description && <p className="text-xs text-destructive">{errors.description.message}</p>}
           </div>
           <div className="space-y-1.5">
-            <Label>Deadline *</Label>
+            <Label>موعد التسليم *</Label>
             <Input type="date" {...register("deadline")} />
             {errors.deadline && <p className="text-xs text-destructive">{errors.deadline.message}</p>}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={saving}>{saving && <Loader2 className="h-4 w-4 animate-spin" />} Assign</Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>إلغاء</Button>
+            <Button type="submit" disabled={saving}>{saving && <Loader2 className="h-4 w-4 animate-spin" />} إسناد</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -10,7 +10,7 @@ import {
 import { resolveStudent, GradesService, requireRole } from "@/services";
 import { collections } from "@/services/data/store";
 import { formatDate, round } from "@/lib/utils";
-import { performanceLevel, performanceColor } from "@/lib/constants";
+import { performanceLevel, performanceColor, performanceLabel } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -25,18 +25,18 @@ export default async function StudentGradesPage() {
     <div className="space-y-6">
       <PageHeader title="الدرجات" description="نتائج امتحاناتك ومستوى أدائك." />
       {grades.length === 0 ? (
-        <EmptyState icon={GraduationCap} title="No grades yet" description="Your results will appear here once published." />
+        <EmptyState icon={GraduationCap} title="لا توجد درجات بعد" description="ستظهر نتائجك هنا بعد نشرها." />
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-3">
-            <StatCard label="Average" value={`${avg}%`} icon={GraduationCap} accent="primary" />
-            <StatCard label="Best score" value={`${best}%`} icon={GraduationCap} accent="success" />
-            <StatCard label="Exams taken" value={grades.length} icon={GraduationCap} accent="info" />
+            <StatCard label="المتوسط" value={`${avg}%`} icon={GraduationCap} accent="primary" />
+            <StatCard label="أعلى درجة" value={`${best}%`} icon={GraduationCap} accent="success" />
+            <StatCard label="اختبارات مكتملة" value={grades.length} icon={GraduationCap} accent="info" />
           </div>
           <Card>
             <CardContent className="p-0">
               <Table>
-                <TableHeader><TableRow><TableHead>Exam</TableHead><TableHead>Date</TableHead><TableHead>Score</TableHead><TableHead>%</TableHead><TableHead>Level</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>الاختبار</TableHead><TableHead>التاريخ</TableHead><TableHead>الدرجة</TableHead><TableHead>%</TableHead><TableHead>التقدير</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {grades.map((g) => {
                     const exam = collections().exams.find((e) => e.id === g.exam_id);
@@ -47,7 +47,7 @@ export default async function StudentGradesPage() {
                         <TableCell className="text-sm text-muted-foreground">{exam ? formatDate(exam.date) : "—"}</TableCell>
                         <TableCell>{g.score}/{exam?.max_score}</TableCell>
                         <TableCell className="font-medium">{Math.round(g.percentage ?? 0)}%</TableCell>
-                        <TableCell><Badge className={performanceColor(lvl)}>{lvl}</Badge></TableCell>
+                        <TableCell><Badge className={performanceColor(lvl)}>{performanceLabel(lvl)}</Badge></TableCell>
                       </TableRow>
                     );
                   })}

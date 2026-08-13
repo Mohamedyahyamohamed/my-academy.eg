@@ -28,12 +28,12 @@ export function MessagesPageContent({
   const [sending, setSending] = React.useState(false);
 
   const send = async () => {
-    if (!recipient || !body.trim()) { toast.error("Select a contact and write a message."); return; }
+    if (!recipient || !body.trim()) { toast.error("اختر جهة اتصال واكتب رسالة."); return; }
     setSending(true);
     try {
       const res = await sendMessageAction(recipient, body.trim());
-      if (!res.ok) { toast.error(res.error ?? "Failed"); return; }
-      toast.success("Message sent");
+      if (!res.ok) { toast.error(res.error ?? "تعذّر إرسال الرسالة."); return; }
+      toast.success("تم إرسال الرسالة.");
       setBody(""); setRecipient("");
       router.refresh();
     } finally { setSending(false); }
@@ -43,12 +43,12 @@ export function MessagesPageContent({
     <div className="grid gap-4 lg:grid-cols-2">
       {/* Compose */}
       <div className="card-surface p-5 space-y-3">
-        <h3 className="font-semibold text-sm">New Message</h3>
+        <h3 className="font-semibold text-sm">رسالة جديدة</h3>
         <select value={recipient} onChange={(e) => setRecipient(e.target.value)} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-          <option value="">Select contact…</option>
+          <option value="">اختر جهة اتصال…</option>
           {contacts.map((c) => <option key={c.id} value={c.id}>{c.full_name} ({c.role})</option>)}
         </select>
-        <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} placeholder="Write your message…" />
+        <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} placeholder="اكتب رسالتك…" />
         <Button onClick={send} disabled={sending} className="w-full">
           {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Send
         </Button>
@@ -56,11 +56,11 @@ export function MessagesPageContent({
       {/* Inbox + Sent */}
       <Tabs defaultValue="inbox">
         <TabsList className="w-full">
-          <TabsTrigger value="inbox" className="flex-1"><Inbox className="h-4 w-4" /> Inbox ({inbox.filter(m => !m.read).length})</TabsTrigger>
-          <TabsTrigger value="sent" className="flex-1"><MailOpen className="h-4 w-4" /> Sent</TabsTrigger>
+          <TabsTrigger value="inbox" className="flex-1"><Inbox className="h-4 w-4" /> الوارد ({inbox.filter(m => !m.read).length})</TabsTrigger>
+          <TabsTrigger value="sent" className="flex-1"><MailOpen className="h-4 w-4" /> المرسلة</TabsTrigger>
         </TabsList>
         <TabsContent value="inbox" className="space-y-1">
-          {inbox.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">No messages.</p> : inbox.slice(0, 20).map((m) => (
+          {inbox.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">لا توجد رسائل.</p> : inbox.slice(0, 20).map((m) => (
             <div key={m.id} className={cn("flex items-start gap-3 rounded-lg p-3", !m.read && "bg-primary/5")}>
               <Avatar className="h-8 w-8"><AvatarFallback className="text-[10px]">{initials(m.sender_name)}</AvatarFallback></Avatar>
               <div className="min-w-0 flex-1">
@@ -75,7 +75,7 @@ export function MessagesPageContent({
           ))}
         </TabsContent>
         <TabsContent value="sent" className="space-y-1">
-          {sent.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">No sent messages.</p> : sent.slice(0, 20).map((m) => (
+          {sent.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">لا توجد رسائل مرسلة.</p> : sent.slice(0, 20).map((m) => (
             <div key={m.id} className="flex items-start gap-3 rounded-lg p-3">
               <Avatar className="h-8 w-8"><AvatarFallback className="text-[10px]">{initials(m.recipient_name)}</AvatarFallback></Avatar>
               <div className="min-w-0 flex-1">

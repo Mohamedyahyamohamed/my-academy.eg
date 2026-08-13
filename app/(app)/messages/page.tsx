@@ -17,7 +17,7 @@ export default async function MessagesRoute() {
     <div className="space-y-6">
       <PageHeader title="الرسائل" description="تواصل مع المدرّسين وأولياء الأمور." />
       {contacts.length === 0 ? (
-        <EmptyState icon={MessageSquare} title="No contacts yet" description="Contacts appear once users are created." />
+        <EmptyState icon={MessageSquare} title="لا توجد جهات اتصال بعد" description="ستظهر جهات الاتصال بعد إنشاء المستخدمين." />
       ) : (
         <MessagesPageContent inbox={inbox} sent={sent} contacts={contacts as any} />
       )}

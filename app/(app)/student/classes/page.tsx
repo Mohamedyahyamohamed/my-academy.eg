@@ -18,9 +18,9 @@ export default async function StudentClassesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="My Classes" description="The groups you're enrolled in." />
+      <PageHeader title="حصصي" description="المجموعات المسجّل بها." />
       {groups.length === 0 ? (
-        <EmptyState icon={BookOpen} title="No classes" description="You're not enrolled in any groups yet." />
+        <EmptyState icon={BookOpen} title="لا توجد مجموعات" description="أنت غير مسجّل في أي مجموعة حتى الآن." />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {groups.map((g) => (
@@ -36,14 +36,14 @@ export default async function StudentClassesPage() {
                       <p className="text-xs text-muted-foreground">{g.course?.name}</p>
                     </div>
                   </div>
-                  <Badge variant="secondary">{formatCurrency(g.monthly_fee)}/mo</Badge>
+                  <Badge variant="secondary">{formatCurrency(g.monthly_fee)}/شهريًا</Badge>
                 </div>
                 <div className="mt-4 space-y-1 text-sm text-muted-foreground">
-                  <p>Schedule: {g.schedule}</p>
-                  {g.room && <p>Room: {g.room}</p>}
+                  <p>الموعد: {g.schedule}</p>
+                  {g.room && <p>القاعة: {g.room}</p>}
                 </div>
                 <Button asChild variant="outline" size="sm" className="mt-4 w-full">
-                  <Link href="/student/lessons">View lessons</Link>
+                  <Link href="/student/lessons">عرض الحصص</Link>
                 </Button>
               </CardContent>
             </Card>

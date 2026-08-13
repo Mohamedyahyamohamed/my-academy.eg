@@ -16,9 +16,9 @@ export default async function ParentChildrenPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="My Children" description="Click a child to view their full profile." />
+      <PageHeader title="أبنائي" description="اختر أحد الأبناء لعرض ملفه الكامل." />
       {children.length === 0 ? (
-        <EmptyState icon={Users} title="No children linked" description="Contact the academy to link your children." />
+        <EmptyState icon={Users} title="لا يوجد أبناء مرتبطون" description="تواصل مع الأكاديمية لربط الأبناء بحسابك." />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {children.map((c) => {
@@ -38,8 +38,8 @@ export default async function ParentChildrenPage() {
                       {(c.groups ?? []).map((g) => <Badge key={g.id} variant="secondary">{g.name.split(" — ")[0]}</Badge>)}
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-3 border-t pt-3 text-sm">
-                      <div><p className="text-xs text-muted-foreground">Attendance</p><p className="font-semibold">{s.attendanceRate}%</p></div>
-                      <div><p className="text-xs text-muted-foreground">Outstanding</p><p className="font-semibold">{formatCurrency(s.outstanding)}</p></div>
+                      <div><p className="text-xs text-muted-foreground">الحضور</p><p className="font-semibold">{s.attendanceRate}%</p></div>
+                      <div><p className="text-xs text-muted-foreground">المتبقي</p><p className="font-semibold">{formatCurrency(s.outstanding)}</p></div>
                     </div>
                   </CardContent>
                 </Card>

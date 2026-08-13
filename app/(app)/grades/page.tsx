@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreateExamDialog } from "@/components/grades/create-exam-dialog";
 import { GradesService, MiscService, GroupsService, requireRole } from "@/services";
-import { performanceColor, performanceLevel } from "@/lib/constants";
+import { performanceColor, performanceLevel, performanceLabel } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ export default async function GradesPage() {
     <div className="space-y-6">
       <PageHeader
         title="الدرجات"
-        description="Create exams and record student grades to track performance."
+        description="أنشئ الاختبارات وسجّل درجات الطلاب لمتابعة مستوى الأداء."
       >
         <CreateExamDialog courses={courses} groups={groups} />
       </PageHeader>
@@ -31,8 +31,8 @@ export default async function GradesPage() {
       {exams.length === 0 ? (
         <EmptyState
           icon={GraduationCap}
-          title="No exams yet"
-          description="Create your first exam to start entering grades."
+          title="لا توجد اختبارات بعد"
+          description="أنشئ أول اختبار لبدء إدخال الدرجات."
           action={<CreateExamDialog courses={courses} groups={groups} />}
         />
       ) : (
@@ -55,16 +55,16 @@ export default async function GradesPage() {
                       </span>
                     </div>
                     <div className="mt-4 flex items-center justify-between">
-                      <Badge variant="secondary">{gradeCountFor(e.id)} graded</Badge>
+                      <Badge variant="secondary">{gradeCountFor(e.id)} درجات مسجّلة</Badge>
                       <div className="text-right">
                         <p className="text-lg font-semibold">{avg}%</p>
-                        <p className="text-[11px] text-muted-foreground">class avg</p>
+                        <p className="text-[11px] text-muted-foreground">متوسط المجموعة</p>
                       </div>
                     </div>
                     <div className="mt-3 flex items-center justify-between border-t pt-3">
-                      <Badge className={performanceColor(level)}>{level}</Badge>
+                      <Badge className={performanceColor(level)}>{performanceLabel(level)}</Badge>
                       <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        Enter grades <ArrowRight className="h-3.5 w-3.5" />
+                        إدخال الدرجات <ArrowRight className="h-3.5 w-3.5" />
                       </span>
                     </div>
                   </CardContent>

@@ -40,9 +40,9 @@ export function SubmitHomework({
       if (!res.ok) throw new Error(res.error);
       setFileUrl(res.url!);
       setFileName(res.name!);
-      toast.success("File attached");
+      toast.success("تم إرفاق الملف.");
     } catch (e) {
-      toast.error("Upload failed: " + (e as Error).message);
+      toast.error("تعذّر رفع الملف: " + (e as Error).message);
     } finally {
       setUploading(false);
     }
@@ -50,13 +50,13 @@ export function SubmitHomework({
 
   const submit = async () => {
     if (!content.trim() && !fileUrl) {
-      toast.error("Please write your answer or attach a file.");
+      toast.error("اكتب إجابتك أو أرفق ملفًا.");
       return;
     }
     setSaving(true);
     try {
       await submitHomeworkAction(homeworkId, studentId, content.trim(), fileUrl ?? undefined);
-      toast.success("Homework submitted");
+      toast.success("تم تسليم الواجب.");
       setOpen(false);
       setContent("");
       setFileUrl(null);
@@ -75,12 +75,12 @@ export function SubmitHomework({
         </Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>Submit your work</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>تسليم الواجب</DialogTitle></DialogHeader>
         <Textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
           rows={5}
-          placeholder="Type your answer or paste your work here…"
+          placeholder="اكتب إجابتك أو الصق عملك هنا…"
         />
         <div className="space-y-2">
           {fileUrl ? (
@@ -107,7 +107,7 @@ export function SubmitHomework({
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => setOpen(false)}>إلغاء</Button>
           <Button onClick={submit} disabled={saving || uploading}>
             {saving && <Loader2 className="h-4 w-4 animate-spin" />} Submit
           </Button>

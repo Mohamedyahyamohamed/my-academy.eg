@@ -34,7 +34,7 @@ export default async function AuditLogsPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Audit Logs" description="تتبّع كل العمليات الحساسة في الأكاديمية." />
+      <PageHeader title="سجل العمليات" description="تتبّع كل العمليات الحساسة في الأكاديمية." />
       <div className="card-surface p-4">
         <ToolbarRoot>
           <ToolbarSearch placeholder="بحث في السجلات…" />

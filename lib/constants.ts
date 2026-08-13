@@ -103,3 +103,30 @@ export function performanceColor(level: string) {
 }
 
 export const PAYMENT_METHODS = ["Cash", "Card", "Bank Transfer", "Wallet", "Other"] as const;
+
+/** Arabic display labels for persisted performance-level values. */
+export const PERFORMANCE_LEVEL_LABELS: Record<string, string> = {
+  Excellent: "ممتاز",
+  "Very Good": "جيد جدًا",
+  Good: "جيد",
+  "Needs Improvement": "يحتاج تحسين",
+};
+
+/** Format persisted or calculated performance levels for the Arabic interface. */
+export function performanceLabel(level: string | null | undefined): string {
+  return level ? PERFORMANCE_LEVEL_LABELS[level] ?? level : "—";
+}
+
+/** Arabic display labels for persisted payment-method values. */
+export const PAYMENT_METHOD_LABELS: Record<(typeof PAYMENT_METHODS)[number], string> = {
+  Cash: "نقدي",
+  Card: "بطاقة",
+  "Bank Transfer": "تحويل بنكي",
+  Wallet: "محفظة إلكترونية",
+  Other: "أخرى",
+};
+
+/** Format persisted payment methods for the Arabic interface. */
+export function paymentMethodLabel(method: string | null | undefined): string {
+  return method ? PAYMENT_METHOD_LABELS[method as keyof typeof PAYMENT_METHOD_LABELS] ?? method : "—";
+}

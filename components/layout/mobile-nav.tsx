@@ -29,7 +29,7 @@ export function MobileNav({ sections }: { sections: NavSection[] }) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open menu">
+        <Button variant="ghost" size="icon" className="lg:hidden" aria-label="فتح القائمة">
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>

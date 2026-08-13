@@ -27,13 +27,13 @@ export default async function ParentPaymentsPage() {
     <div className="space-y-6">
       <PageHeader title="المصاريف" description="سجلات الرسوم والأرصدة لأبنائك." />
       {children.length === 0 ? (
-        <EmptyState icon={Wallet} title="No data" description="No children linked." />
+        <EmptyState icon={Wallet} title="لا توجد بيانات" description="لا يوجد أبناء مرتبطون بالحساب." />
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-3">
-            <StatCard label="Paid (total)" value={formatCurrency(collected)} icon={Wallet} accent="success" />
+            <StatCard label="إجمالي المدفوع" value={formatCurrency(collected)} icon={Wallet} accent="success" />
             <StatCard label='المتبقي' value={formatCurrency(outstanding)} icon={Wallet} accent="warning" />
-            <StatCard label="Records" value={allPayments.length} icon={Wallet} accent="primary" />
+            <StatCard label="السجلات" value={allPayments.length} icon={Wallet} accent="primary" />
           </div>
           <div className="space-y-6">
             {children.map((c, idx) => {
@@ -46,7 +46,7 @@ export default async function ParentPaymentsPage() {
                       <p className="font-semibold">{fullName(c)}</p>
                     </div>
                     <Table>
-                      <TableHeader><TableRow><TableHead>Month</TableHead><TableHead>Due</TableHead><TableHead>Paid</TableHead><TableHead>Remaining</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                      <TableHeader><TableRow><TableHead>الشهر</TableHead><TableHead>المستحق</TableHead><TableHead>المدفوع</TableHead><TableHead>المتبقي</TableHead><TableHead>الحالة</TableHead></TableRow></TableHeader>
                       <TableBody>
                         {pays.map((p) => (
                           <TableRow key={p.id}>
@@ -57,7 +57,7 @@ export default async function ParentPaymentsPage() {
                             <TableCell><PaymentStatusBadge status={p.status} /></TableCell>
                           </TableRow>
                         ))}
-                        {pays.length === 0 && <TableRow><TableCell colSpan={5} className="py-6 text-center text-sm text-muted-foreground">No payments.</TableCell></TableRow>}
+                        {pays.length === 0 && <TableRow><TableCell colSpan={5} className="py-6 text-center text-sm text-muted-foreground">لا توجد مصروفات.</TableCell></TableRow>}
                       </TableBody>
                     </Table>
                   </CardContent>

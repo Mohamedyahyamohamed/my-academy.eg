@@ -26,7 +26,7 @@ export default async function HomeworkDetailPage({ params }: { params: { id: str
         breadcrumbs={[{ label: "الواجبات", href: "/homework" }, { label: hw.title }]}
       >
         <Button asChild variant="outline">
-          <Link href="/homework"><ArrowLeft className="h-4 w-4" /> Back</Link>
+          <Link href="/homework"><ArrowLeft className="h-4 w-4" /> رجوع</Link>
         </Button>
       </PageHeader>
 
@@ -35,7 +35,7 @@ export default async function HomeworkDetailPage({ params }: { params: { id: str
           <p className="text-sm text-muted-foreground">{hw.description}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Badge variant="secondary">{hw.group?.name}</Badge>
-            <Badge variant="outline">Due {formatDate(hw.deadline)}</Badge>
+            <Badge variant="outline">موعد التسليم: {formatDate(hw.deadline)}</Badge>
             <Badge variant="info">{submitted}/{submissions.length} submitted</Badge>
             <Badge variant="success">{reviewed} reviewed</Badge>
           </div>
@@ -43,7 +43,7 @@ export default async function HomeworkDetailPage({ params }: { params: { id: str
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Submissions</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">التسليمات</CardTitle></CardHeader>
         <CardContent>
           <SubmissionReview submissions={submissions} />
         </CardContent>

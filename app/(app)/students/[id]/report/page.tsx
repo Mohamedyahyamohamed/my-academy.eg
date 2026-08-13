@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { StudentsService, GroupsService, PaymentsService, GradesService, AttendanceService, MiscService, requireRole } from "@/services";
 import { collections } from "@/services/data/store";
 import { formatCurrency, formatDate, fullName } from "@/lib/utils";
-import { performanceLevel, performanceColor } from "@/lib/constants";
+import { performanceLevel, performanceColor, performanceLabel } from "@/lib/constants";
 import { PrintReportButton } from "@/components/shared/print-report-button";
 
 export const dynamic = "force-dynamic";
@@ -89,7 +89,7 @@ export default async function StudentReportPage({ params }: { params: { id: stri
                 <td className="p-2 text-center">{exam ? formatDate(exam.date) : "—"}</td>
                 <td className="p-2 text-center">{g.score} / {exam?.max_score ?? "—"}</td>
                 <td className="p-2 text-center font-bold">{pct}%</td>
-                <td className="p-2 text-center">{lvl}</td>
+                <td className="p-2 text-center">{performanceLabel(lvl)}</td>
               </tr>
             );
           })}

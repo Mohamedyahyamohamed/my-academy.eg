@@ -53,6 +53,7 @@ export default function LandingPage() {
             <a href="#features" className="hover:text-foreground">المزايا</a>
             <a href="#audiences" className="hover:text-foreground">لمن هذه المنصة</a>
             <a href="#how" className="hover:text-foreground">كيف تعمل</a>
+            <Link href="/pricing" className="hover:text-foreground">الأسعار</Link>
           </nav>
           <div className="flex items-center gap-2">
             <LanguageToggle />

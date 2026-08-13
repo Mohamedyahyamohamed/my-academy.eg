@@ -48,6 +48,8 @@ export interface SeedData {
   notifications: AppNotification[];
   notes: Note[];
   files: FileRecord[];
+  /** رسائل محمّلة من قاعدة البيانات ومزودة بأسماء العرض في طبقة الخدمة. */
+  messages: any[];
   auditLogs: any[];
   subscriptions: Array<{
     id: string;
@@ -723,6 +725,7 @@ export function createSeedData(): SeedData {
     submissions,
     notifications,
     notes,
+    messages: [],
     auditLogs: [],
     subscriptions: [],
     files,

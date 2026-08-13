@@ -10,5 +10,5 @@ export async function sendMessageAction(recipientId: string, body: string, stude
   const msg = await sendMessage(recipientId, body, studentId);
   void audit({ action: "mutation" });
   revalidatePath("/messages");
-  return msg ? { ok: true } : { ok: false, error: "Failed to send." };
+  return msg ? { ok: true } : { ok: false, error: "تعذّر إرسال الرسالة." };
 }

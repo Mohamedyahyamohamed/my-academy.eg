@@ -50,7 +50,7 @@ export function MessagesPageContent({
         </select>
         <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} placeholder="اكتب رسالتك…" />
         <Button onClick={send} disabled={sending} className="w-full">
-          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Send
+          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} إرسال الرسالة
         </Button>
       </div>
       {/* Inbox + Sent */}
@@ -79,7 +79,7 @@ export function MessagesPageContent({
             <div key={m.id} className="flex items-start gap-3 rounded-lg p-3">
               <Avatar className="h-8 w-8"><AvatarFallback className="text-[10px]">{initials(m.recipient_name)}</AvatarFallback></Avatar>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">To: {m.recipient_name}</p>
+                <p className="text-sm font-medium">إلى: {m.recipient_name}</p>
                 <p className="text-sm text-muted-foreground truncate">{m.body}</p>
               </div>
               <span className="text-[11px] text-muted-foreground shrink-0">{formatRelative(m.created_at)}</span>

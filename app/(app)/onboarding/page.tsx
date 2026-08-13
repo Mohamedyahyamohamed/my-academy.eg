@@ -24,7 +24,6 @@ export default function OnboardingPage() {
   const [loading, setLoading] = React.useState(false);
   const [academy, setAcademy] = React.useState({ name: "", phone: "", address: "" });
   const [course, setCourse] = React.useState({ name: "", color: "#7c5cfc" });
-  const [group, setGroup] = React.useState({ name: "", fee: "", schedule: "" });
   const [teacherInvite, setTeacherInvite] = React.useState({ fullName: "", email: "" });
   const [sendingInvite, setSendingInvite] = React.useState(false);
   const [inviteSent, setInviteSent] = React.useState(false);
@@ -38,17 +37,14 @@ export default function OnboardingPage() {
       }
       if (course.name) {
         const { createCourseAction } = await import("@/app/actions/settings");
-        const { createGroupAction } = await import("@/app/actions/groups");
         const c: any = await createCourseAction({ name: course.name, color: course.color });
-        if (group.name) {
-          await createGroupAction({ name: group.name, course_id: c?.id ?? "", teacher_id: "", monthly_fee: Number(group.fee) || 0, schedule: group.schedule });
-        }
+        if (!c?.id) throw new Error("تعذّر إنشاء المادة الأولى.");
       }
       const { completeOnboardingAction } = await import("@/app/actions/settings");
       await completeOnboardingAction({
         hasAcademy: Boolean(academy.name),
         hasCourse: Boolean(course.name),
-        hasGroup: Boolean(group.name),
+        hasGroup: false,
       });
       toast.success("تم تجهيز الأكاديمية بنجاح");
       router.push("/dashboard");
@@ -124,19 +120,15 @@ export default function OnboardingPage() {
         )}
         {step === 2 && (
           <>
-            <h2 className="font-semibold">أنشئ أول مجموعة</h2>
-            <div className="space-y-1.5"><Label>اسم المجموعة</Label><Input value={group.name} onChange={(e) => setGroup(g => ({ ...g, name: e.target.value }))} placeholder="الصف الثالث الإعدادي — رياضيات" /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5"><Label>الاشتراك الشهري (ج.م)</Label><Input dir="ltr" type="number" value={group.fee} onChange={(e) => setGroup(g => ({ ...g, fee: e.target.value }))} placeholder="1200" /></div>
-              <div className="space-y-1.5"><Label>موعد الحصة</Label><Input value={group.schedule} onChange={(e) => setGroup(g => ({ ...g, schedule: e.target.value }))} placeholder="الأحد والثلاثاء — 4 مساءً" /></div>
-            </div>
+            <h2 className="font-semibold">جهّز أول مجموعة</h2>
+            <p className="text-sm leading-6 text-muted-foreground">تتطلب كل مجموعة مدرسًا معيّنًا للحفاظ على حضور الطلاب وحصصهم وصلاحياتهم بدقة. بعد إرسال دعوة المدرس وقبوله لها، أنشئ المجموعة من صفحة المجموعات وحدد المادة والمدرس والموعد.</p>
           </>
         )}
         {step === 3 && (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <CheckCircle2 className="h-12 w-12 text-emerald-500" />
             <h2 className="text-lg font-semibold">أكاديميتك جاهزة!</h2>
-            <p className="text-sm text-muted-foreground">تم إعداد الأساسيات. أكمل الخطوتين التاليتين الآن أو نفّذهما لاحقًا من لوحة التحكم.</p>
+            <p className="text-sm text-muted-foreground">تم إعداد الأساسيات. بعد قبول المدرس للدعوة، أنشئ مجموعتك من صفحة المجموعات وحدد المادة والمدرس والموعد.</p>
             <div className="grid w-full gap-3 pt-2 text-right sm:grid-cols-2">
               <div className="rounded-lg border bg-muted/20 p-4">
                 <div className="mb-2 flex items-center gap-2 font-medium"><Upload className="h-4 w-4 text-primary" /> استيراد الطلاب</div>

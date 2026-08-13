@@ -69,7 +69,7 @@ export function AcademySettingsForm({ academy }: { academy: Academy }) {
         </Field>
       </div>
       <Button type="submit" disabled={saving}>
-        {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save changes
+        {saving && <Loader2 className="h-4 w-4 animate-spin" />} حفظ التغييرات
       </Button>
     </form>
   );
@@ -127,7 +127,7 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
             <span className="h-8 w-8 shrink-0 rounded-lg" style={{ background: c.color ?? "#7c5cfc" }} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{c.name}</p>
-              <p className="truncate text-xs text-muted-foreground">{c.description ?? "No description"}</p>
+              <p className="truncate text-xs text-muted-foreground">{c.description ?? "لا يوجد وصف"}</p>
             </div>
             <Button
               variant="ghost"

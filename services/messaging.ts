@@ -59,7 +59,11 @@ export async function sendMessage(
 
   if (!(collections() as any).messages) (collections() as any).messages = [];
   (collections() as any).messages.push(msg);
-  void persistInsert("messages", msg);
+
+  // أسماء العرض تخص واجهة التطبيق فقط؛ جدول الرسائل يحفظ المعرّفات ويُعاد
+  // اشتقاق الأسماء من ملفات الأكاديمية عند التحميل.
+  const { sender_name, recipient_name, ...record } = msg;
+  void persistInsert("messages", record);
   return msg;
 }
 

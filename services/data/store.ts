@@ -137,12 +137,12 @@ async function hydrateFromSupabase(academyId: string): Promise<SeedData | null> 
     };
 
     const [courses, teachers, parents, students, groups, lessons, payments, exams,
-      homework, notifications, notes, files, profiles, subscriptions] = await Promise.all([
+      homework, notifications, notes, files, profiles, messages, subscriptions] = await Promise.all([
       pickForAcademy("courses"), pickForAcademy("teachers"), pickForAcademy("parents"),
       pickForAcademy("students"), pickForAcademy("groups"), pickForAcademy("lessons"),
       pickForAcademy("payments"), pickForAcademy("exams"), pickForAcademy("homework"),
       pickForAcademy("notifications"), pickForAcademy("notes"), pickForAcademy("files"),
-      pickForAcademy("profiles"), pickForAcademy("subscriptions"),
+      pickForAcademy("profiles"), pickForAcademy("messages"), pickForAcademy("subscriptions"),
     ]);
 
     const groupIds = groups.map((group) => group.id as string);
@@ -204,6 +204,11 @@ async function hydrateFromSupabase(academyId: string): Promise<SeedData | null> 
       notifications: notifications as any,
       notes: notes as any,
       files: files as any,
+      messages: (messages as any[]).map((message) => ({
+        ...message,
+        sender_name: (profiles as any[]).find((profile) => profile.id === message.sender_id)?.full_name ?? "مستخدم",
+        recipient_name: (profiles as any[]).find((profile) => profile.id === message.recipient_id)?.full_name ?? "مستخدم",
+      })),
       auditLogs: auditLogs as any,
       subscriptions: subscriptions as any,
     };
@@ -237,9 +242,24 @@ function getAdminClient() {
  * caused "Add/Edit student does nothing" bugs (writes returned a PostgrestError
  * that was never inspected).
  */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Demo snapshots use friendly ids such as `academy-1`. They must never be
+ * written through to a production UUID column if a stale demo session exists.
+ */
+function hasValidAcademyId(row: unknown): boolean {
+  const academyId = (row as { academy_id?: unknown } | null)?.academy_id;
+  return typeof academyId !== "string" || UUID_RE.test(academyId);
+}
+
 export async function persistInsert(table: string, row: any) {
   const client = getAdminClient();
   if (!client) return;
+  if (!hasValidAcademyId(row)) {
+    console.warn(`persistInsert ${table} skipped: non-production academy id.`);
+    return;
+  }
   try {
     const { error } = await client.from(table).upsert(row);
     if (error) {

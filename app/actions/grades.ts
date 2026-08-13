@@ -37,6 +37,7 @@ export async function saveGradesAction(
       entries.map((e) => e.studentId),
       "📊 درجات جديدة",
       () => "تم تسجيل درجات جديدة لابنك. برجاء متابعة بوابة أولياء الأمور.",
+      "GRADE_POSTED",
     );
     revalidatePath("/grades");
     revalidatePath(`/exams/${examId}`);

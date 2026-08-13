@@ -8,12 +8,13 @@
  * Environment variables (set on Vercel → Settings → Environment Variables):
  *   WHATSAPP_TOKEN             — System User access token (دائم) أو test token (مؤقت)
  *   WHATSAPP_PHONE_NUMBER_ID   — Phone Number ID من لوحة Meta
- *   WHATSAPP_API_VERSION       — إصدار Graph API (default: "v21.0")
+ *   WHATSAPP_API_VERSION       — إصدار Graph API (default: "v26.0")
+ *   WHATSAPP_MODE              — "live" للسماح بالإرسال الفعلي؛ أي قيمة أخرى وضع عرض آمن
  *
  * Docs: https://developers.facebook.com/docs/whatsapp/cloud-api
  */
 
-const API_VERSION = process.env.WHATSAPP_API_VERSION || "v21.0";
+const API_VERSION = process.env.WHATSAPP_API_VERSION || "v26.0";
 const BASE_URL = `https://graph.facebook.com/${API_VERSION}`;
 
 function getCreds() {
@@ -27,6 +28,14 @@ function getCreds() {
 export function isWhatsAppConfigured(): boolean {
   const { token, phoneNumberId } = getCreds();
   return Boolean(token && phoneNumberId);
+}
+
+/**
+ * الإرسال الحي يتطلب قرارًا صريحًا من المالك، لا يكفي وجود المفاتيح وحده.
+ * هذا يحافظ على أمان بيئات العرض والمعاينة في Vercel.
+ */
+export function isWhatsAppLiveEnabled(): boolean {
+  return isWhatsAppConfigured() && process.env.WHATSAPP_MODE?.toLowerCase() === "live";
 }
 
 /**

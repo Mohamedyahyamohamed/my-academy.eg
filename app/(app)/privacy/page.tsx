@@ -1,9 +1,13 @@
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Download, ShieldCheck } from "lucide-react";
 import { APP_CONFIG } from "@/lib/constants";
+import { getCurrentUser } from "@/services";
 
 export const metadata = { title: "سياسة الخصوصية" };
 
 export default function PrivacyPage() {
+  const user = getCurrentUser();
+  const canExport = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+
   return (
     <div dir="rtl" className="mx-auto max-w-3xl space-y-6">
       <div>
@@ -57,10 +61,10 @@ export default function PrivacyPage() {
 
       <Section title="٤. الاحتفاظ بالبيانات">
         <ul className="list-disc space-y-1 pr-5 text-sm text-muted-foreground">
-          <li><strong>الطلاب النشطون:</strong> تُحفظ بياناتهم أثناء فترة التسجيل.</li>
-          <li><strong>الطلاب المؤرشفون:</strong> تُحفظ بياناتهم لمدة <strong>عام دراسي واحد</strong> بعد الأرشفة، ثم تُحذف نهائيًا.</li>
-          <li><strong>المدفوعات والدرجات:</strong> لا تُحذف نهائيًا (حذف ناعم مع ختم زمني) للحفاظ على السلامة المالية والأكاديمية.</li>
-          <li><strong>سجلات التدقيق:</strong> تُحفظ لمدة 90 يومًا.</li>
+          <li><strong>الطلاب النشطون والمؤرشفون:</strong> تظل البيانات متاحة للأكاديمية طوال فترة استخدامها للخدمة، إلى أن يطلب المدير إجراء حذف أو إغلاق الحساب.</li>
+          <li><strong>المدفوعات والدرجات:</strong> تُراجع قبل أي حذف لأن الاحتفاظ بها قد يكون مطلوبًا للأغراض المالية والأكاديمية.</li>
+          <li><strong>سجلات الأمان:</strong> لا تدخل في ملف التصدير العادي، ويجري الاحتفاظ بها بالحد اللازم للحماية والتحقيق في إساءة الاستخدام.</li>
+          <li><strong>الحذف التلقائي:</strong> غير مفعل حاليًا؛ أي طلب حذف أو إغلاق يخضع لمراجعة نطاق البيانات والالتزامات التنظيمية قبل التنفيذ.</li>
         </ul>
       </Section>
 
@@ -69,16 +73,32 @@ export default function PrivacyPage() {
         <ul className="list-disc space-y-1 pr-5 text-sm text-muted-foreground">
           <li><strong>الوصول:</strong> طلب نسخة من بياناتهم.</li>
           <li><strong>التصحيح:</strong> طلب تصحيح البيانات غير الدقيقة.</li>
-          <li><strong>التصدير:</strong> تنزيل جميع البيانات بصيغة JSON/CSV.</li>
+          <li><strong>التصدير:</strong> تنزيل أرشيف الأكاديمية بصيغة JSON؛ يمكن فتحه أو تحويل الجداول المطلوبة منه للاستخدام في أدوات البيانات.</li>
           <li><strong>الحذف:</strong> طلب الحذف (مع مراعاة الاحتفاظ بالسجلات المالية).</li>
         </ul>
-        <p>لممارسة هذه الحقوق، يُرجى التواصل مع مدير الأكاديمية.</p>
+        <p>لممارسة هذه الحقوق، تواصل مع مدير الأكاديمية أو مركز الدعم داخل التطبيق. ستُراجع الطلبات للتحقق من الهوية ونطاق الأكاديمية قبل التنفيذ.</p>
       </Section>
+
+      {canExport && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-primary/10 p-2 text-primary"><Download className="h-5 w-5" /></div>
+            <div className="min-w-0 flex-1">
+              <h2 className="font-semibold">تصدير نسخة الأكاديمية</h2>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">نزّل أرشيف JSON مقيدًا بأكاديميتك يضم البيانات التشغيلية والتعليمية والمالية وبيانات الملفات الوصفية. لا يشمل كلمات المرور أو الجلسات أو بيانات بطاقات الدفع أو السجلات الأمنية الداخلية.</p>
+              <a href="/api/export" className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">
+                <Download className="h-4 w-4" /> تنزيل نسخة البيانات
+              </a>
+              <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5" /> احفظ الملف في موقع معتمد فقط؛ فهو يحتوي على بيانات شخصية وتعليمية حساسة.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Section title="٦. بيانات القاصرين (الطلاب دون 18 عامًا)">
         <ul className="list-disc space-y-1 pr-5 text-sm text-muted-foreground">
           <li>تُجمع بيانات الطلاب بموافقة صريحة من <strong>ولي الأمر</strong>.</li>
-          <li>يمكن لأولياء الأمور الوصول إلى بيانات أبنائهم أو تصديرها أو طلب حذفها في أي وقت.</li>
+          <li>يمكن لأولياء الأمور الوصول إلى بيانات أبنائهم وطلب تصحيحها أو الحصول على نسخة منها أو طلب حذفها عبر مدير الأكاديمية أو الدعم.</li>
           <li>حسابات الطلاب للقراءة فقط — لا يمكنهم تعديل الدرجات أو الحضور الرسمية.</li>
           <li>لا تُجمع <strong>أي بيانات حيوية</strong>. رموز QR تحتوي على رقم الطالب فقط.</li>
         </ul>
@@ -95,7 +115,7 @@ export default function PrivacyPage() {
       </Section>
 
       <Section title="٨. التواصل">
-        <p>لأي استفسارات متعلقة بالخصوصية أو طلبات البيانات، يُرجى التواصل مع مدير الأكاديمية.</p>
+        <p>لأي استفسارات متعلقة بالخصوصية أو طلبات البيانات، يُرجى التواصل مع مدير الأكاديمية أو مركز الدعم داخل التطبيق.</p>
       </Section>
 
       <p className="text-center text-xs text-muted-foreground">

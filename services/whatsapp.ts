@@ -1,30 +1,46 @@
-/**
- * طبقة خدمات واتساب الخاصة بالأكاديمية.
- * تربط بين بيانات الطلاب/أولياء الأمور وواجهة WhatsApp Cloud API.
- *
- * كل الدوال best-effort: الواتساب مكمل للـ Push، وليس بديلًا.
- * أي خطأ يُبتلع بصمت حتى لا يفشل العملية الأساسية (حفظ درجة/دفعة/حضور).
- */
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import {
-  isWhatsAppConfigured,
+  isWhatsAppLiveEnabled,
   normalizePhoneE164,
   sendWhatsAppTemplate,
 } from "@/lib/whatsapp";
 
-/** اسم القالب الافتراضي للإشعارات (يمكن تغييره عبر WHATSAPP_NOTIFICATION_TEMPLATE). */
-function defaultTemplate(): string | undefined {
-  return process.env.WHATSAPP_NOTIFICATION_TEMPLATE;
+/** لا نرسل سوى تنبيهات تشغيلية Utility؛ لا يوجد إرسال تسويقي في هذا المسار. */
+export type WhatsAppEventType =
+  | "ATTENDANCE_ABSENCE"
+  | "GRADE_POSTED"
+  | "PAYMENT_RECORDED"
+  | "GENERAL";
+
+const TEMPLATE_BY_EVENT: Record<WhatsAppEventType, string> = {
+  ATTENDANCE_ABSENCE: "WHATSAPP_ATTENDANCE_TEMPLATE",
+  GRADE_POSTED: "WHATSAPP_GRADE_TEMPLATE",
+  PAYMENT_RECORDED: "WHATSAPP_PAYMENT_TEMPLATE",
+  GENERAL: "WHATSAPP_NOTIFICATION_TEMPLATE",
+};
+
+type ParentContact = {
+  academyId: string;
+  parentId: string;
+  parentPhone: string | null;
+  studentName: string | null;
+};
+
+function templateFor(eventType: WhatsAppEventType): string | null {
+  return process.env[TEMPLATE_BY_EVENT[eventType]] || process.env.WHATSAPP_NOTIFICATION_TEMPLATE || null;
 }
 
-function defaultLang(): string {
+function templateLanguage(): string {
   return process.env.WHATSAPP_TEMPLATE_LANG || "ar";
 }
 
+function phoneLast4(phone: string | null | undefined): string | null {
+  const normalized = normalizePhoneE164(phone);
+  return normalized ? normalized.slice(-4) : null;
+}
+
 /** جلب student_id المرتبط بدفعة معيّنة (من جدول payments). */
-export async function getStudentIdByPayment(
-  paymentId: string,
-): Promise<string | null> {
+export async function getStudentIdByPayment(paymentId: string): Promise<string | null> {
   const client = nodeSupabaseClient();
   if (!client) return null;
   const { data } = await client
@@ -35,66 +51,159 @@ export async function getStudentIdByPayment(
   return data?.student_id ?? null;
 }
 
-/** جلب أسم الطالب + اسم ولي الأمر (لصياغة الرسائل). */
-async function getStudentAndParent(
-  studentId: string,
-): Promise<{ studentName: string | null; parentPhone: string | null }> {
+/** جلب بيانات اتصال ولي الأمر داخل أكاديمية الطالب فقط. */
+async function getStudentAndParent(studentId: string): Promise<ParentContact | null> {
   const client = nodeSupabaseClient();
-  if (!client) return { studentName: null, parentPhone: null };
+  if (!client) return null;
   const { data } = await client
     .from("students")
-    .select("first_name,last_name,parent:parents!parent_id(first_name,last_name,phone)")
+    .select("academy_id,first_name,last_name,parent:parents!parent_id(id,phone)")
     .eq("id", studentId)
     .maybeSingle();
-  const s = (data as any) || {};
-  const studentName = [s.first_name, s.last_name].filter(Boolean).join(" ") || null;
-  return { studentName, parentPhone: s.parent?.phone ?? null };
+  const student = data as any;
+  if (!student?.academy_id || !student?.parent?.id) return null;
+  return {
+    academyId: student.academy_id,
+    parentId: student.parent.id,
+    parentPhone: student.parent.phone ?? null,
+    studentName: [student.first_name, student.last_name].filter(Boolean).join(" ") || null,
+  };
 }
 
-/**
- * إرسال إشعار واتساب لولي أمر طالب واحد.
- * يبعت القالب الافتراضي (academy_notice) باسم الطالب كمتحول {{student_name}}.
- * القالب ده شامل لكل الإشعارات (درجات/مصاريف/غياب) — واتساب يبعت "تنبيه"
- * للولي بالدخول للتطبيق للاطلاع على التفاصيل.
- *
- * القالب الموصى به (Utility، عربي):
- *   لديكم إشعار جديد بخصوص ابنكم {{student_name}} على منصة أكاديميتي.
- *   برجاء الدخول إلى التطبيق للاطلاع على التفاصيل.
- */
-export async function notifyParentWhatsApp(
-  studentId: string,
-  title: string,
-  body: string,
-): Promise<void> {
-  if (!isWhatsAppConfigured()) return;
-  try {
-    const { parentPhone, studentName } = await getStudentAndParent(studentId);
-    if (!parentPhone) return;
-    const number = normalizePhoneE164(parentPhone);
-    if (!number) return;
+async function parentHasWhatsAppOptIn(academyId: string, parentId: string): Promise<boolean> {
+  const client = nodeSupabaseClient();
+  if (!client) return false;
+  const { data, error } = await client
+    .from("whatsapp_preferences")
+    .select("opted_in")
+    .eq("academy_id", academyId)
+    .eq("parent_id", parentId)
+    .maybeSingle();
+  // غياب الجدول أو السجل يعني عدم وجود موافقة؛ لا نرسل افتراضيًا.
+  return !error && data?.opted_in === true;
+}
 
-    const tmpl = defaultTemplate() || "academy_notification";
-    // ابعت اسم الطالب كمتغير {{1}} داخل القالب (المتغيرات موضعية).
-    await sendWhatsAppTemplate(parentPhone, tmpl, defaultLang(), [
-      { type: "body", parameters: [{ type: "text", text: studentName || "ابنكم" }] },
-    ]);
+async function logWhatsAppAttempt(input: {
+  academyId: string;
+  parentId: string;
+  studentId: string;
+  eventType: WhatsAppEventType;
+  templateName?: string | null;
+  phone?: string | null;
+  status: "SKIPPED" | "ACCEPTED" | "FAILED";
+  externalMessageId?: string;
+  failureReason?: string;
+}): Promise<void> {
+  const client = nodeSupabaseClient();
+  if (!client) return;
+  try {
+    await client.from("whatsapp_message_logs").insert({
+      academy_id: input.academyId,
+      parent_id: input.parentId,
+      student_id: input.studentId,
+      event_type: input.eventType,
+      template_name: input.templateName ?? null,
+      recipient_phone_last4: phoneLast4(input.phone),
+      status: input.status,
+      external_message_id: input.externalMessageId ?? null,
+      failure_reason: input.failureReason ?? null,
+      accepted_at: input.status === "ACCEPTED" ? new Date().toISOString() : null,
+    });
   } catch {
-    /* silent — best-effort */
+    // يبقى سجل الإرسال ميزة مراقبة فقط، ولا يعطل العملية التعليمية الأساسية.
   }
 }
 
 /**
- * إرسال إشعار واتساب لأولياء أمور مجموعة طلاب (بعد حفظ درجات/حضور مثلاً).
+ * إرسال قالب Utility لولي أمر واحد. لا ترسل الدالة أي نص حر أو تفاصيل حساسة؛
+ * القالب المعتمد يقود ولي الأمر إلى البوابة الآمنة لعرض التفاصيل.
  */
+export async function notifyParentWhatsApp(
+  studentId: string,
+  _title: string,
+  _body: string,
+  eventType: WhatsAppEventType = "GENERAL",
+): Promise<void> {
+  try {
+    const contact = await getStudentAndParent(studentId);
+    if (!contact) return;
+
+    if (!isWhatsAppLiveEnabled()) {
+      await logWhatsAppAttempt({
+        ...contact,
+        studentId,
+        eventType,
+        status: "SKIPPED",
+        failureReason: "WhatsApp live mode is disabled",
+      });
+      return;
+    }
+
+    if (!contact.parentPhone || !normalizePhoneE164(contact.parentPhone)) {
+      await logWhatsAppAttempt({
+        ...contact,
+        studentId,
+        eventType,
+        status: "SKIPPED",
+        failureReason: "Parent phone is missing or invalid",
+      });
+      return;
+    }
+
+    if (!(await parentHasWhatsAppOptIn(contact.academyId, contact.parentId))) {
+      await logWhatsAppAttempt({
+        ...contact,
+        studentId,
+        eventType,
+        status: "SKIPPED",
+        failureReason: "No recorded WhatsApp opt-in",
+      });
+      return;
+    }
+
+    const templateName = templateFor(eventType);
+    if (!templateName) {
+      await logWhatsAppAttempt({
+        ...contact,
+        studentId,
+        eventType,
+        status: "SKIPPED",
+        failureReason: "No approved template is configured for this event",
+      });
+      return;
+    }
+
+    const result = await sendWhatsAppTemplate(contact.parentPhone, templateName, templateLanguage(), [
+      { type: "body", parameters: [{ type: "text", text: contact.studentName || "ابنكم" }] },
+    ]);
+    await logWhatsAppAttempt({
+      ...contact,
+      studentId,
+      eventType,
+      templateName,
+      status: result.ok ? "ACCEPTED" : "FAILED",
+      externalMessageId: result.messageId,
+      failureReason: result.error,
+    });
+  } catch {
+    // best-effort: لا ينبغي لتنبيه خارجي أن يمنع تسجيل الحضور أو الدرجة أو الدفعة.
+  }
+}
+
+/** إرسال تنبيه محدود السرعة إلى أولياء أمور عدة طلاب. */
 export async function notifyParentsWhatsApp(
   studentIds: string[],
   title: string,
   bodyFn: () => string,
+  eventType: WhatsAppEventType = "GENERAL",
 ): Promise<void> {
-  if (!isWhatsAppConfigured()) return;
-  const ids = Array.from(new Set(studentIds.filter(Boolean)));
-  // حدّد التزامن حتى لا نضغط على الـ rate limit (حدّ أقصى 100 لكل دفعة).
-  await Promise.all(
-    ids.slice(0, 100).map((id) => notifyParentWhatsApp(id, title, bodyFn())),
-  );
+  const uniqueIds = Array.from(new Set(studentIds.filter(Boolean))).slice(0, 100);
+  // دفعات صغيرة تمنع الاندفاع غير الضروري ولا تتجاوز حدود المزود بسرعة.
+  for (let index = 0; index < uniqueIds.length; index += 5) {
+    await Promise.all(
+      uniqueIds.slice(index, index + 5).map((studentId) =>
+        notifyParentWhatsApp(studentId, title, bodyFn(), eventType),
+      ),
+    );
+  }
 }

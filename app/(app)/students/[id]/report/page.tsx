@@ -3,6 +3,7 @@ import { StudentsService, GroupsService, PaymentsService, GradesService, Attenda
 import { collections } from "@/services/data/store";
 import { formatCurrency, formatDate, fullName } from "@/lib/utils";
 import { performanceLevel, performanceColor } from "@/lib/constants";
+import { PrintReportButton } from "@/components/shared/print-report-button";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export default async function StudentReportPage({ params }: { params: { id: stri
           {academy.address && <p className="text-xs text-gray-500">{academy.address}</p>}
         </div>
         <div className="text-left">
+          <div className="mb-2 flex justify-end"><PrintReportButton /></div>
           <h2 className="text-lg font-bold">كشف درجات وحضور</h2>
           <p className="text-xs text-gray-500">{new Date().toLocaleDateString("ar-EG")}</p>
         </div>

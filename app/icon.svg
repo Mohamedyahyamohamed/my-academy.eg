@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title>MY Academy</title>
+  <defs>
+    <linearGradient id="bg" x1="48" y1="40" x2="470" y2="488" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B6CFF"/>
+      <stop offset="1" stop-color="#4F2CCB"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <path d="M96 194.5 256 112l160 82.5-160 82.8-160-82.8Z" fill="#fff"/>
+  <path d="M148 221v105.4c0 11.1 8.6 22.5 25.2 32.2C194.3 371 223.3 378 256 378s61.7-7 82.8-19.4c16.6-9.7 25.2-21.1 25.2-32.2V221l-108 55.9L148 221Z" fill="#EDE9FE"/>
+  <path d="M392 206v110" fill="none" stroke="#fff" stroke-width="20" stroke-linecap="round"/>
+  <circle cx="392" cy="336" r="23" fill="#FBBF24"/>
+  <path d="M208 302h96M208 334h62" stroke="#6D4DE0" stroke-width="18" stroke-linecap="round"/>
+</svg>

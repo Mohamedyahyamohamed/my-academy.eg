@@ -15,6 +15,7 @@ import {
   TrendingUp,
   CalendarClock,
   Crown,
+  CircleHelp,
   type LucideProps,
 } from "lucide-react";
 import type { Role } from "@/types";
@@ -69,6 +70,7 @@ export const ADMIN_NAV: NavSection[] = [
       { titleAr: "الاشتراكات", titleEn: "Billing", href: "/billing", icon: BarChart3 },
       { titleAr: "سجل العمليات", titleEn: "Audit Logs", href: "/audit", icon: BarChart3 },
       { titleAr: "الخصوصية", titleEn: "Privacy", href: "/privacy", icon: Settings },
+      { titleAr: "المساعدة والدعم", titleEn: "Help & Support", href: "/support", icon: CircleHelp },
     ],
   },
 ];
@@ -90,6 +92,7 @@ export const TEACHER_NAV: NavSection[] = [
       { titleAr: "الطلاب", titleEn: "Students", href: "/students", icon: Users },
       { titleAr: "المساعدون", titleEn: "Assistants", href: "/teacher/assistants", icon: UsersRound },
       { titleAr: "الرسائل", titleEn: "Messages", href: "/messages", icon: Bell },
+      { titleAr: "المساعدة والدعم", titleEn: "Help & Support", href: "/support", icon: CircleHelp },
     ],
   },
 ];
@@ -108,6 +111,7 @@ export const PARENT_NAV: NavSection[] = [
       { titleAr: "المصاريف", titleEn: "Payments", href: "/parent/payments", icon: Wallet },
       { titleAr: "الرسائل", titleEn: "Messages", href: "/messages", icon: Bell },
       { titleAr: "الإشعارات", titleEn: "Notifications", href: "/notifications", icon: Bell },
+      { titleAr: "المساعدة والدعم", titleEn: "Help & Support", href: "/support", icon: CircleHelp },
     ],
   },
 ];
@@ -125,6 +129,7 @@ export const STUDENT_NAV: NavSection[] = [
       { titleAr: "الدرجات", titleEn: "Grades", href: "/student/grades", icon: GraduationCap },
       { titleAr: "تقدّمي", titleEn: "Progress", href: "/student/progress", icon: TrendingUp },
       { titleAr: "الإشعارات", titleEn: "Notifications", href: "/notifications", icon: Bell },
+      { titleAr: "المساعدة والدعم", titleEn: "Help & Support", href: "/support", icon: CircleHelp },
     ],
   },
 ];

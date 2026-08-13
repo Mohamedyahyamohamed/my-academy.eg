@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, CheckCircle2, Building2, BookOpen, Users, Rocket } from "lucide-react";
+import { Loader2, CheckCircle2, Building2, BookOpen, Users, Rocket, Mail, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,10 +12,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 const STEPS = [
-  { id: 0, title: "Academy Info", icon: Building2 },
-  { id: 1, title: "First Course", icon: BookOpen },
-  { id: 2, title: "First Group", icon: Users },
-  { id: 3, title: "Done", icon: Rocket },
+  { id: 0, title: "بيانات الأكاديمية", icon: Building2 },
+  { id: 1, title: "أول مادة", icon: BookOpen },
+  { id: 2, title: "أول مجموعة", icon: Users },
+  { id: 3, title: "جاهزة للبدء", icon: Rocket },
 ];
 
 export default function OnboardingPage() {
@@ -25,6 +25,9 @@ export default function OnboardingPage() {
   const [academy, setAcademy] = React.useState({ name: "", phone: "", address: "" });
   const [course, setCourse] = React.useState({ name: "", color: "#7c5cfc" });
   const [group, setGroup] = React.useState({ name: "", fee: "", schedule: "" });
+  const [teacherInvite, setTeacherInvite] = React.useState({ fullName: "", email: "" });
+  const [sendingInvite, setSendingInvite] = React.useState(false);
+  const [inviteSent, setInviteSent] = React.useState(false);
 
   const complete = async () => {
     setLoading(true);
@@ -50,18 +53,44 @@ export default function OnboardingPage() {
       toast.success("تم تجهيز الأكاديمية بنجاح");
       router.push("/dashboard");
     } catch {
-      toast.error("Something went wrong. You can finish later.");
+      toast.error("حدثت مشكلة. يمكنك إكمال الإعداد لاحقًا من الإعدادات.");
       router.push("/dashboard");
     } finally { setLoading(false); }
+  };
+
+  const sendTeacherInvite = async () => {
+    if (!teacherInvite.email.trim()) {
+      toast.error("أدخل بريد المدرس الإلكتروني أولًا.");
+      return;
+    }
+    setSendingInvite(true);
+    try {
+      const { createAcademyInviteAction } = await import("@/app/actions/invites");
+      const result = await createAcademyInviteAction({
+        email: teacherInvite.email,
+        fullName: teacherInvite.fullName,
+        role: "TEACHER",
+      });
+      if (!result.ok) {
+        toast.error(result.error || "تعذر إرسال دعوة المدرس.");
+        return;
+      }
+      setInviteSent(true);
+      toast.success(result.emailSent ? "تم إرسال دعوة المدرس بالبريد." : "تم إنشاء الدعوة. يمكنك مشاركتها من الإعدادات.");
+    } catch {
+      toast.error("تعذر إنشاء الدعوة الآن. يمكنك إرسالها من الإعدادات لاحقًا.");
+    } finally {
+      setSendingInvite(false);
+    }
   };
 
   const next = () => { if (step < 3) setStep(step + 1); else complete(); };
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div dir="rtl" className="mx-auto max-w-xl space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Welcome to MY Academy! 🎉</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Let&apos;s set up your academy in a few quick steps.</p>
+        <h1 className="text-2xl font-semibold">أهلًا بك في MY Academy</h1>
+        <p className="mt-1 text-sm text-muted-foreground">جهّز أكاديميتك خلال دقائق ثم أضف طلابك وابدأ العمل.</p>
       </div>
       <div className="flex items-center gap-2">
         {STEPS.map((s, i) => (
@@ -76,16 +105,16 @@ export default function OnboardingPage() {
       <Card><CardContent className="space-y-4 p-6">
         {step === 0 && (
           <>
-            <h2 className="font-semibold">Academy Information</h2>
-            <div className="space-y-1.5"><Label>Academy name</Label><Input value={academy.name} onChange={(e) => setAcademy(a => ({ ...a, name: e.target.value }))} placeholder="MY Academy" /></div>
-            <div className="space-y-1.5"><Label>Phone</Label><Input value={academy.phone} onChange={(e) => setAcademy(a => ({ ...a, phone: e.target.value }))} placeholder="+20 ..." /></div>
-            <div className="space-y-1.5"><Label>Address</Label><Input value={academy.address} onChange={(e) => setAcademy(a => ({ ...a, address: e.target.value }))} placeholder="City, Country" /></div>
+            <h2 className="font-semibold">بيانات الأكاديمية</h2>
+            <div className="space-y-1.5"><Label>اسم الأكاديمية</Label><Input value={academy.name} onChange={(e) => setAcademy(a => ({ ...a, name: e.target.value }))} placeholder="أكاديمية التميز" /></div>
+            <div className="space-y-1.5"><Label>رقم الهاتف</Label><Input dir="ltr" value={academy.phone} onChange={(e) => setAcademy(a => ({ ...a, phone: e.target.value }))} placeholder="+20 10 0000 0000" /></div>
+            <div className="space-y-1.5"><Label>العنوان</Label><Input value={academy.address} onChange={(e) => setAcademy(a => ({ ...a, address: e.target.value }))} placeholder="المدينة، المحافظة" /></div>
           </>
         )}
         {step === 1 && (
           <>
-            <h2 className="font-semibold">Create Your First Course</h2>
-            <div className="space-y-1.5"><Label>Course name</Label><Input value={course.name} onChange={(e) => setCourse(c => ({ ...c, name: e.target.value }))} placeholder="Mathematics" /></div>
+            <h2 className="font-semibold">أنشئ أول مادة</h2>
+            <div className="space-y-1.5"><Label>اسم المادة</Label><Input value={course.name} onChange={(e) => setCourse(c => ({ ...c, name: e.target.value }))} placeholder="الرياضيات" /></div>
             <div className="flex flex-wrap gap-2 pt-1">
               {["#7c5cfc", "#0ea5e9", "#10b981", "#f59e0b", "#f43f5e"].map(col => (
                 <button key={col} type="button" onClick={() => setCourse(c => ({ ...c, color: col }))} className={cn("h-7 w-7 rounded-full border-2", course.color === col ? "border-foreground" : "border-transparent")} style={{ background: col }} />
@@ -95,26 +124,44 @@ export default function OnboardingPage() {
         )}
         {step === 2 && (
           <>
-            <h2 className="font-semibold">Create Your First Group</h2>
-            <div className="space-y-1.5"><Label>Group name</Label><Input value={group.name} onChange={(e) => setGroup(g => ({ ...g, name: e.target.value }))} placeholder="Grade 9 — Math A" /></div>
+            <h2 className="font-semibold">أنشئ أول مجموعة</h2>
+            <div className="space-y-1.5"><Label>اسم المجموعة</Label><Input value={group.name} onChange={(e) => setGroup(g => ({ ...g, name: e.target.value }))} placeholder="الصف الثالث الإعدادي — رياضيات" /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5"><Label>Monthly fee</Label><Input type="number" value={group.fee} onChange={(e) => setGroup(g => ({ ...g, fee: e.target.value }))} placeholder="1200" /></div>
-              <div className="space-y-1.5"><Label>Schedule</Label><Input value={group.schedule} onChange={(e) => setGroup(g => ({ ...g, schedule: e.target.value }))} placeholder="Sun, Tue — 4PM" /></div>
+              <div className="space-y-1.5"><Label>الاشتراك الشهري (ج.م)</Label><Input dir="ltr" type="number" value={group.fee} onChange={(e) => setGroup(g => ({ ...g, fee: e.target.value }))} placeholder="1200" /></div>
+              <div className="space-y-1.5"><Label>موعد الحصة</Label><Input value={group.schedule} onChange={(e) => setGroup(g => ({ ...g, schedule: e.target.value }))} placeholder="الأحد والثلاثاء — 4 مساءً" /></div>
             </div>
           </>
         )}
         {step === 3 && (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <CheckCircle2 className="h-12 w-12 text-emerald-500" />
-            <h2 className="text-lg font-semibold">You&apos;re all set! 🚀</h2>
-            <p className="text-sm text-muted-foreground">أكاديميتك جاهزة. أضف الطلاب، سجّل الحضور، وابدأ التدريس.</p>
-            <Button variant="outline" size="sm" asChild><Link href="/students/import">استيراد الطلاب من CSV</Link></Button>
+            <h2 className="text-lg font-semibold">أكاديميتك جاهزة!</h2>
+            <p className="text-sm text-muted-foreground">تم إعداد الأساسيات. أكمل الخطوتين التاليتين الآن أو نفّذهما لاحقًا من لوحة التحكم.</p>
+            <div className="grid w-full gap-3 pt-2 text-right sm:grid-cols-2">
+              <div className="rounded-lg border bg-muted/20 p-4">
+                <div className="mb-2 flex items-center gap-2 font-medium"><Upload className="h-4 w-4 text-primary" /> استيراد الطلاب</div>
+                <p className="mb-3 text-xs leading-5 text-muted-foreground">ارفع ملف CSV أو الصق البيانات لإضافة الطلاب وأولياء الأمور دفعة واحدة.</p>
+                <Button variant="outline" size="sm" asChild><Link href="/students/import">فتح استيراد الطلاب</Link></Button>
+              </div>
+              <div className="rounded-lg border bg-muted/20 p-4">
+                <div className="mb-2 flex items-center gap-2 font-medium"><Mail className="h-4 w-4 text-primary" /> دعوة أول مدرس</div>
+                {inviteSent ? (
+                  <p className="text-xs leading-5 text-emerald-700">تم إنشاء الدعوة بنجاح. سيظهر المدرس في الأكاديمية بعد قبولها.</p>
+                ) : (
+                  <div className="space-y-2">
+                    <Input value={teacherInvite.fullName} onChange={(e) => setTeacherInvite(v => ({ ...v, fullName: e.target.value }))} placeholder="اسم المدرس (اختياري)" />
+                    <Input dir="ltr" type="email" value={teacherInvite.email} onChange={(e) => setTeacherInvite(v => ({ ...v, email: e.target.value }))} placeholder="teacher@example.com" />
+                    <Button variant="outline" size="sm" onClick={sendTeacherInvite} disabled={sendingInvite}>{sendingInvite && <Loader2 className="h-3.5 w-3.5 animate-spin" />} إرسال الدعوة</Button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </CardContent></Card>
       <div className="flex justify-between">
-        <Button variant="ghost" onClick={() => step > 0 ? setStep(step - 1) : router.push("/dashboard")}>{step > 0 ? "Back" : "Skip"}</Button>
-        <Button onClick={next} disabled={loading}>{loading && <Loader2 className="h-4 w-4 animate-spin" />} {step === 3 ? "Go to Dashboard" : "Next"}</Button>
+        <Button variant="ghost" onClick={() => step > 0 ? setStep(step - 1) : router.push("/dashboard")}>{step > 0 ? "السابق" : "تخطّي الآن"}</Button>
+        <Button onClick={next} disabled={loading}>{loading && <Loader2 className="h-4 w-4 animate-spin" />} {step === 3 ? "الذهاب إلى لوحة التحكم" : "التالي"}</Button>
       </div>
     </div>
   );

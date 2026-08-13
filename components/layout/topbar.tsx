@@ -6,6 +6,7 @@ import { NotificationsMenu } from "./notifications-menu";
 import { UserMenu } from "./user-menu";
 import { LanguageToggle } from "./language-toggle";
 import { PushNotifications } from "./push-notifications";
+import { InstallApp } from "./install-app";
 import type { SessionUser } from "@/types";
 import type { NavSection } from "@/lib/nav";
 
@@ -23,6 +24,7 @@ export function Topbar({ user, sections }: TopbarProps) {
         <GlobalSearch />
       </div>
       <div className="flex items-center gap-1">
+        <InstallApp />
         <PushNotifications />
         <LanguageToggle />
         <NotificationsMenu />

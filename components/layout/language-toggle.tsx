@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function LanguageToggle() {
+  const router = useRouter();
   const [lang, setLang] = React.useState<"ar" | "en">("ar");
 
   React.useEffect(() => {
@@ -16,10 +18,10 @@ export function LanguageToggle() {
     const next = lang === "ar" ? "en" : "ar";
     setLang(next);
     localStorage.setItem("ma_lang", next);
-    document.cookie = `ma_lang=${next}; path=/; max-age=${60 * 60 * 24 * 365}`;
+    document.cookie = `ma_lang=${next}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
     document.documentElement.dir = next === "ar" ? "rtl" : "ltr";
-    // reload para reflejar cambios del servidor
-    window.location.reload();
+    document.documentElement.lang = next;
+    router.refresh();
   };
 
   return (

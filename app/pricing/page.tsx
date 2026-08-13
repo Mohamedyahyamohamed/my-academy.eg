@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, ArrowRight } from "lucide-react";
+import { Check, ArrowRight, MessageCircle } from "lucide-react";
 import { listPlans } from "@/services/saas";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ function formatLimit(value: number, suffix: string) {
 
 export default function PricingPage() {
   const plans = listPlans();
+  const salesWhatsAppUrl = process.env.NEXT_PUBLIC_WHATSAPP_SALES_URL?.trim();
+  const hasSalesWhatsApp = Boolean(salesWhatsAppUrl?.startsWith("https://wa.me/"));
   return (
     <main dir="rtl" className="min-h-screen bg-background">
       <header className="border-b border-border bg-background/90">
@@ -49,7 +51,17 @@ export default function PricingPage() {
             </article>
           ))}
         </div>
-        <p className="mt-8 text-center text-xs text-muted-foreground">الأسعار ابتدائية وقابلة للتعديل قبل الإطلاق التجاري النهائي. الدفع الإلكتروني يُفعّل بعد إعداد Paymob أو Stripe.</p>
+        <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-brand-200 bg-brand-50/60 p-6 text-center">
+          <h2 className="text-xl font-bold">هل تحتاج مساعدة في اختيار الخطة أو نقل بياناتك؟</h2>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">ابدأ بالخطة المجانية في أي وقت، أو اطلب تجربة موجهة لتتعرف على الإعداد والاستيراد قبل اتخاذ قرار الاشتراك.</p>
+          <div className="mt-4 flex flex-wrap justify-center gap-3">
+            <Button asChild variant="outline"><Link href="/signup">أنشئ أكاديميتك مجانًا</Link></Button>
+            {hasSalesWhatsApp ? (
+              <Button asChild><a href={salesWhatsAppUrl} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> اطلب تجربة موجهة</a></Button>
+            ) : null}
+          </div>
+        </div>
+        <p className="mt-8 text-center text-xs text-muted-foreground">الأسعار شهرية بالجنيه المصري. تفعيل الدفع الإلكتروني يحتاج إعداد Paymob أو Stripe والتحقق من Webhook قبل تحصيل أي اشتراك.</p>
       </section>
     </main>
   );

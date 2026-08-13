@@ -43,6 +43,7 @@ export async function recordPaymentAction(
           studentId,
           "💰 دفعة مسجّلة",
           `تم تسجيل دفعة بقيمة ${amount} جنيه. شكرًا لكم.`,
+          "PAYMENT_RECORDED",
         );
       }
     })();

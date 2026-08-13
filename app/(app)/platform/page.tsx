@@ -1,4 +1,14 @@
-import { Building2, Users, GraduationCap, Crown, Wallet, TrendingUp, Banknote } from "lucide-react";
+import {
+  Activity,
+  Banknote,
+  Building2,
+  Crown,
+  GraduationCap,
+  ShieldCheck,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,8 +19,12 @@ import { PLANS } from "@/services/saas";
 
 export const dynamic = "force-dynamic";
 
-const EGP = (n: number) =>
-  new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 0 }).format(n || 0) + " ج.م";
+const EGP = (value: number) =>
+  new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 0 }).format(value || 0) + " ج.م";
+const percent = (numerator: number, denominator: number) =>
+  denominator ? Math.round((numerator / denominator) * 100) : 0;
+const formatDate = (value: string | null | undefined) =>
+  value ? new Date(value).toLocaleDateString("ar-EG") : "—";
 
 export default async function PlatformPage() {
   requireRole("SUPER_ADMIN");
@@ -23,130 +37,181 @@ export default async function PlatformPage() {
     { data: subs },
     { data: profiles },
     { data: payments },
+    { data: lifecycleEvents },
+    { data: billingEvents },
   ] = await Promise.all([
-    client.from("academies").select("*").order("created_at", { ascending: false }),
+    client.from("academies").select("id,name,created_at").order("created_at", { ascending: false }),
     client.from("students").select("academy_id"),
     client.from("teachers").select("academy_id"),
-    client.from("subscriptions").select("academy_id,plan_id,status"),
+    client.from("subscriptions").select("academy_id,plan_id,status,cancel_at_period_end,canceled_at"),
     client.from("profiles").select("academy_id,role"),
     client.from("payments").select("academy_id,amount_paid"),
+    client
+      .from("audit_logs")
+      .select("academy_id,action,created_at")
+      .in("action", ["academy.create", "onboarding.complete", "billing.checkout_started"])
+      .order("created_at", { ascending: false })
+      .limit(1000),
+    client
+      .from("billing_events")
+      .select("academy_id,status,processed_at,created_at")
+      .eq("status", "processed")
+      .order("created_at", { ascending: false })
+      .limit(1000),
   ]);
 
-  const count = (rows: any[] | null, aid: string) =>
-    (rows ?? []).filter((r) => r.academy_id === aid).length;
-
-  const sumPaid = (aid?: string) =>
+  const academyRows = academies ?? [];
+  const subscriptionRows = subs ?? [];
+  const count = (rows: Array<{ academy_id: string | null }> | null, academyId: string) =>
+    (rows ?? []).filter((row) => row.academy_id === academyId).length;
+  const sumPaid = (academyId?: string) =>
     (payments ?? [])
-      .filter((p: any) => !aid || p.academy_id === aid)
-      .reduce((s: number, p: any) => s + Number(p.amount_paid || 0), 0);
-
-  const subFor = (aid: string) => (subs ?? []).find((s: any) => s.academy_id === aid);
-  const priceFor = (aid: string) => {
-    const sub = subFor(aid);
-    const plan = sub?.plan_id ? PLANS[sub.plan_id] : PLANS.free;
-    return { plan, price: plan?.price ?? 0, status: sub?.status ?? "active" };
+      .filter((payment: any) => !academyId || payment.academy_id === academyId)
+      .reduce((sum: number, payment: any) => sum + Number(payment.amount_paid || 0), 0);
+  const subFor = (academyId: string) => subscriptionRows.find((sub: any) => sub.academy_id === academyId);
+  const priceFor = (academyId: string) => {
+    const subscription: any = subFor(academyId);
+    const plan = subscription?.plan_id ? PLANS[subscription.plan_id] : PLANS.free;
+    return { plan, price: plan?.price ?? 0, status: subscription?.status ?? "active", subscription };
   };
 
-  // إيرادات الـ SaaS (MRR) = مجموع اشتراكات الأكاديميات النشطة
-  const mrr = (subs ?? [])
-    .filter((s: any) => s.status === "active" || s.status === "trialing" || !s.status)
-    .reduce((sum: number, s: any) => sum + (PLANS[s.plan_id]?.price ?? 0), 0);
-
-  const totalCollected = sumPaid(); // إجمالي مدفوعات الطلاب على المنصة
-  const payingAcademies = (academies ?? []).filter((a: any) => priceFor(a.id).price > 0).length;
+  const activeSubscriptions = subscriptionRows.filter((sub: any) => sub.status === "active");
+  const trialSubscriptions = subscriptionRows.filter((sub: any) => sub.status === "trialing");
+  const atRiskSubscriptions = subscriptionRows.filter(
+    (sub: any) => sub.status === "past_due" || sub.cancel_at_period_end || sub.canceled_at,
+  );
+  const mrr = activeSubscriptions.reduce((sum: number, sub: any) => sum + (PLANS[sub.plan_id]?.price ?? 0), 0);
+  const potentialMrr = [...activeSubscriptions, ...trialSubscriptions].reduce(
+    (sum: number, sub: any) => sum + (PLANS[sub.plan_id]?.price ?? 0),
+    0,
+  );
+  const paidAcademies = academyRows.filter((academy: any) => priceFor(academy.id).price > 0).length;
+  const activatedAcademies = academyRows.filter((academy: any) => count(students, academy.id) > 0).length;
+  const completedOnboarding = new Set(
+    (lifecycleEvents ?? [])
+      .filter((event: any) => event.action === "onboarding.complete")
+      .map((event: any) => event.academy_id),
+  ).size;
+  const checkoutAcademies = new Set(
+    (lifecycleEvents ?? [])
+      .filter((event: any) => event.action === "billing.checkout_started")
+      .map((event: any) => event.academy_id),
+  ).size;
+  const convertedAcademies = new Set((billingEvents ?? []).map((event: any) => event.academy_id)).size;
+  const lastThirtyDays = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const newAcademies30d = academyRows.filter((academy: any) => new Date(academy.created_at).getTime() >= lastThirtyDays).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir="rtl">
       <PageHeader
-        title="لوحة تحكم المنصة 👑"
-        description="إنت صاحب الـ SaaS — بتشوف كل الأكاديميات والإيرادات من هنا."
+        title="لوحة مالك المنصة"
+        description="صورة تشغيلية موحدة للنمو، التفعيل، الإيراد، والأكاديميات التي تحتاج متابعة."
       />
 
-      {/* بطاقات الإيرادات */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-emerald-500/30 bg-emerald-500/5">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard icon={<Banknote className="h-4 w-4" />} label="إيراد SaaS شهري فعلي" value={EGP(mrr)} hint={`${activeSubscriptions.length} اشتراك نشط`} tone="emerald" />
+        <MetricCard icon={<TrendingUp className="h-4 w-4" />} label="إيراد محتمل بعد التجارب" value={EGP(potentialMrr)} hint={`${trialSubscriptions.length} أكاديمية في تجربة`} tone="violet" />
+        <MetricCard icon={<Activity className="h-4 w-4" />} label="تفعيل الأكاديميات" value={`${percent(activatedAcademies, academyRows.length)}%`} hint={`${activatedAcademies} من ${academyRows.length} لديها طلاب`} tone="sky" />
+        <MetricCard icon={<ShieldCheck className="h-4 w-4" />} label="اشتراكات تحتاج متابعة" value={String(atRiskSubscriptions.length)} hint="متأخرات أو إلغاء مجدول" tone="amber" />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
           <CardContent className="p-5">
-            <div className="flex items-center gap-2 text-emerald-700"><Banknote className="h-4 w-4" /><span className="text-xs font-medium">إيراد الـ SaaS الشهري (MRR)</span></div>
-            <p className="mt-2 text-3xl font-bold text-emerald-700">{EGP(mrr)}</p>
-            <p className="mt-1 text-xs text-muted-foreground">من {payingAcademies} أكاديمية مدفوعة</p>
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-semibold">قمع النمو والتحويل</h2>
+                <p className="text-xs text-muted-foreground">يعتمد على أحداث التسجيل والتهيئة والفوترة المسجلة في النظام.</p>
+              </div>
+              <Badge variant="secondary">آخر تحديث: الآن</Badge>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-4">
+              <FunnelStep label="أكاديميات جديدة" value={academyRows.length} hint={`${newAcademies30d} خلال 30 يوم`} />
+              <FunnelStep label="أكملت التهيئة" value={completedOnboarding} hint={`${percent(completedOnboarding, academyRows.length)}% من المسجلين`} />
+              <FunnelStep label="بدأت الدفع" value={checkoutAcademies} hint={`${percent(checkoutAcademies, completedOnboarding)}% من المهيأين`} />
+              <FunnelStep label="تحويلات مدفوعة" value={convertedAcademies} hint={`${percent(convertedAcademies, checkoutAcademies)}% من البدايات`} final />
+            </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center gap-2 text-muted-foreground"><Wallet className="h-4 w-4" /><span className="text-xs font-medium">مدفوعات الطلاب (كل المنصة)</span></div>
-            <p className="mt-2 text-2xl font-bold">{EGP(totalCollected)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center gap-2 text-muted-foreground"><TrendingUp className="h-4 w-4" /><span className="text-xs font-medium">إيراد سنوي متوقّع</span></div>
-            <p className="mt-2 text-2xl font-bold">{EGP(mrr * 12)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center gap-2 text-muted-foreground"><Building2 className="h-4 w-4" /><span className="text-xs font-medium">أكاديميات</span></div>
-            <p className="mt-2 text-2xl font-bold">{academies?.length ?? 0}</p>
+          <CardContent className="space-y-4 p-5">
+            <div>
+              <h2 className="font-semibold">نظرة تشغيلية</h2>
+              <p className="text-xs text-muted-foreground">مقاييس استخدام المنصة عبر كل الأكاديميات.</p>
+            </div>
+            <OperationalRow label="أكاديميات مدفوعة" value={`${paidAcademies}`} />
+            <OperationalRow label="طلاب على المنصة" value={`${students?.length ?? 0}`} />
+            <OperationalRow label="مدرسون نشطون" value={`${teachers?.length ?? 0}`} />
+            <OperationalRow label="مستخدمون مسجلون" value={`${profiles?.length ?? 0}`} />
+            <OperationalRow label="تحصيل أولياء الأمور" value={EGP(sumPaid())} />
           </CardContent>
         </Card>
       </div>
 
-      {/* إحصائيات عامة */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card><CardContent className="flex items-center gap-3 p-5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600"><Users className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold">{students?.length ?? 0}</p><p className="text-xs text-muted-foreground">طالب</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="flex items-center gap-3 p-5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600"><GraduationCap className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold">{teachers?.length ?? 0}</p><p className="text-xs text-muted-foreground">مدرّس</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="flex items-center gap-3 p-5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600"><Crown className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold">{profiles?.length ?? 0}</p><p className="text-xs text-muted-foreground">مستخدم</p></div>
-        </CardContent></Card>
-      </div>
-
-      {/* قائمة الأكاديميات بالإيراد */}
       <Card>
         <CardContent className="p-0">
-          <div className="flex items-center justify-between border-b p-4">
-            <h2 className="font-semibold">كل الأكاديميات والإيرادات</h2>
-            <span className="text-xs text-muted-foreground">إيراد الـ SaaS من كل أكاديمية</span>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
+            <div>
+              <h2 className="font-semibold">الأكاديميات والإيرادات والاستخدام</h2>
+              <p className="text-xs text-muted-foreground">ركّز على الأكاديميات غير المفعلة أو التي لديها حالة اشتراك تحتاج متابعة.</p>
+            </div>
+            <span className="text-xs text-muted-foreground">العملة: جنيه مصري</span>
           </div>
           <div className="divide-y">
-            {(academies ?? []).map((a: any) => {
-              const { plan, price, status } = priceFor(a.id);
+            {academyRows.map((academy: any) => {
+              const { plan, price, status, subscription } = priceFor(academy.id);
+              const studentCount = count(students, academy.id);
+              const teacherCount = count(teachers, academy.id);
+              const atRisk = status === "past_due" || subscription?.cancel_at_period_end || subscription?.canceled_at;
               return (
-                <div key={a.id} className="flex flex-wrap items-center gap-3 p-4">
-                  <Avatar><AvatarFallback>{(a.name || "A").slice(0, 2)}</AvatarFallback></Avatar>
+                <div key={academy.id} className="flex flex-wrap items-center gap-3 p-4">
+                  <Avatar><AvatarFallback>{(academy.name || "أ").slice(0, 2)}</AvatarFallback></Avatar>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{a.name}</p>
+                    <p className="truncate font-medium">{academy.name || "أكاديمية بلا اسم"}</p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {count(students, a.id)} طالب · {count(teachers, a.id)} مدرّس · {new Date(a.created_at).toLocaleDateString("ar-EG")}
+                      {studentCount} طالب · {teacherCount} مدرس · انضمّت {formatDate(academy.created_at)}
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 text-sm">
-                    <div className="text-right">
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <Badge variant={studentCount > 0 ? "success" : "secondary"}>{studentCount > 0 ? "مفعّلة" : "تحتاج تهيئة"}</Badge>
+                    <Badge variant={atRisk ? "destructive" : status === "active" ? "success" : "secondary"}>
+                      {atRisk ? "تحتاج متابعة" : status}
+                    </Badge>
+                    <Badge variant="secondary">{plan?.name ?? "مجانية"}</Badge>
+                    <div className="min-w-28 text-left">
                       <p className="font-semibold text-emerald-700">{EGP(price)}<span className="text-xs font-normal text-muted-foreground">/شهر</span></p>
-                      <p className="text-xs text-muted-foreground">تحصيل: {EGP(sumPaid(a.id))}</p>
+                      <p className="text-xs text-muted-foreground">تحصيل: {EGP(sumPaid(academy.id))}</p>
                     </div>
-                    <Badge variant="secondary">{plan?.name ?? "free"}</Badge>
-                    <Badge variant={status === "active" ? "success" : "secondary"}>{status}</Badge>
                   </div>
                 </div>
               );
             })}
-            {(!academies || academies.length === 0) && (
-              <p className="p-6 text-center text-sm text-muted-foreground">مفيش أكاديميات بعد.</p>
-            )}
+            {academyRows.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">لا توجد أكاديميات بعد.</p>}
           </div>
         </CardContent>
       </Card>
 
       <p className="text-center text-xs text-muted-foreground">
-        💡 إيراد الـ SaaS بييجي من اشتراكات الأكاديميات. لما تتوصّل الدفع (Paymob)، الأكاديميات هتدفع وMRR هيطلع هنا أوتوماتيك.
+        إيراد SaaS الشهري الفعلي يعتمد على الاشتراكات النشطة فقط. لا تُحسب التجارب ضمنه، وتظهر منفصلة ضمن الإيراد المحتمل.
       </p>
     </div>
   );
+}
+
+function MetricCard({ icon, label, value, hint, tone }: { icon: React.ReactNode; label: string; value: string; hint: string; tone: "emerald" | "violet" | "sky" | "amber" }) {
+  const tones = {
+    emerald: "border-emerald-500/30 bg-emerald-500/5 text-emerald-700",
+    violet: "border-violet-500/30 bg-violet-500/5 text-violet-700",
+    sky: "border-sky-500/30 bg-sky-500/5 text-sky-700",
+    amber: "border-amber-500/30 bg-amber-500/5 text-amber-700",
+  };
+  return <Card className={tones[tone]}><CardContent className="p-5"><div className="flex items-center gap-2 text-xs font-medium">{icon}<span>{label}</span></div><p className="mt-2 text-3xl font-bold">{value}</p><p className="mt-1 text-xs text-muted-foreground">{hint}</p></CardContent></Card>;
+}
+
+function FunnelStep({ label, value, hint, final = false }: { label: string; value: number; hint: string; final?: boolean }) {
+  return <div className={`rounded-xl border p-4 ${final ? "border-emerald-500/30 bg-emerald-500/5" : "bg-muted/20"}`}><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-2xl font-bold">{value}</p><p className="mt-1 text-xs text-muted-foreground">{hint}</p></div>;
+}
+
+function OperationalRow({ label, value }: { label: string; value: string }) {
+  return <div className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0"><span className="text-sm text-muted-foreground">{label}</span><span className="font-semibold">{value}</span></div>;
 }

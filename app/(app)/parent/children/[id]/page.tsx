@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,9 +54,14 @@ export default async function ParentChildPage({ params }: { params: { id: string
         description={`${child.grade} · ${groups.map((g) => g.name.split(" — ")[0]).join(", ") || "No groups"}`}
         breadcrumbs={[{ label: "My Children", href: "/parent/children" }, { label: fullName(child) }]}
       >
-        <Button asChild variant="outline">
-          <Link href="/parent"><ArrowLeft className="h-4 w-4" /> Back</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/parent/children/${child.id}/report`} target="_blank"><FileText className="h-4 w-4" /> تقرير قابل للطباعة</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/parent"><ArrowLeft className="h-4 w-4" /> رجوع</Link>
+          </Button>
+        </div>
       </PageHeader>
 
       <Card>

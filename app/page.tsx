@@ -14,6 +14,7 @@ import {
   Baby,
   School,
   Sparkles,
+  MessageCircle,
 } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { LanguageToggle } from "@/components/layout/language-toggle";
@@ -27,12 +28,15 @@ export default function LandingPage() {
   const user = getCurrentUser();
   if (user) redirect(roleHome(user.role));
 
+  const salesWhatsAppUrl = process.env.NEXT_PUBLIC_WHATSAPP_SALES_URL?.trim();
+  const hasSalesWhatsApp = Boolean(salesWhatsAppUrl?.startsWith("https://wa.me/"));
+
   const features = [
     { icon: Users, title: "إدارة الطلاب", desc: "سجلات الطلاب وأولياء الأمور والمجموعات في مكان واحد منظّم." },
     { icon: CalendarCheck, title: "الحضور", desc: "ثلاث طرق لتسجيل الحضور: يدوي، رمز QR، وتسجيل ذاتي مع تنبيهات الغياب." },
     { icon: Wallet, title: "المصاريف والفواتير", desc: "تتبّع المدفوعات والمتأخرات وإصدار إيصالات احترافية لكل طالب." },
     { icon: GraduationCap, title: "الدرجات والواجبات", desc: "تسجيل الدرجات والواجبات وشهادات تقدير قابلة للطباعة." },
-    { icon: MessageSquare, title: "إشعارات واتساب", desc: "إشعارات تلقائية لأولياء الأمور بالدرجات والمدفوعات والغياب." },
+    { icon: MessageSquare, title: "إشعارات واتساب", desc: "رسائل للغياب والدرجات والمدفوعات عند تفعيل الربط وموافقة ولي الأمر." },
     { icon: BarChart3, title: "التقارير والتحليلات", desc: "لوحات تحكم وإحصائيات ذكية تساعدك على اتخاذ قرارات أفضل." },
   ];
 
@@ -73,14 +77,14 @@ export default function LandingPage() {
         <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 lg:grid-cols-2 lg:py-24">
           <div className="space-y-6">
             <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">
-              <Sparkles className="h-3.5 w-3.5" /> منصة إدارة الأكاديميات الأولى في مصر
+              <Sparkles className="h-3.5 w-3.5" /> منصة عربية لإدارة الأكاديميات في مصر
             </div>
             <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
               أدر أكاديميتك <span className="text-brand-600">في مكان واحد</span>، ببساطة وأناقة.
             </h1>
             <p className="text-lg text-muted-foreground">
               {APP_CONFIG.name} منصة متكاملة لإدارة الطلاب والمجموعات والحضور والمصاريف
-              والدرجات — مع بوابات للمدرّسين وأولياء الأمور والطلاب، وإشعارات واتساب تلقائية.
+              والدرجات — مع بوابات للمدرّسين وأولياء الأمور والطلاب، وإشعارات اختيارية منضبطة عبر واتساب.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <Button asChild size="lg">
@@ -193,25 +197,22 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Value proposition */}
       <section className="border-t border-border bg-muted/30 py-16">
         <div className="mx-auto max-w-6xl px-4">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight">قالوا عنّا</h2>
-            <p className="mt-3 text-muted-foreground">آراء أكاديميات تستخدم {APP_CONFIG.name} كل يوم.</p>
+            <h2 className="text-3xl font-bold tracking-tight">مصممة لروتين الأكاديمية اليومي</h2>
+            <p className="mt-3 text-muted-foreground">ابدأ بعملية منظمة الآن، ثم فعّل الأدوات التي تحتاجها مع نمو الأكاديمية.</p>
           </div>
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             {[
-              { name: "أ. منى عبد الله", role: "مديرة أكاديمية النخبة", text: "وفّرت ساعاتٍ يوميًا في تسجيل الحضور والمصاريف، وأصبح أولياء الأمور أكثر رضًا بفضل الإشعارات." },
-              { name: "م. خالد فؤاد", role: "صاحب أكاديمية المستقبل", text: "التقارير والتحليلات تساعدني على فهم أداء الأكاديمية واتخاذ قرارات أفضل." },
-              { name: "أ. سارة إبراهيم", role: "مدرّسة لغة إنجليزية", text: "بوابة المدرّس سهّلت عليّ إدارة مجموعاتي وتسجيل الدرجات بسرعة." },
-            ].map((t) => (
-              <div key={t.name} className="rounded-xl border border-border bg-card p-6">
-                <p className="text-sm leading-relaxed text-foreground/90">&ldquo;{t.text}&rdquo;</p>
-                <div className="mt-4 border-t border-border pt-4">
-                  <p className="font-semibold">{t.name}</p>
-                  <p className="text-xs text-muted-foreground">{t.role}</p>
-                </div>
+              { title: "بيانات منظمة", text: "ملفات للطلاب وأولياء الأمور والمدرسين ومجموعات الدراسة، ضمن أكاديميتك فقط." },
+              { title: "متابعة واضحة", text: "حضور ودرجات وواجبات ومدفوعات وتقارير قابلة للطباعة لتمكين القرار اليومي." },
+              { title: "تواصل منضبط", text: "بوابات منفصلة للأدوار، ورسائل اختيارية لا تُرسل إلا وفق الإعدادات والموافقة." },
+            ].map((item) => (
+              <div key={item.title} className="rounded-xl border border-border bg-card p-6">
+                <h3 className="font-semibold">{item.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.text}</p>
               </div>
             ))}
           </div>
@@ -227,7 +228,7 @@ export default function LandingPage() {
           <div className="mt-10 space-y-3">
             {[
               { q: "هل أحتاج بطاقة ائتمان للبدء؟", a: "لا. أنشئ حسابك وابدأ مجانًا دون أي بطاقة أو التزام." },
-              { q: "كيف يتابع أولياء الأمور أبناءهم؟", a: "يحصل كل ولي أمر على بوابة مخصصة للاطّلاع على الدرجات والحضور والمصاريف، ويتلقّى إشعارات واتساب تلقائية." },
+              { q: "كيف يتابع أولياء الأمور أبناءهم؟", a: "يحصل كل ولي أمر على بوابة مخصصة للاطّلاع على الدرجات والحضور والمصاريف. يمكن تفعيل رسائل واتساب بعد إعداد القناة وتسجيل الموافقة." },
               { q: "هل يمكنني استيراد الطلاب من Excel؟", a: "نعم، يمكنك استيراد كشف طلاب كامل من ملف Excel مع إنشاء حسابات تلقائية للطلاب وأولياء الأمور." },
               { q: "هل بياناتي محمية؟", a: "جميع البيانات محمية بنظام أمان على مستوى قاعدة البيانات (RLS)، وتمرّ كل صلاحية بفحص أمني على الخادم." },
             ].map((f) => (
@@ -249,19 +250,21 @@ export default function LandingPage() {
           <ShieldCheck className="mx-auto mb-4 h-10 w-10" />
           <h2 className="text-3xl font-bold">جاهز للبدء؟</h2>
           <p className="mx-auto mt-3 max-w-md text-white/80">
-            انضم إلى أكاديميات تثق في {APP_CONFIG.name} ونظّم عملك اليوم.
+            أنشئ أكاديميتك مجانًا، واستورد طلابك وابدأ التجربة على بياناتك الفعلية.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Button asChild size="lg" variant="secondary">
               <Link href="/signup">أنشئ أكاديميتك مجانًا</Link>
             </Button>
-            <DemoLoginButton
-              email="admin@myacademy.edu"
-              password="demo1234"
-              label="جرّب العرض التجريبي"
-              variant="outline"
-              className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-            />
+            {hasSalesWhatsApp ? (
+              <Button asChild size="lg" variant="outline" className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white">
+                <a href={salesWhatsAppUrl} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> اطلب تجربة موجهة عبر واتساب</a>
+              </Button>
+            ) : (
+              <Button asChild size="lg" variant="outline" className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white">
+                <Link href="/pricing">قارن الخطط والأسعار</Link>
+              </Button>
+            )}
           </div>
           <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-white/70">
             {["آمنة ومحميّة", "دون التزام", "دعم بالعربية"].map((t) => (
@@ -280,6 +283,7 @@ export default function LandingPage() {
           <p>© {new Date().getFullYear()} {APP_CONFIG.name}. جميع الحقوق محفوظة.</p>
           <div className="flex gap-4">
             <Link href="/login" className="hover:text-foreground">تسجيل الدخول</Link>
+            <Link href="/pricing" className="hover:text-foreground">الأسعار</Link>
             <Link href="/signup" className="hover:text-foreground">إنشاء حساب</Link>
           </div>
         </div>

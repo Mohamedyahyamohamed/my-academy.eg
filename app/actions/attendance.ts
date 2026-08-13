@@ -56,6 +56,7 @@ export async function saveAttendanceAction(
     entries.filter((e) => e.status === "ABSENT").map((e) => e.studentId),
     "⚠️ تنبيه غياب",
     () => "نود إعلامكم بغياب ابنكم عن الحصة اليوم. برجاء المتابعة.",
+    "ATTENDANCE_ABSENCE",
   );
   revalidatePath(`/lessons/${lessonId}`);
   revalidatePath(`/groups/${groupId}`);

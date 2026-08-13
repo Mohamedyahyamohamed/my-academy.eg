@@ -110,9 +110,38 @@ export interface ParentDashboardData {
 export function resolveTeacher(user: SessionUser) {
   return (
     collections().teachers.find(
-      (t) => t.profile_id === user.id || t.email.toLowerCase() === user.email.toLowerCase(),
+      (t) =>
+        t.academy_id === user.academy_id &&
+        (t.profile_id === user.id || t.email?.toLowerCase() === user.email.toLowerCase()),
     ) ?? null
   );
+}
+
+/** Resolve from the request-bound database if the academy snapshot is stale. */
+async function resolveTeacherForDashboard(user: SessionUser) {
+  const cached = resolveTeacher(user);
+  if (cached || !isSupabaseConfigured()) return cached;
+  try {
+    const { createServerSupabaseClient } = await import("@/lib/supabase/server");
+    const client = createServerSupabaseClient();
+    const byProfile = await client
+      .from("teachers")
+      .select("*")
+      .eq("academy_id", user.academy_id)
+      .eq("profile_id", user.id)
+      .maybeSingle();
+    if (byProfile.data) return byProfile.data as any;
+    const byEmail = await client
+      .from("teachers")
+      .select("*")
+      .eq("academy_id", user.academy_id)
+      .ilike("email", user.email)
+      .maybeSingle();
+    return (byEmail.data as any) ?? null;
+  } catch (error) {
+    console.error("resolveTeacherForDashboard error:", (error as Error)?.message);
+    return null;
+  }
 }
 
 export interface TeacherDashboardData {
@@ -129,11 +158,11 @@ export interface TeacherDashboardData {
 }
 
 export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDashboardData | null> {
-  const teacher = resolveTeacher(user);
+  const teacher = await resolveTeacherForDashboard(user);
   if (!teacher) return null;
 
   // RLS-backed fetch.
-  const [allGroups, allLessons, allAttendance, allHomework, allSubmissions, allStudents, allCourses] = await Promise.all([
+  const [allGroups, allLessons, allAttendance, allHomework, allSubmissions, allStudents, allCourses, allGroupStudents] = await Promise.all([
     fetchTableRLS<any>("groups"),
     fetchTableRLS<any>("lessons"),
     fetchTableRLS<any>("attendance"),
@@ -141,6 +170,7 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
     fetchTableRLS<any>("homework_submissions"),
     fetchTableRLS<any>("students"),
     fetchTableRLS<any>("courses"),
+    fetchTableRLS<any>("group_students"),
   ]);
 
   const scope = teacherGroupScope();
@@ -148,8 +178,9 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
   const myGroups = allGroups.filter((g: any) => groupIds.has(g.id))
     .map((g: any) => ({ ...g, course: allCourses.find((c: any) => c.id === g.course_id) }));
 
+  const groupStudentRows = allGroupStudents.length ? allGroupStudents : collections().groupStudents;
   const enrolledIds = new Set(
-    collections().groupStudents.filter((gs) => groupIds.has(gs.group_id)).map((gs) => gs.student_id)
+    groupStudentRows.filter((gs: any) => groupIds.has(gs.group_id)).map((gs: any) => gs.student_id)
   );
   const myLessons = allLessons.filter((l: any) => groupIds.has(l.group_id))
     .sort((a: any, b: any) => +new Date(a.date) - +new Date(b.date));

@@ -13,12 +13,14 @@ export const dynamic = "force-dynamic";
 
 export default async function ParentDashboard() {
   const user = requireRole("PARENT");
-  const { children, summaries } = await getParentDashboard(user);
+  const { children = [], summaries = {} } = await getParentDashboard(user);
+  const displayName = user.full_name?.trim() || user.email || "User";
+  const firstName = displayName.split(/\s+/)[0] || displayName;
 
   if (children.length === 0) {
     return (
       <div className="space-y-6">
-        <PageHeader title="لوحة التحكم" description={`Welcome, ${user.full_name}.`} />
+        <PageHeader title="لوحة التحكم" description={`Welcome, ${displayName}.`} />
         <EmptyState
           icon={Users}
           title="مفيش أبناء مربوطين بعد"
@@ -44,7 +46,7 @@ export default async function ParentDashboard() {
     <div className="space-y-6">
       <PageHeader
         title="لوحة التحكم"
-        description={`Welcome back, ${user.full_name.split(" ")[0]}. Here's how your children are doing.`}
+        description={`Welcome back, ${firstName}. Here's how your children are doing.`}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -56,7 +58,7 @@ export default async function ParentDashboard() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {children.map((c) => {
-          const s = summaries[c.id] ?? { attendanceRate: 0, averageGrade: 0, outstanding: 0, upcomingLesson: null } as any;
+          const s = summaries[c.id] ?? { attendanceRate: 0, averageGrade: 0, outstanding: 0, upcomingLesson: null, pendingHomework: 0 };
           return (
             <Link key={c.id} href={`/parent/children/${c.id}`}>
               <Card className="h-full transition-shadow hover:shadow-elevated">

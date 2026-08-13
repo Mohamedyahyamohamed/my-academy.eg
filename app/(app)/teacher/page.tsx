@@ -17,11 +17,12 @@ export const dynamic = "force-dynamic";
 
 export default async function TeacherDashboard() {
   const user = requireRole("TEACHER");
+  const displayName = user.full_name?.trim() || user.email || "Teacher";
   const d = await getTeacherDashboard(user);
   if (!d) {
     return (
       <div className="space-y-6">
-        <PageHeader title="لوحة التحكم" description={`Welcome, ${user.full_name}.`} />
+        <PageHeader title="لوحة التحكم" description={`Welcome, ${displayName}.`} />
         <EmptyState
           icon={UsersRound}
           title="No teacher profile linked"
@@ -34,7 +35,7 @@ export default async function TeacherDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`Welcome, ${d.teacherName.split(" ")[0]} 👋`}
+        title={`Welcome, ${(d.teacherName || displayName).split(/\s+/)[0]} 👋`}
         description="Your teaching overview — only your groups, students and lessons."
       />
 

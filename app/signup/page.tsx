@@ -1,8 +1,6 @@
 import Link from "next/link";
-import { Check } from "lucide-react";
 import { SignupForm } from "@/components/auth/signup-form";
 import { Logo } from "@/components/shared/logo";
-import { APP_CONFIG } from "@/lib/constants";
 import { getCurrentUser, roleHome } from "@/services";
 import { redirect } from "next/navigation";
 

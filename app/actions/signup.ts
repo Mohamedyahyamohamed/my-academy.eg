@@ -1,13 +1,13 @@
 "use server";
-import { audit } from "@/services/audit";
 
+import { audit } from "@/services/audit";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { SESSION_COOKIE } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/services/supabase/config";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
-import { invalidateStore, persistInsert, collections } from "@/services/data/store";
+import { invalidateStore } from "@/services/data/store";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { sendWelcomeEmail } from "@/lib/email";
 import type { SessionUser } from "@/types";
@@ -20,96 +20,80 @@ export interface SignupInput {
   password: string;
 }
 
+/** Creates a new academy and its first (owner) administrator. */
 export async function signupAction(input: SignupInput) {
-  // Rate limit: prevent abuse.
-  const rl = await rateLimit(`signup:${input.email.toLowerCase()}`, LIMITS.signup.max, LIMITS.signup.window);
-  if (!rl.allowed) {
-    return { ok: false, error: "Too many signup attempts. Please try again later." };
-  }
-  if (!input.email || !input.password || !input.academyName || !input.fullName) {
-    return { ok: false, error: "All fields are required." };
-  }
-  if (input.password.length < 6) {
-    return { ok: false, error: "Password must be at least 6 characters." };
-  }
-  if (!isSupabaseConfigured()) {
-    return { ok: false, error: "Self-signup requires Supabase. (Demo mode is single-academy.)" };
-  }
+  const email = input.email.trim().toLowerCase();
+  const academyName = input.academyName.trim();
+  const fullName = input.fullName.trim();
+  const rl = await rateLimit(`signup:${email}`, LIMITS.signup.max, LIMITS.signup.window);
+  if (!rl.allowed) return { ok: false, error: "محاولات كثيرة. حاول مرة أخرى لاحقًا." };
+  if (!email || !input.password || !academyName || !fullName) return { ok: false, error: "جميع الحقول مطلوبة." };
+  if (input.password.length < 8) return { ok: false, error: "كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل." };
+  if (!isSupabaseConfigured()) return { ok: false, error: "يتطلب إنشاء الأكاديمية إعداد قاعدة البيانات أولًا." };
 
-  const client = nodeSupabaseClient()!;
+  const client = nodeSupabaseClient();
+  if (!client) return { ok: false, error: "تعذّر الاتصال بقاعدة البيانات." };
 
-  // 1. Create the academy.
-  const slug =
-    input.academyName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") +
-    "-" +
-    Math.random().toString(36).slice(2, 6);
-  const { data: academy, error: academyErr } = await client
+  const slugBase = academyName
+    .toLowerCase()
+    .replace(/[^a-z0-9\u0600-\u06ff]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 48) || "academy";
+  const slug = `${slugBase}-${Math.random().toString(36).slice(2, 8)}`;
+
+  const { data: academy, error: academyError } = await client
     .from("academies")
-    .insert({
-      name: input.academyName,
-      slug,
-      currency: "EGP",
-      timezone: "Africa/Cairo",
-    })
-    .select()
+    .insert({ name: academyName, slug, currency: "EGP", timezone: "Africa/Cairo" })
+    .select("id")
     .single();
-  if (academyErr) {
-    return { ok: false, error: "Could not create academy: " + academyErr.message };
-  }
+  if (academyError || !academy) return { ok: false, error: "تعذّر إنشاء الأكاديمية. حاول مرة أخرى." };
 
-  // 2. Create the admin auth user.
-  const { data: userData, error: userErr } = await client.auth.admin.createUser({
-    email: input.email,
+  const { data: userData, error: userError } = await client.auth.admin.createUser({
+    email,
     password: input.password,
     email_confirm: true,
-    user_metadata: { full_name: input.fullName, role: "ADMIN", academy_id: academy!.id },
+    user_metadata: { full_name: fullName, role: "ADMIN", academy_id: academy.id },
   });
-  if (userErr) {
-    // rollback academy
-    await client.from("academies").delete().eq("id", academy!.id);
-    return { ok: false, error: userErr.message };
+  if (userError || !userData.user) {
+    await client.from("academies").delete().eq("id", academy.id);
+    return { ok: false, error: userError?.message || "تعذّر إنشاء حساب المدير." };
   }
-  const uid = userData.user.id;
 
-  // 3. Upsert the admin profile into the new academy.
-  await client.from("profiles").upsert({
-    id: uid,
-    academy_id: academy!.id,
-    email: input.email,
+  const userId = userData.user.id;
+  const now = new Date().toISOString();
+  const { error: profileError } = await client.from("profiles").upsert({
+    id: userId,
+    academy_id: academy.id,
+    email,
     role: "ADMIN",
-    full_name: input.fullName,
+    full_name: fullName,
     is_active: true,
+    created_at: now,
+    updated_at: now,
   });
+  if (profileError) {
+    await client.auth.admin.deleteUser(userId);
+    await client.from("academies").delete().eq("id", academy.id);
+    return { ok: false, error: "تعذّر تجهيز ملف مالك الأكاديمية." };
+  }
 
-  // 4. Grant the owner an explicit active membership for SaaS authorization.
-  const { error: ownerMembershipError } = await client.from("academy_memberships").upsert({
-    academy_id: academy!.id,
-    profile_id: uid,
+  const { error: membershipError } = await client.from("academy_memberships").upsert({
+    academy_id: academy.id,
+    profile_id: userId,
     role: "ADMIN",
     status: "ACTIVE",
-    joined_at: new Date().toISOString(),
+    joined_at: now,
+    updated_at: now,
   }, { onConflict: "academy_id,profile_id" });
-  if (ownerMembershipError) {
-    await client.auth.admin.deleteUser(uid);
-    await client.from("academies").delete().eq("id", academy!.id);
-    return { ok: false, error: "Could not activate the academy owner: " + ownerMembershipError.message };
+  if (membershipError) {
+    await client.auth.admin.deleteUser(userId);
+    await client.from("academies").delete().eq("id", academy.id);
+    return { ok: false, error: "تعذّر تفعيل عضوية مالك الأكاديمية." };
   }
 
-  // 5. Refresh the in-memory cache so the new academy is visible.
   invalidateStore();
-
-  // 4b. Send welcome email.
-  void sendWelcomeEmail(input.email, input.fullName, "ADMIN");
-
-  // 5. Issue the session cookie.
-  const user: SessionUser = {
-    id: uid,
-    email: input.email,
-    role: "ADMIN",
-    full_name: input.fullName,
-    avatar_url: null,
-    academy_id: academy!.id,
-  };
+  void sendWelcomeEmail(email, fullName, "ADMIN");
+  const user: SessionUser = { id: userId, email, role: "ADMIN", full_name: fullName, avatar_url: null, academy_id: academy.id };
   cookies().set(SESSION_COOKIE, createSignedSession(user), {
     httpOnly: true,
     sameSite: "lax",
@@ -117,123 +101,25 @@ export async function signupAction(input: SignupInput) {
     path: "/",
     maxAge: sessionMaxAgeSeconds(),
   });
-
-  void audit({ action: "mutation" });
+  void audit({ action: "academy.create", entity_type: "academy", entity_id: academy.id }, { id: userId, role: "ADMIN" });
   revalidatePath("/dashboard");
   redirect("/onboarding");
 }
 
 /**
- * Self-signup for a PARENT or STUDENT joining an EXISTING academy by code.
- * Creates: auth user + profile + (parent | student) record linked to the academy.
+ * Legacy entry point retained so stale browser bundles fail closed. Public
+ * enrollment by academy slug was removed because a copied code could grant
+ * unverified access to tenant data. Use a tokenized `/invite/[token]` link.
  */
-export async function joinAcademyAction(input: {
+export async function joinAcademyAction(_input: {
   role: "PARENT" | "STUDENT";
   academyCode: string;
   fullName: string;
   email: string;
   password: string;
 }) {
-  const rl = await rateLimit(`signup:${input.email.toLowerCase()}`, LIMITS.signup.max, LIMITS.signup.window);
-  if (!rl.allowed) {
-    return { ok: false, error: "Too many signup attempts. Please try again later." };
-  }
-  if (!input.email || !input.password || !input.fullName || !input.academyCode) {
-    return { ok: false, error: "All fields are required." };
-  }
-  if (input.password.length < 6) {
-    return { ok: false, error: "Password must be at least 6 characters." };
-  }
-  if (!isSupabaseConfigured()) {
-    return { ok: false, error: "Self-signup requires Supabase." };
-  }
-
-  const client = nodeSupabaseClient();
-  if (!client) return { ok: false, error: "Supabase not configured." };
-
-  // 1. Find the academy by its signup code (= slug).
-  const code = input.academyCode.trim().toLowerCase();
-  const { data: academy, error: academyErr } = await client
-    .from("academies")
-    .select("id,name,slug")
-    .ilike("slug", code)
-    .maybeSingle();
-  if (academyErr || !academy) {
-    return { ok: false, error: "Invalid academy code. Ask your academy for the correct code." };
-  }
-
-  // 2. Create the auth user.
-  const { data: userData, error: userErr } = await client.auth.admin.createUser({
-    email: input.email,
-    password: input.password,
-    email_confirm: true,
-    user_metadata: { full_name: input.fullName, role: input.role, academy_id: academy.id },
-  });
-  if (userErr) {
-    return { ok: false, error: userErr.message };
-  }
-  const uid = userData.user.id;
-  const now = new Date().toISOString();
-
-  // 3. Profile.
-  await client.from("profiles").upsert({
-    id: uid, academy_id: academy.id, email: input.email, role: input.role,
-    full_name: input.fullName, is_active: true,
-  });
-
-  const { error: membershipError } = await client.from("academy_memberships").upsert({
-    academy_id: academy.id,
-    profile_id: uid,
-    role: input.role,
-    status: "ACTIVE",
-    joined_at: now,
-  }, { onConflict: "academy_id,profile_id" });
-  if (membershipError) {
-    await client.auth.admin.deleteUser(uid);
-    return { ok: false, error: "Could not activate academy access: " + membershipError.message };
-  }
-
-  const [first, ...rest] = input.fullName.trim().split(/\s+/);
-  const last = rest.join(" ") || "-";
-
-  // 4. Parent or Student record (linked so the portal resolves it).
-  if (input.role === "PARENT") {
-    const p = {
-      id: crypto.randomUUID(), academy_id: academy.id, profile_id: uid,
-      first_name: first, last_name: last, email: input.email,
-      phone: null, occupation: null, created_at: now, updated_at: now,
-    };
-    collections().parents.push(p as any);
-    await persistInsert("parents", p);
-  } else {
-    const s = {
-      id: crypto.randomUUID(), academy_id: academy.id,
-      first_name: first, last_name: last,
-      phone: null, email: input.email, date_of_birth: null, gender: null,
-      parent_id: null, school: null, grade: null, notes: null,
-      status: "ACTIVE", enrolled_at: now, created_at: now, updated_at: now,
-    };
-    collections().students.push(s as any);
-    await persistInsert("students", s);
-  }
-
-  invalidateStore();
-
-  // 5. Session cookie.
-  const user: SessionUser = {
-    id: uid, email: input.email, role: input.role,
-    full_name: input.fullName, avatar_url: null, academy_id: academy.id,
+  return {
+    ok: false,
+    error: "الانضمام بكود عام لم يعد متاحًا. اطلب من الأكاديمية إرسال رابط دعوة آمن إلى بريدك الإلكتروني.",
   };
-  cookies().set(SESSION_COOKIE, createSignedSession(user), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: sessionMaxAgeSeconds(),
-  });
-
-  void audit({ action: "mutation" });
-  void sendWelcomeEmail(input.email, input.fullName, input.role);
-
-  redirect(input.role === "PARENT" ? "/parent" : "/student");
 }

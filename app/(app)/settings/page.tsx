@@ -7,7 +7,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { RoleBadge } from "@/components/shared/badges";
 import { AcademySettingsForm, CoursesManager } from "@/components/settings/settings-forms";
 import { AcademyBranding } from "@/components/settings/academy-branding";
-import { CreateUserDialog } from "@/components/settings/create-user-dialog";
+import { InviteManager } from "@/components/settings/invite-manager";
+import { listAcademyInvites } from "@/app/actions/invites";
 import { ChangePasswordForm } from "@/components/settings/change-password";
 import { MiscService, requireRole } from "@/services";
 import { initials } from "@/lib/utils";
@@ -20,6 +21,7 @@ export default async function SettingsPage() {
   const academy = MiscService.getAcademy();
   const courses = await MiscService.listCourses();
   const users = MiscService.listProfiles();
+  const invites = await listAcademyInvites();
 
   return (
     <div className="space-y-6">
@@ -50,20 +52,13 @@ export default async function SettingsPage() {
 
           <Card className="mt-4">
             <CardHeader>
-              <CardTitle className="text-base">كود انضمام الطلاب وأولياء الأمور</CardTitle>
+              <CardTitle className="text-base">الانضمام الآمن للأكاديمية</CardTitle>
               <CardDescription>
-                شارك الكود ده مع الطلاب وأولياء الأمور عشان يسجّلوا لوحدهم وينضمّوا لأكاديميتك.
+                للحفاظ على خصوصية بيانات الأكاديمية، أرسل دعوة شخصية من تبويب المستخدمين بدل مشاركة كود عام للتسجيل.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap items-center gap-3">
-                <code className="rounded-lg border border-border bg-muted px-4 py-2 text-lg font-semibold tracking-wide">
-                  {academy.slug ?? "—"}
-                </code>
-                <p className="text-xs text-muted-foreground">
-                  في صفحة التسجيل (/signup)، الطالب/ولي الأمر بيدخل الكود ده + بياناته وينضم تلقائيًا.
-                </p>
-              </div>
+              <p className="text-sm text-muted-foreground">كل دعوة مرتبطة بالبريد الإلكتروني، محدودة المدة، وتُستخدم مرة واحدة فقط.</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -75,7 +70,6 @@ export default async function SettingsPage() {
                 <CardTitle className="text-base">Users & access</CardTitle>
                 <CardDescription>People with accounts in your academy.</CardDescription>
               </div>
-              <CreateUserDialog />
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y">
@@ -93,6 +87,9 @@ export default async function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+          <div className="mt-4">
+            <InviteManager initialInvites={invites} />
+          </div>
         </TabsContent>
 
         <TabsContent value="courses">

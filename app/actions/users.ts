@@ -1,15 +1,13 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { requireRole } from "@/services";
-import { currentAcademyId } from "@/services/session";
-import { collections, invalidateStore } from "@/services/data/store";
-import { nodeSupabaseClient } from "@/lib/supabase/node-client";
-import { persistInsert } from "@/services/data/store";
 import type { Role } from "@/types";
-import { sendInviteEmail } from "@/lib/email";
-import { audit } from "@/services/audit";
 
+/**
+ * Legacy type retained for stale clients compiled before the invitation flow.
+ * Password-based provisioning has been removed: it leaked credentials through
+ * administrator workflows and bypassed the invite acceptance audit trail.
+ */
 export interface CreateUserInput {
   full_name: string;
   email: string;
@@ -18,93 +16,14 @@ export interface CreateUserInput {
   phone?: string;
 }
 
-export async function createUserAction(input: CreateUserInput) {
+/**
+ * @deprecated Use createAcademyInviteAction from app/actions/invites instead.
+ * This fails closed even if an old bundle invokes the server action directly.
+ */
+export async function createUserAction(_input: CreateUserInput) {
   requireRole("ADMIN");
-  if (!input.email || !input.password || !input.full_name) {
-    return { ok: false, error: "Name, email and password are required." };
-  }
-  if (input.password.length < 6) {
-    return { ok: false, error: "Password must be at least 6 characters." };
-  }
-
-  const client = nodeSupabaseClient();
-  if (!client) return { ok: false, error: "Supabase not configured." };
-
-  const academyId = currentAcademyId();
-
-  // 1. Create the auth user with explicit tenant context.
-  const { data, error } = await client.auth.admin.createUser({
-    email: input.email,
-    password: input.password,
-    email_confirm: true,
-    user_metadata: { full_name: input.full_name, role: input.role, academy_id: academyId },
-  });
-  if (error) {
-    return { ok: false, error: error.message };
-  }
-  const uid = data.user.id;
-
-  // 2. Profile (academy-scoped).
-  const profile = {
-    id: uid,
-    academy_id: academyId,
-    email: input.email,
-    role: input.role,
-    full_name: input.full_name,
-    phone: input.phone ?? null,
-    avatar_url: null,
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+  return {
+    ok: false,
+    error: "تم إيقاف إنشاء الحساب بكلمة مرور من لوحة الإدارة. استخدم «دعوة مستخدم» لإرسال رابط آمن ومحدود المدة.",
   };
-  const { error: profileError } = await client.from("profiles").upsert(profile);
-  if (profileError) {
-    await client.auth.admin.deleteUser(uid);
-    return { ok: false, error: profileError.message };
-  }
-
-  const { error: membershipError } = await client.from("academy_memberships").upsert({
-    academy_id: academyId,
-    profile_id: uid,
-    role: input.role,
-    status: "ACTIVE",
-    joined_at: new Date().toISOString(),
-  }, { onConflict: "academy_id,profile_id" });
-  if (membershipError) {
-    await client.auth.admin.deleteUser(uid);
-    return { ok: false, error: "Could not grant academy access: " + membershipError.message };
-  }
-
-  collections().profiles.push(profile as any);
-
-  // 3. Linked domain record (teacher/parent/student) so the account is usable.
-  const [firstName, ...rest] = input.full_name.split(" ");
-  const lastName = rest.join(" ") || "-";
-  if (input.role === "TEACHER") {
-    const t = {
-      id: crypto.randomUUID(), academy_id: academyId, profile_id: uid,
-      first_name: firstName, last_name: lastName, email: input.email,
-      phone: input.phone ?? null, bio: null, is_active: true,
-      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-    };
-    collections().teachers.push(t as any);
-    void persistInsert("teachers", t);
-  } else if (input.role === "PARENT") {
-    const p = {
-      id: crypto.randomUUID(), academy_id: academyId, profile_id: uid,
-      first_name: firstName, last_name: lastName, email: input.email,
-      phone: input.phone ?? null, occupation: null,
-      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-    };
-    collections().parents.push(p as any);
-    void persistInsert("parents", p);
-  }
-
-    void audit({ action: "user.create" });
-  revalidatePath("/settings");
-  revalidatePath("/students");
-  revalidatePath("/dashboard");
-  // Send invite email with credentials.
-  void sendInviteEmail(input.email, input.full_name, input.password, input.role);
-  return { ok: true };
 }

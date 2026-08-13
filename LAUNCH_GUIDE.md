@@ -182,3 +182,19 @@ npx playwright test e2e/security.spec.ts e2e/billing-webhooks.spec.ts
 [1]: https://vercel.com/docs/environment-variables/managing-environment-variables "Vercel — Managing environment variables"
 [2]: https://docs.stripe.com/webhooks "Stripe — Receive Stripe events in your webhook endpoint"
 [3]: https://resend.com/docs/dashboard/domains/introduction "Resend — Verified Domains"
+
+
+## 10. التسعير الابتدائي — أغسطس 2026
+
+تم اعتماد تسعير مبدئي قابل للتعديل من ملف `services/saas.ts`، والأسعار شهرية بالجنيه المصري:
+
+| الخطة | السعر الشهري | الطلاب | المدرسون | المجموعات | الأكاديميات | التخزين |
+|---|---:|---:|---:|---:|---:|---:|
+| مجاني | 0 EGP | 50 | 3 | 5 | 1 | 250 MB |
+| أساسي | 399 EGP | 200 | 10 | 25 | 1 | 2 GB |
+| احترافي | 899 EGP | 750 | 35 | 100 | 3 | 10 GB |
+| مؤسسات | 2,499 EGP | 5,000 | 200 | 500 | 10 | 50 GB |
+
+هذه أرقام إطلاق أولية قابلة للمراجعة بعد أول عملاء. حدود الطلاب والمدرسين والمجموعات تدخل في منطق الخادم، بينما حدود الأكاديميات والتخزين معروضة حاليًا كحدود تجارية للخطة وتحتاج طبقة قياس واستهلاك مستقلة قبل فرضها آليًا. لتعديل الأسعار أو الحدود، عدّل `PLANS` في `services/saas.ts` ثم نفّذ فحص TypeScript وbuild قبل النشر.
+
+يفضل اختبار الأسعار مع أول 3–5 أكاديميات وقياس التحويل والإلغاء وتكلفة الدعم قبل تثبيت الأسعار نهائيًا. لا يتم تفعيل الدفع الحقيقي قبل إدخال مفاتيح Stripe أو Paymob التجارية واختبار Webhook ناجح.

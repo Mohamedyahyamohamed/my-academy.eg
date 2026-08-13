@@ -18,6 +18,11 @@ import {
   DEMO_ACCOUNTS,
   roleHome,
 } from "@/lib/auth";
+import {
+  createSignedSession,
+  readSignedSession,
+  sessionMaxAgeSeconds,
+} from "@/lib/session-cookie";
 
 // Re-export so server consumers can import from the service barrel.
 export { DEMO_ACCOUNTS, roleHome, SESSION_COOKIE };
@@ -43,20 +48,8 @@ function resolveLocalUser(email: string): SessionUser | null {
  * Returns null if not authenticated.
  */
 export function getCurrentUser(): SessionUser | null {
-  if (isSupabaseConfigured()) {
-    // Production path: would await supabase.auth.getUser()
-    // Falls through to local for this build.
-  }
   const raw = cookies().get(SESSION_COOKIE)?.value;
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(
-      Buffer.from(raw, "base64").toString("utf-8"),
-    ) as SessionUser;
-    return parsed;
-  } catch {
-    return null;
-  }
+  return readSignedSession(raw);
 }
 
 /** Require an authenticated user, else redirect to login. */
@@ -76,14 +69,14 @@ export function requireRole(...roles: Role[]): SessionUser {
 }
 
 /**
- * The academy id of the currently-authenticated user.
- * Falls back to the first academy (used by scripts/tests without a session).
- * Used to scope every read to the caller's academy (app-layer RLS).
+ * The academy id selected in the authenticated server session.
+ * This intentionally fails closed: choosing the first academy for an anonymous
+ * request is a cross-tenant data leak in a multi-academy SaaS.
  */
 export function currentAcademyId(): string {
-  const u = getCurrentUser();
-  if (u?.academy_id) return u.academy_id;
-  return collections().academies[0]?.id ?? "";
+  const academyId = getCurrentUser()?.academy_id;
+  if (!academyId) throw new Error("Missing authenticated academy context.");
+  return academyId;
 }
 
 /** The teacher record id of the current user, or null if they're not a teacher. */
@@ -91,7 +84,7 @@ export function currentTeacherId(): string | null {
   const u = getCurrentUser();
   if (!u || u.role !== "TEACHER") return null;
   const t = collections().teachers.find(
-    (t) => t.profile_id === u.id || t.email.toLowerCase() === u.email.toLowerCase(),
+    (t) => t.academy_id === u.academy_id && (t.profile_id === u.id || t.email.toLowerCase() === u.email.toLowerCase()),
   );
   return t?.id ?? null;
 }
@@ -119,12 +112,12 @@ export async function login(
     return { ok: false, error: "No account found for this email." };
   }
   if (isSupabaseConfigured() === false) {
-    const token = Buffer.from(JSON.stringify(user), "utf-8").toString("base64");
-    cookies().set(SESSION_COOKIE, token, {
+    cookies().set(SESSION_COOKIE, createSignedSession(user), {
       httpOnly: true,
       sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: sessionMaxAgeSeconds(),
     });
   }
   return { ok: true, user };

@@ -11,6 +11,7 @@ import { invalidateStore, persistInsert, collections } from "@/services/data/sto
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { sendWelcomeEmail } from "@/lib/email";
 import type { SessionUser } from "@/types";
+import { createSignedSession, sessionMaxAgeSeconds } from "@/lib/session-cookie";
 
 export interface SignupInput {
   academyName: string;
@@ -61,7 +62,7 @@ export async function signupAction(input: SignupInput) {
     email: input.email,
     password: input.password,
     email_confirm: true,
-    user_metadata: { full_name: input.fullName, role: "ADMIN" },
+    user_metadata: { full_name: input.fullName, role: "ADMIN", academy_id: academy!.id },
   });
   if (userErr) {
     // rollback academy
@@ -80,7 +81,21 @@ export async function signupAction(input: SignupInput) {
     is_active: true,
   });
 
-  // 4. Refresh the in-memory cache so the new academy is visible.
+  // 4. Grant the owner an explicit active membership for SaaS authorization.
+  const { error: ownerMembershipError } = await client.from("academy_memberships").upsert({
+    academy_id: academy!.id,
+    profile_id: uid,
+    role: "ADMIN",
+    status: "ACTIVE",
+    joined_at: new Date().toISOString(),
+  }, { onConflict: "academy_id,profile_id" });
+  if (ownerMembershipError) {
+    await client.auth.admin.deleteUser(uid);
+    await client.from("academies").delete().eq("id", academy!.id);
+    return { ok: false, error: "Could not activate the academy owner: " + ownerMembershipError.message };
+  }
+
+  // 5. Refresh the in-memory cache so the new academy is visible.
   invalidateStore();
 
   // 4b. Send welcome email.
@@ -95,12 +110,12 @@ export async function signupAction(input: SignupInput) {
     avatar_url: null,
     academy_id: academy!.id,
   };
-  const token = Buffer.from(JSON.stringify(user), "utf-8").toString("base64");
-  cookies().set(SESSION_COOKIE, token, {
+  cookies().set(SESSION_COOKIE, createSignedSession(user), {
     httpOnly: true,
     sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: sessionMaxAgeSeconds(),
   });
 
   void audit({ action: "mutation" });
@@ -152,7 +167,7 @@ export async function joinAcademyAction(input: {
     email: input.email,
     password: input.password,
     email_confirm: true,
-    user_metadata: { full_name: input.fullName, role: input.role },
+    user_metadata: { full_name: input.fullName, role: input.role, academy_id: academy.id },
   });
   if (userErr) {
     return { ok: false, error: userErr.message };
@@ -165,6 +180,18 @@ export async function joinAcademyAction(input: {
     id: uid, academy_id: academy.id, email: input.email, role: input.role,
     full_name: input.fullName, is_active: true,
   });
+
+  const { error: membershipError } = await client.from("academy_memberships").upsert({
+    academy_id: academy.id,
+    profile_id: uid,
+    role: input.role,
+    status: "ACTIVE",
+    joined_at: now,
+  }, { onConflict: "academy_id,profile_id" });
+  if (membershipError) {
+    await client.auth.admin.deleteUser(uid);
+    return { ok: false, error: "Could not activate academy access: " + membershipError.message };
+  }
 
   const [first, ...rest] = input.fullName.trim().split(/\s+/);
   const last = rest.join(" ") || "-";
@@ -197,9 +224,12 @@ export async function joinAcademyAction(input: {
     id: uid, email: input.email, role: input.role,
     full_name: input.fullName, avatar_url: null, academy_id: academy.id,
   };
-  const token = Buffer.from(JSON.stringify(user), "utf-8").toString("base64");
-  cookies().set(SESSION_COOKIE, token, {
-    httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7,
+  cookies().set(SESSION_COOKIE, createSignedSession(user), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: sessionMaxAgeSeconds(),
   });
 
   void audit({ action: "mutation" });

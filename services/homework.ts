@@ -11,7 +11,8 @@ import { collections } from "./data/store";
 import { persistInsert, persistUpdate } from "./data/store";
 import { getGroup, getLesson, studentsInGroup, byAcademy, teacherGroupScope, fetchTableRLS } from "./_shared";
 import { fullName } from "./_shared";
-import { currentAcademyId } from "./session";
+import { currentAcademyId, getCurrentUser } from "./session";
+import { can, hasAcademyWideScope } from "@/lib/permissions";
 
 function attachHw(h: Homework): Homework {
   return { ...h, group: getGroup(h.group_id), lesson: getLesson(h.lesson_id) };
@@ -75,11 +76,56 @@ function hid() {
   return crypto.randomUUID();
 }
 
+function homeworkInCurrentAcademy(homeworkId: string): Homework {
+  const homework = collections().homework.find((item) => item.id === homeworkId);
+  const academyId = currentAcademyId();
+  const group = homework ? collections().groups.find((item) => item.id === homework.group_id) : null;
+  if (!homework || !group || homework.academy_id !== academyId || group.academy_id !== academyId) {
+    throw new Error("Homework is outside the authenticated academy.");
+  }
+  return homework;
+}
+
+function assertHomeworkManager(homework: Homework) {
+  const user = getCurrentUser();
+  if (!user || !can(user, "homework.manage")) throw new Error("You are not allowed to manage homework.");
+  if (!hasAcademyWideScope(user.role) && !teacherGroupScope()?.has(homework.group_id)) {
+    throw new Error("You can only manage homework for an assigned group.");
+  }
+  return user;
+}
+
+function assertStudentSubmissionScope(homework: Homework, studentId: string) {
+  const user = getCurrentUser();
+  if (!user || user.role !== "STUDENT" || !can(user, "homework.submit")) {
+    throw new Error("Only the enrolled student can submit homework.");
+  }
+  const student = collections().students.find((item) => item.id === studentId && item.academy_id === homework.academy_id);
+  const enrolled = collections().groupStudents.some((item) => item.group_id === homework.group_id && item.student_id === studentId);
+  if (!student || !enrolled || student.email?.toLowerCase() !== user.email.toLowerCase()) {
+    throw new Error("You can only submit homework assigned to your own account.");
+  }
+}
+
 export async function createHomework(input: HomeworkInput): Promise<Homework> {
+  const user = getCurrentUser();
+  if (!user || !can(user, "homework.manage")) throw new Error("You are not allowed to create homework.");
+  const academyId = currentAcademyId();
+  const group = collections().groups.find((item) => item.id === input.group_id && item.academy_id === academyId);
+  if (!group) throw new Error("Homework group is outside the authenticated academy.");
+  if (!hasAcademyWideScope(user.role) && !teacherGroupScope()?.has(group.id)) {
+    throw new Error("You can only create homework for an assigned group.");
+  }
+  if (input.lesson_id) {
+    const lesson = collections().lessons.find((item) => item.id === input.lesson_id);
+    if (!lesson || lesson.academy_id !== academyId || lesson.group_id !== group.id) {
+      throw new Error("Homework lesson must belong to the selected group.");
+    }
+  }
   const now = new Date().toISOString();
   const h: Homework = {
     id: hid(),
-    academy_id: currentAcademyId(),
+    academy_id: academyId,
     group_id: input.group_id,
     lesson_id: input.lesson_id ?? null,
     title: input.title,
@@ -113,6 +159,8 @@ export async function createHomework(input: HomeworkInput): Promise<Homework> {
 }
 
 export function deleteHomework(id: string): boolean {
+  const homework = homeworkInCurrentAcademy(id);
+  assertHomeworkManager(homework);
   const before = collections().homework.length;
   collections().homework = collections().homework.filter((h) => h.id !== id);
   collections().submissions = collections().submissions.filter(
@@ -136,6 +184,7 @@ export function getSubmission(
 export async function listSubmissions(
   homeworkId: string,
 ): Promise<HomeworkSubmission[]> {
+  assertHomeworkManager(homeworkInCurrentAcademy(homeworkId));
   return collections()
     .submissions.filter((s) => s.homework_id === homeworkId)
     .map((s) => ({
@@ -151,6 +200,9 @@ export function submitHomework(
   content: string,
   fileUrl?: string,
 ): HomeworkSubmission | null {
+  const homework = homeworkInCurrentAcademy(homeworkId);
+  assertStudentSubmissionScope(homework, studentId);
+  if (new Date(homework.deadline).getTime() < Date.now()) throw new Error("Homework deadline has passed.");
   let s = collections().submissions.find(
     (x) => x.homework_id === homeworkId && x.student_id === studentId,
   );
@@ -189,6 +241,10 @@ export function reviewSubmission(
 ): HomeworkSubmission | null {
   const s = collections().submissions.find((x) => x.id === submissionId);
   if (!s) return null;
+  const homework = homeworkInCurrentAcademy(s.homework_id);
+  assertHomeworkManager(homework);
+  const enrolled = collections().groupStudents.some((item) => item.group_id === homework.group_id && item.student_id === s.student_id);
+  if (!enrolled) throw new Error("Submission student is not enrolled in the homework group.");
   s.feedback = feedback;
   s.grade = grade ?? s.grade;
   s.status = "REVIEWED";

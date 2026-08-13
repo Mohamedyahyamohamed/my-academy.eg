@@ -80,16 +80,28 @@ export async function createAssistantAction(input: {
     email: input.email,
     password: input.password,
     email_confirm: true,
-    user_metadata: { full_name: input.full_name, role: "TEACHER" },
+    user_metadata: { full_name: input.full_name, role: "TEACHER", academy_id: academyId },
   });
   if (error) return { ok: false, error: error.message };
   const uid = data.user.id;
 
   // 2. Profile + teacher record.
-  await client.from("profiles").upsert({
+  const { error: profileError } = await client.from("profiles").upsert({
     id: uid, academy_id: academyId, email: input.email, role: "TEACHER",
     full_name: input.full_name, is_active: true,
   });
+  if (profileError) {
+    await client.auth.admin.deleteUser(uid);
+    return { ok: false, error: `Could not create assistant profile: ${profileError.message}` };
+  }
+  const { error: membershipError } = await client.from("academy_memberships").upsert({
+    academy_id: academyId, profile_id: uid, role: "TEACHER", status: "ACTIVE",
+    joined_at: new Date().toISOString(),
+  }, { onConflict: "academy_id,profile_id" });
+  if (membershipError) {
+    await client.auth.admin.deleteUser(uid);
+    return { ok: false, error: `Could not grant assistant access: ${membershipError.message}` };
+  }
   const [first, ...rest] = input.full_name.split(" ");
   const teacherRec = {
     id: crypto.randomUUID(), academy_id: academyId, profile_id: uid,

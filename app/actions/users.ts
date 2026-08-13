@@ -32,12 +32,12 @@ export async function createUserAction(input: CreateUserInput) {
 
   const academyId = currentAcademyId();
 
-  // 1. Create the auth user.
+  // 1. Create the auth user with explicit tenant context.
   const { data, error } = await client.auth.admin.createUser({
     email: input.email,
     password: input.password,
     email_confirm: true,
-    user_metadata: { full_name: input.full_name, role: input.role },
+    user_metadata: { full_name: input.full_name, role: input.role, academy_id: academyId },
   });
   if (error) {
     return { ok: false, error: error.message };
@@ -57,7 +57,24 @@ export async function createUserAction(input: CreateUserInput) {
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
-  await client.from("profiles").upsert(profile);
+  const { error: profileError } = await client.from("profiles").upsert(profile);
+  if (profileError) {
+    await client.auth.admin.deleteUser(uid);
+    return { ok: false, error: profileError.message };
+  }
+
+  const { error: membershipError } = await client.from("academy_memberships").upsert({
+    academy_id: academyId,
+    profile_id: uid,
+    role: input.role,
+    status: "ACTIVE",
+    joined_at: new Date().toISOString(),
+  }, { onConflict: "academy_id,profile_id" });
+  if (membershipError) {
+    await client.auth.admin.deleteUser(uid);
+    return { ok: false, error: "Could not grant academy access: " + membershipError.message };
+  }
+
   collections().profiles.push(profile as any);
 
   // 3. Linked domain record (teacher/parent/student) so the account is usable.

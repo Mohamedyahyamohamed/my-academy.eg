@@ -74,13 +74,21 @@ export async function fixParentAccountsAction() {
         email: nameEmail,
         password: PARENT_DEFAULT_PASSWORD,
         email_confirm: true,
-        user_metadata: { full_name: `${p.first_name} ${p.last_name}`, role: "PARENT" },
+        user_metadata: { full_name: `${p.first_name} ${p.last_name}`, role: "PARENT", academy_id: aid },
       });
       if (aErr) { errors.push(`${p.first_name} ${p.last_name}: ${aErr.message}`); continue; }
-      await client.from("profiles").upsert({
+      const { error: profileError } = await client.from("profiles").upsert({
         id: aData.user!.id, academy_id: aid, email: nameEmail, role: "PARENT",
         full_name: `${p.first_name} ${p.last_name}`, is_active: true,
       });
+      const { error: membershipError } = profileError ? { error: profileError } : await client
+        .from("academy_memberships")
+        .upsert({ academy_id: aid, profile_id: aData.user!.id, role: "PARENT", status: "ACTIVE", joined_at: new Date().toISOString() }, { onConflict: "academy_id,profile_id" });
+      if (membershipError) {
+        await client.auth.admin.deleteUser(aData.user!.id);
+        errors.push(`${p.first_name} ${p.last_name}: ${membershipError.message}`);
+        continue;
+      }
       await client.from("parents").update({ email: nameEmail, profile_id: aData.user!.id }).eq("id", p.id);
       created++;
     }

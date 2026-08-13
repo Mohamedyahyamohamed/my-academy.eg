@@ -9,12 +9,44 @@ import type {
 } from "@/types";
 import { collections } from "./data/store";
 import { persistDelete, persistInsert } from "./data/store";
-import { studentsInGroup, fullName } from "./_shared";
+import { studentsInGroup, fullName, teacherGroupScope } from "./_shared";
 import { percentage } from "@/lib/utils";
+import { currentAcademyId, getCurrentUser } from "./session";
+import { can, hasAcademyWideScope } from "@/lib/permissions";
 
 export interface AttendanceEntry {
   student: Student;
   status: AttendanceStatus | null;
+}
+
+function lessonInCurrentAcademy(lessonId: string) {
+  const academyId = currentAcademyId();
+  const lesson = collections().lessons.find((item) => item.id === lessonId);
+  const group = lesson ? collections().groups.find((item) => item.id === lesson.group_id) : null;
+  if (!lesson || !group || lesson.academy_id !== academyId || group.academy_id !== academyId) {
+    throw new Error("Lesson is outside the authenticated academy.");
+  }
+  return { lesson, group };
+}
+
+function assertAttendanceManager(lessonId: string) {
+  const user = getCurrentUser();
+  if (!user || !can(user, "attendance.record")) {
+    throw new Error("You are not allowed to record attendance.");
+  }
+  const { lesson, group } = lessonInCurrentAcademy(lessonId);
+  if (!hasAcademyWideScope(user.role) && !teacherGroupScope()?.has(group.id)) {
+    throw new Error("You can only record attendance for an assigned group.");
+  }
+  return { user, lesson, group };
+}
+
+function assertStudentEnrolled(lessonId: string, studentId: string) {
+  const { lesson, group } = lessonInCurrentAcademy(lessonId);
+  const student = collections().students.find((item) => item.id === studentId && item.academy_id === group.academy_id);
+  const enrolled = collections().groupStudents.some((item) => item.group_id === group.id && item.student_id === studentId);
+  if (!student || !enrolled) throw new Error("Student is not enrolled in this lesson group.");
+  return { lesson, group, student };
 }
 
 /** Load a roster for a group/lesson with current attendance state. */
@@ -61,6 +93,10 @@ export async function saveAttendance(
   lessonId: string,
   entries: { studentId: string; status: AttendanceStatus }[],
 ): Promise<void> {
+  assertAttendanceManager(lessonId);
+  const uniqueStudentIds = new Set(entries.map((entry) => entry.studentId));
+  if (uniqueStudentIds.size !== entries.length) throw new Error("Duplicate student attendance entries are not allowed.");
+  for (const entry of entries) assertStudentEnrolled(lessonId, entry.studentId);
   const now = new Date().toISOString();
   // remove existing
   collections().attendance = collections().attendance.filter(
@@ -98,6 +134,16 @@ export async function recordCheckin(
   studentId: string,
   status: AttendanceStatus = "PRESENT",
 ): Promise<void> {
+  const user = getCurrentUser();
+  if (!user) throw new Error("Authentication is required.");
+  const { student } = assertStudentEnrolled(lessonId, studentId);
+  if (user.role === "STUDENT") {
+    if (student.email?.toLowerCase() !== user.email.toLowerCase()) {
+      throw new Error("Students can only check in for themselves.");
+    }
+  } else {
+    assertAttendanceManager(lessonId);
+  }
   const now = new Date().toISOString();
   const existing = collections().attendance.find(
     (a) => a.lesson_id === lessonId && a.student_id === studentId,

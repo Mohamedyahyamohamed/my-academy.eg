@@ -6,8 +6,16 @@ import { isSupabaseConfigured } from "@/services/supabase/config";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import type { SessionUser } from "@/types";
+import { createSignedSession, sessionMaxAgeSeconds } from "@/lib/session-cookie";
 
 export async function POST(req: NextRequest) {
+  if (process.env.NODE_ENV === "production" && !isSupabaseConfigured()) {
+    return NextResponse.json(
+      { error: "إعدادات خدمة الحسابات غير مكتملة. تواصل مع إدارة المنصة." },
+      { status: 503 },
+    );
+  }
+
   const { email, password } = await req.json();
   if (!email || !password) {
     return NextResponse.json(
@@ -32,7 +40,7 @@ export async function POST(req: NextRequest) {
     // Supabase auth cookies so RLS works on subsequent requests.
     try {
       const client = createServerSupabaseClient();
-      const { error: authError } = await client.auth.signInWithPassword({
+      const { data: authData, error: authError } = await client.auth.signInWithPassword({
         email,
         password,
       });
@@ -48,8 +56,8 @@ export async function POST(req: NextRequest) {
       // start weren't in the in-memory cache → login failed.
       const { data: profile, error: profileErr } = await client
         .from("profiles")
-        .select("*")
-        .eq("email", email.toLowerCase())
+        .select("id,email,role,full_name,avatar_url,academy_id")
+        .eq("id", authData.user.id)
         .single();
 
       if (profileErr || !profile) {
@@ -59,23 +67,41 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // Use the explicit SaaS membership as the authorization source. During
+      // rollout, profile.academy_id is a deliberate primary-tenant preference,
+      // never an implicit first-row fallback.
+      const { data: memberships, error: membershipErr } = await client
+        .from("academy_memberships")
+        .select("academy_id,role,joined_at")
+        .eq("profile_id", profile.id)
+        .eq("status", "ACTIVE")
+        .order("joined_at", { ascending: true })
+        .limit(20);
+      if (membershipErr || !memberships?.length) {
+        return NextResponse.json(
+          { ok: false, error: "This account has no active academy membership." },
+          { status: 403 },
+        );
+      }
+      const membership = memberships.find((item) => item.academy_id === profile.academy_id) ?? memberships[0];
+
       // Issue BOTH cookies:
       // 1. ma_session (for sync getCurrentUser in existing code)
       // 2. Supabase auth cookies (set by signInWithPassword above — for RLS)
       const user: SessionUser = {
         id: profile.id,
         email: profile.email,
-        role: profile.role,
+        role: membership.role,
         full_name: profile.full_name,
         avatar_url: profile.avatar_url,
-        academy_id: profile.academy_id,
+        academy_id: membership.academy_id,
       };
-      const token = Buffer.from(JSON.stringify(user), "utf-8").toString("base64");
-      cookies().set(SESSION_COOKIE, token, {
+      cookies().set(SESSION_COOKIE, createSignedSession(user), {
         httpOnly: true,
         sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
         path: "/",
-        maxAge: 60 * 60 * 24 * 7,
+        maxAge: sessionMaxAgeSeconds(),
       });
 
       return NextResponse.json({ ok: true, user });
@@ -110,12 +136,12 @@ export async function POST(req: NextRequest) {
       avatar_url: profile.avatar_url,
       academy_id: profile.academy_id,
     };
-    const token = Buffer.from(JSON.stringify(user), "utf-8").toString("base64");
-    cookies().set(SESSION_COOKIE, token, {
+    cookies().set(SESSION_COOKIE, createSignedSession(user), {
       httpOnly: true,
       sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: sessionMaxAgeSeconds(),
     });
     return NextResponse.json({ ok: true, user });
   }

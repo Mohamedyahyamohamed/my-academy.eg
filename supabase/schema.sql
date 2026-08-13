@@ -54,20 +54,19 @@ create table profiles (
 create index profiles_academy_idx on profiles(academy_id);
 create index profiles_role_idx on profiles(role);
 
--- Auto-create a profile when a new auth user signs up
+-- Auth users are created before the trusted server flow assigns an academy,
+-- profile and academy_membership. Never choose an academy here: selecting the
+-- first row can assign a new user to another tenant.
 create or replace function public.handle_new_user()
-returns trigger language plpgsql security definer as $$
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
 begin
-  insert into public.profiles (id, academy_id, email, full_name, role)
-  values (
-    new.id,
-    coalesce((select id from public.academies limit 1), gen_random_uuid()),
-    new.email,
-    coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
-    coalesce((new.raw_user_meta_data->>'role')::user_role, 'STUDENT')
-  );
   return new;
-end; $$;
+end;
+$$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users

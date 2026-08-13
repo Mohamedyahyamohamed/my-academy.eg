@@ -11,7 +11,7 @@ import type {
   StudentStats,
 } from "@/types";
 import { collections } from "./data/store";
-import { currentAcademyId } from "./session";
+import { currentAcademyId, getCurrentUser } from "./session";
 import { persistInsert, persistUpdate } from "./data/store";
 import {
   attendanceForStudent,
@@ -23,11 +23,13 @@ import {
   gradesForStudent,
   paymentsForStudent,
   teacherStudentScope,
+  teacherGroupScope,
 } from "./_shared";
 import { percentage, round } from "@/lib/utils";
 import { isSupabaseConfigured } from "./supabase/config";
 import { canCreate } from "./saas";
 import { STUDENT_DEFAULT_PASSWORD } from "@/lib/auth";
+import { can, hasAcademyWideScope } from "@/lib/permissions";
 
 function attachRelations(s: Student): Student {
   return {
@@ -35,6 +37,35 @@ function attachRelations(s: Student): Student {
     parent: getParent(s.parent_id) ?? null,
     groups: groupsForStudent(s.id),
   };
+}
+
+function assertStudentManager() {
+  const user = getCurrentUser();
+  if (!user || !can(user, "students.manage")) throw new Error("You are not allowed to manage students.");
+  return user;
+}
+
+function assertRequestedGroupScope(groupIds: string[], academyId: string) {
+  const user = assertStudentManager();
+  const groups = groupIds.map((id) => collections().groups.find((group) => group.id === id && group.academy_id === academyId));
+  if (groups.some((group) => !group)) throw new Error("A selected group is outside the authenticated academy.");
+  if (!hasAcademyWideScope(user.role)) {
+    const scope = teacherGroupScope();
+    if (!scope || groupIds.some((id) => !scope.has(id))) {
+      throw new Error("Teachers can only manage students in assigned groups.");
+    }
+  }
+}
+
+function assertStudentMutationScope(studentId: string): Student {
+  const academyId = currentAcademyId();
+  const student = collections().students.find((item) => item.id === studentId && item.academy_id === academyId);
+  if (!student) throw new Error("Student is outside the authenticated academy.");
+  const user = assertStudentManager();
+  if (!hasAcademyWideScope(user.role) && !teacherStudentScope()?.has(studentId)) {
+    throw new Error("Teachers can only manage students in assigned groups.");
+  }
+  return student;
 }
 
 // ─── CACHE FALLBACKS (used when Supabase not configured) ──────────
@@ -341,6 +372,13 @@ function uid() {
 }
 
 export async function createStudent(input: StudentInput): Promise<Student> {
+  const academyId = currentAcademyId();
+  const groupIdsForAuthorization = input.groupIds ?? [];
+  assertRequestedGroupScope(groupIdsForAuthorization, academyId);
+  if (input.parent_id) {
+    const parent = collections().parents.find((item) => item.id === input.parent_id && item.academy_id === academyId);
+    if (!parent) throw new Error("Parent is outside the authenticated academy.");
+  }
   // SaaS usage limit check (server-enforced).
   const check = canCreate("students");
   if (!check.allowed) {
@@ -348,7 +386,7 @@ export async function createStudent(input: StudentInput): Promise<Student> {
   }
 
   // منع التكرار: نفس الاسم + الموبايل في نفس الأكاديمية
-  const aid = currentAcademyId();
+  const aid = academyId;
   try {
     const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
     const admin = nodeSupabaseClient();
@@ -421,10 +459,11 @@ export async function createStudent(input: StudentInput): Promise<Student> {
         user_metadata: {
           full_name: `${student.first_name} ${student.last_name}`,
           role: "STUDENT",
+          academy_id: aid,
         },
       });
       if (!aErr && aData.user) {
-        await client.from("profiles").upsert({
+        const { error: profileError } = await client.from("profiles").upsert({
           id: aData.user.id,
           academy_id: aid,
           email: loginEmail,
@@ -432,6 +471,13 @@ export async function createStudent(input: StudentInput): Promise<Student> {
           full_name: `${student.first_name} ${student.last_name}`,
           is_active: true,
         });
+        const { error: membershipError } = profileError ? { error: profileError } : await client
+          .from("academy_memberships")
+          .upsert({ academy_id: aid, profile_id: aData.user.id, role: "STUDENT", status: "ACTIVE", joined_at: now }, { onConflict: "academy_id,profile_id" });
+        if (membershipError) {
+          await client.auth.admin.deleteUser(aData.user.id);
+          throw new Error(`Could not grant student access: ${membershipError.message}`);
+        }
         // خزّن الإيميل على سجل الطالب عشان الـ portal يربطه
         student.email = loginEmail;
         void persistUpdate("students", student.id, { email: loginEmail });
@@ -457,8 +503,13 @@ export function updateStudent(
   id: string,
   input: Partial<StudentInput>,
 ): Student | null {
-  const s = collections().students.find((x) => x.id === id);
-  if (!s) return null;
+  const s = assertStudentMutationScope(id);
+  const academyId = currentAcademyId();
+  if (input.parent_id) {
+    const parent = collections().parents.find((item) => item.id === input.parent_id && item.academy_id === academyId);
+    if (!parent) throw new Error("Parent is outside the authenticated academy.");
+  }
+  if (input.groupIds) assertRequestedGroupScope(input.groupIds, academyId);
   Object.assign(s, {
     ...input,
     updated_at: new Date().toISOString(),

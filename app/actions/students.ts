@@ -92,13 +92,13 @@ export async function createMissingStudentAccountsAction() {
       email: loginEmail,
       password: STUDENT_DEFAULT_PASSWORD,
       email_confirm: true,
-      user_metadata: { full_name: `${s.first_name} ${s.last_name}`, role: "STUDENT" },
+      user_metadata: { full_name: `${s.first_name} ${s.last_name}`, role: "STUDENT", academy_id: aid },
     });
     if (aErr) {
       errors.push(`${s.first_name} ${s.last_name}: ${aErr.message}`);
       continue;
     }
-    await client.from("profiles").upsert({
+    const { error: profileError } = await client.from("profiles").upsert({
       id: aData.user!.id,
       academy_id: aid,
       email: loginEmail,
@@ -106,6 +106,14 @@ export async function createMissingStudentAccountsAction() {
       full_name: `${s.first_name} ${s.last_name}`,
       is_active: true,
     });
+    const { error: membershipError } = profileError ? { error: profileError } : await client
+      .from("academy_memberships")
+      .upsert({ academy_id: aid, profile_id: aData.user!.id, role: "STUDENT", status: "ACTIVE", joined_at: new Date().toISOString() }, { onConflict: "academy_id,profile_id" });
+    if (membershipError) {
+      await client.auth.admin.deleteUser(aData.user!.id);
+      errors.push(`${s.first_name} ${s.last_name}: ${membershipError.message}`);
+      continue;
+    }
     await client.from("students").update({ email: loginEmail }).eq("id", s.id);
     created++;
   }

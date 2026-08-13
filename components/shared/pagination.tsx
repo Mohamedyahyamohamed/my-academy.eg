@@ -35,7 +35,7 @@ export function PaginationBar({ pagination }: { pagination: Pagination }) {
           onClick={() => go(page - 1)}
           disabled={page <= 1}
         >
-          <ChevronLeft className="h-4 w-4" /> Prev
+          <ChevronLeft className="h-4 w-4" /> السابق
         </Button>
         <div className="flex items-center gap-1">
           {Array.from({ length: totalPages }).slice(0, 7).map((_, i) => {

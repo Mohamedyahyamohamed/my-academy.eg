@@ -60,7 +60,7 @@ function CheckInInner() {
             <p className="text-sm text-muted-foreground">{msg}</p>
             {msg.includes("expired") && (
               <p className="flex items-center gap-1 text-xs text-amber-600">
-                <Clock className="h-3 w-3" /> Ask your teacher to generate a new QR.
+                <Clock className="h-3 w-3" /> اطلب من مدرّسك إنشاء رمز QR جديد.
               </p>
             )}
           </>
@@ -79,7 +79,7 @@ export default function CheckInPage() {
           fallback={
             <Card>
               <CardContent className="flex items-center justify-center gap-2 p-8 text-sm text-muted-foreground">
-                <Loader2 className="h-5 w-5 animate-spin" /> Loading…
+                <Loader2 className="h-5 w-5 animate-spin" /> جارٍ التحميل…
               </CardContent>
             </Card>
           }

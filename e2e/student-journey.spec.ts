@@ -3,7 +3,7 @@ import { test, expect } from "./helpers";
 test.describe("Student Journey", () => {
   test("login → student dashboard", async ({ studentPage }) => {
     await expect(studentPage).toHaveURL(/\/student/);
-    await expect(studentPage.locator("text=points").or(studentPage.locator("text=Attendance"))).toBeVisible({ timeout: 10_000 });
+    await expect(studentPage.locator("text=النقاط").or(studentPage.locator("text=الحضور"))).toBeVisible({ timeout: 10_000 });
   });
 
   test("can view classes", async ({ studentPage }) => {

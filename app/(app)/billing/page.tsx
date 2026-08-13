@@ -23,7 +23,7 @@ export default async function BillingPage() {
     { label: "المجموعات", current: usage.groups, limit: currentPlan.maxGroups },
   ];
 
-  const formatStorage = (mb: number) => mb >= 1024 ? `${mb / 1024} GB` : `${mb} MB`;
+  const formatStorage = (mb: number) => mb >= 1024 ? `${mb / 1024} جيجابايت` : `${mb} ميجابايت`;
 
   return (
     <div className="space-y-6">

@@ -27,7 +27,7 @@ export default async function NewLessonPage({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <BookOpen className="h-4 w-4 text-primary" /> Lesson details
+            <BookOpen className="h-4 w-4 text-primary" /> تفاصيل الحصة
           </CardTitle>
           <CardDescription>اختيار المجموعة يحدد معلّمها تلقائيًا.</CardDescription>
         </CardHeader>

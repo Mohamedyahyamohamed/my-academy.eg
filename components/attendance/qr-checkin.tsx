@@ -62,7 +62,7 @@ export function QrCheckin({ lessonId }: { lessonId: string }) {
                 <Clock className="h-3 w-3" /> {remaining}s
               </Badge>
               <Button size="sm" variant="ghost" onClick={generate}>
-                <RefreshCw className="h-3.5 w-3.5" /> Refresh
+                <RefreshCw className="h-3.5 w-3.5" /> تحديث
               </Button>
             </div>
           </div>
@@ -70,7 +70,7 @@ export function QrCheckin({ lessonId }: { lessonId: string }) {
           <Button onClick={generate}><RefreshCw className="h-4 w-4" /> إنشاء رمز QR</Button>
         )}
         <Button variant="outline" onClick={() => setOpen(false)}>
-          <X className="h-4 w-4" /> Close
+          <X className="h-4 w-4" /> إغلاق
         </Button>
       </DialogContent>
     </Dialog>

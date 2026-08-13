@@ -67,7 +67,7 @@ export function CreateAssistantDialog({ groups }: { groups: Group[] }) {
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Groups to share ({selected.length} selected)</Label>
+            <Label>المجموعات المشتركة ({selected.length} مختارة)</Label>
             <div className="grid max-h-40 gap-2 overflow-y-auto sm:grid-cols-2">
               {groups.map((g) => (
                 <label key={g.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-border p-2 text-sm hover:bg-accent/50">

@@ -74,7 +74,7 @@ export function NotificationsMenu() {
               }}
               className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
             >
-              <CheckCheck className="h-3.5 w-3.5" /> Mark all read
+              <CheckCheck className="h-3.5 w-3.5" /> تعليم الكل كمقروء
             </button>
           )}
         </div>

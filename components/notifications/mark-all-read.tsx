@@ -15,7 +15,7 @@ export function MarkAllReadButton() {
         router.refresh();
       }}
     >
-      <CheckCheck className="h-4 w-4" /> Mark all read
+      <CheckCheck className="h-4 w-4" /> تعليم الكل كمقروء
     </Button>
   );
 }

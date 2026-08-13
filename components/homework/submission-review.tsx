@@ -91,7 +91,7 @@ export function SubmissionReview({ submissions }: { submissions: HomeworkSubmiss
                 </div>
               ) : (
                 <Button variant="soft" size="sm" className="mt-3" onClick={() => start(s)}>
-                  <MessageSquare className="h-3.5 w-3.5" /> Review
+                  <MessageSquare className="h-3.5 w-3.5" /> مراجعة
                 </Button>
               )
             ) : null}

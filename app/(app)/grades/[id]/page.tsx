@@ -38,7 +38,7 @@ export default async function ExamGradePage({ params }: { params: { id: string }
       </PageHeader>
 
       <div className="flex flex-wrap gap-2">
-        <Badge variant="secondary">Maximum score: {exam.max_score}</Badge>
+        <Badge variant="secondary">الدرجة النهائية: {exam.max_score}</Badge>
         <Badge variant="info">{roster.length} students</Badge>
       </div>
 

@@ -55,7 +55,7 @@ export function AddStudentToGroupDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" disabled={availableStudents.length === 0}>
-          <UserPlus className="h-4 w-4" /> Add student
+          <UserPlus className="h-4 w-4" /> إضافة طالب
         </Button>
       </DialogTrigger>
       <DialogContent>

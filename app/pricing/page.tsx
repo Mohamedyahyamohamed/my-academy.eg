@@ -43,7 +43,7 @@ export default function PricingPage() {
                 <li className="flex gap-2"><Check className="h-4 w-4 shrink-0 text-emerald-600" />{formatLimit(plan.maxTeachers, "مدرس")}</li>
                 <li className="flex gap-2"><Check className="h-4 w-4 shrink-0 text-emerald-600" />{formatLimit(plan.maxGroups, "مجموعة")}</li>
                 <li className="flex gap-2"><Check className="h-4 w-4 shrink-0 text-emerald-600" />{formatLimit(plan.maxAcademies, "أكاديمية")}</li>
-                <li className="flex gap-2"><Check className="h-4 w-4 shrink-0 text-emerald-600" />{formatLimit(plan.maxStorageMb >= 1024 ? Math.round(plan.maxStorageMb / 1024) : plan.maxStorageMb, plan.maxStorageMb >= 1024 ? "GB تخزين" : "MB تخزين")}</li>
+                <li className="flex gap-2"><Check className="h-4 w-4 shrink-0 text-emerald-600" />{formatLimit(plan.maxStorageMb >= 1024 ? Math.round(plan.maxStorageMb / 1024) : plan.maxStorageMb, plan.maxStorageMb >= 1024 ? "جيجابايت تخزين" : "ميجابايت تخزين")}</li>
               </ul>
               <Button asChild className="mt-7 w-full" variant={plan.id === "pro" ? "default" : "outline"}>
                 <Link href="/signup">ابدأ الآن <ArrowRight className="h-4 w-4" /></Link>

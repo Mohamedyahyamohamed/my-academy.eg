@@ -76,7 +76,7 @@ export function StudentQrCard({
       <DialogTrigger asChild>
         {trigger ?? (
           <Button variant="outline" size="sm">
-            <QrCode className="h-4 w-4" /> My QR card
+            <QrCode className="h-4 w-4" /> بطاقة رمز QR الخاصة بي
           </Button>
         )}
       </DialogTrigger>
@@ -96,7 +96,7 @@ export function StudentQrCard({
           احفظ الصورة أو صورها سكرين شوت وابعتها على الواتساب. اعرضها للمعلّم عند الحضور.
         </p>
         <Button onClick={download} className="w-full">
-          <Download className="h-4 w-4" /> Download QR image
+          <Download className="h-4 w-4" /> تنزيل صورة رمز QR
         </Button>
       </DialogContent>
     </Dialog>

@@ -157,18 +157,18 @@ export function AttendanceWorkshop({
           {/* Summary + bulk actions */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap gap-2">
-              <Badge variant="success">Present {counts.present}</Badge>
-              <Badge variant="warning">Late {counts.late}</Badge>
-              <Badge variant="destructive">Absent {counts.absent}</Badge>
-              <Badge variant="info">Rate {counts.rate}%</Badge>
+              <Badge variant="success">حاضر {counts.present}</Badge>
+              <Badge variant="warning">متأخر {counts.late}</Badge>
+              <Badge variant="destructive">غائب {counts.absent}</Badge>
+              <Badge variant="info">النسبة {counts.rate}%</Badge>
             </div>
             <div className="flex gap-2">
               <QrCheckin lessonId={lessonId} />
               <Button variant="outline" size="sm" onClick={() => setAll("PRESENT")}>
-                <CheckCheck className="h-4 w-4 text-emerald-600" /> All present
+                <CheckCheck className="h-4 w-4 text-emerald-600" /> تسجيل الكل حاضرًا
               </Button>
               <Button variant="outline" size="sm" onClick={() => setAll("ABSENT")}>
-                <XCircle className="h-4 w-4 text-rose-600" /> All absent
+                <XCircle className="h-4 w-4 text-rose-600" /> تسجيل الكل غائبًا
               </Button>
             </div>
           </div>

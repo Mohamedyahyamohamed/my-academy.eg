@@ -126,7 +126,7 @@ export default async function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">الأدوار والصلاحيات</CardTitle>
-              <CardDescription>How role-based access control works in {academy.name}.</CardDescription>
+              <CardDescription>كيفية عمل صلاحيات الوصول بحسب الدور في {academy.name}.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {[

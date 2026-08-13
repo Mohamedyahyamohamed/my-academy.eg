@@ -3,7 +3,7 @@ import { test, expect } from "./helpers";
 test.describe("Teacher Journey", () => {
   test("login → teacher dashboard", async ({ teacherPage }) => {
     await expect(teacherPage).toHaveURL(/\/teacher/);
-    await expect(teacherPage.getByText("My groups").first()).toBeVisible({ timeout: 10_000 });
+    await expect(teacherPage.getByText("مجموعاتي").first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("sees only own groups (not all)", async ({ teacherPage }) => {

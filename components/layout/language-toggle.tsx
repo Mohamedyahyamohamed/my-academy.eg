@@ -30,7 +30,7 @@ export function LanguageToggle() {
       size="sm"
       onClick={toggle}
       className="gap-1.5"
-      title={lang === "ar" ? "Switch to English" : "تبديل للعربية"}
+      title={lang === "ar" ? "التبديل إلى الإنجليزية" : "التبديل إلى العربية"}
     >
       <Languages className="h-4 w-4" />
       <span className="text-xs font-medium">{lang === "ar" ? "EN" : "ع"}</span>

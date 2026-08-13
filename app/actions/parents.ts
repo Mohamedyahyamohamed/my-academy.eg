@@ -2,7 +2,7 @@
 import { audit } from "@/services/audit";
 
 import { revalidatePath } from "next/cache";
-import { MiscService, requireRole, currentAcademyId } from "@/services";
+import { MiscService, requireScopedRole, currentAcademyId } from "@/services";
 import { PARENT_DEFAULT_PASSWORD } from "@/lib/auth";
 
 /** Quick-create a parent record (no login) so it can be linked to a student. */
@@ -13,7 +13,7 @@ export async function createParentAction(input: {
   email?: string;
   occupation?: string;
 }) {
-  requireRole("ADMIN", "TEACHER");
+  await requireScopedRole("ADMIN", "TEACHER");
   if (!input.first_name || !input.last_name) {
     return { ok: false, error: "First and last name are required." };
   }
@@ -41,7 +41,7 @@ function parentEmail(p: { first_name: string; last_name: string; id: string }): 
  * - اللي ممعاهومش → ينشئله حساب بالإيميل ده.
  */
 export async function fixParentAccountsAction() {
-  requireRole("ADMIN");
+  await requireScopedRole("ADMIN");
   const aid = currentAcademyId();
   const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
   const client = nodeSupabaseClient();

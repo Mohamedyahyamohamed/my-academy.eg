@@ -1,12 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireRole, GroupsService } from "@/services";
+import { requireScopedRole, GroupsService } from "@/services";
 import type { GroupInput } from "@/services/groups";
 import { audit } from "@/services/audit";
 
 export async function createGroupAction(input: GroupInput) {
-  requireRole("ADMIN", "TEACHER");
+  await requireScopedRole("ADMIN", "TEACHER");
   const g = await GroupsService.createGroup(input);
     void audit({ action: "group.create" });
   revalidatePath("/groups");
@@ -15,7 +15,7 @@ export async function createGroupAction(input: GroupInput) {
 }
 
 export async function updateGroupAction(id: string, input: Partial<GroupInput>) {
-  requireRole("ADMIN");
+  await requireScopedRole("ADMIN");
   const g = GroupsService.updateGroup(id, input);
     void audit({ action: "group.update" });
   revalidatePath("/groups");
@@ -24,7 +24,7 @@ export async function updateGroupAction(id: string, input: Partial<GroupInput>) 
 }
 
 export async function deleteGroupAction(id: string) {
-  requireRole("ADMIN");
+  await requireScopedRole("ADMIN");
   GroupsService.deleteGroup(id);
     void audit({ action: "group.delete" });
   revalidatePath("/groups");
@@ -32,7 +32,7 @@ export async function deleteGroupAction(id: string) {
 }
 
 export async function addStudentToGroupAction(groupId: string, studentId: string) {
-  requireRole("ADMIN", "TEACHER");
+  await requireScopedRole("ADMIN", "TEACHER");
   const res = await GroupsService.addStudent(groupId, studentId);
   void audit({ action: "group.add_student" });
   revalidatePath(`/groups/${groupId}`);
@@ -40,7 +40,7 @@ export async function addStudentToGroupAction(groupId: string, studentId: string
 }
 
 export async function removeStudentFromGroupAction(groupId: string, studentId: string) {
-  requireRole("ADMIN", "TEACHER");
+  await requireScopedRole("ADMIN", "TEACHER");
   GroupsService.removeStudent(groupId, studentId);
     void audit({ action: "group.remove_student" });
   revalidatePath(`/groups/${groupId}`);

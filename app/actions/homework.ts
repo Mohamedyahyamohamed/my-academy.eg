@@ -2,11 +2,11 @@
 import { audit } from "@/services/audit";
 
 import { revalidatePath } from "next/cache";
-import { requireRole, HomeworkService } from "@/services";
+import { requireScopedRole, HomeworkService } from "@/services";
 import type { HomeworkInput } from "@/services/homework";
 
 export async function createHomeworkAction(input: HomeworkInput) {
-  const user = requireRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
   const h = await HomeworkService.createHomework(input);
   // Push notification + email to parents about new homework.
   if (h) {
@@ -34,7 +34,7 @@ export async function createHomeworkAction(input: HomeworkInput) {
 }
 
 export async function deleteHomeworkAction(id: string) {
-  requireRole("ADMIN", "TEACHER");
+  await requireScopedRole("ADMIN", "TEACHER");
   HomeworkService.deleteHomework(id);
   void audit({ action: "mutation" });
   revalidatePath("/homework");
@@ -45,7 +45,7 @@ export async function reviewSubmissionAction(
   feedback: string,
   grade?: number,
 ) {
-  const user = requireRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
   HomeworkService.reviewSubmission(submissionId, feedback, grade);
   // Notify student's parent about reviewed homework.
   const { collections } = await import("@/services/data/store");
@@ -70,7 +70,7 @@ export async function submitHomeworkAction(
   content: string,
   fileUrl?: string,
 ) {
-  requireRole("STUDENT");
+  await requireScopedRole("STUDENT");
   HomeworkService.submitHomework(homeworkId, studentId, content, fileUrl);
   void audit({ action: "mutation" });
   revalidatePath("/student/homework");

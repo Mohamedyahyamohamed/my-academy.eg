@@ -9,11 +9,12 @@ export default async function AuthenticatedLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Hydrate the in-memory store from Supabase (write-through cache).
-  await ensureStoreLoaded();
   const user = getCurrentUser();
   if (!user) redirect("/login");
 
+  // Production data is hydrated only after resolving the academy from the
+  // signed server session, keeping each request isolated to its tenant.
+  await ensureStoreLoaded(user.academy_id);
   const academy = MiscService.getAcademy();
 
   return (

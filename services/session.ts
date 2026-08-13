@@ -79,6 +79,18 @@ export function currentAcademyId(): string {
   return academyId;
 }
 
+/**
+ * Require a role and hydrate the signed user's academy snapshot for the current
+ * server-action request. This prevents standalone actions and API requests from
+ * reading an empty or unrelated tenant cache.
+ */
+export async function requireScopedRole(...roles: Role[]): Promise<SessionUser> {
+  const user = requireRole(...roles);
+  const { ensureStoreLoaded } = await import("./data/store");
+  await ensureStoreLoaded(user.academy_id);
+  return user;
+}
+
 /** The teacher record id of the current user, or null if they're not a teacher. */
 export function currentTeacherId(): string | null {
   const u = getCurrentUser();

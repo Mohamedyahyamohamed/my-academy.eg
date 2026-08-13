@@ -1,11 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireRole, PaymentsService } from "@/services";
+import { requireScopedRole, PaymentsService } from "@/services";
 import type { CreatePaymentInput } from "@/services/payments";
 
 export async function createPaymentAction(input: CreatePaymentInput) {
-  const user = requireRole("ADMIN");
+  const user = await requireScopedRole("ADMIN");
   const res = await PaymentsService.createPayment(input);
   if (!res.ok) return res;
   await import("@/services/audit").then((m) => m.audit(
@@ -24,7 +24,7 @@ export async function recordPaymentAction(
   method: string,
   note?: string,
 ) {
-  const user = requireRole("ADMIN");
+  const user = await requireScopedRole("ADMIN");
   const res = PaymentsService.recordPayment(paymentId, amount, method, note);
   if (res.ok) {
     await import("@/services/audit").then((m) => m.audit(
@@ -53,7 +53,7 @@ export async function recordPaymentAction(
 }
 
 export async function deletePaymentAction(id: string) {
-  requireRole("ADMIN");
+  await requireScopedRole("ADMIN");
   PaymentsService.deletePayment(id);
   revalidatePath("/payments");
   revalidatePath("/dashboard");

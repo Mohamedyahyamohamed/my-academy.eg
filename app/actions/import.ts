@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { requireRole, currentAcademyId } from "@/services";
+import { requireScopedRole, currentAcademyId } from "@/services";
 import { collections, invalidateStore } from "@/services/data/store";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
@@ -14,7 +14,7 @@ export interface ImportRow {
  * Uses the service-role client directly so we can check + report errors.
  */
 export async function importStudentsAction(rows: ImportRow[]) {
-  const user = requireRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
   void user;
   const aid = currentAcademyId();
   if (!aid) return { ok: false, error: "لا توجد أكاديمية." };

@@ -1,13 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireRole, AttendanceService } from "@/services";
+import { requireScopedRole, AttendanceService } from "@/services";
 import type { AttendanceStatus } from "@/types";
 import { NotificationsService, getCurrentUser } from "@/services";
 import { audit } from "@/services/audit";
 
 export async function checkinAction(lessonId: string) {
-  const user = requireRole("STUDENT");
+  const user = await requireScopedRole("STUDENT");
   // Resolve the student record by the logged-in email.
   const { resolveStudent } = await import("@/services/portals");
   const student = resolveStudent(user);
@@ -26,7 +26,7 @@ export async function checkinAction(lessonId: string) {
 
 /** Teacher scans a student's personal QR → records them present for a lesson. */
 export async function scanCheckinAction(lessonId: string, studentId: string) {
-  const user = requireRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
 
   // Rate limit QR scans.
   const { rateLimit, LIMITS } = await import("@/lib/rate-limit-redis");
@@ -43,7 +43,7 @@ export async function saveAttendanceAction(
   lessonId: string,
   entries: { studentId: string; status: AttendanceStatus }[],
 ) {
-  const user = requireRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
   await AttendanceService.saveAttendance(lessonId, entries);
     void audit({ action: "attendance.save" }, user);
   // إشعار Push لأولياء الأمور

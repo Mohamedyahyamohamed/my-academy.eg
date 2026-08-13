@@ -9,7 +9,12 @@ import type { SessionUser } from "@/types";
 import { createSignedSession, sessionMaxAgeSeconds } from "@/lib/session-cookie";
 
 export async function POST(req: NextRequest) {
-  if (process.env.NODE_ENV === "production" && !isSupabaseConfigured()) {
+  // The test runner uses the seeded demo fixture only when this explicit flag
+  // is present. A normal production deployment still refuses authentication
+  // unless Supabase is configured.
+  const useE2eDemoFixture = process.env.E2E_DEMO_MODE === "true";
+  const useSupabase = isSupabaseConfigured() && !useE2eDemoFixture;
+  if (process.env.NODE_ENV === "production" && !useSupabase && !useE2eDemoFixture) {
     return NextResponse.json(
       { error: "إعدادات خدمة الحسابات غير مكتملة. تواصل مع إدارة المنصة." },
       { status: 503 },
@@ -35,7 +40,7 @@ export async function POST(req: NextRequest) {
 
   await ensureStoreLoaded();
 
-  if (isSupabaseConfigured()) {
+  if (useSupabase) {
     // Use the SERVER client (cookie-bound) → signInWithPassword sets the
     // Supabase auth cookies so RLS works on subsequent requests.
     try {
@@ -112,8 +117,20 @@ export async function POST(req: NextRequest) {
       );
     }
   } else {
-    // Demo mode — resolve from cache.
-    if (password !== DEMO_PASSWORD) {
+    // Demo mode — resolve from cache. The role-specific passwords are accepted
+    // exclusively for the explicit local E2E fixture; ordinary demo mode keeps
+    // its single documented password.
+    const e2ePasswords: Record<string, string> = {
+      "admin@myacademy.edu": "demo1234",
+      "teacher@myacademy.edu": "teacher1234",
+      "parent@myacademy.edu": "parent1234",
+      "student@myacademy.edu": "student1234",
+    };
+    const expectedFixturePassword = e2ePasswords[email.toLowerCase()];
+    const validPassword = password === DEMO_PASSWORD || (
+      useE2eDemoFixture && expectedFixturePassword === password
+    );
+    if (!validPassword) {
       return NextResponse.json(
         { ok: false, error: "Invalid email or password." },
         { status: 401 },

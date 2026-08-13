@@ -106,7 +106,7 @@ export function academyExamIds(): Set<string> {
   return new Set(byAcademy(collections().exams).map((e) => e.id));
 }
 
-export const ACADEMY_ID = () => collections().academies[0].id;
+export const ACADEMY_ID = () => currentAcademyId();
 
 export function getCourse(id?: string | null): Course | undefined {
   if (!id) return undefined;

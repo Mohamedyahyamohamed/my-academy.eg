@@ -153,8 +153,10 @@ export function globalSearch(query: string): SearchResult[] {
 /* ---------------- Settings ---------------- */
 
 export function getAcademy(): Academy {
-  const aid = currentAcademyId();
-  return collections().academies.find((a) => a.id === aid) ?? collections().academies[0];
+  const academyId = currentAcademyId();
+  const academy = collections().academies.find((item) => item.id === academyId);
+  if (!academy) throw new Error("Academy data is unavailable for the active session.");
+  return academy;
 }
 
 export function updateAcademy(input: Partial<Academy>): Academy {

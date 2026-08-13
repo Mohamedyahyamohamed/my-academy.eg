@@ -1,12 +1,12 @@
 import { Check, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { requireRole } from "@/services";
 import { listPlans, getPlan, getUsage, getSubscriptionStatus } from "@/services/saas";
 import { formatCurrency } from "@/lib/utils";
+import { PlanCheckoutButton } from "@/components/billing/plan-checkout-button";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ export default async function BillingPage() {
 
   const usageItems = [
     { label: "الطلاب", current: usage.students, limit: currentPlan.maxStudents },
-    { label: "Teachers", current: usage.teachers, limit: currentPlan.maxTeachers },
+    { label: "المدرسون", current: usage.teachers, limit: currentPlan.maxTeachers },
     { label: "المجموعات", current: usage.groups, limit: currentPlan.maxGroups },
   ];
 
@@ -30,9 +30,9 @@ export default async function BillingPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            Current Plan: <Badge variant="secondary">{currentPlan.name}</Badge>
+            الخطة الحالية: <Badge variant="secondary">{currentPlan.name}</Badge>
             <Badge variant={sub.status === "active" || sub.status === "trialing" ? "success" : "destructive"}>
-              {sub.status}
+              {sub.status === "active" ? "نشطة" : sub.status === "trialing" ? "تجريبية" : sub.status === "past_due" ? "دفعة مستحقة" : sub.status === "canceled" ? "ملغاة" : "منتهية"}
             </Badge>
           </CardTitle>
         </CardHeader>
@@ -62,34 +62,28 @@ export default async function BillingPage() {
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold">{p.name}</h3>
-                  {isCurrent && <Badge>Current</Badge>}
+                  {isCurrent && <Badge>الخطة الحالية</Badge>}
                   {p.id === "pro" && <Sparkles className="h-4 w-4 text-amber-500" />}
                 </div>
                 <p className="mt-2 text-2xl font-bold">
                   {p.price === 0 ? "مجاني" : formatCurrency(p.price)}
-                  {p.price > 0 && <span className="text-sm font-normal text-muted-foreground">/mo</span>}
+                  {p.price > 0 && <span className="text-sm font-normal text-muted-foreground"> / شهريًا</span>}
                 </p>
                 <ul className="mt-4 space-y-2 text-sm">
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-emerald-500" />
-                    {p.maxStudents === 99999 ? "Unlimited" : p.maxStudents} students
+                    {p.maxStudents === 99999 ? "عدد غير محدود" : p.maxStudents} طالب
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-emerald-500" />
-                    {p.maxTeachers === 999 ? "Unlimited" : p.maxTeachers} teachers
+                    {p.maxTeachers === 999 ? "عدد غير محدود" : p.maxTeachers} مدرس
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-emerald-500" />
-                    {p.maxGroups === 999 ? "Unlimited" : p.maxGroups} groups
+                    {p.maxGroups === 999 ? "عدد غير محدود" : p.maxGroups} مجموعة
                   </li>
                 </ul>
-                <Button
-                  className="mt-4 w-full"
-                  variant={isCurrent ? "outline" : "default"}
-                  disabled={isCurrent}
-                >
-                  {isCurrent ? "Current plan" : "Upgrade"}
-                </Button>
+                <PlanCheckoutButton planId={p.id} isCurrent={isCurrent} isFree={p.price === 0} />
               </CardContent>
             </Card>
           );

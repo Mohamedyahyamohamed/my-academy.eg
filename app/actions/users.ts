@@ -1,6 +1,6 @@
 "use server";
 
-import { requireRole } from "@/services";
+import { requireScopedRole } from "@/services";
 import type { Role } from "@/types";
 
 /**
@@ -21,7 +21,7 @@ export interface CreateUserInput {
  * This fails closed even if an old bundle invokes the server action directly.
  */
 export async function createUserAction(_input: CreateUserInput) {
-  requireRole("ADMIN");
+  await requireScopedRole("ADMIN");
   return {
     ok: false,
     error: "تم إيقاف إنشاء الحساب بكلمة مرور من لوحة الإدارة. استخدم «دعوة مستخدم» لإرسال رابط آمن ومحدود المدة.",

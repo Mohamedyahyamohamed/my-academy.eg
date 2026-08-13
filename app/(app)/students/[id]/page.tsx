@@ -98,7 +98,7 @@ export default async function StudentProfilePage({
           studentId={detail.id}
           name={`${detail.first_name} ${detail.last_name}`}
           grade={detail.grade}
-          academyName={collections().academies[0]?.name ?? "MY Academy"}
+          academyName={MiscService.getAcademy().name}
           trigger={<Button variant="outline">QR card</Button>}
         />
         <EditStudentDialog student={detail} parents={parents} groups={groups} />

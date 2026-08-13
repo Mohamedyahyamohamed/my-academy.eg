@@ -1,14 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireRole, StudentsService, currentAcademyId } from "@/services";
+import { requireScopedRole, StudentsService, currentAcademyId } from "@/services";
 import type { StudentInput } from "@/services/students";
 import { STUDENT_DEFAULT_PASSWORD } from "@/lib/auth";
 
 export async function createStudentAction(input: StudentInput) {
   console.log("[createStudentAction] START", { first: input.first_name, last: input.last_name, parent_id: input.parent_id });
   try {
-    const user = requireRole("ADMIN", "TEACHER");
+    const user = await requireScopedRole("ADMIN", "TEACHER");
     console.log("[createStudentAction] user OK:", user.email, "academy:", user.academy_id);
     const student = await StudentsService.createStudent(input);
     console.log("[createStudentAction] CREATED OK:", student.id);
@@ -28,7 +28,7 @@ export async function createStudentAction(input: StudentInput) {
 export async function updateStudentAction(id: string, input: Partial<StudentInput>) {
   console.log("[updateStudentAction] START", { id, first: input.first_name });
   try {
-    const user = requireRole("ADMIN", "TEACHER");
+    const user = await requireScopedRole("ADMIN", "TEACHER");
     const student = StudentsService.updateStudent(id, input);
     console.log("[updateStudentAction] UPDATED:", student?.id ?? "NOT FOUND");
     if (student) {
@@ -48,7 +48,7 @@ export async function updateStudentAction(id: string, input: Partial<StudentInpu
 }
 
 export async function archiveStudentAction(id: string) {
-  const user = requireRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
   StudentsService.setStudentStatus(id, "ARCHIVED");
   await import("@/services/audit").then((m) => m.audit(
     { action: "student.archive", entity_type: "student", entity_id: id },
@@ -59,7 +59,7 @@ export async function archiveStudentAction(id: string) {
 }
 
 export async function restoreStudentAction(id: string) {
-  requireRole("ADMIN", "TEACHER");
+  await requireScopedRole("ADMIN", "TEACHER");
   StudentsService.setStudentStatus(id, "ACTIVE");
   revalidatePath("/students");
   revalidatePath(`/students/${id}`);
@@ -69,7 +69,7 @@ export async function restoreStudentAction(id: string) {
  * ينشئ حسابات دخول (إيميل + باسورد افتراضي) لكل الطلاب اللي ممعاهومش حساب.
  */
 export async function createMissingStudentAccountsAction() {
-  requireRole("ADMIN");
+  await requireScopedRole("ADMIN");
   const aid = currentAcademyId();
   const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
   const client = nodeSupabaseClient();

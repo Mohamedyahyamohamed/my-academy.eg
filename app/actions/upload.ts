@@ -1,13 +1,13 @@
 "use server";
 import { audit } from "@/services/audit";
 
-import { requireRole } from "@/services";
+import { requireScopedRole } from "@/services";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 
 /** Upload a homework attachment using the service role (bypasses storage RLS). */
 export async function uploadHomeworkFile(formData: FormData) {
-  const user = requireRole("STUDENT", "ADMIN", "TEACHER");
+  const user = await requireScopedRole("STUDENT", "ADMIN", "TEACHER");
 
   // Rate limit uploads.
   const rl = await rateLimit(`upload:${user.id}`, LIMITS.upload.max, LIMITS.upload.window);

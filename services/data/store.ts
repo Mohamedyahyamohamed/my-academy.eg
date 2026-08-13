@@ -1,13 +1,17 @@
 /**
  * In-memory data store (development/demo backend).
  *
- * When Supabase is configured, this acts as a WRITE-THROUGH CACHE: data is
- * loaded from Supabase into memory on first access (reads stay fast) and every
- * mutation is mirrored to Supabase so it persists across restarts.
- *
- * When Supabase is NOT configured, it's a pure in-memory seeded store.
+ * In production, every access resolves an academy-scoped snapshot through the
+ * signed request session. Snapshots are keyed by academy only and never fall
+ * back to the global demo data, so concurrent requests cannot observe another
+ * tenant's rows.
  */
+import { AsyncLocalStorage } from "node:async_hooks";
+import { cookies } from "next/headers";
 import { createSeedData, type SeedData } from "./seed";
+import { isSupabaseConfigured } from "../supabase/config";
+import { SESSION_COOKIE } from "@/lib/auth";
+import { readSignedSession } from "@/lib/session-cookie";
 
 class LocalDB {
   data: SeedData;
@@ -26,86 +30,165 @@ declare global {
   var __MY_ACADEMY_DB__: LocalDB | undefined;
 }
 
-/** Shared singleton across hot-reloads in dev. */
+/** Shared demo data only. Production requests use requestData below. */
 export const db: LocalDB =
   globalThis.__MY_ACADEMY_DB__ ?? (globalThis.__MY_ACADEMY_DB__ = new LocalDB());
 
-/** Convenience getter for the current collections. */
-export const collections = () => db.data;
+const requestData = new AsyncLocalStorage<SeedData>();
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __MY_ACADEMY_TENANT_SNAPSHOTS__: Map<string, SeedData> | undefined;
+}
+
+// Shared only by academy key; collection access still resolves the academy from
+// the signed request cookie. This supports independent server-action requests
+// without ever falling back to another tenant's data.
+const tenantSnapshots =
+  globalThis.__MY_ACADEMY_TENANT_SNAPSHOTS__ ??
+  (globalThis.__MY_ACADEMY_TENANT_SNAPSHOTS__ = new Map<string, SeedData>());
+
+function activeAcademyId(): string | null {
+  try {
+    return readSignedSession(cookies().get(SESSION_COOKIE)?.value)?.academy_id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function emptyData(): SeedData {
+  const data = createSeedData();
+  for (const key of Object.keys(data) as Array<keyof SeedData>) {
+    const value = data[key];
+    if (Array.isArray(value)) (value as unknown[]).length = 0;
+  }
+  return data;
+}
+
+/**
+ * Return the current request's scoped data snapshot. In production, calls that
+ * bypass ensureStoreLoaded fail closed with an empty snapshot rather than demo
+ * data or another tenant's cached rows.
+ */
+export const collections = (): SeedData => {
+  if (!isSupabaseConfigured()) return db.data;
+  const academyId = activeAcademyId();
+  if (!academyId) return emptyData();
+  return requestData.getStore() ?? tenantSnapshots.get(academyId) ?? emptyData();
+};
 
 /* ----------------------------------------------------------------- */
-/* Supabase write-through cache                                       */
+/* Supabase request-scoped hydration                                 */
 /* ----------------------------------------------------------------- */
 
 /**
- * Ensure the in-memory store is hydrated from Supabase.
- * ALWAYS re-hydrates on every request — guarantees fresh data on Vercel.
+ * Load the signed-in academy's data for the current server request.
+ * Pre-auth callers intentionally receive no production snapshot; login resolves
+ * its profile and membership directly through Supabase instead.
  */
-export async function ensureStoreLoaded(): Promise<void> {
-  if (!isSupabaseConfigured()) return;
-  await hydrateFromSupabase();
+export async function ensureStoreLoaded(academyId?: string): Promise<void> {
+  if (!isSupabaseConfigured() || !academyId) return;
+  const data = await hydrateFromSupabase(academyId);
+  if (data) {
+    tenantSnapshots.set(academyId, data);
+    requestData.enterWith(data);
+  }
 }
 
-/** No-op (always re-hydrate now). Kept for backward compat. */
-export function invalidateStore() {}
+/** Discard the active academy snapshot after a destructive or bulk mutation. */
+export function invalidateStore(academyId = activeAcademyId() ?? undefined) {
+  if (academyId) tenantSnapshots.delete(academyId);
+}
 
-async function hydrateFromSupabase(): Promise<void> {
+async function hydrateFromSupabase(academyId: string): Promise<SeedData | null> {
   try {
     const client = getAdminClient();
-    if (!client) return;
-    const { data } = await client
+    if (!client) return null;
+
+    const { data: academy, error: academyError } = await client
       .from("academies")
       .select("*")
-      .order("created_at")
-      .limit(1)
-      .single();
-    if (!data) return;
-    const a = data as any;
-
-    const pick = async (table: string) =>
-      (await client.from(table).select("*")).data ?? [];
-
-    const [courses, teachers, parents, students, groups, groupStudents, lessons,
-      attendance, payments, transactions, exams, grades, homework, submissions,
-      notifications, notes, files, profiles] = await Promise.all([
-      pick("courses"), pick("teachers"), pick("parents"), pick("students"),
-      pick("groups"), pick("group_students"), pick("lessons"), pick("attendance"),
-      pick("payments"), pick("payment_transactions"), pick("exams"), pick("grades"),
-      pick("homework"), pick("homework_submissions"), pick("notifications"),
-      pick("notes"), pick("files"), pick("profiles"),
-    ]);
-    // group_assistants may not exist yet (added by supabase/assistants.sql) — best-effort.
-    let groupAssistants: any[] = [];
-    try {
-      groupAssistants = (await client.from("group_assistants").select("*")).data ?? [];
-    } catch {
-      groupAssistants = [];
+      .eq("id", academyId)
+      .maybeSingle();
+    if (academyError || !academy) {
+      if (academyError) console.error("academy hydration failed:", academyError.message);
+      return null;
     }
-    // audit_logs may not exist yet (added by supabase/audit-logs.sql) — best-effort.
+
+    const pickForAcademy = async (table: string): Promise<any[]> => {
+      const { data, error } = await client.from(table).select("*").eq("academy_id", academyId);
+      if (error) {
+        console.error(`store hydrate ${table} failed:`, error.message);
+        return [];
+      }
+      return data ?? [];
+    };
+    const pickForIds = async (table: string, column: string, ids: string[]): Promise<any[]> => {
+      if (!ids.length) return [];
+      const { data, error } = await client.from(table).select("*").in(column, ids);
+      if (error) {
+        console.error(`store hydrate ${table} failed:`, error.message);
+        return [];
+      }
+      return data ?? [];
+    };
+
+    const [courses, teachers, parents, students, groups, lessons, payments, exams,
+      homework, notifications, notes, files, profiles, subscriptions] = await Promise.all([
+      pickForAcademy("courses"), pickForAcademy("teachers"), pickForAcademy("parents"),
+      pickForAcademy("students"), pickForAcademy("groups"), pickForAcademy("lessons"),
+      pickForAcademy("payments"), pickForAcademy("exams"), pickForAcademy("homework"),
+      pickForAcademy("notifications"), pickForAcademy("notes"), pickForAcademy("files"),
+      pickForAcademy("profiles"), pickForAcademy("subscriptions"),
+    ]);
+
+    const groupIds = groups.map((group) => group.id as string);
+    const lessonIds = lessons.map((lesson) => lesson.id as string);
+    const paymentIds = payments.map((payment) => payment.id as string);
+    const examIds = exams.map((exam) => exam.id as string);
+    const homeworkIds = homework.map((item) => item.id as string);
+
+    const [groupStudents, groupAssistants, attendance, transactions, grades, submissions] = await Promise.all([
+      pickForIds("group_students", "group_id", groupIds),
+      pickForIds("group_assistants", "group_id", groupIds),
+      pickForIds("attendance", "lesson_id", lessonIds),
+      pickForIds("payment_transactions", "payment_id", paymentIds),
+      pickForIds("grades", "exam_id", examIds),
+      pickForIds("homework_submissions", "homework_id", homeworkIds),
+    ]);
+
+    // Optional tables are deployed by separate migrations. Keep their absence
+    // non-fatal while preserving the academy predicate when available.
     let auditLogs: any[] = [];
     try {
-      auditLogs = (await client.from("audit_logs").select("*").limit(500).order("created_at", { ascending: false }))?.data ?? [];
+      const { data, error } = await client
+        .from("audit_logs")
+        .select("*")
+        .eq("academy_id", academyId)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (!error) auditLogs = data ?? [];
     } catch {
       auditLogs = [];
     }
 
-    db.data = {
-      academies: [a],
+    return {
+      academies: [academy] as any,
       profiles: profiles as any,
       courses: courses as any,
       teachers: teachers as any,
       parents: parents as any,
       students: students as any,
       groups: groups as any,
-      groupStudents: (groupStudents as any[]).map((g) => ({
-        group_id: g.group_id,
-        student_id: g.student_id,
-        joined_at: g.joined_at,
+      groupStudents: (groupStudents as any[]).map((row) => ({
+        group_id: row.group_id,
+        student_id: row.student_id,
+        joined_at: row.joined_at,
       })),
-      groupAssistants: (groupAssistants as any[]).map((g) => ({
-        group_id: g.group_id,
-        teacher_id: g.teacher_id,
-        assigned_at: g.assigned_at,
+      groupAssistants: (groupAssistants as any[]).map((row) => ({
+        group_id: row.group_id,
+        teacher_id: row.teacher_id,
+        assigned_at: row.assigned_at,
       })),
       lessons: lessons as any,
       attendance: attendance as any,
@@ -119,14 +202,13 @@ async function hydrateFromSupabase(): Promise<void> {
       notes: notes as any,
       files: files as any,
       auditLogs: auditLogs as any,
+      subscriptions: subscriptions as any,
     };
-  } catch (e) {
-    // Fall back to seed data if hydration fails.
-    console.error("store hydrate failed:", (e as Error)?.message);
+  } catch (error) {
+    console.error("store hydrate failed:", (error as Error)?.message);
+    return null;
   }
 }
-
-import { isSupabaseConfigured } from "../supabase/config";
 
 let _adminClient: any = null;
 function getAdminClient() {
@@ -163,8 +245,8 @@ export async function persistInsert(table: string, row: any) {
         row?.id ?? "",
       );
     }
-  } catch (e) {
-    console.error(`persistInsert ${table} EXCEPTION:`, (e as Error)?.message);
+  } catch (error) {
+    console.error(`persistInsert ${table} EXCEPTION:`, (error as Error)?.message);
   }
 }
 
@@ -179,8 +261,8 @@ export async function persistUpdate(table: string, id: string, patch: any) {
         `persistUpdate ${table} FAILED [${error.code}]: ${error.message} (id=${id})`,
       );
     }
-  } catch (e) {
-    console.error(`persistUpdate ${table} EXCEPTION:`, (e as Error)?.message);
+  } catch (error) {
+    console.error(`persistUpdate ${table} EXCEPTION:`, (error as Error)?.message);
   }
 }
 
@@ -192,16 +274,16 @@ export async function persistDelete(
   const client = getAdminClient();
   if (!client) return;
   try {
-    let q = client.from(table).delete();
-    for (const [col, val] of Object.entries(filters)) q = q.eq(col, val);
-    const { error } = await q;
+    let query = client.from(table).delete();
+    for (const [column, value] of Object.entries(filters)) query = query.eq(column, value);
+    const { error } = await query;
     if (error) {
       console.error(
         `persistDelete ${table} FAILED [${error.code}]: ${error.message}`,
         filters,
       );
     }
-  } catch (e) {
-    console.error(`persistDelete ${table} EXCEPTION:`, (e as Error)?.message);
+  } catch (error) {
+    console.error(`persistDelete ${table} EXCEPTION:`, (error as Error)?.message);
   }
 }

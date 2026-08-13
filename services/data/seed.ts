@@ -49,6 +49,13 @@ export interface SeedData {
   notes: Note[];
   files: FileRecord[];
   auditLogs: any[];
+  subscriptions: Array<{
+    id: string;
+    academy_id: string;
+    plan_id: string;
+    status: string;
+    [key: string]: unknown;
+  }>;
 }
 
 const iso = (d: Date) => d.toISOString();
@@ -717,6 +724,7 @@ export function createSeedData(): SeedData {
     notifications,
     notes,
     auditLogs: [],
+    subscriptions: [],
     files,
   };
 }

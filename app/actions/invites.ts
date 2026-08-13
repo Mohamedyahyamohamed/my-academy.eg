@@ -4,7 +4,7 @@ import { createHash, randomBytes } from "crypto";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { audit } from "@/services/audit";
-import { currentAcademyId, getCurrentUser, requireRole, roleHome } from "@/services/session";
+import { currentAcademyId, getCurrentUser, requireScopedRole, roleHome } from "@/services/session";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { isSupabaseConfigured } from "@/services/supabase/config";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
@@ -66,7 +66,7 @@ function displayNameParts(fullName: string): { firstName: string; lastName: stri
 
 /** Admin-only list of invitations for the current academy. */
 export async function listAcademyInvites(): Promise<AcademyInviteView[]> {
-  requireRole("ADMIN");
+  await requireScopedRole("ADMIN");
   const client = nodeSupabaseClient();
   if (!client) return [];
 
@@ -95,7 +95,7 @@ export async function createAcademyInviteAction(input: {
   phone?: string;
   expiresInDays?: number;
 }): Promise<{ ok: boolean; error?: string; emailSent?: boolean; inviteUrl?: string }> {
-  const actor = requireRole("ADMIN");
+  const actor = await requireScopedRole("ADMIN");
   const email = normalizeEmail(input.email);
   const fullName = input.fullName?.trim() || undefined;
   const phone = input.phone?.trim() || undefined;
@@ -202,7 +202,7 @@ export async function createAcademyInviteAction(input: {
 
 /** Admin-only revocation; accepted invitations are retained as an audit record. */
 export async function revokeAcademyInviteAction(inviteId: string): Promise<{ ok: boolean; error?: string }> {
-  requireRole("ADMIN");
+  await requireScopedRole("ADMIN");
   if (!inviteId) return { ok: false, error: "معرّف الدعوة غير صالح." };
   const client = nodeSupabaseClient();
   if (!client) return { ok: false, error: "تعذّر الاتصال بقاعدة البيانات." };

@@ -3,13 +3,13 @@ import { audit } from "@/services/audit";
 
 import { revalidatePath } from "next/cache";
 import { collections, persistInsert, persistDelete } from "@/services/data/store";
-import { requireRole, currentTeacherId, currentAcademyId } from "@/services";
+import { requireScopedRole, currentTeacherId, currentAcademyId } from "@/services";
 import { teacherGroupScope } from "@/services/_shared";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
 /** Assign an existing assistant (co-teacher) to a group. Owner teacher or admin only. */
 export async function assignAssistantAction(groupId: string, teacherId: string) {
-  const user = requireRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
   if (user.role === "TEACHER") {
     const owns = collections().groups.find((g) => g.id === groupId && g.teacher_id === currentTeacherId());
     if (!owns) return { ok: false, error: "You can only manage your own groups." };
@@ -27,7 +27,7 @@ export async function assignAssistantAction(groupId: string, teacherId: string) 
 }
 
 export async function removeAssistantAction(groupId: string, teacherId: string) {
-  const user = requireRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
   if (user.role === "TEACHER") {
     const owns = collections().groups.find((g) => g.id === groupId && g.teacher_id === currentTeacherId());
     if (!owns) return { ok: false, error: "You can only manage your own groups." };
@@ -52,7 +52,7 @@ export async function createAssistantAction(input: {
   password: string;
   groupIds: string[];
 }) {
-  const user = requireRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
   if (!input.email || !input.password || !input.full_name)
     return { ok: false, error: "Name, email and password are required." };
   if (input.password.length < 6)

@@ -16,8 +16,8 @@ import { APP_CONFIG } from "@/lib/constants";
 
 /* ---------------- Courses ---------------- */
 
-export async function listCourses(): Promise<Course[]> {
-  return fetchTableRLS<Course>("courses");
+export async function listCourses(academyId?: string): Promise<Course[]> {
+  return fetchTableRLS<Course>("courses", academyId);
 }
 
 export async function createCourse(input: { name: string; description?: string | null; color?: string | null }): Promise<Course> {
@@ -165,8 +165,8 @@ export function updateAcademy(input: Partial<Academy>): Academy {
   return a;
 }
 
-export function listProfiles() {
-  return byAcademy(collections().profiles);
+export function listProfiles(academyId?: string) {
+  return byAcademy(collections().profiles, academyId);
 }
 
 export { APP_CONFIG };

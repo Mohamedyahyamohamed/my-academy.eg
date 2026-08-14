@@ -104,9 +104,21 @@ export function currentAcademyId(): string {
  * reading an empty or unrelated tenant cache.
  */
 export async function requireScopedRole(...roles: Role[]): Promise<SessionUser> {
-  const user = requireRole(...roles);
+  // This helper is used by async Server Components and actions. Resolve the
+  // signed cookie before checking the role; requireRole() is intentionally
+  // synchronous and cannot safely discover a cookie on a fresh render.
+  const user = await loadCurrentUser();
+  if (!user) redirect("/login");
+  if (user.role !== "SUPER_ADMIN" && !roles.includes(user.role)) {
+    redirect(roleHome(user.role));
+  }
+
   const { ensureStoreLoaded } = await import("./data/store");
   await ensureStoreLoaded(user.academy_id);
+  // Store hydration may cross an async boundary that does not preserve the
+  // request context in every Next.js render path. Re-bind the authenticated
+  // user after hydration before any tenant-scoped service reads occur.
+  setRequestContext(user);
   return user;
 }
 

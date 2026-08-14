@@ -20,8 +20,8 @@ import type {
 import { performanceLevel } from "@/lib/constants";
 
 /** Filter a collection to the current academy (app-layer multi-tenant isolation). */
-export function byAcademy<T extends { academy_id?: string | null }>(items: T[]): T[] {
-  const aid = currentAcademyId();
+export function byAcademy<T extends { academy_id?: string | null }>(items: T[], academyId?: string): T[] {
+  const aid = academyId ?? currentAcademyId();
   if (!aid) return items;
   return items.filter((i) => i.academy_id === aid);
 }
@@ -31,11 +31,11 @@ export function byAcademy<T extends { academy_id?: string | null }>(items: T[]):
  * RLS policies automatically filter by academy_id — NO app-layer filter needed.
  * Falls back to the in-memory cache when Supabase isn't configured.
  */
-export async function fetchTableRLS<T = any>(table: string): Promise<T[]> {
+export async function fetchTableRLS<T = any>(table: string, academyId?: string): Promise<T[]> {
   if (!isSupabaseConfigured()) {
     // Fallback: use cache (demo mode or Supabase not configured).
     const cacheData = (collections() as any)[table] ?? [];
-    return byAcademy(cacheData) as T[];
+    return byAcademy(cacheData, academyId) as T[];
   }
   try {
     const { createServerSupabaseClient } = await import("@/lib/supabase/server");
@@ -44,12 +44,12 @@ export async function fetchTableRLS<T = any>(table: string): Promise<T[]> {
     if (error || !data) {
       // Fallback on error.
       const cacheData = (collections() as any)[table] ?? [];
-      return byAcademy(cacheData) as T[];
+      return byAcademy(cacheData, academyId) as T[];
     }
     return data as T[];
   } catch {
     const cacheData = (collections() as any)[table] ?? [];
-    return byAcademy(cacheData) as T[];
+    return byAcademy(cacheData, academyId) as T[];
   }
 }
 

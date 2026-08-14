@@ -15,6 +15,11 @@ export function SignupForm() {
   const [loading, setLoading] = React.useState(false);
   const [form, setForm] = React.useState({ workspaceType: "ACADEMY" as "ACADEMY" | "TEACHER", academyName: "", fullName: "", email: "", password: "" });
 
+  React.useEffect(() => {
+    const workspace = new URLSearchParams(window.location.search).get("workspace");
+    if (workspace === "teacher") setForm((current) => ({ ...current, workspaceType: "TEACHER" }));
+  }, []);
+
   const set = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {

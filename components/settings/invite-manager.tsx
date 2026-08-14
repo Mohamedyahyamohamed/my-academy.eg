@@ -106,15 +106,16 @@ export function InviteManager({ initialInvites }: { initialInvites: AcademyInvit
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
           <div>
-            <CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="h-5 w-5 text-primary" />دعوات المستخدمين</CardTitle>
-            <CardDescription className="mt-1 leading-6">أرسل رابطًا آمنًا ومحدود المدة. لا تُنشأ كلمات مرور ولا تُرسل عبر البريد.</CardDescription>
+            <CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="h-5 w-5 text-primary" />إنشاء حسابات الأكاديمية</CardTitle>
+            <CardDescription className="mt-1 leading-6">من هنا تضيف مدرسًا أو ولي أمر أو طالبًا إلى أكاديميتك. كل حساب يحصل على عضوية داخل هذه الأكاديمية فقط.</CardDescription>
+            <p className="mt-2 text-xs text-muted-foreground">هل تريد إنشاء مساحة لمدرس يعمل بمفرده؟ <a href="/signup?workspace=teacher" className="font-semibold text-primary hover:underline">ابدأ تسجيل مدرس مستقل</a></p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button size="sm"><UserPlus className="h-4 w-4" />دعوة مستخدم</Button></DialogTrigger>
+            <DialogTrigger asChild><Button size="sm"><UserPlus className="h-4 w-4" />إضافة عضو للأكاديمية</Button></DialogTrigger>
             <DialogContent dir="rtl">
               <DialogHeader>
-                <DialogTitle>دعوة مستخدم إلى الأكاديمية</DialogTitle>
-                <DialogDescription>سيصل للمستخدم رابط شخصي لتعيين كلمة المرور وتفعيل الحساب. تنتهي الدعوة تلقائيًا.</DialogDescription>
+                <DialogTitle>إضافة حساب إلى الأكاديمية</DialogTitle>
+                <DialogDescription>اختر نوع العضو داخل أكاديميتك. سيصل للمستخدم رابط شخصي لتعيين كلمة المرور وتفعيل الحساب، وتنتهي الدعوة تلقائيًا.</DialogDescription>
               </DialogHeader>
               <form onSubmit={submit} className="space-y-4" noValidate>
                 <div className="space-y-1.5"><Label htmlFor="invite-name">الاسم الكامل (اختياري)</Label><Input id="invite-name" value={form.fullName} onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))} placeholder="مثال: أحمد علي" /></div>
@@ -123,7 +124,7 @@ export function InviteManager({ initialInvites }: { initialInvites: AcademyInvit
                   <div className="space-y-1.5"><Label htmlFor="invite-phone">الهاتف (اختياري)</Label><Input id="invite-phone" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} placeholder="01xxxxxxxxx" /></div>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5"><Label htmlFor="invite-role">الدور</Label><select id="invite-role" value={form.role} onChange={(event) => setForm((current) => ({ ...current, role: event.target.value as Role }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="TEACHER">مدرّس</option><option value="PARENT">ولي أمر</option><option value="STUDENT">طالب</option><option value="ADMIN">مدير</option></select></div>
+                  <div className="space-y-1.5"><Label htmlFor="invite-role">نوع الحساب داخل الأكاديمية</Label><select id="invite-role" value={form.role} onChange={(event) => setForm((current) => ({ ...current, role: event.target.value as Role }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="TEACHER">مدرّس في الأكاديمية</option><option value="PARENT">ولي أمر</option><option value="STUDENT">طالب</option><option value="ADMIN">مدير</option></select></div>
                   <div className="space-y-1.5"><Label htmlFor="invite-expiry">صلاحية الرابط</Label><select id="invite-expiry" value={form.expiry} onChange={(event) => setForm((current) => ({ ...current, expiry: event.target.value }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="1">يوم واحد</option><option value="7">7 أيام</option><option value="14">14 يومًا</option><option value="30">30 يومًا</option></select></div>
                 </div>
                 <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>إلغاء</Button><Button type="submit" disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}إنشاء الدعوة</Button></DialogFooter>

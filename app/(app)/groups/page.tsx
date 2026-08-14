@@ -8,10 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GroupsService, MiscService, requireScopedRole, getCurrentUser, currentTeacherId } from "@/services";
 import { formatCurrency } from "@/lib/utils";
+import { cookies } from "next/headers";
+import { getLangFromCookie } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
 export default async function GroupsPage() {
+  const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
+  const en = lang === "en";
   const user = await requireScopedRole("ADMIN", "TEACHER");
   const isTeacher = user.role === "TEACHER";
   const tid = isTeacher ? currentTeacherId() : null;
@@ -21,10 +25,10 @@ export default async function GroupsPage() {
   const groupCreationBlocked = isTeacher ? !tid : teachers.length === 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
-        title="المجموعات"
-        description="نظّم الطلاب في مجموعات حسب المادة والمدرّس والجدول."
+        title={en ? "Groups" : "المجموعات"}
+        description={en ? "Organize students by subject, teacher, and schedule." : "نظّم الطلاب في مجموعات حسب المادة والمدرّس والجدول."}
       >
         <AddGroupDialog
           courses={courses}
@@ -41,15 +45,15 @@ export default async function GroupsPage() {
             <div className="flex items-start gap-3">
               <UserPlus className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-400" />
               <div>
-                <p className="font-medium">أنشئ مدرسًا أو اربط حسابك أولًا</p>
+                <p className="font-medium">{en ? "Create a teacher or link your account first" : "أنشئ مدرسًا أو اربط حسابك أولًا"}</p>
                 <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  كل مجموعة تحتاج مدرسًا مسؤولًا عنها. أرسل دعوة للمدرس من الإعدادات، ثم ارجع إلى هنا لإنشاء المجموعة. يمكنك كتابة مادة جديدة داخل نموذج المجموعة دون إعدادها مسبقًا.
+                  {en ? "Each group needs an assigned teacher. Invite a teacher from Settings, then return here to create the group. You can enter a new subject in the group form without setting it up first." : "كل مجموعة تحتاج مدرسًا مسؤولًا عنها. أرسل دعوة للمدرس من الإعدادات، ثم ارجع إلى هنا لإنشاء المجموعة. يمكنك كتابة مادة جديدة داخل نموذج المجموعة دون إعدادها مسبقًا."}
                 </p>
               </div>
             </div>
             {!isTeacher && (
               <Button asChild variant="outline" className="shrink-0">
-                <Link href="/settings?tab=users#invite">دعوة مدرس</Link>
+                <Link href="/settings?tab=users#invite">{en ? "Invite teacher" : "دعوة مدرس"}</Link>
               </Button>
             )}
           </CardContent>
@@ -59,8 +63,8 @@ export default async function GroupsPage() {
       {groups.length === 0 ? (
         <EmptyState
           icon={UsersRound}
-          title="لا توجد مجموعات بعد"
-          description="أنشئ أول مجموعة لبدء جدولة الحصص ومتابعة الحضور."
+          title={en ? "No groups yet" : "لا توجد مجموعات بعد"}
+          description={en ? "Create your first group to start scheduling lessons and tracking attendance." : "أنشئ أول مجموعة لبدء جدولة الحصص ومتابعة الحضور."}
           action={<AddGroupDialog courses={courses} teachers={teachers} disabled={groupCreationBlocked} />}
         />
       ) : (
@@ -86,7 +90,7 @@ export default async function GroupsPage() {
                   </div>
                   <div className="mt-4 flex flex-wrap gap-3 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1.5">
-                      <UsersRound className="h-4 w-4" /> {g.student_count} طالب
+                      <UsersRound className="h-4 w-4" /> {g.student_count} {en ? "students" : "طالب"}
                     </span>
                     <span className="flex items-center gap-1.5">
                       <Calendar className="h-4 w-4" /> {g.schedule}
@@ -94,12 +98,12 @@ export default async function GroupsPage() {
                   </div>
                   <div className="mt-4 flex items-center justify-between border-t pt-3">
                     <span className="text-sm">
-                      المدرّس:{" "}
+                      {en ? "Teacher: " : "المدرّس: "}
                       <span className="font-medium text-foreground">
                         {g.teacher ? `${g.teacher.first_name} ${g.teacher.last_name}` : "—"}
                       </span>
                     </span>
-                    <Badge variant="secondary">{formatCurrency(g.monthly_fee)}/شهر</Badge>
+                    <Badge variant="secondary">{formatCurrency(g.monthly_fee)}/{en ? "month" : "شهر"}</Badge>
                   </div>
                 </CardContent>
               </Card>

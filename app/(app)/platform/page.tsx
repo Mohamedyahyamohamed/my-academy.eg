@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { requireScopedRole } from "@/services";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { PLANS } from "@/services/saas";
+import { PlatformAcademyControls, PlatformUserControls } from "@/components/platform/platform-admin-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export default async function PlatformPage() {
     client.from("students").select("academy_id"),
     client.from("teachers").select("academy_id"),
     client.from("subscriptions").select("academy_id,plan_id,status,cancel_at_period_end,canceled_at"),
-    client.from("profiles").select("academy_id,role"),
+    client.from("profiles").select("id,email,academy_id,role,is_active"),
     client.from("payments").select("academy_id,amount_paid"),
     client
       .from("audit_logs")
@@ -61,6 +62,10 @@ export default async function PlatformPage() {
   ]);
 
   const academyRows = academies ?? [];
+  const profileRows = profiles ?? [];
+  const ownerAcademyId = profileRows.find((profile: any) => profile.email?.toLowerCase() === "mohamedyahya13579@gmail.com")?.academy_id;
+  const managedAcademies = academyRows.filter((academy: any) => academy.id !== ownerAcademyId);
+  const managedUsers = profileRows.filter((profile: any) => profile.email?.toLowerCase() !== "mohamedyahya13579@gmail.com" && profile.role !== "SUPER_ADMIN");
   const subscriptionRows = subs ?? [];
   const count = (rows: Array<{ academy_id: string | null }> | null, academyId: string) =>
     (rows ?? []).filter((row) => row.academy_id === academyId).length;
@@ -142,7 +147,7 @@ export default async function PlatformPage() {
             <OperationalRow label="أكاديميات مدفوعة" value={`${paidAcademies}`} />
             <OperationalRow label="طلاب على المنصة" value={`${students?.length ?? 0}`} />
             <OperationalRow label="مدرسون نشطون" value={`${teachers?.length ?? 0}`} />
-            <OperationalRow label="مستخدمون مسجلون" value={`${profiles?.length ?? 0}`} />
+            <OperationalRow label="مستخدمون مسجلون" value={`${profileRows.length}`} />
             <OperationalRow label="تحصيل أولياء الأمور" value={EGP(sumPaid())} />
           </CardContent>
         </Card>
@@ -190,6 +195,27 @@ export default async function PlatformPage() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardContent className="space-y-4 p-5">
+            <div>
+              <h2 className="font-semibold">إدارة المستخدمين على مستوى المنصة</h2>
+              <p className="text-xs text-muted-foreground">يمكنك إيقاف أو حذف أي حساب، باستثناء حساب مالك المنصة.</p>
+            </div>
+            <PlatformUserControls users={managedUsers.map((profile: any) => ({ id: profile.id, email: profile.email, role: profile.role, is_active: profile.is_active }))} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="space-y-4 p-5">
+            <div>
+              <h2 className="font-semibold">إدارة الأكاديميات</h2>
+              <p className="text-xs text-muted-foreground">حذف الأكاديمية يحذف بياناتها التابعة نهائيًا، بينما تظل أكاديمية المالك محمية.</p>
+            </div>
+            <PlatformAcademyControls academies={managedAcademies.map((academy: any) => ({ id: academy.id, name: academy.name }))} />
+          </CardContent>
+        </Card>
+      </div>
 
       <p className="text-center text-xs text-muted-foreground">
         إيراد SaaS الشهري الفعلي يعتمد على الاشتراكات النشطة فقط. لا تُحسب التجارب ضمنه، وتظهر منفصلة ضمن الإيراد المحتمل.

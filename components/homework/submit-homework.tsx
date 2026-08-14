@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { submitHomeworkAction } from "@/app/actions/homework";
 import { uploadHomeworkFile } from "@/app/actions/upload";
+import { useClientLang } from "@/lib/i18n-client";
 
 export function SubmitHomework({
   homeworkId,
@@ -21,6 +22,7 @@ export function SubmitHomework({
   studentId: string;
   disabled?: boolean;
 }) {
+  const en = useClientLang() === "en";
   const [open, setOpen] = React.useState(false);
   const [content, setContent] = React.useState("");
   const [fileUrl, setFileUrl] = React.useState<string | null>(null);
@@ -40,9 +42,9 @@ export function SubmitHomework({
       if (!res.ok) throw new Error(res.error);
       setFileUrl(res.url!);
       setFileName(res.name!);
-      toast.success("تم إرفاق الملف.");
+      toast.success(en ? "File attached." : "تم إرفاق الملف.");
     } catch (e) {
-      toast.error("تعذّر رفع الملف: " + (e as Error).message);
+      toast.error((en ? "Could not upload file: " : "تعذّر رفع الملف: ") + (e as Error).message);
     } finally {
       setUploading(false);
     }
@@ -50,13 +52,13 @@ export function SubmitHomework({
 
   const submit = async () => {
     if (!content.trim() && !fileUrl) {
-      toast.error("اكتب إجابتك أو أرفق ملفًا.");
+      toast.error(en ? "Write your answer or attach a file." : "اكتب إجابتك أو أرفق ملفًا.");
       return;
     }
     setSaving(true);
     try {
       await submitHomeworkAction(homeworkId, studentId, content.trim(), fileUrl ?? undefined);
-      toast.success("تم تسليم الواجب.");
+      toast.success(en ? "Homework submitted." : "تم تسليم الواجب.");
       setOpen(false);
       setContent("");
       setFileUrl(null);
@@ -71,16 +73,16 @@ export function SubmitHomework({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" disabled={disabled}>
-          <Upload className="h-3.5 w-3.5" /> {disabled ? "مُسلَّم" : "Submit"}
+          <Upload className="h-3.5 w-3.5" /> {disabled ? (en ? "Submitted" : "مُسلَّم") : (en ? "Submit" : "تسليم")}
         </Button>
       </DialogTrigger>
-      <DialogContent>
-        <DialogHeader><DialogTitle>تسليم الواجب</DialogTitle></DialogHeader>
+      <DialogContent dir={en ? "ltr" : "rtl"}>
+        <DialogHeader><DialogTitle>{en ? "Submit homework" : "تسليم الواجب"}</DialogTitle></DialogHeader>
         <Textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
           rows={5}
-          placeholder="اكتب إجابتك أو الصق عملك هنا…"
+          placeholder={en ? "Write your answer or paste your work here…" : "اكتب إجابتك أو الصق عملك هنا…"}
         />
         <div className="space-y-2">
           {fileUrl ? (
@@ -96,7 +98,7 @@ export function SubmitHomework({
           ) : (
             <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground hover:bg-accent/50">
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {uploading ? "Uploading…" : "Attach a file (PDF, image, doc)"}
+              {uploading ? (en ? "Uploading…" : "جارٍ الرفع…") : (en ? "Attach a file (PDF, image, doc)" : "إرفاق ملف (PDF أو صورة أو مستند)")}
               <input
                 type="file"
                 className="hidden"
@@ -107,9 +109,9 @@ export function SubmitHomework({
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>إلغاء</Button>
+          <Button variant="outline" onClick={() => setOpen(false)}>{en ? "Cancel" : "إلغاء"}</Button>
           <Button onClick={submit} disabled={saving || uploading}>
-            {saving && <Loader2 className="h-4 w-4 animate-spin" />} Submit
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />} {en ? "Submit" : "تسليم"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -57,7 +57,7 @@ export function GroupForm({
   const lockedTeacherName = React.useMemo(() => {
     const t = teachers.find((x) => x.id === defaultTeacherId);
     return t ? `${t.first_name} ${t.last_name}` : (en ? "You" : "أنت");
-  }, [teachers, defaultTeacherId]);
+  }, [teachers, defaultTeacherId, en]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

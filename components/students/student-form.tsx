@@ -319,7 +319,7 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
         <div className="text-sm">
           <span className="font-medium">{en ? "Parent or guardian consent *" : "موافقة ولي الأمر أو الوصي *"}</span>
           <p className="text-xs text-muted-foreground">
-            {en ? <>I confirm that the parent or guardian consented to collecting and processing this student's data under the <a href="/privacy" className="text-primary underline">Privacy Policy</a>.</> : <>أقرّ بأن ولي الأمر أو الوصي وافق على جمع بيانات هذا الطالب ومعالجتها وفقًا لـ <a href="/privacy" className="text-primary underline">سياسة الخصوصية</a>.</>}
+            {en ? <>I confirm that the parent or guardian consented to collecting and processing this student&apos;s data under the <a href="/privacy" className="text-primary underline">Privacy Policy</a>.</> : <>أقرّ بأن ولي الأمر أو الوصي وافق على جمع بيانات هذا الطالب ومعالجتها وفقًا لـ <a href="/privacy" className="text-primary underline">سياسة الخصوصية</a>.</>}
           </p>
         </div>
       </label>

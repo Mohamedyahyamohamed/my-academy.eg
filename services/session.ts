@@ -38,10 +38,11 @@ function resolveLocalUser(email: string): SessionUser | null {
     (p) => p.email.toLowerCase() === email.toLowerCase(),
   );
   if (!profile) return null;
+  const isPlatformOwner = profile.email.toLowerCase() === "mohamedyahya13579@gmail.com";
   return {
     id: profile.id,
     email: profile.email,
-    role: profile.role,
+    role: isPlatformOwner ? "SUPER_ADMIN" : profile.role,
     full_name: profile.full_name,
     avatar_url: profile.avatar_url,
     academy_id: profile.academy_id,

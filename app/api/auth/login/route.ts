@@ -123,10 +123,11 @@ export async function POST(req: NextRequest) {
       // Issue BOTH cookies:
       // 1. ma_session (for sync getCurrentUser in existing code)
       // 2. Supabase auth cookies (set by signInWithPassword above — for RLS)
+      const isPlatformOwner = profile.email.toLowerCase() === "mohamedyahya13579@gmail.com";
       const user: SessionUser = {
         id: profile.id,
         email: profile.email,
-        role: membership.role,
+        role: isPlatformOwner ? "SUPER_ADMIN" : membership.role,
         full_name: profile.full_name,
         avatar_url: profile.avatar_url,
         academy_id: membership.academy_id,
@@ -185,10 +186,11 @@ export async function POST(req: NextRequest) {
         { status: 401 },
       );
     }
+    const isPlatformOwner = profile.email.toLowerCase() === "mohamedyahya13579@gmail.com";
     const user: SessionUser = {
       id: profile.id,
       email: profile.email,
-      role: profile.role,
+      role: isPlatformOwner ? "SUPER_ADMIN" : profile.role,
       full_name: profile.full_name,
       avatar_url: profile.avatar_url,
       academy_id: profile.academy_id,

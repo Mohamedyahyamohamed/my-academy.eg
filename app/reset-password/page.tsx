@@ -10,6 +10,19 @@ import { Label } from "@/components/ui/label";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/services/supabase/config";
 
+function cleanRecoveryUrl() {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  url.hash = "";
+  url.searchParams.delete("code");
+  url.searchParams.delete("token_hash");
+  url.searchParams.delete("type");
+  url.searchParams.delete("error");
+  url.searchParams.delete("error_code");
+  url.searchParams.delete("error_description");
+  window.history.replaceState({}, document.title, `${url.pathname}${url.search}`);
+}
+
 export default function ResetPasswordPage() {
   const supabase = React.useMemo(
     () => (isSupabaseConfigured() ? createBrowserSupabaseClient() : null),
@@ -25,6 +38,7 @@ export default function ResetPasswordPage() {
 
   React.useEffect(() => {
     let mounted = true;
+    let initialized = false;
 
     if (!supabase) {
       setChecking(false);
@@ -33,21 +47,73 @@ export default function ResetPasswordPage() {
       };
     }
 
-    const setSessionState = (hasSession: boolean) => {
+    const setSessionState = (hasSession: boolean, message?: string) => {
       if (!mounted) return;
       setHasRecoverySession(hasSession);
+      if (message) setError(message);
       setChecking(false);
     };
 
+    const initializeRecoverySession = async () => {
+      if (initialized || !mounted) return;
+      initialized = true;
+
+      try {
+        const url = new URL(window.location.href);
+        const query = url.searchParams;
+        const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
+        const code = query.get("code");
+        const tokenHash = query.get("token_hash");
+        const tokenType = query.get("type");
+        const accessToken = hash.get("access_token");
+        const refreshToken = hash.get("refresh_token");
+        let authError = query.get("error_description") ?? hash.get("error_description");
+
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          authError = exchangeError?.message ?? authError;
+        } else if (tokenHash && tokenType === "recovery") {
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: "recovery",
+          });
+          authError = verifyError?.message ?? authError;
+        } else if (accessToken && refreshToken) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          authError = sessionError?.message ?? authError;
+        }
+
+        if (code || tokenHash || accessToken || refreshToken) cleanRecoveryUrl();
+
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) authError = sessionError.message;
+
+        if (!mounted) return;
+        if (sessionData.session) {
+          setSessionState(true);
+        } else {
+          setSessionState(
+            false,
+            authError
+              ? "تعذر التحقق من رابط الاستعادة. اطلب رابطًا جديدًا وحاول فتحه مرة واحدة فقط."
+              : undefined,
+          );
+        }
+      } catch {
+        setSessionState(false, "تعذر التحقق من رابط الاستعادة. اطلب رابطًا جديدًا وحاول فتحه مرة واحدة فقط.");
+      }
+    };
+
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN" || event === "INITIAL_SESSION") {
         setSessionState(Boolean(session));
       }
     });
 
-    void supabase.auth.getSession().then(({ data: sessionData }) => {
-      setSessionState(Boolean(sessionData.session));
-    });
+    void initializeRecoverySession();
 
     return () => {
       mounted = false;
@@ -102,9 +168,7 @@ export default function ResetPasswordPage() {
                 <CheckCircle2 className="h-6 w-6" />
               </div>
               <h1 className="text-xl font-semibold tracking-tight">تم تحديث كلمة المرور</h1>
-              <p className="mt-2 text-sm text-muted-foreground">
-                يمكنك الآن تسجيل الدخول باستخدام كلمة المرور الجديدة.
-              </p>
+              <p className="mt-2 text-sm text-muted-foreground">يمكنك الآن تسجيل الدخول باستخدام كلمة المرور الجديدة.</p>
               <Button asChild className="mt-6 w-full">
                 <Link href="/login">الانتقال إلى تسجيل الدخول</Link>
               </Button>
@@ -133,9 +197,7 @@ export default function ResetPasswordPage() {
                 <KeyRound className="h-6 w-6" />
               </div>
               <h1 className="text-xl font-semibold tracking-tight">إنشاء كلمة مرور جديدة</h1>
-              <p className="mt-1.5 text-sm text-muted-foreground">
-                اختر كلمة مرور قوية لحماية حسابك.
-              </p>
+              <p className="mt-1.5 text-sm text-muted-foreground">اختر كلمة مرور قوية لحماية حسابك.</p>
 
               <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
                 <div className="space-y-1.5">
@@ -178,10 +240,7 @@ export default function ResetPasswordPage() {
         </div>
 
         <div className="mt-6 text-center">
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
-          >
+          <Link href="/login" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> العودة لتسجيل الدخول
           </Link>
         </div>

@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { useClientLang } from "@/lib/i18n-client";
 
 export function CalendarView({ lessons }: { lessons: any[] }) {
-  const days = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
+  const en = useClientLang() === "en";
+  const days = en ? ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] : ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
   const hours = Array.from({ length: 12 }, (_, i) => `${i + 9}:00`);
 
   const dayIndex = (dateStr: string) => {
@@ -17,7 +19,7 @@ export function CalendarView({ lessons }: { lessons: any[] }) {
   let colorIdx = 0;
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto" dir={en ? "ltr" : "rtl"}>
       <div className="min-w-[800px]">
         {/* رأس الأيام */}
         <div className="grid grid-cols-8 gap-1 border-b border-border pb-2">
@@ -38,7 +40,7 @@ export function CalendarView({ lessons }: { lessons: any[] }) {
               return (
                 <div key={di} className="min-h-[40px] rounded-md p-0.5">
                   {cellLessons.map((l) => {
-                    const courseName = l.group?.name?.split(" — ")[0] ?? l.topic ?? "حصة";
+                    const courseName = l.group?.name?.split(" — ")[0] ?? l.topic ?? (en ? "Lesson" : "حصة");
                     if (!courseColors[courseName]) {
                       courseColors[courseName] = colors[colorIdx % colors.length];
                       colorIdx++;
@@ -67,7 +69,7 @@ export function CalendarView({ lessons }: { lessons: any[] }) {
           </div>
         )}
         {lessons.length === 0 && (
-          <p className="mt-4 text-center text-sm text-muted-foreground">مفيش حصص مجدولة.</p>
+          <p className="mt-4 text-center text-sm text-muted-foreground">{en ? "No lessons scheduled." : "مفيش حصص مجدولة."}</p>
         )}
       </div>
     </div>

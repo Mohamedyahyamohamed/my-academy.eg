@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import { AppShell } from "@/components/layout/app-shell";
 import { OnboardingGate } from "@/components/layout/onboarding-gate";
 import { DemoBanner } from "@/components/layout/demo-banner";
+import { RealtimeNotifications } from "@/components/layout/realtime-notifications";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { loadCurrentUser, MiscService } from "@/services";
 import { collections, ensureStoreLoaded } from "@/services/data/store";
 
@@ -41,11 +43,14 @@ export default async function AuthenticatedLayout({
     shouldCheckOnboarding && teacherCount === 0 && studentCount === 0 && groupCount === 0;
 
   return (
-    <OnboardingGate required={needsOnboarding}>
-      <DemoBanner user={user} />
-      <AppShell user={user} academyName={academy.name}>
-        {children}
-      </AppShell>
-    </OnboardingGate>
+    <TooltipProvider delayDuration={200}>
+      <RealtimeNotifications />
+      <OnboardingGate required={needsOnboarding}>
+        <DemoBanner user={user} />
+        <AppShell user={user} academyName={academy.name}>
+          {children}
+        </AppShell>
+      </OnboardingGate>
+    </TooltipProvider>
   );
 }

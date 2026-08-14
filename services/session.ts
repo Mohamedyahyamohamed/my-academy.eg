@@ -20,6 +20,7 @@ import {
   DEMO_PASSWORD,
   DEMO_ACCOUNTS,
   roleHome,
+  isPlatformOwnerEmail,
 } from "@/lib/auth";
 import {
   createSignedSession,
@@ -38,7 +39,7 @@ function resolveLocalUser(email: string): SessionUser | null {
     (p) => p.email.toLowerCase() === email.toLowerCase(),
   );
   if (!profile) return null;
-  const isPlatformOwner = profile.email.toLowerCase() === "mohamedyahya13579@gmail.com";
+  const isPlatformOwner = isPlatformOwnerEmail(profile.email);
   return {
     id: profile.id,
     email: profile.email,
@@ -62,8 +63,9 @@ export async function loadCurrentUser(): Promise<SessionUser | null> {
   const raw = cookieStore.get(SESSION_COOKIE)?.value;
   const user = readSignedSession(raw);
   if (user) {
-    setRequestContext(user);
-    return user;
+    const normalizedUser = normalizePlatformOwner(user);
+    setRequestContext(normalizedUser);
+    return normalizedUser;
   }
 
   setRequestContext(null);
@@ -74,6 +76,10 @@ export function getCurrentUser(): SessionUser | null {
   return getRequestUser();
 }
 
+function normalizePlatformOwner(user: SessionUser): SessionUser {
+  return isPlatformOwnerEmail(user.email) ? { ...user, role: "SUPER_ADMIN" } : user;
+}
+
 export type AccessRestriction = {
   blocked: boolean;
   reason: "academy_suspended" | "subscription_past_due" | "subscription_expired" | null;
@@ -82,7 +88,7 @@ export type AccessRestriction = {
 
 /** Resolve the platform access state for one tenant. The owner is never blocked. */
 export async function getAccessRestriction(user: SessionUser): Promise<AccessRestriction> {
-  if (user.role === "SUPER_ADMIN" || user.email.toLowerCase() === "mohamedyahya13579@gmail.com") {
+  if (user.role === "SUPER_ADMIN" || isPlatformOwnerEmail(user.email)) {
     return { blocked: false, reason: null };
   }
 
@@ -121,7 +127,7 @@ export function requireUser(): SessionUser {
 export function requireRole(...roles: Role[]): SessionUser {
   const user = requireUser();
   // SUPER_ADMIN يقدر يفتح أي صفحة (صاحب المنصة)
-  if (user.role === "SUPER_ADMIN") return user;
+  if (user.role === "SUPER_ADMIN" || isPlatformOwnerEmail(user.email)) return { ...user, role: "SUPER_ADMIN" };
   if (!roles.includes(user.role)) redirect(roleHome(user.role));
   return user;
 }

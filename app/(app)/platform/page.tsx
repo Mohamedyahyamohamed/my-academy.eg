@@ -19,6 +19,7 @@ import { PLANS } from "@/services/saas";
 import { PlatformAcademyControls, PlatformUserControls } from "@/components/platform/platform-admin-controls";
 import { cookies } from "next/headers";
 import { getLangFromCookie } from "@/lib/i18n";
+import { isPlatformOwnerEmail } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -67,14 +68,20 @@ export default async function PlatformPage() {
 
   const academyRows = academies ?? [];
   const profileRows = profiles ?? [];
-  const ownerAcademyId = profileRows.find((profile: any) => profile.email?.toLowerCase() === "mohamedyahya13579@gmail.com")?.academy_id;
+  const ownerAcademyId = profileRows.find((profile: any) => isPlatformOwnerEmail(profile.email))?.academy_id;
   const managedAcademies = academyRows.filter((academy: any) => academy.id !== ownerAcademyId);
-  const managedUsers = profileRows.filter((profile: any) => profile.email?.toLowerCase() !== "mohamedyahya13579@gmail.com" && profile.role !== "SUPER_ADMIN");
-  const subscriptionRows = subs ?? [];
+  const managedAcademyIds = new Set(managedAcademies.map((academy: any) => academy.id));
+  const managedStudents = (students ?? []).filter((row: any) => managedAcademyIds.has(row.academy_id));
+  const managedTeachers = (teachers ?? []).filter((row: any) => managedAcademyIds.has(row.academy_id));
+  const managedPayments = (payments ?? []).filter((row: any) => managedAcademyIds.has(row.academy_id));
+  const managedLifecycleEvents = (lifecycleEvents ?? []).filter((row: any) => managedAcademyIds.has(row.academy_id));
+  const managedBillingEvents = (billingEvents ?? []).filter((row: any) => managedAcademyIds.has(row.academy_id));
+  const managedUsers = profileRows.filter((profile: any) => managedAcademyIds.has(profile.academy_id) && !isPlatformOwnerEmail(profile.email) && profile.role !== "SUPER_ADMIN");
+  const subscriptionRows = (subs ?? []).filter((row: any) => managedAcademyIds.has(row.academy_id));
   const count = (rows: Array<{ academy_id: string | null }> | null, academyId: string) =>
     (rows ?? []).filter((row) => row.academy_id === academyId).length;
   const sumPaid = (academyId?: string) =>
-    (payments ?? [])
+    managedPayments
       .filter((payment: any) => !academyId || payment.academy_id === academyId)
       .reduce((sum: number, payment: any) => sum + Number(payment.amount_paid || 0), 0);
   const subFor = (academyId: string) => subscriptionRows.find((sub: any) => sub.academy_id === academyId);
@@ -94,21 +101,21 @@ export default async function PlatformPage() {
     (sum: number, sub: any) => sum + (PLANS[sub.plan_id]?.price ?? 0),
     0,
   );
-  const paidAcademies = academyRows.filter((academy: any) => priceFor(academy.id).price > 0).length;
-  const activatedAcademies = academyRows.filter((academy: any) => count(students, academy.id) > 0).length;
+  const paidAcademies = managedAcademies.filter((academy: any) => priceFor(academy.id).price > 0).length;
+  const activatedAcademies = managedAcademies.filter((academy: any) => count(managedStudents, academy.id) > 0).length;
   const completedOnboarding = new Set(
-    (lifecycleEvents ?? [])
+    managedLifecycleEvents
       .filter((event: any) => event.action === "onboarding.complete")
       .map((event: any) => event.academy_id),
   ).size;
   const checkoutAcademies = new Set(
-    (lifecycleEvents ?? [])
+    managedLifecycleEvents
       .filter((event: any) => event.action === "billing.checkout_started")
       .map((event: any) => event.academy_id),
   ).size;
-  const convertedAcademies = new Set((billingEvents ?? []).map((event: any) => event.academy_id)).size;
+  const convertedAcademies = new Set(managedBillingEvents.map((event: any) => event.academy_id)).size;
   const lastThirtyDays = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  const newAcademies30d = academyRows.filter((academy: any) => new Date(academy.created_at).getTime() >= lastThirtyDays).length;
+  const newAcademies30d = managedAcademies.filter((academy: any) => new Date(academy.created_at).getTime() >= lastThirtyDays).length;
 
   return (
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
@@ -120,7 +127,7 @@ export default async function PlatformPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard icon={<Banknote className="h-4 w-4" />} label={en ? "Actual monthly SaaS revenue" : "إيراد SaaS شهري فعلي"} value={EGP(mrr, en)} hint={`${activeSubscriptions.length} ${en ? "active subscriptions" : "اشتراك نشط"}`} tone="emerald" />
         <MetricCard icon={<TrendingUp className="h-4 w-4" />} label={en ? "Potential revenue after trials" : "إيراد محتمل بعد التجارب"} value={EGP(potentialMrr, en)} hint={`${trialSubscriptions.length} ${en ? "academies on trial" : "أكاديمية في تجربة"}`} tone="violet" />
-        <MetricCard icon={<Activity className="h-4 w-4" />} label={en ? "Academy activation" : "تفعيل الأكاديميات"} value={`${percent(activatedAcademies, academyRows.length)}%`} hint={en ? `${activatedAcademies} of ${academyRows.length} have students` : `${activatedAcademies} من ${academyRows.length} لديها طلاب`} tone="sky" />
+        <MetricCard icon={<Activity className="h-4 w-4" />} label={en ? "Academy activation" : "تفعيل الأكاديميات"} value={`${percent(activatedAcademies, managedAcademies.length)}%`} hint={en ? `${activatedAcademies} of ${managedAcademies.length} have students` : `${activatedAcademies} من ${managedAcademies.length} لديها طلاب`} tone="sky" />
         <MetricCard icon={<ShieldCheck className="h-4 w-4" />} label={en ? "Subscriptions needing attention" : "اشتراكات تحتاج متابعة"} value={String(atRiskSubscriptions.length)} hint={en ? "Past due or scheduled cancellation" : "متأخرات أو إلغاء مجدول"} tone="amber" />
       </div>
 
@@ -135,8 +142,8 @@ export default async function PlatformPage() {
               <Badge variant="secondary">{en ? "Updated: now" : "آخر تحديث: الآن"}</Badge>
             </div>
             <div className="grid gap-3 sm:grid-cols-4">
-              <FunnelStep label={en ? "New academies" : "أكاديميات جديدة"} value={academyRows.length} hint={en ? `${newAcademies30d} in 30 days` : `${newAcademies30d} خلال 30 يوم`} />
-              <FunnelStep label={en ? "Completed onboarding" : "أكملت التهيئة"} value={completedOnboarding} hint={`${percent(completedOnboarding, academyRows.length)}% ${en ? "of registered academies" : "من المسجلين"}`} />
+              <FunnelStep label={en ? "New academies" : "أكاديميات جديدة"} value={managedAcademies.length} hint={en ? `${newAcademies30d} in 30 days` : `${newAcademies30d} خلال 30 يوم`} />
+              <FunnelStep label={en ? "Completed onboarding" : "أكملت التهيئة"} value={completedOnboarding} hint={`${percent(completedOnboarding, managedAcademies.length)}% ${en ? "of registered academies" : "من المسجلين"}`} />
               <FunnelStep label={en ? "Started checkout" : "بدأت الدفع"} value={checkoutAcademies} hint={`${percent(checkoutAcademies, completedOnboarding)}% ${en ? "of onboarded" : "من المهيأين"}`} />
               <FunnelStep label={en ? "Paid conversions" : "تحويلات مدفوعة"} value={convertedAcademies} hint={`${percent(convertedAcademies, checkoutAcademies)}% ${en ? "of checkouts" : "من البدايات"}`} final />
             </div>
@@ -149,9 +156,9 @@ export default async function PlatformPage() {
               <p className="text-xs text-muted-foreground">{en ? "Platform usage metrics across all academies." : "مقاييس استخدام المنصة عبر كل الأكاديميات."}</p>
             </div>
             <OperationalRow label={en ? "Paid academies" : "أكاديميات مدفوعة"} value={`${paidAcademies}`} />
-            <OperationalRow label={en ? "Students on platform" : "طلاب على المنصة"} value={`${students?.length ?? 0}`} />
-            <OperationalRow label={en ? "Active teachers" : "مدرسون نشطون"} value={`${teachers?.length ?? 0}`} />
-            <OperationalRow label={en ? "Registered users" : "مستخدمون مسجلون"} value={`${profileRows.length}`} />
+            <OperationalRow label={en ? "Students on platform" : "طلاب على المنصة"} value={`${managedStudents.length}`} />
+            <OperationalRow label={en ? "Active teachers" : "مدرسون نشطون"} value={`${managedTeachers.length}`} />
+            <OperationalRow label={en ? "Registered users" : "مستخدمون مسجلون"} value={`${managedUsers.length}`} />
             <OperationalRow label={en ? "Parent collections" : "تحصيل أولياء الأمور"} value={EGP(sumPaid(), en)} />
           </CardContent>
         </Card>
@@ -167,10 +174,10 @@ export default async function PlatformPage() {
             <span className="text-xs text-muted-foreground">{en ? "Currency: Egyptian pound" : "العملة: جنيه مصري"}</span>
           </div>
           <div className="divide-y">
-            {academyRows.map((academy: any) => {
+            {managedAcademies.map((academy: any) => {
               const { plan, price, status, subscription } = priceFor(academy.id);
-              const studentCount = count(students, academy.id);
-              const teacherCount = count(teachers, academy.id);
+              const studentCount = count(managedStudents, academy.id);
+              const teacherCount = count(managedTeachers, academy.id);
               const atRisk = status === "past_due" || subscription?.cancel_at_period_end || subscription?.canceled_at;
               const suspended = academy.is_active === false;
               return (
@@ -196,7 +203,7 @@ export default async function PlatformPage() {
                 </div>
               );
             })}
-            {academyRows.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">{en ? "No academies yet." : "لا توجد أكاديميات بعد."}</p>}
+            {managedAcademies.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">{en ? "No academies yet." : "لا توجد أكاديميات بعد."}</p>}
           </div>
         </CardContent>
       </Card>

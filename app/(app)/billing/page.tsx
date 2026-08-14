@@ -20,6 +20,7 @@ export default async function BillingPage() {
   const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
   const en = lang === "en";
   const currentUser = await requireScopedRole("ADMIN", "TEACHER");
+  if (currentUser.role === "SUPER_ADMIN") redirect("/platform");
   const academy = await getAcademyAsync(currentUser.academy_id);
   const workspaceType = academy.workspace_type === "TEACHER" ? "TEACHER" : "ACADEMY";
   // A TEACHER role inside an academy may teach, but cannot manage the academy subscription.

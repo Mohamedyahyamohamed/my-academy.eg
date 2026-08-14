@@ -5,6 +5,9 @@ import { requireScopedRole } from "@/services";
 
 export async function startBillingCheckoutAction(planId: string) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
+  if (user.role === "SUPER_ADMIN") {
+    return { ok: false as const, error: "مالك المنصة لا يحتاج إلى خطة عميل أو اشتراك خاص به." };
+  }
   const result = await createCheckout({
     academyId: user.academy_id,
     email: user.email,

@@ -5,10 +5,14 @@ import { ScanLine } from "lucide-react";
 import { AttendanceWorkshop } from "@/components/attendance/attendance-workshop";
 import { GroupsService, LessonsService, StudentsService, requireScopedRole } from "@/services";
 import { collections } from "@/services/data/store";
+import { cookies } from "next/headers";
+import { getLangFromCookie } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
 export default async function AttendancePage() {
+  const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
+  const en = lang === "en";
   const user = await requireScopedRole("ADMIN", "TEACHER");
   const groups = await GroupsService.listGroups("", user.academy_id, user.id);
   const lessons = (await LessonsService.listLessons({ pageSize: 500 }, user.academy_id, user.id)).items;
@@ -19,13 +23,13 @@ export default async function AttendancePage() {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
-        title="الحضور"
-        description="اختر المجموعة والحصة، ثم سجّل حضور كل طالب خلال ثوانٍ."
+        title={en ? "Attendance" : "الحضور"}
+        description={en ? "Choose a group and lesson, then record each student's attendance in seconds." : "اختر المجموعة والحصة، ثم سجّل حضور كل طالب خلال ثوانٍ."}
       >
         <Button asChild variant="outline">
-          <Link href="/attendance/scan"><ScanLine className="h-4 w-4" /> امسح أكواد الطلاب (QR)</Link>
+          <Link href="/attendance/scan"><ScanLine className="h-4 w-4" /> {en ? "Scan student QR codes" : "امسح أكواد الطلاب (QR)"}</Link>
         </Button>
       </PageHeader>
       <AttendanceWorkshop

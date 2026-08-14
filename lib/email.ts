@@ -30,18 +30,35 @@ function roleLabel(role: string): string {
   } as Record<string, string>)[role] || role;
 }
 
-async function send(to: string, subject: string, html: string): Promise<boolean> {
+type InviteEmailResult = {
+  sent: boolean;
+  errorCode?: "not_configured" | "sender_domain_unverified" | "provider_error";
+};
+
+async function sendDetailed(to: string, subject: string, html: string): Promise<InviteEmailResult> {
   if (!resend) {
     console.log(`[email] (no Resend key) would send to ${to}: ${subject}`);
-    return false;
+    return { sent: false, errorCode: "not_configured" };
   }
   try {
-    await resend.emails.send({ from: FROM, to, subject, html });
-    return true;
+    const { error } = await resend.emails.send({ from: FROM, to, subject, html });
+    if (error) {
+      const message = `${error.name ?? ""} ${error.message ?? ""}`.toLowerCase();
+      const errorCode = message.includes("resend.dev") || message.includes("domain") || message.includes("from address")
+        ? "sender_domain_unverified"
+        : "provider_error";
+      console.error("[email] send failed:", error.message);
+      return { sent: false, errorCode };
+    }
+    return { sent: true };
   } catch (error) {
     console.error("[email] send failed:", (error as Error).message);
-    return false;
+    return { sent: false, errorCode: "provider_error" };
   }
+}
+
+async function send(to: string, subject: string, html: string): Promise<boolean> {
+  return (await sendDetailed(to, subject, html)).sent;
 }
 
 export async function sendWelcomeEmail(email: string, name: string, role: string): Promise<void> {
@@ -69,7 +86,7 @@ export async function sendAcademyInviteEmail(input: {
   role: string;
   inviteUrl: string;
   expiresAt: string;
-}): Promise<boolean> {
+}): Promise<InviteEmailResult> {
   const greeting = input.recipientName ? `مرحبًا ${escapeHtml(input.recipientName)}` : "مرحبًا";
   const expiry = new Intl.DateTimeFormat("ar-EG", {
     dateStyle: "medium",
@@ -78,7 +95,7 @@ export async function sendAcademyInviteEmail(input: {
   }).format(new Date(input.expiresAt));
   const safeUrl = escapeHtml(input.inviteUrl);
 
-  return send(
+  return sendDetailed(
     input.email,
     `دعوة للانضمام إلى ${input.academyName} على ${APP_CONFIG.name}`,
     `<div dir="rtl" style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:24px;line-height:1.7;color:#0f172a">

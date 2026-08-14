@@ -70,7 +70,11 @@ export function InviteManager({ initialInvites }: { initialInvites: AcademyInvit
         return;
       }
       setFallbackUrl(result.inviteUrl ?? null);
-      toast.success(result.emailSent ? "تم إرسال الدعوة بالبريد الإلكتروني." : "تم إنشاء الدعوة. انسخ الرابط وأرسله يدويًا.");
+      if (result.emailSent) {
+        toast.success("تم إرسال الدعوة بالبريد الإلكتروني.");
+      } else {
+        toast.error(result.emailError ?? "تعذّر إرسال البريد. انسخ رابط الدعوة وأرسله يدويًا.");
+      }
       setForm({ fullName: "", email: "", phone: "", role: "TEACHER", expiry: "7" });
       setOpen(false);
     } finally {
@@ -148,7 +152,7 @@ export function InviteManager({ initialInvites }: { initialInvites: AcademyInvit
       {fallbackUrl && (
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-            <div className="flex-1"><p className="font-medium">رابط الدعوة الجاهز للإرسال</p><p className="text-xs text-muted-foreground">احتفظ به في مكان آمن. لا يمكن استعادته لاحقًا، ويمكن استخدامه مرة واحدة فقط.</p></div>
+            <div className="flex-1"><p className="font-medium">رابط الدعوة الجاهز للإرسال</p><p className="text-xs text-muted-foreground">لم يصل البريد لأن نطاق المرسل غير موثّق حاليًا. انسخ الرابط وأرسله للمستخدم يدويًا؛ الرابط صالح للاستخدام مرة واحدة فقط.</p></div>
             <Button variant="outline" onClick={async () => { if (await copyToClipboard(fallbackUrl)) toast.success("تم نسخ الرابط."); else toast.error("تعذّر نسخ الرابط. انسخه يدويًا."); }}><Copy className="h-4 w-4" />نسخ الرابط</Button>
             <Button variant="ghost" size="icon" aria-label="إخفاء الرابط" onClick={() => setFallbackUrl(null)}><X className="h-4 w-4" /></Button>
           </CardContent>

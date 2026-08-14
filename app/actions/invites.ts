@@ -97,7 +97,7 @@ export async function createAcademyInviteAction(input: {
   fullName?: string;
   phone?: string;
   expiresInDays?: number;
-}): Promise<{ ok: boolean; error?: string; emailSent?: boolean; inviteUrl?: string }> {
+}): Promise<{ ok: boolean; error?: string; emailSent?: boolean; emailError?: string; inviteUrl?: string }> {
   const actor = await requireScopedRole("ADMIN");
   // Keep the tenant id attached to the authenticated actor. Reading it again
   // from AsyncLocalStorage after several awaited database calls can lose the
@@ -184,7 +184,7 @@ export async function createAcademyInviteAction(input: {
   }
 
   const inviteUrl = `${appUrl()}/invite/${token}`;
-  const emailSent = await sendAcademyInviteEmail({
+  const emailResult = await sendAcademyInviteEmail({
     email,
     recipientName: fullName,
     academyName: academy.name,
@@ -192,6 +192,14 @@ export async function createAcademyInviteAction(input: {
     inviteUrl,
     expiresAt,
   });
+  const emailSent = emailResult.sent;
+  const emailError = emailResult.errorCode === "not_configured"
+    ? "خدمة البريد غير مفعّلة بعد. انسخ رابط الدعوة وأرسله يدويًا."
+    : emailResult.errorCode === "sender_domain_unverified"
+      ? "تعذّر إرسال البريد لأن نطاق المرسل غير موثّق في خدمة البريد. انسخ رابط الدعوة وأرسله يدويًا مؤقتًا."
+      : emailResult.errorCode === "provider_error"
+        ? "تعذّر إرسال البريد من مزود الخدمة. انسخ رابط الدعوة وأرسله يدويًا مؤقتًا."
+        : undefined;
 
   void audit({
     action: "invite.create",
@@ -203,7 +211,7 @@ export async function createAcademyInviteAction(input: {
 
   // The one-time URL is returned only to the inviting administrator as a
   // delivery fallback when the email provider is not configured or unavailable.
-  return { ok: true, emailSent, inviteUrl };
+  return { ok: true, emailSent, emailError, inviteUrl };
 }
 
 /** Admin-only revocation; accepted invitations are retained as an audit record. */

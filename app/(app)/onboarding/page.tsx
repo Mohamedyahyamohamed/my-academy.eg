@@ -71,7 +71,11 @@ export default function OnboardingPage() {
         return;
       }
       setInviteSent(true);
-      toast.success(result.emailSent ? "تم إرسال دعوة المدرس بالبريد." : "تم إنشاء الدعوة. يمكنك مشاركتها من الإعدادات.");
+      if (result.emailSent) {
+        toast.success("تم إرسال دعوة المدرس بالبريد.");
+      } else {
+        toast.error(result.emailError ?? "تم إنشاء الدعوة، لكن تعذّر إرسال البريد. يمكنك مشاركتها من الإعدادات.");
+      }
     } catch {
       toast.error("تعذر إنشاء الدعوة الآن. يمكنك إرسالها من الإعدادات لاحقًا.");
     } finally {

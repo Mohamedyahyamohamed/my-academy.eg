@@ -1,6 +1,8 @@
 "use client";
 
+import * as React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useClientLang } from "@/lib/i18n-client";
 
 interface StudentProfileTabsProps {
   overview: React.ReactNode;
@@ -13,16 +15,17 @@ interface StudentProfileTabsProps {
 }
 
 export function StudentProfileTabs(props: StudentProfileTabsProps) {
+  const en = useClientLang() === "en";
   return (
-    <Tabs defaultValue="overview">
+    <Tabs defaultValue="overview" dir={en ? "ltr" : "rtl"}>
       <TabsList className="w-full justify-start overflow-x-auto sm:w-auto">
-        <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
-        <TabsTrigger value="attendance">الحضور</TabsTrigger>
-        <TabsTrigger value="payments">المصروفات</TabsTrigger>
-        <TabsTrigger value="grades">الدرجات</TabsTrigger>
-        <TabsTrigger value="homework">الواجبات</TabsTrigger>
-        <TabsTrigger value="lessons">الحصص</TabsTrigger>
-        <TabsTrigger value="notes">الملاحظات</TabsTrigger>
+        <TabsTrigger value="overview">{en ? "Overview" : "نظرة عامة"}</TabsTrigger>
+        <TabsTrigger value="attendance">{en ? "Attendance" : "الحضور"}</TabsTrigger>
+        <TabsTrigger value="payments">{en ? "Payments" : "المصروفات"}</TabsTrigger>
+        <TabsTrigger value="grades">{en ? "Grades" : "الدرجات"}</TabsTrigger>
+        <TabsTrigger value="homework">{en ? "Homework" : "الواجبات"}</TabsTrigger>
+        <TabsTrigger value="lessons">{en ? "Lessons" : "الحصص"}</TabsTrigger>
+        <TabsTrigger value="notes">{en ? "Notes" : "الملاحظات"}</TabsTrigger>
       </TabsList>
       <TabsContent value="overview">{props.overview}</TabsContent>
       <TabsContent value="attendance">{props.attendance}</TabsContent>

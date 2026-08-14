@@ -16,13 +16,13 @@ export async function POST(req: NextRequest) {
   // unless Supabase is configured.
   const useE2eDemoFixture = process.env.E2E_DEMO_MODE === "true";
   const useSupabase = isSupabaseConfigured() && !useE2eDemoFixture;
-  if (process.env.NODE_ENV === "production" && useE2eDemoFixture) {
+  if (process.env.NODE_ENV === "production" && useE2eDemoFixture && process.env.ALLOW_E2E_DEMO_IN_PRODUCTION !== "true") {
     return NextResponse.json(
-      { error: "Demo authentication is disabled in production." },
+      { error: "Demo authentication is disabled in production unless explicitly enabled for a local test run." },
       { status: 503 },
     );
   }
-  if (process.env.NODE_ENV === "production" && !useSupabase) {
+  if (process.env.NODE_ENV === "production" && !useSupabase && !useE2eDemoFixture) {
     return NextResponse.json(
       { error: "إعدادات خدمة الحسابات غير مكتملة. تواصل مع إدارة المنصة." },
       { status: 503 },

@@ -121,6 +121,6 @@ test.describe("Security E2E", () => {
   // ─── Signup Rate Limiting ─────────────────────────────────────────
   test("(signup) signup page is accessible", async ({ page }) => {
     await page.goto("/signup");
-    await expect(page.locator("h1")).toContainText("أكاديميتك");
+    await expect(page.locator("h1")).toContainText("MYAcademy");
   });
 });

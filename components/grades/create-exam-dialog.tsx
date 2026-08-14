@@ -15,8 +15,10 @@ import {
 import { examSchema, type ExamValues } from "@/schemas";
 import { createExamAction } from "@/app/actions/grades";
 import type { Course, Group } from "@/types";
+import { useClientLang } from "@/lib/i18n-client";
 
 export function CreateExamDialog({ courses, groups }: { courses: Course[]; groups: Group[] }) {
+  const en = useClientLang() === "en";
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
   const [saving, setSaving] = React.useState(false);
@@ -30,7 +32,7 @@ export function CreateExamDialog({ courses, groups }: { courses: Course[]; group
     setSaving(true);
     try {
       const e = await createExamAction(values);
-      toast.success("تم إنشاء الاختبار.");
+      toast.success(en ? "Exam created." : "تم إنشاء الاختبار.");
       setOpen(false);
       router.push(`/grades/${e.id}`);
       router.refresh();
@@ -41,48 +43,48 @@ export function CreateExamDialog({ courses, groups }: { courses: Course[]; group
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button><Plus className="h-4 w-4" /> اختبار جديد</Button></DialogTrigger>
-      <DialogContent>
+      <DialogTrigger asChild><Button><Plus className="h-4 w-4" /> {en ? "New exam" : "اختبار جديد"}</Button></DialogTrigger>
+      <DialogContent dir={en ? "ltr" : "rtl"}>
         <DialogHeader>
-          <DialogTitle>إنشاء اختبار</DialogTitle>
-          <DialogDescription>حدّد اختبارًا لإدخال درجات طلاب المجموعة.</DialogDescription>
+          <DialogTitle>{en ? "Create exam" : "إنشاء اختبار"}</DialogTitle>
+          <DialogDescription>{en ? "Set up an exam to enter grades for the group students." : "حدّد اختبارًا لإدخال درجات طلاب المجموعة."}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           <div className="space-y-1.5">
-            <Label>اسم الاختبار *</Label>
-            <Input {...register("name")} placeholder="مثال: اختبار الجبر النصفي" />
+            <Label>{en ? "Exam name *" : "اسم الاختبار *"}</Label>
+            <Input {...register("name")} placeholder={en ? "e.g. Midterm algebra exam" : "مثال: اختبار الجبر النصفي"} />
             {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>المادة *</Label>
+              <Label>{en ? "Course *" : "المادة *"}</Label>
               <select {...register("course_id")} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                <option value="">اختر…</option>
+                <option value="">{en ? "Choose…" : "اختر…"}</option>
                 {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               {errors.course_id && <p className="text-xs text-destructive">{errors.course_id.message}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label>المجموعة *</Label>
+              <Label>{en ? "Group *" : "المجموعة *"}</Label>
               <select {...register("group_id")} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                <option value="">اختر…</option>
+                <option value="">{en ? "Choose…" : "اختر…"}</option>
                 {groups.filter((g) => !courseId || g.course_id === courseId).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
               {errors.group_id && <p className="text-xs text-destructive">{errors.group_id.message}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label>التاريخ *</Label>
+              <Label>{en ? "Date *" : "التاريخ *"}</Label>
               <Input type="date" {...register("date")} />
             </div>
             <div className="space-y-1.5">
-              <Label>الدرجة النهائية *</Label>
+              <Label>{en ? "Maximum score *" : "الدرجة النهائية *"}</Label>
               <Input type="number" min={1} step="any" {...register("max_score")} />
               {errors.max_score && <p className="text-xs text-destructive">{errors.max_score.message}</p>}
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>إلغاء</Button>
-            <Button type="submit" disabled={saving}>{saving && <Loader2 className="h-4 w-4 animate-spin" />} إنشاء</Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>{en ? "Cancel" : "إلغاء"}</Button>
+            <Button type="submit" disabled={saving}>{saving && <Loader2 className="h-4 w-4 animate-spin" />} {en ? "Create" : "إنشاء"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

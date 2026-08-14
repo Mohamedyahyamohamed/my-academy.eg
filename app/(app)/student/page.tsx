@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { CalendarClock, GraduationCap, ClipboardList, CalendarCheck, TrendingUp, ArrowRight, BookOpen } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -13,17 +14,20 @@ import { StudentQrCard } from "@/components/attendance/student-qr-card";
 import { collections } from "@/services/data/store";
 import { formatCurrency, formatDate, fullName } from "@/lib/utils";
 import { performanceLevel, performanceColor } from "@/lib/constants";
+import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
 export default async function StudentDashboard() {
   const user = await requireScopedRole("STUDENT");
+  const lang = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value);
+  const en = lang === "en";
   const d = await getStudentDashboard(user);
   if (!d) {
     return (
-      <div className="space-y-6">
-        <PageHeader title="لوحة التحكم" description={`أهلاً، ${user.full_name}.`} />
-        <EmptyState icon={BookOpen} title="الملف غير مرتبط" description="حسابك غير مرتبط بسجل طالب. تواصل مع الأكاديمية." />
+      <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
+        <PageHeader title={en ? "Dashboard" : "لوحة التحكم"} description={`${en ? "Hello" : "أهلاً"}, ${user.full_name}.`} />
+        <EmptyState icon={BookOpen} title={en ? "Profile not linked" : "الملف غير مرتبط"} description={en ? "Your account is not linked to a student record. Contact the academy." : "حسابك غير مرتبط بسجل طالب. تواصل مع الأكاديمية."} />
       </div>
     );
   }
@@ -33,10 +37,10 @@ export default async function StudentDashboard() {
   const academyName = MiscService.getAcademy(user.academy_id).name;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
-        title={`أهلاً، ${d.student.first_name} 👋`}
-        description={`${d.student.grade} · ${d.groups.map((g) => g.name.split(" — ")[0]).join(", ") || "لا توجد مجموعات"}`}
+        title={`${en ? "Hello" : "أهلاً"}, ${d.student.first_name} 👋`}
+        description={`${d.student.grade} · ${d.groups.map((g) => g.name.split(" — ")[0]).join(", ") || (en ? "No groups" : "لا توجد مجموعات")}`}
       >
         <StudentQrCard
           studentId={d.student.id}
@@ -47,10 +51,10 @@ export default async function StudentDashboard() {
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="الحضور" value={`${d.attendanceRate}%`} icon={CalendarCheck} accent="success" />
-        <StatCard label="متوسط الدرجات" value={`${d.averageGrade}%`} icon={GraduationCap} accent="primary" />
-        <StatCard label="المجموعات النشطة" value={d.groups.length} icon={BookOpen} accent="info" />
-        <StatCard label="الواجبات المعلّقة" value={d.pendingHomework.length} icon={ClipboardList} accent="warning" />
+        <StatCard label={en ? "Attendance" : "الحضور"} value={`${d.attendanceRate}%`} icon={CalendarCheck} accent="success" />
+        <StatCard label={en ? "Average grade" : "متوسط الدرجات"} value={`${d.averageGrade}%`} icon={GraduationCap} accent="primary" />
+        <StatCard label={en ? "Active groups" : "المجموعات النشطة"} value={d.groups.length} icon={BookOpen} accent="info" />
+        <StatCard label={en ? "Pending homework" : "الواجبات المعلّقة"} value={d.pendingHomework.length} icon={ClipboardList} accent="warning" />
       </div>
 
       {/* Gamification */}
@@ -58,11 +62,11 @@ export default async function StudentDashboard() {
         <div className="grid gap-4 lg:grid-cols-3">
           <Card className="lg:col-span-1 bg-gradient-to-br from-brand-500 to-brand-700 text-white">
             <CardContent className="p-5 text-center">
-              <p className="text-sm text-white/80">نقاطك</p>
+              <p className="text-sm text-white/80">{en ? "Your points" : "نقاطك"}</p>
               <p className="text-4xl font-bold">{rank.points}</p>
-              <p className="mt-1 text-sm text-white/80">الترتيب #{rank.rank}</p>
+              <p className="mt-1 text-sm text-white/80">{en ? "Rank" : "الترتيب"} #{rank.rank}</p>
               <p className="mt-3 inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-sm font-medium">
-                🔥 {rank.streak} أيام متتالية
+                🔥 {rank.streak} {en ? "day streak" : "أيام متتالية"}
               </p>
               <div className="mt-4 flex flex-wrap justify-center gap-1.5">
                 {rank.badges.filter((b) => b.earned).map((b) => (
@@ -71,7 +75,7 @@ export default async function StudentDashboard() {
                   </span>
                 ))}
                 {rank.badges.filter((b) => b.earned).length === 0 && (
-                  <span className="text-xs text-white/70">احصل على شارات بالمواظبة وتحقيق درجات مميزة.</span>
+                  <span className="text-xs text-white/70">{en ? "Earn badges through consistency and strong grades." : "احصل على شارات بالمواظبة وتحقيق درجات مميزة."}</span>
                 )}
               </div>
             </CardContent>
@@ -79,7 +83,7 @@ export default async function StudentDashboard() {
 
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle className="text-base">🏆 لوحة المتصدرين</CardTitle>
+              <CardTitle className="text-base">🏆 {en ? "Leaderboard" : "لوحة المتصدرين"}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1">
               {leaderboard.map((row) => (
@@ -91,9 +95,9 @@ export default async function StudentDashboard() {
                     {row.rank}
                   </span>
                   <span className="flex-1 truncate text-sm font-medium">
-                    {row.studentId === d.student.id ? "أنت" : row.name}
+                    {row.studentId === d.student.id ? (en ? "You" : "أنت") : row.name}
                   </span>
-                  <span className="text-sm text-muted-foreground">{row.points} نقطة</span>
+                  <span className="text-sm text-muted-foreground">{row.points} {en ? "points" : "نقطة"}</span>
                 </div>
               ))}
             </CardContent>
@@ -104,12 +108,12 @@ export default async function StudentDashboard() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">الحصص القادمة</CardTitle>
-            <Button asChild variant="ghost" size="sm"><Link href="/student/lessons">عرض الكل</Link></Button>
+            <CardTitle className="text-base">{en ? "Upcoming lessons" : "الحصص القادمة"}</CardTitle>
+            <Button asChild variant="ghost" size="sm"><Link href="/student/lessons">{en ? "View all" : "عرض الكل"}</Link></Button>
           </CardHeader>
           <CardContent className="space-y-1">
             {d.upcomingLessons.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">لا توجد حصص قادمة.</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">{en ? "No upcoming lessons." : "لا توجد حصص قادمة."}</p>
             ) : (
               d.upcomingLessons.map((l) => (
                 <div key={l.id} className="flex items-center justify-between rounded-lg p-2.5 hover:bg-accent">
@@ -128,12 +132,12 @@ export default async function StudentDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">أحدث الدرجات</CardTitle>
-            <Button asChild variant="ghost" size="sm"><Link href="/student/grades">عرض الكل</Link></Button>
+            <CardTitle className="text-base">{en ? "Recent grades" : "أحدث الدرجات"}</CardTitle>
+            <Button asChild variant="ghost" size="sm"><Link href="/student/grades">{en ? "View all" : "عرض الكل"}</Link></Button>
           </CardHeader>
           <CardContent className="space-y-1">
             {d.recentGrades.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">لا توجد درجات بعد.</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">{en ? "No grades yet." : "لا توجد درجات بعد."}</p>
             ) : (
               d.recentGrades.map((g) => {
                 const exam = collections().exams.find((e) => e.id === g.exam_id);
@@ -155,18 +159,18 @@ export default async function StudentDashboard() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base">الواجبات المعلّقة</CardTitle>
-          <Button asChild variant="ghost" size="sm"><Link href="/student/homework">عرض الكل</Link></Button>
+          <CardTitle className="text-base">{en ? "Pending homework" : "الواجبات المعلّقة"}</CardTitle>
+          <Button asChild variant="ghost" size="sm"><Link href="/student/homework">{en ? "View all" : "عرض الكل"}</Link></Button>
         </CardHeader>
         <CardContent className="space-y-1">
           {d.pendingHomework.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">لا توجد واجبات معلّقة 🎉</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">{en ? "No pending homework." : "لا توجد واجبات معلّقة 🎉"}</p>
           ) : (
             d.pendingHomework.map((s) => (
               <div key={s.id} className="flex items-center justify-between rounded-lg p-2.5 hover:bg-accent">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{s.homework?.title}</p>
-                  <p className="text-xs text-muted-foreground">موعد التسليم: {formatDate(s.homework?.deadline)}</p>
+                  <p className="text-xs text-muted-foreground">{en ? "Due:" : "موعد التسليم:"} {formatDate(s.homework?.deadline)}</p>
                 </div>
                 <HomeworkBadge status={s.status} />
               </div>

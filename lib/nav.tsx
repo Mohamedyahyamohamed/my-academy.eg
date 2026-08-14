@@ -166,13 +166,33 @@ export const SUPER_ADMIN_NAV: NavSection[] = [
 ];
 
 /** Academy managers handle administration; teaching operations stay with teachers. */
-export const ACADEMY_MANAGER_NAV: NavSection[] = ADMIN_NAV
-  .filter((section) => section.titleEn !== "Academic Operations")
-  .map((section) => ({
-    ...section,
-    items: section.items.filter((item) => item.href !== "/calendar"),
-  }))
-  .filter((section) => section.items.length > 0);
+export const ACADEMY_MANAGER_NAV: NavSection[] = [
+  {
+    items: [{ titleAr: "لوحة التحكم", titleEn: "Dashboard", href: "/dashboard", icon: LayoutDashboard }],
+  },
+  {
+    titleAr: "التقارير والمتابعة", titleEn: "Reports & Oversight",
+    items: [
+      { titleAr: "التقارير", titleEn: "Reports", href: "/reports", icon: CalendarDays },
+      { titleAr: "التحليلات", titleEn: "Analytics", href: "/analytics", icon: BarChart3 },
+    ],
+  },
+  {
+    titleAr: "المالية والرقابة", titleEn: "Finance & Governance",
+    items: [
+      { titleAr: "المصاريف", titleEn: "Payments", href: "/payments", icon: Wallet },
+      { titleAr: "الاشتراك", titleEn: "Subscription", href: "/billing", icon: BarChart3 },
+      { titleAr: "سجل العمليات", titleEn: "Audit Logs", href: "/audit", icon: BarChart3 },
+    ],
+  },
+  {
+    titleAr: "النظام والدعم", titleEn: "System & Support",
+    items: [
+      { titleAr: "الإعدادات", titleEn: "Settings", href: "/settings", icon: Settings },
+      { titleAr: "المساعدة والدعم", titleEn: "Help & Support", href: "/support", icon: CircleHelp },
+    ],
+  },
+];
 
 export function navForRole(role: Role): NavSection[] {
   switch (role) {

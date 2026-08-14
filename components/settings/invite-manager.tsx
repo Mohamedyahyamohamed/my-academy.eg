@@ -71,9 +71,13 @@ export function InviteManager({ initialInvites }: { initialInvites: AcademyInvit
       }
       setFallbackUrl(result.inviteUrl ?? null);
       if (result.emailSent) {
-        toast.success("تم إرسال الدعوة بالبريد الإلكتروني.");
+        toast.success("تم إنشاء الدعوة وإرسالها بالبريد الإلكتروني.");
       } else {
-        toast.error(result.emailError ?? "تعذّر إرسال البريد. انسخ رابط الدعوة وأرسله يدويًا.");
+        toast.success("تم إنشاء الدعوة بنجاح.");
+        toast.warning(result.emailError ?? "تعذّر إرسال البريد. انسخ رابط الدعوة وأرسله يدويًا.", {
+          description: "رابط الدعوة ظاهر أسفل الصفحة وجاهز للنسخ.",
+          duration: 7000,
+        });
       }
       setForm({ fullName: "", email: "", phone: "", role: "TEACHER", expiry: "7" });
       setOpen(false);
@@ -122,7 +126,7 @@ export function InviteManager({ initialInvites }: { initialInvites: AcademyInvit
                   <div className="space-y-1.5"><Label htmlFor="invite-role">الدور</Label><select id="invite-role" value={form.role} onChange={(event) => setForm((current) => ({ ...current, role: event.target.value as Role }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="TEACHER">مدرّس</option><option value="PARENT">ولي أمر</option><option value="STUDENT">طالب</option><option value="ADMIN">مدير</option></select></div>
                   <div className="space-y-1.5"><Label htmlFor="invite-expiry">صلاحية الرابط</Label><select id="invite-expiry" value={form.expiry} onChange={(event) => setForm((current) => ({ ...current, expiry: event.target.value }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="1">يوم واحد</option><option value="7">7 أيام</option><option value="14">14 يومًا</option><option value="30">30 يومًا</option></select></div>
                 </div>
-                <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>إلغاء</Button><Button type="submit" disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}إرسال الدعوة</Button></DialogFooter>
+                <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>إلغاء</Button><Button type="submit" disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}إنشاء الدعوة</Button></DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
@@ -152,7 +156,7 @@ export function InviteManager({ initialInvites }: { initialInvites: AcademyInvit
       {fallbackUrl && (
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-            <div className="flex-1"><p className="font-medium">رابط الدعوة الجاهز للإرسال</p><p className="text-xs text-muted-foreground">لم يصل البريد لأن نطاق المرسل غير موثّق حاليًا. انسخ الرابط وأرسله للمستخدم يدويًا؛ الرابط صالح للاستخدام مرة واحدة فقط.</p></div>
+            <div className="flex-1"><p className="font-medium">تم إنشاء الدعوة — الرابط جاهز للإرسال</p><p className="text-xs text-muted-foreground">لم يُرسل البريد تلقائيًا لأن نطاق المرسل غير موثّق حاليًا. انسخ الرابط وأرسله للمستخدم يدويًا؛ الرابط صالح للاستخدام مرة واحدة فقط.</p></div>
             <Button variant="outline" onClick={async () => { if (await copyToClipboard(fallbackUrl)) toast.success("تم نسخ الرابط."); else toast.error("تعذّر نسخ الرابط. انسخه يدويًا."); }}><Copy className="h-4 w-4" />نسخ الرابط</Button>
             <Button variant="ghost" size="icon" aria-label="إخفاء الرابط" onClick={() => setFallbackUrl(null)}><X className="h-4 w-4" /></Button>
           </CardContent>

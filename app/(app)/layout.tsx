@@ -5,7 +5,7 @@ import { OnboardingGate } from "@/components/layout/onboarding-gate";
 import { DemoBanner } from "@/components/layout/demo-banner";
 import { RealtimeNotifications } from "@/components/layout/realtime-notifications";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { loadCurrentUser, MiscService } from "@/services";
+import { getAccessRestriction, loadCurrentUser, MiscService } from "@/services";
 import { collections, ensureStoreLoaded } from "@/services/data/store";
 
 export default async function AuthenticatedLayout({
@@ -15,6 +15,8 @@ export default async function AuthenticatedLayout({
 }) {
   const user = await loadCurrentUser();
   if (!user) redirect("/login");
+  const restriction = await getAccessRestriction(user);
+  if (restriction.blocked) redirect(`/suspended?reason=${restriction.reason}`);
 
   // Production data is hydrated only after resolving the academy from the
   // signed server session, keeping each request isolated to its tenant.

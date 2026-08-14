@@ -52,6 +52,27 @@ export async function deletePlatformUser(profileId: string): Promise<ActionResul
   return { ok: true };
 }
 
+export async function setPlatformAcademyStatus(academyId: string, isActive: boolean, reason?: string): Promise<ActionResult> {
+  const client = await adminClient();
+  const { data: ownerProfile } = await client.from("profiles").select("id,academy_id").eq("email", OWNER_EMAIL).maybeSingle();
+  if (ownerProfile?.academy_id === academyId) return { ok: false, error: "لا يمكن إيقاف أكاديمية المالك الأساسية." };
+
+  const { data: academy, error: academyError } = await client.from("academies").select("id").eq("id", academyId).maybeSingle();
+  if (academyError || !academy) return { ok: false, error: "الأكاديمية غير موجودة." };
+
+  const { error } = await client.from("academies").update({
+    is_active: isActive,
+    suspension_reason: isActive ? null : (reason?.trim() || "تم الإيقاف بواسطة مالك المنصة"),
+    suspended_at: isActive ? null : new Date().toISOString(),
+    suspended_by: isActive ? null : (ownerProfile?.id ?? null),
+    updated_at: new Date().toISOString(),
+  }).eq("id", academyId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/platform");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
 export async function deletePlatformAcademy(academyId: string): Promise<ActionResult> {
   const client = await adminClient();
   const { data: ownerProfile } = await client

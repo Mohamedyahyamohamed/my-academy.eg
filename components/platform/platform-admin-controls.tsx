@@ -2,13 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { ShieldOff, Trash2 } from "lucide-react";
+import { ShieldOff, Trash2, Power } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { setPlatformUserStatus, deletePlatformUser, deletePlatformAcademy } from "@/app/actions/platform";
+import { setPlatformUserStatus, deletePlatformUser, deletePlatformAcademy, setPlatformAcademyStatus } from "@/app/actions/platform";
 
 type UserRow = { id: string; email: string; role: string; is_active: boolean };
-type AcademyRow = { id: string; name: string };
+type AcademyRow = { id: string; name: string; is_active?: boolean };
 
 export function PlatformUserControls({ users }: { users: UserRow[] }) {
   const router = useRouter();
@@ -64,7 +64,26 @@ export function PlatformAcademyControls({ academies }: { academies: AcademyRow[]
     <div className="space-y-2">
       {academies.map((academy) => (
         <div key={academy.id} className="flex items-center gap-3 rounded-lg border p-3">
-          <p className="min-w-0 flex-1 truncate text-sm font-medium">{academy.name || "أكاديمية بلا اسم"}</p>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium">{academy.name || "أكاديمية بلا اسم"}</p>
+            <p className="text-xs text-muted-foreground">{academy.is_active === false ? "موقوفة" : "نشطة"}</p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={() => {
+              const next = academy.is_active === false;
+              if (!next && !window.confirm(`سيتم إيقاف خدمة «${academy.name}» مع الحفاظ على جميع البيانات. هل تريد المتابعة؟`)) return;
+              startTransition(async () => {
+                const result = await setPlatformAcademyStatus(academy.id, next);
+                if (!result.ok) toast.error(result.error || "تعذر تحديث حالة الأكاديمية");
+                else { toast.success(next ? "تم تفعيل الأكاديمية" : "تم إيقاف الأكاديمية مؤقتًا"); router.refresh(); }
+              });
+            }}
+          >
+            <Power className="h-4 w-4" /> {academy.is_active === false ? "تفعيل" : "إيقاف مؤقت"}
+          </Button>
           <Button
             size="sm"
             variant="destructive"

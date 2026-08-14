@@ -13,6 +13,7 @@ import type { Role, SessionUser } from "@/types";
 import { collections } from "./data/store";
 import { getRequestUser, setRequestContext } from "./request-context";
 import { isSupabaseConfigured } from "./supabase/config";
+import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import {
   ACTIVE_ACADEMY_COOKIE,
   SESSION_COOKIE,
@@ -72,6 +73,42 @@ export function getCurrentUser(): SessionUser | null {
   return getRequestUser();
 }
 
+export type AccessRestriction = {
+  blocked: boolean;
+  reason: "academy_suspended" | "subscription_past_due" | "subscription_expired" | null;
+  academyName?: string;
+};
+
+/** Resolve the platform access state for one tenant. The owner is never blocked. */
+export async function getAccessRestriction(user: SessionUser): Promise<AccessRestriction> {
+  if (user.role === "SUPER_ADMIN" || user.email.toLowerCase() === "mohamedyahya13579@gmail.com") {
+    return { blocked: false, reason: null };
+  }
+
+  try {
+    const client = nodeSupabaseClient();
+    if (client) {
+      const [{ data: academy }, { data: subscription }] = await Promise.all([
+        client.from("academies").select("name,is_active").eq("id", user.academy_id).maybeSingle(),
+        client.from("subscriptions").select("status,current_period_end").eq("academy_id", user.academy_id).maybeSingle(),
+      ]);
+      if (academy?.is_active === false) return { blocked: true, reason: "academy_suspended", academyName: academy.name ?? undefined };
+      if (subscription?.status === "past_due") return { blocked: true, reason: "subscription_past_due", academyName: academy?.name ?? undefined };
+      if (subscription?.status === "expired" || subscription?.status === "canceled") return { blocked: true, reason: "subscription_expired", academyName: academy?.name ?? undefined };
+      return { blocked: false, reason: null, academyName: academy?.name ?? undefined };
+    }
+  } catch (error) {
+    console.error("[access] unable to read platform access state:", (error as Error).message);
+  }
+
+  const localAcademy = collections().academies.find((academy: any) => academy.id === user.academy_id) as any;
+  if (localAcademy?.is_active === false) return { blocked: true, reason: "academy_suspended", academyName: localAcademy.name };
+  const localSubscription = (collections() as any).subscriptions?.find((row: any) => row.academy_id === user.academy_id);
+  if (localSubscription?.status === "past_due") return { blocked: true, reason: "subscription_past_due", academyName: localAcademy?.name };
+  if (localSubscription?.status === "expired" || localSubscription?.status === "canceled") return { blocked: true, reason: "subscription_expired", academyName: localAcademy?.name };
+  return { blocked: false, reason: null, academyName: localAcademy?.name };
+}
+
 /** Require an authenticated user, else redirect to login. */
 export function requireUser(): SessionUser {
   const user = getCurrentUser();
@@ -113,6 +150,9 @@ export async function requireScopedRole(...roles: Role[]): Promise<SessionUser> 
   if (user.role !== "SUPER_ADMIN" && !roles.includes(user.role)) {
     redirect(roleHome(user.role));
   }
+
+  const restriction = await getAccessRestriction(user);
+  if (restriction.blocked) redirect(`/suspended?reason=${restriction.reason}`);
 
   const { ensureStoreLoaded } = await import("./data/store");
   await ensureStoreLoaded(user.academy_id);

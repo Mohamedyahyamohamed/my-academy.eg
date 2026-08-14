@@ -45,7 +45,7 @@ export default async function PlatformPage() {
     { data: lifecycleEvents },
     { data: billingEvents },
   ] = await Promise.all([
-    client.from("academies").select("id,name,created_at").order("created_at", { ascending: false }),
+    client.from("academies").select("id,name,created_at,is_active,suspension_reason").order("created_at", { ascending: false }),
     client.from("students").select("academy_id"),
     client.from("teachers").select("academy_id"),
     client.from("subscriptions").select("academy_id,plan_id,status,cancel_at_period_end,canceled_at"),
@@ -172,6 +172,7 @@ export default async function PlatformPage() {
               const studentCount = count(students, academy.id);
               const teacherCount = count(teachers, academy.id);
               const atRisk = status === "past_due" || subscription?.cancel_at_period_end || subscription?.canceled_at;
+              const suspended = academy.is_active === false;
               return (
                 <div key={academy.id} className="flex flex-wrap items-center gap-3 p-4">
                   <Avatar><AvatarFallback>{(academy.name || "أ").slice(0, 2)}</AvatarFallback></Avatar>
@@ -182,7 +183,7 @@ export default async function PlatformPage() {
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <Badge variant={studentCount > 0 ? "success" : "secondary"}>{studentCount > 0 ? (en ? "Active" : "مفعّلة") : (en ? "Needs setup" : "تحتاج تهيئة")}</Badge>
+                    <Badge variant={suspended ? "destructive" : studentCount > 0 ? "success" : "secondary"}>{suspended ? (en ? "Suspended" : "موقوفة") : studentCount > 0 ? (en ? "Active" : "مفعّلة") : (en ? "Needs setup" : "تحتاج تهيئة")}</Badge>
                     <Badge variant={atRisk ? "destructive" : status === "active" ? "success" : "secondary"}>
                       {atRisk ? (en ? "Needs attention" : "تحتاج متابعة") : status}
                     </Badge>
@@ -216,7 +217,7 @@ export default async function PlatformPage() {
               <h2 className="font-semibold">{en ? "Academy management" : "إدارة الأكاديميات"}</h2>
               <p className="text-xs text-muted-foreground">{en ? "Deleting an academy permanently deletes its data; the owner's academy remains protected." : "حذف الأكاديمية يحذف بياناتها التابعة نهائيًا، بينما تظل أكاديمية المالك محمية."}</p>
             </div>
-            <PlatformAcademyControls academies={managedAcademies.map((academy: any) => ({ id: academy.id, name: academy.name }))} />
+            <PlatformAcademyControls academies={managedAcademies.map((academy: any) => ({ id: academy.id, name: academy.name, is_active: academy.is_active !== false }))} />
           </CardContent>
         </Card>
       </div>

@@ -62,6 +62,11 @@ export interface Academy {
   phone: string | null;
   email: string | null;
   address: string | null;
+  /** Platform-wide soft suspension state; data remains preserved when false. */
+  is_active?: boolean;
+  suspension_reason?: string | null;
+  suspended_at?: ISODate | null;
+  suspended_by?: UUID | null;
   created_at: ISODate;
   updated_at: ISODate;
 }

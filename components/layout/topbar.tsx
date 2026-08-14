@@ -7,6 +7,7 @@ import { UserMenu } from "./user-menu";
 import { LanguageToggle } from "./language-toggle";
 import { PushNotifications } from "./push-notifications";
 import { InstallApp } from "./install-app";
+import { AcademySwitcher } from "./academy-switcher";
 import type { SessionUser } from "@/types";
 import type { NavSection } from "@/lib/nav";
 
@@ -23,6 +24,7 @@ export function Topbar({ user, sections }: TopbarProps) {
       <div className="flex-1">
         <GlobalSearch />
       </div>
+      <AcademySwitcher currentAcademyId={user.academy_id} memberships={user.memberships} />
       <div className="flex items-center gap-1">
         <InstallApp />
         <PushNotifications />

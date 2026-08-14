@@ -9,6 +9,17 @@ export type ISODate = string;
 
 export type Role = "SUPER_ADMIN" | "ADMIN" | "TEACHER" | "PARENT" | "STUDENT";
 
+/** A user's active role inside one academy. Memberships are the authorization source. */
+export interface AcademyMembership {
+  id?: UUID;
+  academy_id: UUID;
+  role: Role;
+  status?: "INVITED" | "ACTIVE" | "SUSPENDED" | "REVOKED";
+  academy_name?: string;
+  academy_slug?: string;
+  joined_at?: ISODate | null;
+}
+
 export type Gender = "male" | "female";
 
 /** A Supabase auth user's profile (1:1 with auth.users). */
@@ -32,7 +43,12 @@ export interface SessionUser {
   role: Role;
   full_name: string;
   avatar_url: string | null;
+  /** The academy currently selected for this request. */
   academy_id: UUID;
+  /** Explicit active membership identifier when available. */
+  active_membership_id?: UUID;
+  /** Active academy memberships available to the signed-in user. */
+  memberships?: AcademyMembership[];
 }
 
 export interface Academy {

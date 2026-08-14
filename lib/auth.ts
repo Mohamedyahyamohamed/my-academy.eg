@@ -5,6 +5,8 @@
 import type { Role } from "@/types";
 
 export const SESSION_COOKIE = "ma_session";
+/** Non-sensitive preference for the user's selected academy context. */
+export const ACTIVE_ACADEMY_COOKIE = "ma_active_academy";
 export const DEMO_PASSWORD = "demo1234";
 
 /** الباسورد الافتراضي لحسابات الطلاب لما الأدمن يضيفهم (الطالب يغيّره بعدين). */

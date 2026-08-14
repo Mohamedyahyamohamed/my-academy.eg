@@ -9,9 +9,9 @@ import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { isSupabaseConfigured } from "@/services/supabase/config";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { createSignedSession, sessionMaxAgeSeconds } from "@/lib/session-cookie";
-import { SESSION_COOKIE } from "@/lib/auth";
+import { ACTIVE_ACADEMY_COOKIE, SESSION_COOKIE } from "@/lib/auth";
 import { sendAcademyInviteEmail } from "@/lib/email";
-import type { Role, SessionUser } from "@/types";
+import type { AcademyMembership, Role, SessionUser } from "@/types";
 
 const INVITABLE_ROLES = ["ADMIN", "TEACHER", "PARENT", "STUDENT"] as const;
 type InvitableRole = (typeof INVITABLE_ROLES)[number];
@@ -402,22 +402,49 @@ export async function acceptAcademyInviteAction(input: {
     .maybeSingle();
   if (redeemError || !redeemed) return { ok: false, error: "تعذّر تأكيد قبول الدعوة. أعد المحاولة." };
 
+  const { data: activeMemberships, error: activeMembershipsError } = await client
+    .from("academy_memberships")
+    .select("id,academy_id,role,status,joined_at,academies(name,slug)")
+    .eq("profile_id", userId)
+    .eq("status", "ACTIVE")
+    .order("joined_at", { ascending: true })
+    .limit(20);
+  if (activeMembershipsError || !activeMemberships?.length) {
+    return { ok: false, error: "تم قبول الدعوة، لكن تعذّر تحميل عضويات الحساب." };
+  }
+  const memberships: AcademyMembership[] = activeMemberships.map((item: any) => {
+    const academy = Array.isArray(item.academies) ? item.academies[0] : item.academies;
+    return {
+      id: item.id,
+      academy_id: item.academy_id,
+      role: item.role,
+      status: item.status,
+      joined_at: item.joined_at,
+      academy_name: academy?.name,
+      academy_slug: academy?.slug,
+    };
+  });
+  const currentMembership = memberships.find((membership) => membership.academy_id === invite.academy_id) ?? memberships[0];
   const cookieStore = await cookies();
   const signedUser: SessionUser = {
     id: userId,
     email: invite.email,
-    role: invite.role as Role,
+    role: currentMembership.role as Role,
     full_name: fullName,
     avatar_url: avatarUrl,
-    academy_id: invite.academy_id,
+    academy_id: currentMembership.academy_id,
+    active_membership_id: currentMembership.id,
+    memberships,
   };
-  cookieStore.set(SESSION_COOKIE, createSignedSession(signedUser), {
+  const sessionCookieOptions = {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: sessionMaxAgeSeconds(),
-  });
+  };
+  cookieStore.set(SESSION_COOKIE, createSignedSession(signedUser), sessionCookieOptions);
+  cookieStore.set(ACTIVE_ACADEMY_COOKIE, signedUser.academy_id, sessionCookieOptions);
 
   const academy = invite.academies as unknown as { name?: string } | { name?: string }[] | null;
   const academyName = Array.isArray(academy) ? academy[0]?.name : academy?.name;

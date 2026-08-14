@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { SESSION_COOKIE, DEMO_PASSWORD } from "@/lib/auth";
+import { ACTIVE_ACADEMY_COOKIE, SESSION_COOKIE, DEMO_PASSWORD } from "@/lib/auth";
 import { ensureStoreLoaded } from "@/services/data/store";
 import { isSupabaseConfigured } from "@/services/supabase/config";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
       // never an implicit first-row fallback.
       const { data: memberships, error: membershipErr } = await client
         .from("academy_memberships")
-        .select("academy_id,role,joined_at")
+        .select("id,academy_id,role,status,joined_at,academies(name,slug)")
         .eq("profile_id", profile.id)
         .eq("status", "ACTIVE")
         .order("joined_at", { ascending: true })
@@ -103,7 +103,22 @@ export async function POST(req: NextRequest) {
           { status: 403 },
         );
       }
-      const membership = memberships.find((item: { academy_id: string }) => item.academy_id === profile.academy_id) ?? memberships[0];
+      const preferredAcademyId = cookieStore.get(ACTIVE_ACADEMY_COOKIE)?.value;
+      const membership = memberships.find((item: { academy_id: string }) => item.academy_id === preferredAcademyId)
+        ?? memberships.find((item: { academy_id: string }) => item.academy_id === profile.academy_id)
+        ?? memberships[0];
+      const availableMemberships = memberships.map((item: any) => {
+        const academy = Array.isArray(item.academies) ? item.academies[0] : item.academies;
+        return {
+          id: item.id,
+          academy_id: item.academy_id,
+          role: item.role,
+          status: item.status,
+          joined_at: item.joined_at,
+          academy_name: academy?.name,
+          academy_slug: academy?.slug,
+        };
+      });
 
       // Issue BOTH cookies:
       // 1. ma_session (for sync getCurrentUser in existing code)
@@ -115,8 +130,17 @@ export async function POST(req: NextRequest) {
         full_name: profile.full_name,
         avatar_url: profile.avatar_url,
         academy_id: membership.academy_id,
+        active_membership_id: membership.id,
+        memberships: availableMemberships,
       };
       cookieStore.set(SESSION_COOKIE, createSignedSession(user), {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: sessionMaxAgeSeconds(),
+      });
+      cookieStore.set(ACTIVE_ACADEMY_COOKIE, membership.academy_id, {
         httpOnly: true,
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",

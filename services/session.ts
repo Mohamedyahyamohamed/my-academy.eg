@@ -14,6 +14,7 @@ import { collections } from "./data/store";
 import { getRequestUser, setRequestContext } from "./request-context";
 import { isSupabaseConfigured } from "./supabase/config";
 import {
+  ACTIVE_ACADEMY_COOKIE,
   SESSION_COOKIE,
   DEMO_PASSWORD,
   DEMO_ACCOUNTS,
@@ -184,7 +185,9 @@ export async function logout(): Promise<void> {
       await client.auth.signOut();
     }
   } catch {}
-  (await cookies()).delete(SESSION_COOKIE);
+  const cookieStore = await cookies();
+  cookieStore.delete(SESSION_COOKIE);
+  cookieStore.delete(ACTIVE_ACADEMY_COOKIE);
 }
 
 /** Reset password stub — in production this calls Supabase resetPasswordForEmail. */

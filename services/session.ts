@@ -195,7 +195,7 @@ export async function requestPasswordReset(email: string): Promise<LoginResult> 
     try {
       const { createServerSupabaseClient } = await import("@/lib/supabase/server");
       const client = await createServerSupabaseClient();
-      const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://my-academy-eg.vercel.app"}/reset-password`;
+      const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://my-academy-eg.vercel.app"}/reset-password`;
       await client.auth.resetPasswordForEmail(normalizedEmail, { redirectTo });
     } catch {
       // Keep the public response uniform even when the provider is unavailable.

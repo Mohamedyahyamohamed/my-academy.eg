@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/table";
 import { requireScopedRole } from "@/services";
 import { listAuditLogs } from "@/services/audit";
+import { cookies } from "next/headers";
+import { getLangFromCookie } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,8 @@ export default async function AuditLogsPage(
   }
 ) {
   const searchParams = await props.searchParams;
+  const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
+  const en = lang === "en";
   const user = await requireScopedRole("ADMIN");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
@@ -34,24 +38,24 @@ export default async function AuditLogsPage(
     a.includes("create") ? "success" : a.includes("delete") || a.includes("archive") ? "destructive" : a.includes("update") || a.includes("record") || a.includes("save") ? "info" : "secondary";
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="سجل العمليات" description="تتبّع كل العمليات الحساسة في الأكاديمية." />
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
+      <PageHeader title={en ? "Audit log" : "سجل العمليات"} description={en ? "Track all sensitive operations in the academy." : "تتبّع كل العمليات الحساسة في الأكاديمية."} />
       <div className="card-surface p-4">
         <ToolbarRoot>
-          <ToolbarSearch placeholder="بحث في السجلات…" />
+          <ToolbarSearch placeholder={en ? "Search logs…" : "بحث في السجلات…"} />
         </ToolbarRoot>
       </div>
       {result.items.length === 0 ? (
-        <EmptyState icon={ScrollText} title="مفيش سجلات لسه" description="عمليات إنشاء/تعديل الطلاب والمدفوعات والدرجات هتظهر هنا." />
+        <EmptyState icon={ScrollText} title={en ? "No logs yet" : "مفيش سجلات لسه"} description={en ? "Student, payment, and grade operations will appear here." : "عمليات إنشاء/تعديل الطلاب والمدفوعات والدرجات هتظهر هنا."} />
       ) : (
         <div className="card-surface overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>العملية</TableHead>
-                <TableHead>النوع</TableHead>
-                <TableHead>المستخدم</TableHead>
-                <TableHead>الوقت</TableHead>
+                <TableHead>{en ? "Action" : "العملية"}</TableHead>
+                <TableHead>{en ? "Type" : "النوع"}</TableHead>
+                <TableHead>{en ? "User" : "المستخدم"}</TableHead>
+                <TableHead>{en ? "Time" : "الوقت"}</TableHead>
                 <TableHead>IP</TableHead>
               </TableRow>
             </TableHeader>
@@ -61,7 +65,7 @@ export default async function AuditLogsPage(
                   <TableCell><Badge variant={actionColor(log.action) as any}>{log.action}</Badge></TableCell>
                   <TableCell className="text-sm">{log.entity_type} {log.entity_id ? `· ${log.entity_id.slice(0, 8)}…` : ""}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{log.actor_role ?? "—"}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{new Date(log.created_at).toLocaleString("en-GB")}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{new Date(log.created_at).toLocaleString(en ? "en-GB" : "ar-EG")}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{log.ip ?? "—"}</TableCell>
                 </TableRow>
               ))}

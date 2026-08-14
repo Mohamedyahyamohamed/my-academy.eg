@@ -2,47 +2,49 @@
  * Rate limiting — supports both in-memory (dev) and Upstash Redis (production).
  * Uses Upstash Redis when UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN are set.
  * Falls back to in-memory when not configured.
- *
- * To enable Redis rate limiting on Vercel:
- * 1. Create a free database at upstash.com
- * 2. Add env vars: UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN
- * 3. Run: npm install @upstash/redis @upstash/ratelimit
  */
 
-// Check if Redis is configured.
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const USE_REDIS = Boolean(REDIS_URL && REDIS_TOKEN);
 
-// Lazy-load Redis (only when configured).
-let redisLimiter: any = null;
-async function getRedisLimiter() {
-  if (redisLimiter) return redisLimiter;
+type RedisLimiter = { limit: (key: string) => Promise<{ success: boolean; remaining: number }> };
+const redisLimiters = new Map<string, RedisLimiter>();
+
+function windowDescription(windowMs: number): string {
+  const seconds = Math.max(1, Math.ceil(windowMs / 1000));
+  return `${seconds} s`;
+}
+
+async function getRedisLimiter(maxRequests: number, windowMs: number): Promise<RedisLimiter | null> {
+  const configKey = `${maxRequests}:${windowMs}`;
+  const cached = redisLimiters.get(configKey);
+  if (cached) return cached;
   try {
-    // Dynamic require to avoid build-time module resolution when not installed.
-    const { createRequire } = await import("module");
-    const require = createRequire(import.meta.url);
-    const { Redis } = require("@upstash/redis");
-    const { Ratelimit } = require("@upstash/ratelimit");
+    const { Redis } = await import("@upstash/redis");
+    const { Ratelimit } = await import("@upstash/ratelimit");
+    type Duration = Parameters<typeof Ratelimit.slidingWindow>[1];
     const redis = new Redis({ url: REDIS_URL!, token: REDIS_TOKEN! });
-    redisLimiter = new Ratelimit({
+    const limiter = new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(10, "1 m"),
-      prefix: "myacademy:rl",
-    });
-    return redisLimiter;
+      limiter: Ratelimit.slidingWindow(maxRequests, windowDescription(windowMs) as Duration),
+      prefix: `myacademy:rl:${configKey}`,
+    }) as RedisLimiter;
+    redisLimiters.set(configKey, limiter);
+    return limiter;
   } catch {
     return null;
   }
 }
 
-// In-memory fallback.
 interface Bucket { count: number; resetAt: number; }
 const buckets = new Map<string, Bucket>();
 if (typeof setInterval !== "undefined") {
   setInterval(() => {
     const now = Date.now();
-    for (const [key, b] of buckets) { if (b.resetAt < now) buckets.delete(key); }
+    for (const [key, bucket] of buckets) {
+      if (bucket.resetAt < now) buckets.delete(key);
+    }
   }, 60_000).unref?.();
 }
 
@@ -51,25 +53,23 @@ export async function rateLimit(
   maxRequests: number,
   windowMs: number = 60_000,
 ): Promise<{ allowed: boolean; remaining: number }> {
-  // Try Redis first (production).
   if (USE_REDIS) {
-    const limiter = await getRedisLimiter();
+    const limiter = await getRedisLimiter(maxRequests, windowMs);
     if (limiter) {
       try {
         const result = await limiter.limit(key);
         return { allowed: result.success, remaining: result.remaining };
       } catch {
-        // Fall through to in-memory on Redis error.
+        // Fall through to the local limiter if the Redis provider is unavailable.
       }
     }
   }
 
-  // In-memory fallback.
   const now = Date.now();
   const existing = buckets.get(key);
   if (!existing || existing.resetAt < now) {
     buckets.set(key, { count: 1, resetAt: now + windowMs });
-    return { allowed: true, remaining: maxRequests - 1 };
+    return { allowed: true, remaining: Math.max(0, maxRequests - 1) };
   }
   existing.count++;
   const allowed = existing.count <= maxRequests;
@@ -83,4 +83,6 @@ export const LIMITS = {
   search: { max: 30, window: 60_000 },
   upload: { max: 10, window: 60_000 },
   checkin: { max: 20, window: 60_000 },
+  qr: { max: 30, window: 60_000 },
+  webhook: { max: 120, window: 60_000 },
 } as const;

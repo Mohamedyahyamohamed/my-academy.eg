@@ -7,15 +7,22 @@ import { listPlans, getPlan, getUsage, getSubscriptionStatus } from "@/services/
 import { formatCurrency } from "@/lib/utils";
 import { PlanCheckoutButton } from "@/components/billing/plan-checkout-button";
 import { Check, Sparkles } from "lucide-react";
+import { nodeSupabaseClient } from "@/lib/supabase/node-client";
+import { measureStorageUsage } from "@/lib/storage-quota";
 
 export const dynamic = "force-dynamic";
 
 export default async function BillingPage() {
-  requireRole("ADMIN");
+  const currentUser = requireRole("ADMIN");
   const plans = listPlans();
-  const currentPlan = getPlan();
-  const usage = getUsage();
-  const sub = getSubscriptionStatus();
+  const currentPlan = getPlan(currentUser.academy_id);
+  const usage = getUsage(currentUser.academy_id);
+  const sub = getSubscriptionStatus(currentUser.academy_id);
+  const storageResult = nodeSupabaseClient()
+    ? await measureStorageUsage(nodeSupabaseClient()!, "homework", currentUser.academy_id)
+    : { ok: false as const, error: "Storage is not configured." };
+  const storageUsedMb = storageResult.ok ? storageResult.bytes / (1024 * 1024) : null;
+  const renewalDate = sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd) : null;
 
   const usageItems = [
     { label: "الطلاب", current: usage.students, limit: currentPlan.maxStudents },
@@ -53,6 +60,24 @@ export default async function BillingPage() {
               />
             </div>
           ))}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">التخزين</span>
+              <span className={storageUsedMb !== null && storageUsedMb >= currentPlan.maxStorageMb ? "font-semibold text-rose-600" : "font-medium"}>
+                {storageUsedMb === null ? "غير متاح" : `${storageUsedMb.toFixed(1)} / ${currentPlan.maxStorageMb} ميجابايت`}
+              </span>
+            </div>
+            <Progress
+              value={storageUsedMb === null ? 0 : Math.min(100, (storageUsedMb / currentPlan.maxStorageMb) * 100)}
+              indicatorClassName={storageUsedMb !== null && storageUsedMb / currentPlan.maxStorageMb >= 0.8 ? "bg-amber-500" : "bg-primary"}
+            />
+          </div>
+          <div className="grid gap-2 border-t pt-3 text-sm text-muted-foreground sm:grid-cols-2">
+            <span>
+              التجديد القادم: {renewalDate && !Number.isNaN(renewalDate.getTime()) ? renewalDate.toLocaleDateString("ar-EG", { dateStyle: "long" }) : "غير محدد"}
+            </span>
+            {sub.cancelAtPeriodEnd && <span className="font-medium text-amber-700">سيتم الإلغاء في نهاية الفترة الحالية.</span>}
+          </div>
         </CardContent>
       </Card>
 

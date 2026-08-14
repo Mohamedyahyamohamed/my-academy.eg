@@ -15,7 +15,7 @@ export default async function AuthenticatedLayout({
   // Production data is hydrated only after resolving the academy from the
   // signed server session, keeping each request isolated to its tenant.
   await ensureStoreLoaded(user.academy_id);
-  const academy = MiscService.getAcademy();
+  const academy = MiscService.getAcademy(user.academy_id);
 
   return (
     <>

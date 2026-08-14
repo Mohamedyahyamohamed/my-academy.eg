@@ -5,6 +5,8 @@ import { requireScopedRole, resolveStudent } from "@/services";
 import { collections } from "@/services/data/store";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
+import { measureStorageUsage } from "@/lib/storage-quota";
+import { getPlan } from "@/services/saas";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -85,6 +87,34 @@ export async function uploadHomeworkFile(formData: FormData) {
   const client = nodeSupabaseClient();
   if (!client) return { ok: false, error: "Storage not configured." };
 
+  const plan = getPlan(user.academy_id);
+  const storageUsage = await measureStorageUsage(client, "homework", user.academy_id);
+  if (!storageUsage.ok) return { ok: false, error: storageUsage.error };
+
+  const incomingBytes = file.size;
+  const storageLimitBytes = plan.maxStorageMb * 1024 * 1024;
+  if (storageUsage.bytes + incomingBytes > storageLimitBytes) {
+    return {
+      ok: false,
+      error: `Storage quota exceeded. Your ${plan.name} plan allows ${plan.maxStorageMb} MB.`,
+    };
+  }
+  if (storageUsage.bytes + incomingBytes >= storageLimitBytes * 0.8) {
+    void audit(
+      {
+        action: "storage.quota.warning",
+        metadata: {
+          userId: user.id,
+          academyId: user.academy_id,
+          usedBytes: storageUsage.bytes + incomingBytes,
+          limitBytes: storageLimitBytes,
+          usagePercent: Math.round(((storageUsage.bytes + incomingBytes) / storageLimitBytes) * 100),
+        },
+      },
+      user,
+    );
+  }
+
   const path = `${user.academy_id}/${homeworkId}/${student.id}/${crypto.randomUUID()}.${safeUpload.extension}`;
   void audit(
     { action: "upload.attempt", metadata: { userId: user.id, academyId: user.academy_id } },
@@ -95,9 +125,23 @@ export async function uploadHomeworkFile(formData: FormData) {
     .upload(path, bytes, { contentType: safeUpload.contentType, upsert: false });
   if (error) return { ok: false, error: "Upload failed." };
 
+  const fileRecord = await client.from("files").insert({
+    academy_id: user.academy_id,
+    owner_id: user.id,
+    name: file.name,
+    url: path,
+    size: file.size,
+    mime_type: safeUpload.contentType,
+  });
+  if (fileRecord.error) {
+    await client.storage.from("homework").remove([path]);
+    return { ok: false, error: "Could not record the uploaded file." };
+  }
+
   const signed = await client.storage.from("homework").createSignedUrl(path, 3600);
   if (signed.error || !signed.data?.signedUrl) {
     await client.storage.from("homework").remove([path]);
+    await client.from("files").delete().eq("academy_id", user.academy_id).eq("url", path);
     return { ok: false, error: "Could not create a private download link." };
   }
 

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { storeBillingEvent, verifyPaymobHmac } from "@/services/billing";
+import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
+import { requestIpKey } from "@/lib/request-identity";
 
 export const runtime = "nodejs";
 
@@ -14,6 +16,11 @@ function stringValue(value: unknown): string | undefined {
 }
 
 export async function POST(request: Request) {
+  const inboundLimit = await rateLimit(requestIpKey(request, "paymob:webhook:ip"), LIMITS.webhook.max, LIMITS.webhook.window);
+  if (!inboundLimit.allowed) {
+    return NextResponse.json({ error: "Webhook rate limit exceeded" }, { status: 429, headers: { "Retry-After": "60" } });
+  }
+
   let payload: Json;
   try {
     payload = record(await request.json());

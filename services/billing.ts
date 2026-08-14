@@ -17,15 +17,20 @@ export type CheckoutResult =
   | { ok: true; url: string; provider: BillingProvider }
   | { ok: false; error: string };
 
+type SubscriptionLifecycle = "trialing" | "active" | "past_due" | "canceled" | "expired";
+
 type VerifiedPayment = {
   provider: BillingProvider;
   providerEventId: string;
-  academyId: string;
-  planId: string;
+  academyId?: string | null;
+  planId?: string | null;
   payload: Record<string, unknown>;
   successful: boolean;
   providerCustomerId?: string | null;
   providerSubscriptionId?: string | null;
+  subscriptionStatus?: SubscriptionLifecycle;
+  cancelAtPeriodEnd?: boolean;
+  canceledAt?: string | null;
 };
 
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
@@ -198,15 +203,33 @@ export async function createCheckout(actor: CheckoutActor, planId: string): Prom
   }
 }
 
-/** Persist an inbound provider event and update the subscription only when it is successful. */
+/** Persist a verified provider event and update the current subscription idempotently. */
 export async function storeBillingEvent(event: VerifiedPayment): Promise<{ ok: boolean; alreadyProcessed?: boolean }> {
   const client = nodeSupabaseClient();
   if (!client || !isSupabaseConfigured()) {
-    // Local demo mode has no external gateway. Keeping this branch makes the
-    // service testable without ever accepting an unsigned HTTP callback.
-    if (event.successful) setPlan(event.academyId, event.planId);
+    if (event.successful && event.academyId && event.planId) setPlan(event.academyId, event.planId);
     return { ok: true };
   }
+
+  let currentQuery = client
+    .from("subscriptions")
+    .select("academy_id,plan_id,status,current_period_end,cancel_at_period_end,canceled_at,provider_customer_id,provider_subscription_id")
+    .limit(1);
+  if (event.academyId) currentQuery = currentQuery.eq("academy_id", event.academyId);
+  else if (event.providerSubscriptionId) currentQuery = currentQuery.eq("provider_subscription_id", event.providerSubscriptionId);
+  const currentResult = await currentQuery.maybeSingle();
+  const current = currentResult.data as {
+    academy_id?: string | null;
+    plan_id?: string | null;
+    status?: SubscriptionLifecycle | null;
+    current_period_end?: string | null;
+    cancel_at_period_end?: boolean | null;
+    canceled_at?: string | null;
+    provider_customer_id?: string | null;
+    provider_subscription_id?: string | null;
+  } | null;
+  const academyId = event.academyId || current?.academy_id || null;
+  const planId = event.planId || current?.plan_id || null;
 
   const existing = await client
     .from("billing_events")
@@ -219,8 +242,8 @@ export async function storeBillingEvent(event: VerifiedPayment): Promise<{ ok: b
   const eventRecord = {
     provider: event.provider,
     provider_event_id: event.providerEventId,
-    academy_id: event.academyId,
-    plan_id: event.planId,
+    academy_id: academyId,
+    plan_id: planId,
     status: event.successful ? "received" : "ignored",
     payload: event.payload,
     processed_at: event.successful ? null : new Date().toISOString(),
@@ -236,8 +259,15 @@ export async function storeBillingEvent(event: VerifiedPayment): Promise<{ ok: b
   }
 
   if (!event.successful) return { ok: true };
+  if (!academyId || !planId) {
+    await client.from("billing_events")
+      .update({ status: "failed", failure_reason: "Unable to map event to an academy subscription", updated_at: new Date().toISOString() })
+      .eq("provider", event.provider)
+      .eq("provider_event_id", event.providerEventId);
+    return { ok: false };
+  }
 
-  const plan = getPaidPlan(event.planId);
+  const plan = getPaidPlan(planId);
   if (!plan) {
     await client.from("billing_events")
       .update({ status: "failed", failure_reason: "Unknown paid plan", updated_at: new Date().toISOString() })
@@ -247,25 +277,28 @@ export async function storeBillingEvent(event: VerifiedPayment): Promise<{ ok: b
   }
 
   const providerEnd = providerPeriodEnd(event.payload);
-  const currentPeriodEnd = providerEnd ?? new Date(Date.now() + MONTH_MS).toISOString();
+  const currentPeriodEnd = providerEnd ?? current?.current_period_end ?? new Date(Date.now() + MONTH_MS).toISOString();
+  const status = event.subscriptionStatus ?? "active";
   const subscription = await client.from("subscriptions").upsert({
-    academy_id: event.academyId,
-    plan_id: event.planId,
-    status: "active",
+    academy_id: academyId,
+    plan_id: plan.id,
+    status,
     provider: event.provider,
-    provider_customer_id: event.providerCustomerId || null,
-    provider_subscription_id: event.providerSubscriptionId || null,
+    provider_customer_id: event.providerCustomerId || current?.provider_customer_id || null,
+    provider_subscription_id: event.providerSubscriptionId || current?.provider_subscription_id || null,
     current_period_end: currentPeriodEnd,
-    cancel_at_period_end: false,
+    cancel_at_period_end: event.cancelAtPeriodEnd ?? current?.cancel_at_period_end ?? false,
+    canceled_at: event.canceledAt ?? current?.canceled_at ?? null,
     metadata: {
       last_provider_event_id: event.providerEventId,
-      period_end_source: providerEnd ? "provider" : "fallback_30_days",
+      period_end_source: providerEnd ? "provider" : current?.current_period_end ? "existing_subscription" : "fallback_30_days",
+      lifecycle_status: status,
     },
     updated_at: new Date().toISOString(),
   }, { onConflict: "academy_id" });
 
   if (subscription.error) {
-    console.error("Unable to activate subscription", subscription.error.message);
+    console.error("Unable to update subscription", subscription.error.message);
     await client.from("billing_events")
       .update({ status: "failed", failure_reason: subscription.error.message, updated_at: new Date().toISOString() })
       .eq("provider", event.provider)

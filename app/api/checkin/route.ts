@@ -4,6 +4,7 @@ import { verifyQrSession } from "@/lib/qr-session";
 import { collections } from "@/services/data/store";
 import { AttendanceService } from "@/services";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
+import { requestIpKey } from "@/lib/request-identity";
 
 /** Student self check-in via a tenant-scoped, short-lived QR token. */
 export async function POST(req: NextRequest) {
@@ -13,8 +14,11 @@ export async function POST(req: NextRequest) {
   }
 
   // Rate limit.
-  const rl = await rateLimit(`checkin:${user.id}`, LIMITS.checkin.max, LIMITS.checkin.window);
-  if (!rl.allowed) return NextResponse.json({ ok: false, error: "Too many check-in attempts." }, { status: 429 });
+  const userLimit = await rateLimit(`checkin:user:${user.id}`, LIMITS.checkin.max, LIMITS.checkin.window);
+  const ipLimit = await rateLimit(requestIpKey(req, "checkin:ip"), LIMITS.checkin.max, LIMITS.checkin.window);
+  if (!userLimit.allowed || !ipLimit.allowed) {
+    return NextResponse.json({ ok: false, error: "Too many check-in attempts." }, { status: 429, headers: { "Retry-After": "60" } });
+  }
 
   const { token } = await req.json();
   if (typeof token !== "string" || !token) {

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { collections } from "@/services/data/store";
 import { currentTeacherId, getCurrentUser } from "@/services";
 import { createQrSession } from "@/lib/qr-session";
+import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
+import { requestIpKey } from "@/lib/request-identity";
 
 /** Generate a signed, short-lived QR session token for an owned lesson. */
 export async function POST(req: NextRequest) {
@@ -9,6 +11,12 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!["TEACHER", "ADMIN", "SUPER_ADMIN"].includes(user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const userLimit = await rateLimit(`qr:user:${user.id}`, LIMITS.qr.max, LIMITS.qr.window);
+  const ipLimit = await rateLimit(requestIpKey(req, "qr:ip"), LIMITS.qr.max, LIMITS.qr.window);
+  if (!userLimit.allowed || !ipLimit.allowed) {
+    return NextResponse.json({ error: "Too many QR requests. Please try again shortly." }, { status: 429, headers: { "Retry-After": "60" } });
   }
 
   const { lessonId } = await req.json();

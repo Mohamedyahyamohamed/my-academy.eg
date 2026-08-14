@@ -22,6 +22,8 @@ export interface Subscription {
   academyId: string;
   planId: string;
   status: "trialing" | "active" | "past_due" | "canceled" | "expired";
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
 }
 
 /** Default plans (mirrors SQL). Editable from configuration. */
@@ -100,6 +102,8 @@ export function getSubscriptionStatus(academyId?: string): Subscription {
     academyId: aid,
     planId: sub?.plan_id ?? "free",
     status: sub?.status ?? "active",
+    currentPeriodEnd: sub?.current_period_end ?? null,
+    cancelAtPeriodEnd: Boolean(sub?.cancel_at_period_end),
   };
 }
 

@@ -152,9 +152,9 @@ export function globalSearch(query: string): SearchResult[] {
 
 /* ---------------- Settings ---------------- */
 
-export function getAcademy(): Academy {
-  const academyId = currentAcademyId();
-  const academy = collections().academies.find((item) => item.id === academyId);
+export function getAcademy(academyId?: string): Academy {
+  const activeAcademyId = academyId ?? currentAcademyId();
+  const academy = collections().academies.find((item) => item.id === activeAcademyId);
   if (!academy) throw new Error("Academy data is unavailable for the active session.");
   return academy;
 }

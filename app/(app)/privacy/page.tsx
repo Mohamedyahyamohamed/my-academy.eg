@@ -21,8 +21,7 @@ export default function PrivacyPage() {
       <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
         <p>
-          هذه السياسة مسودة أولية لأغراض العرض، ويجب مراجعتها مع مختص قانوني قبل اعتمادها
-          كنص نهائي — خصوصًا فيما يتعلق بقانون حماية البيانات المصري ولائحته التنفيذية.
+          هذه السياسة تشرح طريقة تشغيل MY Academy للبيانات. يجب على مالك الخدمة مراجعتها مع مختص قانوني قبل اعتمادها النهائي، خصوصًا فيما يتعلق بقانون حماية البيانات المصري ولائحته التنفيذية.
         </p>
       </div>
 
@@ -119,7 +118,7 @@ export default function PrivacyPage() {
       </Section>
 
       <p className="text-center text-xs text-muted-foreground">
-        {APP_CONFIG.name} — سياسة الخصوصية (نسخة تجريبية، قابلة للمراجعة).
+        {APP_CONFIG.name} — سياسة الخصوصية التشغيلية. للاستفسارات، استخدم مركز الدعم داخل المنصة أو تواصل مع مدير الأكاديمية.
       </p>
     </div>
   );

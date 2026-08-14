@@ -7,6 +7,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import type { SessionUser } from "@/types";
 import { createSignedSession, sessionMaxAgeSeconds } from "@/lib/session-cookie";
+import { requestFingerprint, requestIpKey } from "@/lib/request-identity";
 
 export async function POST(req: NextRequest) {
   const cookieStore = await cookies();
@@ -40,11 +41,14 @@ export async function POST(req: NextRequest) {
   // fixture deliberately skips this so a full role suite can log in more than
   // ten times without masking product failures; production never sets this flag.
   if (!useE2eDemoFixture) {
-    const rl = await rateLimit(`login:${email.toLowerCase()}`, LIMITS.login.max, LIMITS.login.window);
-    if (!rl.allowed) {
+    const normalizedEmail = email.toLowerCase().trim();
+    const emailLimit = await rateLimit(`login:email:${normalizedEmail}`, LIMITS.login.max, LIMITS.login.window);
+    const ipLimit = await rateLimit(requestIpKey(req, "login:ip"), LIMITS.login.max, LIMITS.login.window);
+    const fingerprintLimit = await rateLimit(requestFingerprint(req, "login:device", normalizedEmail), LIMITS.login.max, LIMITS.login.window);
+    if (!emailLimit.allowed || !ipLimit.allowed || !fingerprintLimit.allowed) {
       return NextResponse.json(
         { ok: false, error: "Too many attempts. Please try again in a minute." },
-        { status: 429 },
+        { status: 429, headers: { "Retry-After": "60" } },
       );
     }
   }

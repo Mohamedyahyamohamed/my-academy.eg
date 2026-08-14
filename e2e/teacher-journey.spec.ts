@@ -28,9 +28,9 @@ test.describe("Teacher Journey", () => {
     await expect(teacherPage.locator("h1")).toContainText("الواجبات");
   });
 
-  test("can access assistants", async ({ teacherPage }) => {
+  test("cannot manage assistants", async ({ teacherPage }) => {
     await teacherPage.goto("/teacher/assistants");
-    await expect(teacherPage.getByText("يسجّل المساعدون الدخول ببريدهم الخاص")).toBeVisible({ timeout: 5_000 });
+    await expect(teacherPage).toHaveURL(/\/teacher$/);
   });
 
   test("cannot access admin settings", async ({ teacherPage }) => {

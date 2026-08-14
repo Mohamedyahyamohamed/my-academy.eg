@@ -16,6 +16,8 @@ import { PaymentsService, StudentsService, GroupsService, requireScopedRole } fr
 import type { PaymentFilters } from "@/services/payments";
 import { formatCurrency } from "@/lib/utils";
 import type { PaymentStatus } from "@/types";
+import { cookies } from "next/headers";
+import { getLangFromCookie } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +27,8 @@ export default async function PaymentsPage(
   }
 ) {
   const searchParams = await props.searchParams;
+  const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
+  const en = lang === "en";
   const user = await requireScopedRole("ADMIN");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
@@ -46,31 +50,31 @@ export default async function PaymentsPage(
   const months = Array.from(new Set((await PaymentsService.listPayments({ pageSize: 500 }, user.academy_id)).items.map((p) => p.month))).sort().reverse();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
-        title="المصاريف"
-        description="تابع المصاريف المدرسية، سجّل المدفوعات، وتابع المتأخرات."
+        title={en ? "Payments" : "المصاريف"}
+        description={en ? "Track school fees, record payments, and monitor outstanding balances." : "تابع المصاريف المدرسية، سجّل المدفوعات، وتابع المتأخرات."}
       >
         <CreatePaymentDialog students={students} groups={groups} />
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="المحصّل (الشهر الحالي)" value={formatCurrency(metrics.collectedThisMonth)} icon={Banknote} accent="success" />
-        <StatCard label="المستحق (الشهر الحالي)" value={formatCurrency(metrics.monthlyRevenue)} icon={Wallet} accent="primary" />
-        <StatCard label="المتبقي (المتأخرات)" value={formatCurrency(metrics.outstanding)} icon={TrendingDown} accent="warning" />
+        <StatCard label={en ? "Collected (this month)" : "المحصّل (الشهر الحالي)"} value={formatCurrency(metrics.collectedThisMonth)} icon={Banknote} accent="success" />
+        <StatCard label={en ? "Due (this month)" : "المستحق (الشهر الحالي)"} value={formatCurrency(metrics.monthlyRevenue)} icon={Wallet} accent="primary" />
+        <StatCard label={en ? "Outstanding" : "المتبقي (المتأخرات)"} value={formatCurrency(metrics.outstanding)} icon={TrendingDown} accent="warning" />
       </div>
 
       <div className="card-surface p-4">
         <ToolbarRoot>
-          <ToolbarSearch placeholder="ابحث باسم الطالب…" />
-          <ToolbarSelect paramKey="status" label="تصفية بالحالة" options={[
-            { value: "ALL", label: "كل الحالات" },
-            { value: "PAID", label: "مدفوع" },
-            { value: "PARTIAL", label: "مدفوع جزئيًا" },
-            { value: "UNPAID", label: "غير مدفوع" },
+          <ToolbarSearch placeholder={en ? "Search by student name…" : "ابحث باسم الطالب…"} />
+          <ToolbarSelect paramKey="status" label={en ? "Filter by status" : "تصفية بالحالة"} options={[
+            { value: "ALL", label: en ? "All statuses" : "كل الحالات" },
+            { value: "PAID", label: en ? "Paid" : "مدفوع" },
+            { value: "PARTIAL", label: en ? "Partially paid" : "مدفوع جزئيًا" },
+            { value: "UNPAID", label: en ? "Unpaid" : "غير مدفوع" },
           ]} />
-          <ToolbarSelect paramKey="month" label="تصفية بالشهر" options={[
-            { value: "ALL", label: "كل الشهور" },
+          <ToolbarSelect paramKey="month" label={en ? "Filter by month" : "تصفية بالشهر"} options={[
+            { value: "ALL", label: en ? "All months" : "كل الشهور" },
             ...months.map((m) => ({ value: m, label: m })),
           ]} />
         </ToolbarRoot>
@@ -79,8 +83,8 @@ export default async function PaymentsPage(
       {result.items.length === 0 ? (
         <EmptyState
           icon={Wallet}
-          title="لا توجد مدفوعات بعد"
-          description="أضف سجل دفعة لبدء تتبّع المصاريف."
+          title={en ? "No payments yet" : "لا توجد مدفوعات بعد"}
+          description={en ? "Add a payment record to start tracking fees." : "أضف سجل دفعة لبدء تتبّع المصاريف."}
           action={<CreatePaymentDialog students={students} groups={groups} />}
         />
       ) : (
@@ -90,13 +94,13 @@ export default async function PaymentsPage(
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>الطالب</TableHead>
-                  <TableHead>الشهر</TableHead>
-                  <TableHead>المستحق</TableHead>
-                  <TableHead>المدفوع</TableHead>
-                  <TableHead>المتبقي</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead className="text-left">إجراء</TableHead>
+                  <TableHead>{en ? "Student" : "الطالب"}</TableHead>
+                  <TableHead>{en ? "Month" : "الشهر"}</TableHead>
+                  <TableHead>{en ? "Due" : "المستحق"}</TableHead>
+                  <TableHead>{en ? "Paid" : "المدفوع"}</TableHead>
+                  <TableHead>{en ? "Outstanding" : "المتبقي"}</TableHead>
+                  <TableHead>{en ? "Status" : "الحالة"}</TableHead>
+                  <TableHead className="text-left">{en ? "Action" : "إجراء"}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -138,7 +142,7 @@ export default async function PaymentsPage(
                     <PaymentStatusBadge status={p.status} />
                   </div>
                   <div className="mt-3 flex items-center justify-between border-t pt-3 text-sm">
-                    <span className="text-muted-foreground">المتبقي: <span className="font-medium text-rose-600">{formatCurrency(p.remaining)}</span></span>
+                    <span className="text-muted-foreground">{en ? "Outstanding: " : "المتبقي: "}<span className="font-medium text-rose-600">{formatCurrency(p.remaining)}</span></span>
                     <RecordPaymentDialog payment={p} students={students} />
                   </div>
                 </CardContent>

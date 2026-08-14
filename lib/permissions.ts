@@ -31,8 +31,7 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   ADMIN: [
     "academy.manage", "academy.billing.manage", "academy.members.manage",
     "students.read", "students.manage", "groups.read", "groups.manage",
-    "lessons.read", "lessons.manage", "attendance.record", "grades.record",
-    "homework.manage", "payments.read_own", "payments.manage", "reports.read",
+    "payments.read_own", "payments.manage", "reports.read",
     "messages.send", "audit.read",
   ],
   TEACHER: [

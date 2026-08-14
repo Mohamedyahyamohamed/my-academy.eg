@@ -26,7 +26,7 @@ export async function checkinAction(lessonId: string) {
 
 /** Teacher scans a student's personal QR → records them present for a lesson. */
 export async function scanCheckinAction(lessonId: string, studentId: string) {
-  const user = await requireScopedRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("TEACHER");
 
   // Rate limit QR scans.
   const { rateLimit, LIMITS } = await import("@/lib/rate-limit-redis");
@@ -43,7 +43,7 @@ export async function saveAttendanceAction(
   lessonId: string,
   entries: { studentId: string; status: AttendanceStatus }[],
 ) {
-  const user = await requireScopedRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("TEACHER");
   await AttendanceService.saveAttendance(lessonId, entries);
     void audit({ action: "attendance.save" }, user);
   // إشعار Push لأولياء الأمور

@@ -151,10 +151,21 @@ export const SUPER_ADMIN_NAV: NavSection[] = [
   ...ADMIN_NAV,
 ];
 
+/** Academy managers handle administration; teaching operations stay with teachers. */
+export const ACADEMY_MANAGER_NAV: NavSection[] = ADMIN_NAV
+  .filter((section) => section.titleEn !== "Academic Operations")
+  .map((section) => ({
+    ...section,
+    items: section.items.filter((item) => item.href !== "/calendar"),
+  }))
+  .filter((section) => section.items.length > 0);
+
 export function navForRole(role: Role): NavSection[] {
   switch (role) {
     case "SUPER_ADMIN":
       return SUPER_ADMIN_NAV;
+    case "ADMIN":
+      return ACADEMY_MANAGER_NAV;
     case "TEACHER":
       return TEACHER_NAV;
     case "PARENT":

@@ -7,7 +7,7 @@ import { collections } from "@/services/data/store";
 export const dynamic = "force-dynamic";
 
 export default async function CalendarPage() {
-  await requireScopedRole("ADMIN", "TEACHER");
+  await requireScopedRole("TEACHER");
   const lessons = collections().lessons.map((l) => ({
     ...l,
     group: collections().groups.find((g) => g.id === l.group_id),

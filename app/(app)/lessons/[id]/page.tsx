@@ -28,7 +28,7 @@ export default async function LessonDetailPage(
   }
 ) {
   const params = await props.params;
-  await requireScopedRole("ADMIN", "TEACHER");
+  await requireScopedRole("TEACHER");
   const lesson = await LessonsService.getLesson(params.id);
   if (!lesson) notFound();
 

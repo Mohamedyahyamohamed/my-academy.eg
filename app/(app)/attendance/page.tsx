@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function AttendancePage() {
   const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
   const en = lang === "en";
-  const user = await requireScopedRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("TEACHER");
   const groups = await GroupsService.listGroups("", user.academy_id, user.id);
   const lessons = (await LessonsService.listLessons({ pageSize: 500 }, user.academy_id, user.id)).items;
   const students = (await StudentsService.listStudents({ pageSize: 500 }, user.academy_id)).items;

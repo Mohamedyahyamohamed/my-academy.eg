@@ -11,7 +11,7 @@ import { performanceColor, performanceLevel, performanceLabel } from "@/lib/cons
 export const dynamic = "force-dynamic";
 
 export default async function GradesPage() {
-  const user = await requireScopedRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("TEACHER");
   const exams = await GradesService.listExams(user.academy_id, user.id);
   const courses = await MiscService.listCourses(user.academy_id);
   const groups = await GroupsService.listGroups("", user.academy_id);

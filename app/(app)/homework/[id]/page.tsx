@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HomeworkDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  await requireScopedRole("ADMIN", "TEACHER");
+  await requireScopedRole("TEACHER");
   const hw = await HomeworkService.getHomework(params.id);
   if (!hw) notFound();
   const submissions = await HomeworkService.listSubmissions(params.id);

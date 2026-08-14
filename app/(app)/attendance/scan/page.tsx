@@ -6,7 +6,7 @@ import { collections } from "@/services/data/store";
 export const dynamic = "force-dynamic";
 
 export default async function ScanAttendancePage() {
-  await requireScopedRole("ADMIN", "TEACHER");
+  await requireScopedRole("TEACHER");
   const groups = await GroupsService.listGroups();
   const lessons = (await await LessonsService.listLessons({ pageSize: 500 })).items;
   const students = (await StudentsService.listStudents({ pageSize: 500 })).items;

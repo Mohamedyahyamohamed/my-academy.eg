@@ -12,7 +12,7 @@ export default async function NewLessonPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  await requireScopedRole("ADMIN", "TEACHER");
+  await requireScopedRole("TEACHER");
   const groups = await GroupsService.listGroups();
   const teachers = await MiscService.listTeachers();
   const defaultGroup =

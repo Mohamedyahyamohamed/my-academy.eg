@@ -21,7 +21,7 @@ export default async function LessonsPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  await requireScopedRole("ADMIN", "TEACHER");
+  await requireScopedRole("TEACHER");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
 

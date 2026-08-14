@@ -5,14 +5,14 @@ import { requireScopedRole, GradesService } from "@/services";
 import type { ExamInput } from "@/services/grades";
 
 export async function createExamAction(input: ExamInput) {
-  await requireScopedRole("ADMIN", "TEACHER");
+  await requireScopedRole("TEACHER");
   const e = await GradesService.createExam(input);
   revalidatePath("/grades");
   return e;
 }
 
 export async function deleteExamAction(id: string) {
-  await requireScopedRole("ADMIN", "TEACHER");
+  await requireScopedRole("TEACHER");
   GradesService.deleteExam(id);
   revalidatePath("/grades");
 }
@@ -21,7 +21,7 @@ export async function saveGradesAction(
   examId: string,
   entries: { studentId: string; score: number }[],
 ) {
-  const user = await requireScopedRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("TEACHER");
   const res = GradesService.saveGrades(examId, entries);
   if (res.ok) {
     await import("@/services/audit").then((m) => m.audit(

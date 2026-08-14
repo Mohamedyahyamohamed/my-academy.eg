@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ExamGradePage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  await requireScopedRole("ADMIN", "TEACHER");
+  await requireScopedRole("TEACHER");
   const exam = await GradesService.getExam(params.id);
   if (!exam) notFound();
   const roster = GradesService.gradesForExam(params.id);

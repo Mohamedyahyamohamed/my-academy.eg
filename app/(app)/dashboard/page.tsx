@@ -25,26 +25,28 @@ import { DashboardService, MiscService, requireScopedRole } from "@/services";
 import { atRiskStudents } from "@/services/insights";
 import { formatCurrency, formatDate, formatTime, initials } from "@/lib/utils";
 import type { DashboardPeriod } from "@/types";
+import { cookies } from "next/headers";
+import { getLangFromCookie } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
-const SEVERITY_AR: Record<string, string> = {
-  high: "مرتفع",
-  medium: "متوسط",
-  low: "منخفض",
+const SEVERITY: Record<string, { ar: string; en: string }> = {
+  high: { ar: "مرتفع", en: "High" },
+  medium: { ar: "متوسط", en: "Medium" },
+  low: { ar: "منخفض", en: "Low" },
 };
 
-const GRADE_LEVEL_AR: Record<string, string> = {
-  Excellent: "ممتاز",
-  "Very Good": "جيد جدًا",
-  Good: "جيد",
-  "Needs Improvement": "يحتاج تحسين",
+const GRADE_LEVEL: Record<string, { ar: string; en: string }> = {
+  Excellent: { ar: "ممتاز", en: "Excellent" },
+  "Very Good": { ar: "جيد جدًا", en: "Very Good" },
+  Good: { ar: "جيد", en: "Good" },
+  "Needs Improvement": { ar: "يحتاج تحسين", en: "Needs improvement" },
 };
 
-const PERIOD_LABELS: Record<DashboardPeriod, string> = {
-  month: "هذا الشهر",
-  quarter: "هذا الربع",
-  year: "هذا العام",
+const PERIOD_LABELS: Record<DashboardPeriod, { ar: string; en: string }> = {
+  month: { ar: "هذا الشهر", en: "This month" },
+  quarter: { ar: "هذا الربع", en: "This quarter" },
+  year: { ar: "هذا العام", en: "This year" },
 };
 
 const PERIODS: DashboardPeriod[] = ["month", "quarter", "year"];
@@ -55,6 +57,8 @@ export default async function DashboardPage(
   }
 ) {
   const searchParams = await props.searchParams;
+  const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
+  const en = lang === "en";
   const user = await requireScopedRole("ADMIN");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
@@ -68,29 +72,29 @@ export default async function DashboardPage(
   const atRisk = atRiskResult.slice(0, 6);
   const collectionTrend = d.collectionTrend ?? 0;
   const setupSteps = [
-    teachers.length === 0
-      ? { title: "دعوة أول مدرس", description: "أرسل دعوة للمدرس من داخل المنصة.", href: "/settings?tab=users#invite" }
+      teachers.length === 0
+      ? { title: en ? "Invite your first teacher" : "دعوة أول مدرس", description: en ? "Send a teacher invitation from the platform." : "أرسل دعوة للمدرس من داخل المنصة.", href: "/settings?tab=users#invite" }
       : null,
     d.totalStudents === 0
-      ? { title: "إضافة أول طالب", description: "أضف بيانات الطالب مباشرة، ويمكن ربطه بمجموعة لاحقًا.", href: "/students" }
+      ? { title: en ? "Add your first student" : "إضافة أول طالب", description: en ? "Add the student's data directly; you can link a group later." : "أضف بيانات الطالب مباشرة، ويمكن ربطه بمجموعة لاحقًا.", href: "/students" }
       : null,
     d.totalGroups === 0
-      ? { title: "إنشاء أول مجموعة", description: "بعد توفر مدرس، أنشئ المجموعة وحدد المادة والموعد.", href: "/groups" }
+      ? { title: en ? "Create your first group" : "إنشاء أول مجموعة", description: en ? "After adding a teacher, create a group and set its subject and schedule." : "بعد توفر مدرس، أنشئ المجموعة وحدد المادة والموعد.", href: "/groups" }
       : null,
   ].filter((step): step is { title: string; description: string; href: string } => Boolean(step));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
-        title="لوحة التحكم"
-        description="نظرة حيّة على أكاديميتك — الطلاب، الإيرادات، الحضور، والأداء."
+        title={en ? "Dashboard" : "لوحة التحكم"}
+        description={en ? "A live view of your academy — students, revenue, attendance, and performance." : "نظرة حيّة على أكاديميتك — الطلاب، الإيرادات، الحضور، والأداء."}
       >
         <Button asChild variant="outline">
-          <Link href="/reports">عرض التقارير</Link>
+          <Link href="/reports">{en ? "View reports" : "عرض التقارير"}</Link>
         </Button>
         <Button asChild>
           <Link href="/students">
-            إضافة طالب <ArrowRight className="h-4 w-4" />
+            {en ? "Add student" : "إضافة طالب"} <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>
       </PageHeader>
@@ -99,9 +103,9 @@ export default async function DashboardPage(
         <Card className="border-primary/20 bg-primary/[0.03]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Rocket className="h-5 w-5 text-primary" /> خطوات البداية
+              <Rocket className="h-5 w-5 text-primary" /> {en ? "Getting started" : "خطوات البداية"}
             </CardTitle>
-            <CardDescription>اتبع هذه الخطوات بالترتيب المقترح. لا تحتاج إلى تجهيز إعدادات مخفية قبل البدء.</CardDescription>
+            <CardDescription>{en ? "Follow these suggested steps in order. No hidden setup is required before you begin." : "اتبع هذه الخطوات بالترتيب المقترح. لا تحتاج إلى تجهيز إعدادات مخفية قبل البدء."}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 md:grid-cols-3">
@@ -118,7 +122,7 @@ export default async function DashboardPage(
               ))}
             </div>
             <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" /> يمكنك إضافة الطالب قبل إنشاء المجموعة؛ المجموعة فقط تحتاج مدرسًا مسؤولًا.
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" /> {en ? "You can add students before creating a group; only the group needs an assigned teacher." : "يمكنك إضافة الطالب قبل إنشاء المجموعة؛ المجموعة فقط تحتاج مدرسًا مسؤولًا."}
             </div>
           </CardContent>
         </Card>
@@ -136,7 +140,7 @@ export default async function DashboardPage(
                 : "text-muted-foreground hover:bg-accent hover:text-foreground"
             }`}
           >
-            {PERIOD_LABELS[p]}
+            {PERIOD_LABELS[p][en ? "en" : "ar"]}
           </Link>
         ))}
       </div>
@@ -144,28 +148,28 @@ export default async function DashboardPage(
       {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="إجمالي الطلاب"
+          label={en ? "Total students" : "إجمالي الطلاب"}
           value={d.totalStudents}
-          hint={`${d.activeStudents} نشط`}
+          hint={`${d.activeStudents} ${en ? "active" : "نشط"}`}
           icon={Users}
           accent="primary"
         />
         <StatCard
-          label="المجموعات النشطة"
+          label={en ? "Active groups" : "المجموعات النشطة"}
           value={d.totalGroups}
-          hint="قيد التدريس حاليًا"
+          hint={en ? "Currently teaching" : "قيد التدريس حاليًا"}
           icon={UsersRound}
           accent="info"
         />
         <StatCard
-          label={`المحصّل ${PERIOD_LABELS[period]}`}
+          label={`${en ? "Collected" : "المحصّل"} ${PERIOD_LABELS[period][en ? "en" : "ar"]}`}
           value={formatCurrency(d.collectedForPeriod)}
           icon={Wallet}
           accent="success"
-          trend={period === "month" ? { value: Math.abs(collectionTrend), positive: collectionTrend >= 0, label: "مقارنة بالشهر الماضي" } : undefined}
+          trend={period === "month" ? { value: Math.abs(collectionTrend), positive: collectionTrend >= 0, label: en ? "Compared with last month" : "مقارنة بالشهر الماضي" } : undefined}
         />
         <StatCard
-          label="المتبقي (المتأخرات)"
+          label={en ? "Outstanding" : "المتبقي (المتأخرات)"}
           value={formatCurrency(d.outstanding)}
           icon={TrendingDown}
           accent="warning"
@@ -175,25 +179,25 @@ export default async function DashboardPage(
       {/* Secondary metrics */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="الإيراد الشهري"
+          label={en ? "Monthly revenue" : "الإيراد الشهري"}
           value={formatCurrency(d.monthlyRevenue)}
           icon={Wallet}
           accent="primary"
         />
         <StatCard
-          label="الطلاب النشطون"
+          label={en ? "Active students" : "الطلاب النشطون"}
           value={d.activeStudents}
           icon={UserCheck}
           accent="success"
         />
         <StatCard
-          label="نسبة الحضور"
+          label={en ? "Attendance rate" : "نسبة الحضور"}
           value={`${d.attendanceRate}%`}
           icon={CalendarCheck}
           accent="info"
         />
         <StatCard
-          label="متوسط الدرجات"
+          label={en ? "Average grade" : "متوسط الدرجات"}
           value={`${d.averageGrade}%`}
           icon={GraduationCap}
           accent="warning"
@@ -285,7 +289,7 @@ export default async function DashboardPage(
                 return (
                   <div key={g.level} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">{GRADE_LEVEL_AR[g.level] ?? g.level}</span>
+                      <span className="text-muted-foreground">{(GRADE_LEVEL[g.level]?.[en ? "en" : "ar"]) ?? g.level}</span>
                       <span className="font-medium">{g.count}</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-muted">
@@ -373,7 +377,7 @@ export default async function DashboardPage(
                     <p className="truncate text-xs text-muted-foreground">{r.reasons.join(" · ")}</p>
                   </div>
                   <Badge variant={r.severity === "high" ? "destructive" : r.severity === "medium" ? "warning" : "secondary"}>
-                    {SEVERITY_AR[r.severity] ?? r.severity}
+                    {(SEVERITY[r.severity]?.[en ? "en" : "ar"]) ?? r.severity}
                   </Badge>
                 </Link>
               ))

@@ -25,7 +25,9 @@ export function resolveParent(user: SessionUser): Parent | null {
 export function resolveStudent(user: SessionUser): Student | null {
   return (
     collections().students.find(
-      (s) => s.email?.toLowerCase() === user.email.toLowerCase(),
+      (s) =>
+        s.academy_id === user.academy_id &&
+        s.email?.toLowerCase() === user.email.toLowerCase(),
     ) ?? null
   );
 }

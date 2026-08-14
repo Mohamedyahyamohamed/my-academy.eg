@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { Bell } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -5,6 +6,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { MarkAllReadButton } from "@/components/notifications/mark-all-read";
 import { NotificationsService, requireScopedRole } from "@/services";
 import { cn, formatRelative } from "@/lib/utils";
+import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 import type { NotificationType } from "@/types";
 
 const dotColor: Record<NotificationType, string> = {
@@ -23,15 +25,16 @@ export const dynamic = "force-dynamic";
 
 export default async function NotificationsPage() {
   const user = await requireScopedRole("ADMIN", "TEACHER", "PARENT", "STUDENT");
+  const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
   const items = await NotificationsService.listNotifications(user.id);
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="الإشعارات" description="كل تحديثاتك وتنبيهاتك الأخيرة.">
-        <MarkAllReadButton />
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
+      <PageHeader title={en ? "Notifications" : "الإشعارات"} description={en ? "Your latest updates and alerts." : "كل تحديثاتك وتنبيهاتك الأخيرة."}>
+        <MarkAllReadButton en={en} />
       </PageHeader>
       {items.length === 0 ? (
-        <EmptyState icon={Bell} title="لا توجد إشعارات" description="ستظهر التحديثات هنا فور حدوثها." />
+        <EmptyState icon={Bell} title={en ? "No notifications" : "لا توجد إشعارات"} description={en ? "Updates will appear here as soon as they are available." : "ستظهر التحديثات هنا فور حدوثها."} />
       ) : (
         <Card>
           <CardContent className="divide-y p-0">

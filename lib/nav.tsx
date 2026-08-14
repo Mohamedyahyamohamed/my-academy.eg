@@ -143,7 +143,7 @@ export const STUDENT_NAV: NavSection[] = [
       { titleAr: "الدرجات", titleEn: "Grades", href: "/student/grades", icon: GraduationCap },
       { titleAr: "تقدّمي", titleEn: "Progress", href: "/student/progress", icon: TrendingUp },
       { titleAr: "الإشعارات", titleEn: "Notifications", href: "/notifications", icon: Bell },
-      { titleAr: "المساعدة والدعم", titleEn: "Help & Support", href: "/support", icon: CircleHelp },
+      { titleAr: "المساعدة والدعم", titleEn: "Help & Support", href: "/support/tickets", icon: CircleHelp },
     ],
   },
 ];

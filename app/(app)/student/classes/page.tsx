@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { BookOpen } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -8,19 +9,21 @@ import { Badge } from "@/components/ui/badge";
 import { resolveStudent, requireScopedRole } from "@/services";
 import { groupsForStudent } from "@/services/_shared";
 import { formatCurrency } from "@/lib/utils";
+import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
 export default async function StudentClassesPage() {
   const user = await requireScopedRole("STUDENT");
+  const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
   const student = resolveStudent(user);
   const groups = student ? groupsForStudent(student.id) : [];
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="حصصي" description="المجموعات المسجّل بها." />
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
+      <PageHeader title={en ? "My classes" : "حصصي"} description={en ? "The groups you are enrolled in." : "المجموعات المسجّل بها."} />
       {groups.length === 0 ? (
-        <EmptyState icon={BookOpen} title="لا توجد مجموعات" description="أنت غير مسجّل في أي مجموعة حتى الآن." />
+        <EmptyState icon={BookOpen} title={en ? "No classes" : "لا توجد مجموعات"} description={en ? "You are not enrolled in any group yet." : "أنت غير مسجّل في أي مجموعة حتى الآن."} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {groups.map((g) => (
@@ -36,14 +39,14 @@ export default async function StudentClassesPage() {
                       <p className="text-xs text-muted-foreground">{g.course?.name}</p>
                     </div>
                   </div>
-                  <Badge variant="secondary">{formatCurrency(g.monthly_fee)}/شهريًا</Badge>
+                  <Badge variant="secondary">{formatCurrency(g.monthly_fee)}/{en ? "month" : "شهريًا"}</Badge>
                 </div>
                 <div className="mt-4 space-y-1 text-sm text-muted-foreground">
-                  <p>الموعد: {g.schedule}</p>
-                  {g.room && <p>القاعة: {g.room}</p>}
+                  <p>{en ? "Schedule:" : "الموعد:"} {g.schedule}</p>
+                  {g.room && <p>{en ? "Room:" : "القاعة:"} {g.room}</p>}
                 </div>
                 <Button asChild variant="outline" size="sm" className="mt-4 w-full">
-                  <Link href="/student/lessons">عرض الحصص</Link>
+                  <Link href="/student/lessons">{en ? "View lessons" : "عرض الحصص"}</Link>
                 </Button>
               </CardContent>
             </Card>

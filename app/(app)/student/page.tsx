@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { CalendarClock, GraduationCap, ClipboardList, CalendarCheck, TrendingUp, ArrowRight, BookOpen } from "lucide-react";
+import { CalendarClock, GraduationCap, ClipboardList, CalendarCheck, TrendingUp, BookOpen } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

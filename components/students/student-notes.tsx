@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { formatRelative } from "@/lib/utils";
 import { addNoteAction, deleteNoteAction } from "@/app/actions/notes";
 import type { Note } from "@/types";
+import { useClientLang } from "@/lib/i18n-client";
 
 export function StudentNotes({
   studentId,
@@ -19,6 +20,7 @@ export function StudentNotes({
   notes: Note[];
 }) {
   const router = useRouter();
+  const en = useClientLang() === "en";
   const [content, setContent] = React.useState("");
   const [saving, setSaving] = React.useState(false);
 
@@ -28,7 +30,7 @@ export function StudentNotes({
     try {
       await addNoteAction(studentId, content.trim());
       setContent("");
-      toast.success("تمت إضافة الملاحظة.");
+      toast.success(en ? "Note added." : "تمت إضافة الملاحظة.");
       router.refresh();
     } finally {
       setSaving(false);
@@ -36,17 +38,17 @@ export function StudentNotes({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" dir={en ? "ltr" : "rtl"}>
       <div className="card-surface p-4">
         <Textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="أضف ملاحظة عن هذا الطالب…"
+          placeholder={en ? "Add a note about this student…" : "أضف ملاحظة عن هذا الطالب…"}
           rows={3}
         />
         <div className="mt-2 flex justify-end">
           <Button onClick={submit} disabled={saving || !content.trim()} size="sm">
-            {saving && <Loader2 className="h-4 w-4 animate-spin" />} Add note
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />} {en ? "Add note" : "إضافة ملاحظة"}
           </Button>
         </div>
       </div>
@@ -54,8 +56,8 @@ export function StudentNotes({
       {notes.length === 0 ? (
         <EmptyState
           icon={StickyNote}
-          title="لا توجد ملاحظات بعد"
-          description="أضف تذكيرات أو ملاحظات عن هذا الطالب."
+          title={en ? "No notes yet" : "لا توجد ملاحظات بعد"}
+          description={en ? "Add reminders or notes about this student." : "أضف تذكيرات أو ملاحظات عن هذا الطالب."}
         />
       ) : (
         <div className="space-y-2">
@@ -65,16 +67,16 @@ export function StudentNotes({
                 <div className="min-w-0 flex-1">
                   <p className="text-sm">{n.content}</p>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    {n.author_name ?? "Unknown"} · {formatRelative(n.created_at)}
+                    {n.author_name ?? (en ? "Unknown" : "غير معروف")} · {formatRelative(n.created_at)}
                   </p>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label="حذف الملاحظة"
+                  aria-label={en ? "Delete note" : "حذف الملاحظة"}
                   onClick={async () => {
                     await deleteNoteAction(studentId, n.id);
-                    toast.success("تم حذف الملاحظة.");
+                    toast.success(en ? "Note deleted." : "تم حذف الملاحظة.");
                     router.refresh();
                   }}
                 >

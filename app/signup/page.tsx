@@ -16,10 +16,10 @@ export default function SignupPage() {
         </div>
         <div className="card-surface p-8">
           <h1 className="text-xl font-semibold tracking-tight">
-            ابدأ أكاديميتك
+            ابدأ باستخدام MYAcademy
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            أنشئ مساحة عمل لأكاديميتك. ستكون أنت المدير (Admin) وتتحكّم في كل شيء.
+            اختر ما يناسبك: إدارة أكاديمية كاملة أو إنشاء مساحة مدرس مستقلة لإدارة طلابك ومجموعاتك.
           </p>
           <div className="mt-6">
             <SignupForm />

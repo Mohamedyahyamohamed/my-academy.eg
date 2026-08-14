@@ -13,7 +13,10 @@ import { sendWelcomeEmail } from "@/lib/email";
 import type { SessionUser } from "@/types";
 import { createSignedSession, sessionMaxAgeSeconds } from "@/lib/session-cookie";
 
+export type WorkspaceType = "ACADEMY" | "TEACHER";
+
 export interface SignupInput {
+  workspaceType?: WorkspaceType;
   academyName: string;
   fullName: string;
   email: string;
@@ -23,18 +26,20 @@ export interface SignupInput {
 /** Creates a new academy and its first (owner) administrator. */
 export async function signupAction(input: SignupInput) {
   const email = input.email.trim().toLowerCase();
+  const workspaceType: WorkspaceType = input.workspaceType === "TEACHER" ? "TEACHER" : "ACADEMY";
   const academyName = input.academyName.trim();
   const fullName = input.fullName.trim();
+  const effectiveAcademyName = workspaceType === "TEACHER" ? `${fullName} — مساحة المدرس` : academyName;
   const rl = await rateLimit(`signup:${email}`, LIMITS.signup.max, LIMITS.signup.window);
   if (!rl.allowed) return { ok: false, error: "محاولات كثيرة. حاول مرة أخرى لاحقًا." };
-  if (!email || !input.password || !academyName || !fullName) return { ok: false, error: "جميع الحقول مطلوبة." };
+  if (!email || !input.password || !fullName || (workspaceType === "ACADEMY" && !academyName)) return { ok: false, error: "جميع الحقول المطلوبة يجب إدخالها." };
   if (input.password.length < 8) return { ok: false, error: "كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل." };
   if (!isSupabaseConfigured()) return { ok: false, error: "يتطلب إنشاء الأكاديمية إعداد قاعدة البيانات أولًا." };
 
   const client = nodeSupabaseClient();
   if (!client) return { ok: false, error: "تعذّر الاتصال بقاعدة البيانات." };
 
-  const slugBase = academyName
+  const slugBase = effectiveAcademyName
     .toLowerCase()
     .replace(/[^a-z0-9\u0600-\u06ff]+/g, "-")
     .replace(/^-|-$/g, "")
@@ -43,7 +48,7 @@ export async function signupAction(input: SignupInput) {
 
   const { data: academy, error: academyError } = await client
     .from("academies")
-    .insert({ name: academyName, slug, currency: "EGP", timezone: "Africa/Cairo" })
+    .insert({ name: effectiveAcademyName, slug, workspace_type: workspaceType, currency: "EGP", timezone: "Africa/Cairo" })
     .select("id")
     .single();
   if (academyError || !academy) return { ok: false, error: "تعذّر إنشاء الأكاديمية. حاول مرة أخرى." };
@@ -52,7 +57,7 @@ export async function signupAction(input: SignupInput) {
     email,
     password: input.password,
     email_confirm: true,
-    user_metadata: { full_name: fullName, role: "ADMIN", academy_id: academy.id },
+    user_metadata: { full_name: fullName, role: workspaceType === "TEACHER" ? "TEACHER" : "ADMIN", academy_id: academy.id, workspace_type: workspaceType },
   });
   if (userError || !userData.user) {
     await client.from("academies").delete().eq("id", academy.id);
@@ -65,7 +70,7 @@ export async function signupAction(input: SignupInput) {
     id: userId,
     academy_id: academy.id,
     email,
-    role: "ADMIN",
+    role: workspaceType === "TEACHER" ? "TEACHER" : "ADMIN",
     full_name: fullName,
     is_active: true,
     created_at: now,
@@ -80,7 +85,7 @@ export async function signupAction(input: SignupInput) {
   const { error: membershipError } = await client.from("academy_memberships").upsert({
     academy_id: academy.id,
     profile_id: userId,
-    role: "ADMIN",
+    role: workspaceType === "TEACHER" ? "TEACHER" : "ADMIN",
     status: "ACTIVE",
     joined_at: now,
     updated_at: now,
@@ -91,9 +96,26 @@ export async function signupAction(input: SignupInput) {
     return { ok: false, error: "تعذّر تفعيل عضوية مالك الأكاديمية." };
   }
 
+  if (workspaceType === "TEACHER") {
+    const [firstName, ...lastNameParts] = fullName.split(/\s+/);
+    const { error: teacherError } = await client.from("teachers").insert({
+      academy_id: academy.id,
+      profile_id: userId,
+      first_name: firstName || fullName,
+      last_name: lastNameParts.join(" ") || firstName || fullName,
+      email,
+      is_active: true,
+    });
+    if (teacherError) {
+      await client.auth.admin.deleteUser(userId);
+      await client.from("academies").delete().eq("id", academy.id);
+      return { ok: false, error: "تعذّر تجهيز مساحة المدرس. حاول مرة أخرى." };
+    }
+  }
+
   invalidateStore();
-  void sendWelcomeEmail(email, fullName, "ADMIN");
-  const user: SessionUser = { id: userId, email, role: "ADMIN", full_name: fullName, avatar_url: null, academy_id: academy.id };
+  void sendWelcomeEmail(email, fullName, workspaceType === "TEACHER" ? "TEACHER" : "ADMIN");
+  const user: SessionUser = { id: userId, email, role: workspaceType === "TEACHER" ? "TEACHER" : "ADMIN", full_name: fullName, avatar_url: null, academy_id: academy.id };
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, createSignedSession(user), {
     httpOnly: true,
@@ -102,9 +124,9 @@ export async function signupAction(input: SignupInput) {
     path: "/",
     maxAge: sessionMaxAgeSeconds(),
   });
-  void audit({ action: "academy.create", entity_type: "academy", entity_id: academy.id }, { id: userId, role: "ADMIN" });
-  revalidatePath("/dashboard");
-  redirect("/onboarding");
+  void audit({ action: workspaceType === "TEACHER" ? "teacher.workspace.create" : "academy.create", entity_type: "academy", entity_id: academy.id }, { id: userId, role: workspaceType === "TEACHER" ? "TEACHER" : "ADMIN" });
+  revalidatePath(workspaceType === "TEACHER" ? "/teacher" : "/dashboard");
+  redirect(workspaceType === "TEACHER" ? "/teacher" : "/onboarding");
 }
 
 /**

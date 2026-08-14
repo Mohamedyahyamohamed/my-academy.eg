@@ -29,6 +29,7 @@ create table academies (
   country text,
   currency text not null default 'EGP',
   timezone text not null default 'Africa/Cairo',
+  workspace_type text not null default 'ACADEMY' check (workspace_type in ('ACADEMY', 'TEACHER')),
   phone text,
   email text,
   address text,

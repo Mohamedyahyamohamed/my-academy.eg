@@ -150,10 +150,19 @@ export const SUPER_ADMIN_NAV: NavSection[] = [
     items: [{ titleAr: "المنصة", titleEn: "Platform", href: "/platform", icon: Crown }],
   },
   {
-    titleAr: "تشغيل الأكاديمية", titleEn: "Academy Operations",
-    items: ADMIN_NAV[0].items,
+    titleAr: "الرقابة والمالية", titleEn: "Governance & Finance",
+    items: [
+      { titleAr: "الاشتراكات", titleEn: "Subscriptions", href: "/billing", icon: Wallet },
+      { titleAr: "سجل العمليات", titleEn: "Audit Logs", href: "/audit", icon: BarChart3 },
+    ],
   },
-  ...ADMIN_NAV.slice(1),
+  {
+    titleAr: "النظام والدعم", titleEn: "System & Support",
+    items: [
+      { titleAr: "المساعدة والدعم", titleEn: "Help & Support", href: "/support", icon: CircleHelp },
+      { titleAr: "الخصوصية", titleEn: "Privacy", href: "/privacy", icon: Settings },
+    ],
+  },
 ];
 
 /** Academy managers handle administration; teaching operations stay with teachers. */

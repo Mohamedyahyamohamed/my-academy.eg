@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { StudentAvatar } from "@/components/shared/student-avatar";
 import { StudentStatusBadge } from "@/components/shared/badges";
 import { requireScopedRole } from "@/services";
+import { teacherStudentScope } from "@/services/_shared";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export default async function ParentDetailPage(
   }
 ) {
   const params = await props.params;
-  await requireScopedRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
   const { createServerSupabaseClient } = await import("@/lib/supabase/server");
   const client = await createServerSupabaseClient();
 
@@ -24,13 +25,18 @@ export default async function ParentDetailPage(
     .from("parents")
     .select("*")
     .eq("id", params.id)
+    .eq("academy_id", user.academy_id)
     .maybeSingle();
   if (!parent) notFound();
 
-  const { data: children } = await client
+  const { data: rawChildren } = await client
     .from("students")
     .select("id,first_name,last_name,grade,status")
-    .eq("parent_id", params.id);
+    .eq("parent_id", params.id)
+    .eq("academy_id", user.academy_id);
+  const teacherScope = user.role === "TEACHER" ? (teacherStudentScope() ?? new Set<string>()) : null;
+  const children = (rawChildren ?? []).filter((child: any) => !teacherScope || teacherScope.has(child.id));
+  if (user.role === "TEACHER" && children.length === 0) notFound();
 
   return (
     <div className="space-y-6">

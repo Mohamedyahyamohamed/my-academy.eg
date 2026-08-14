@@ -3,8 +3,8 @@
  * Scoped: sender and recipient must be in the same academy.
  */
 import { collections } from "./data/store";
-import { currentAcademyId, requireRole } from "./session";
-import { byAcademy } from "./_shared";
+import { requireRole } from "./session";
+import { byAcademy, teacherStudentScope } from "./_shared";
 import { persistInsert } from "./data/store";
 
 export interface Message {
@@ -21,6 +21,41 @@ export interface Message {
   created_at: string;
 }
 
+function parentStudentIds(parentProfileId: string, academyId: string): Set<string> {
+  const parentIds = new Set(
+    collections().parents
+      .filter((p) => p.academy_id === academyId && (p.profile_id === parentProfileId || p.email.toLowerCase() === collections().profiles.find((profile) => profile.id === parentProfileId)?.email?.toLowerCase()))
+      .map((p) => p.id),
+  );
+  return new Set(
+    collections().students
+      .filter((s) => s.academy_id === academyId && !!s.parent_id && parentIds.has(s.parent_id))
+      .map((s) => s.id),
+  );
+}
+
+function teacherProfileTeachesStudent(teacherProfileId: string, studentIds: Set<string>, academyId: string): boolean {
+  const teacher = collections().teachers.find(
+    (t) => t.academy_id === academyId && t.profile_id === teacherProfileId,
+  );
+  if (!teacher || studentIds.size === 0) return false;
+  const groupIds = new Set(
+    collections().groups
+      .filter((g) => g.academy_id === academyId && g.teacher_id === teacher.id)
+      .map((g) => g.id),
+  );
+  for (const assistant of collections().groupAssistants) {
+    if (assistant.teacher_id === teacher.id && collections().groups.some((g) => g.id === assistant.group_id && g.academy_id === academyId)) {
+      groupIds.add(assistant.group_id);
+    }
+  }
+  return collections().groupStudents.some((gs) => groupIds.has(gs.group_id) && studentIds.has(gs.student_id));
+}
+
+function teacherSharesStudentWithParent(teacherProfileId: string, parentProfileId: string, academyId: string): boolean {
+  return teacherProfileTeachesStudent(teacherProfileId, parentStudentIds(parentProfileId, academyId), academyId);
+}
+
 /** Send a message. */
 export async function sendMessage(
   recipientId: string,
@@ -33,14 +68,28 @@ export async function sendMessage(
   const recipient = collections().profiles.find((p) => p.id === recipientId);
   if (!recipient || recipient.academy_id !== user.academy_id) return null;
 
-  // Parents can only message teachers/admins of their children's groups.
-  if (user.role === "PARENT" && recipient.role !== "TEACHER" && recipient.role !== "ADMIN") {
-    return null;
+  const senderStudentIds = user.role === "TEACHER"
+    ? (teacherStudentScope() ?? new Set<string>())
+    : user.role === "PARENT"
+      ? parentStudentIds(user.id, user.academy_id)
+      : new Set<string>();
+
+  // Parents can contact only teachers of their children, or an academy admin.
+  if (user.role === "PARENT") {
+    if (recipient.role === "TEACHER" && !teacherSharesStudentWithParent(recipient.id, user.id, user.academy_id)) return null;
+    if (recipient.role !== "TEACHER" && recipient.role !== "ADMIN") return null;
   }
-  // Teachers can only message parents of their students.
-  if (user.role === "TEACHER" && recipient.role !== "PARENT" && recipient.role !== "ADMIN") {
-    return null;
+  // Teachers can contact only parents of their assigned students, or an academy admin.
+  if (user.role === "TEACHER") {
+    if (recipient.role === "PARENT") {
+      const recipientStudentIds = parentStudentIds(recipient.id, user.academy_id);
+      if (![...recipientStudentIds].some((id) => senderStudentIds.has(id))) return null;
+    } else if (recipient.role !== "ADMIN") {
+      return null;
+    }
   }
+  // If a student context is supplied, it must belong to the sender's permitted scope.
+  if (studentId && !senderStudentIds.has(studentId)) return null;
 
   const now = new Date().toISOString();
   const msg: Message = {
@@ -96,13 +145,17 @@ export function getContacts(userOverride?: ReturnType<typeof requireRole>) {
   const profiles = byAcademy(collections().profiles, user.academy_id).filter((p) => p.id !== user.id);
 
   if (user.role === "PARENT") {
-    // Parents → teachers + admins of their children's groups.
-    return profiles.filter((p) => p.role === "TEACHER" || p.role === "ADMIN");
+    const children = parentStudentIds(user.id, user.academy_id);
+    return profiles.filter((p) =>
+      p.role === "ADMIN" || (p.role === "TEACHER" && teacherProfileTeachesStudent(p.id, children, user.academy_id)),
+    );
   }
   if (user.role === "TEACHER") {
-    // Teachers → parents of their students + admins.
-    return profiles.filter((p) => p.role === "PARENT" || p.role === "ADMIN");
+    const students = teacherStudentScope() ?? new Set<string>();
+    return profiles.filter((p) =>
+      p.role === "ADMIN" || (p.role === "PARENT" && [...parentStudentIds(p.id, user.academy_id)].some((id) => students.has(id))),
+    );
   }
-  // Admin → everyone.
+  // Admin → everyone in the current academy.
   return profiles;
 }

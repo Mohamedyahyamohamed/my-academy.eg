@@ -13,7 +13,7 @@ export async function createExamAction(input: ExamInput) {
 
 export async function deleteExamAction(id: string) {
   await requireScopedRole("TEACHER");
-  GradesService.deleteExam(id);
+  await GradesService.deleteExam(id);
   revalidatePath("/grades");
 }
 
@@ -22,7 +22,7 @@ export async function saveGradesAction(
   entries: { studentId: string; score: number }[],
 ) {
   const user = await requireScopedRole("TEACHER");
-  const res = GradesService.saveGrades(examId, entries);
+  const res = await GradesService.saveGrades(examId, entries);
   if (res.ok) {
     await import("@/services/audit").then((m) => m.audit(
       { action: "grades.save", entity_type: "exam", entity_id: examId, new_data: { count: entries.length } },

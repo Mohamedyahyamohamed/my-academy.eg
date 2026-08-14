@@ -5,9 +5,10 @@
 import type { Exam, Grade, PaginatedResult } from "@/types";
 import { collections } from "./data/store";
 import { currentAcademyId, getCurrentUser } from "./session";
-import { persistInsert, persistDelete } from "./data/store";
+import { persistInsert, persistDelete, persistUpdate } from "./data/store";
 import { getCourse, getGroup, byAcademy, academyExamIds, teacherGroupScope, fetchTableRLS } from "./_shared";
 import { performanceLevel } from "@/lib/constants";
+import { can, hasAcademyWideScope } from "@/lib/permissions";
 
 function attachExam(e: Exam): Exam {
   return { ...e, course: getCourse(e.course_id), group: getGroup(e.group_id) };
@@ -59,10 +60,20 @@ function eid() {
 }
 
 export async function createExam(input: ExamInput): Promise<Exam> {
+  const user = getCurrentUser();
+  if (!user || !can(user, "grades.record")) throw new Error("You are not allowed to create exams.");
+  const academyId = currentAcademyId();
+  const group = collections().groups.find((item) => item.id === input.group_id && item.academy_id === academyId);
+  if (!group) throw new Error("Exam group is outside the authenticated academy.");
+  if (!hasAcademyWideScope(user.role) && !teacherGroupScope()?.has(group.id)) {
+    throw new Error("You can only create exams for an assigned group.");
+  }
+  const course = collections().courses.find((item) => item.id === input.course_id && item.academy_id === academyId);
+  if (!course || course.id !== group.course_id) throw new Error("Exam course must belong to the selected group.");
   const now = new Date().toISOString();
   const e: Exam = {
     id: eid(),
-    academy_id: currentAcademyId(),
+    academy_id: academyId,
     name: input.name,
     course_id: input.course_id,
     group_id: input.group_id,
@@ -76,10 +87,19 @@ export async function createExam(input: ExamInput): Promise<Exam> {
   return attachExam(e);
 }
 
-export function deleteExam(id: string): boolean {
+export async function deleteExam(id: string): Promise<boolean> {
+  const user = getCurrentUser();
+  if (!user || !can(user, "grades.record")) throw new Error("You are not allowed to delete exams.");
+  const exam = collections().exams.find((item) => item.id === id && item.academy_id === currentAcademyId());
+  if (!exam) return false;
+  if (!hasAcademyWideScope(user.role) && !teacherGroupScope()?.has(exam.group_id)) {
+    throw new Error("You can only delete exams for an assigned group.");
+  }
   const before = collections().exams.length;
   collections().exams = collections().exams.filter((e) => e.id !== id);
   collections().grades = collections().grades.filter((g) => g.exam_id !== id);
+  await persistDelete("grades", { exam_id: id });
+  await persistDelete("exams", { id });
   return collections().exams.length < before;
 }
 
@@ -106,7 +126,12 @@ export interface GradeFilters {
 
 export async function listGrades(filters: GradeFilters = {}, academyId?: string): Promise<PaginatedResult<Grade>> {
   const { examId = "ALL", studentId = "ALL", groupId = "ALL", page = 1, pageSize = 12 } = filters;
-  const examIds = new Set(collections().exams.filter((e) => !academyId || e.academy_id === academyId).map((e) => e.id));
+  const teacherScope = teacherGroupScope();
+  const examIds = new Set(
+    collections().exams
+      .filter((e) => (!academyId || e.academy_id === academyId) && (!teacherScope || teacherScope.has(e.group_id)))
+      .map((e) => e.id),
+  );
   let items = (await fetchTableRLS<Grade>("grades", academyId)).filter((g) => examIds.has(g.exam_id));
 
   if (examId !== "ALL") items = items.filter((g) => g.exam_id === examId);
@@ -149,35 +174,43 @@ export function gradesForExam(
   });
 }
 
-/** Upsert grades for an exam in bulk. Validates score bounds. */
-export function saveGrades(
+/** Upsert grades for an exam in bulk. Validates score bounds and roster scope. */
+export async function saveGrades(
   examId: string,
   entries: { studentId: string; score: number }[],
-): { ok: boolean; error?: string } {
-  const exam = collections().exams.find((e) => e.id === examId);
+): Promise<{ ok: boolean; error?: string }> {
+  const user = getCurrentUser();
+  if (!user || !can(user, "grades.record")) return { ok: false, error: "You are not allowed to save grades." };
+  const exam = collections().exams.find((e) => e.id === examId && e.academy_id === currentAcademyId());
   if (!exam) return { ok: false, error: "Exam not found." };
+  if (!hasAcademyWideScope(user.role) && !teacherGroupScope()?.has(exam.group_id)) {
+    return { ok: false, error: "You can only save grades for an assigned group." };
+  }
+  const roster = new Set(
+    collections().groupStudents
+      .filter((gs) => gs.group_id === exam.group_id)
+      .map((gs) => gs.student_id),
+  );
+  if (new Set(entries.map((entry) => entry.studentId)).size !== entries.length) {
+    return { ok: false, error: "Duplicate student grade entries are not allowed." };
+  }
   for (const e of entries) {
-    if (e.score < 0) return { ok: false, error: "Scores cannot be negative." };
-    if (e.score > exam.max_score)
-      return { ok: false, error: `Score exceeds maximum (${exam.max_score}).` };
+    if (!roster.has(e.studentId)) return { ok: false, error: "Every grade must belong to the exam group roster." };
+    const student = collections().students.find((s) => s.id === e.studentId && s.academy_id === exam.academy_id);
+    if (!student) return { ok: false, error: "Student is outside the authenticated academy." };
+    if (!Number.isFinite(e.score) || e.score < 0) return { ok: false, error: "Scores cannot be negative." };
+    if (e.score > exam.max_score) return { ok: false, error: `Score exceeds maximum (${exam.max_score}).` };
   }
   const now = new Date().toISOString();
   for (const e of entries) {
-    const existing = collections().grades.find(
-      (g) => g.exam_id === examId && g.student_id === e.studentId,
-    );
+    const existing = collections().grades.find((g) => g.exam_id === examId && g.student_id === e.studentId);
     if (existing) {
       existing.score = e.score;
+      await persistUpdate("grades", existing.id, { score: e.score });
     } else {
-      const grade = {
-        id: crypto.randomUUID(),
-        exam_id: examId,
-        student_id: e.studentId,
-        score: e.score,
-        created_at: now,
-      };
+      const grade = { id: crypto.randomUUID(), exam_id: examId, student_id: e.studentId, score: e.score, created_at: now };
       collections().grades.push(grade);
-      void persistInsert("grades", grade);
+      await persistInsert("grades", grade);
     }
   }
   return { ok: true };

@@ -16,6 +16,7 @@ import { cn, fullName, percentage } from "@/lib/utils";
 import type { AttendanceStatus, Group, Lesson, Student } from "@/types";
 import { saveAttendanceAction } from "@/app/actions/attendance";
 import { QrCheckin } from "@/components/attendance/qr-checkin";
+import { useClientLang } from "@/lib/i18n-client";
 
 type Status = AttendanceStatus | null;
 
@@ -36,6 +37,7 @@ export function AttendanceWorkshop({
   groups, lessons, students, enrollments,
 }: AttendanceWorkshopProps) {
   const router = useRouter();
+  const en = useClientLang() === "en";
   const params = useSearchParams();
   const groupId = params.get("group") ?? "";
   const lessonId = params.get("lesson") ?? "";
@@ -87,13 +89,13 @@ export function AttendanceWorkshop({
       .map((s) => ({ studentId: s.id, status: statuses[s.id] }))
       .filter((e): e is { studentId: string; status: AttendanceStatus } => Boolean(e.status));
     if (entries.length < roster.length) {
-      toast.error("حدّد حالة الحضور لكل طالب قبل الحفظ.");
+      toast.error(en ? "Set an attendance status for every student before saving." : "حدّد حالة الحضور لكل طالب قبل الحفظ.");
       return;
     }
     setSaving(true);
     try {
       await saveAttendanceAction(groupId, lessonId, entries);
-      toast.success(`تم حفظ حضور ${entries.length} طالب.`);
+      toast.success(en ? `Attendance saved for ${entries.length} students.` : `تم حفظ حضور ${entries.length} طالب.`);
       router.refresh();
     } finally {
       setSaving(false);
@@ -101,12 +103,12 @@ export function AttendanceWorkshop({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       {/* Setup selectors */}
       <Card>
         <CardContent className="grid gap-4 p-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">1. اختر المجموعة</label>
+            <label className="text-sm font-medium">{en ? "1. Choose group" : "1. اختر المجموعة"}</label>
             <select
               value={groupId}
               onChange={(e) => {
@@ -117,12 +119,12 @@ export function AttendanceWorkshop({
               }}
               className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
-              <option value="">اختر مجموعة…</option>
+              <option value="">{en ? "Choose group…" : "اختر مجموعة…"}</option>
               {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">2. اختر الحصة</label>
+            <label className="text-sm font-medium">{en ? "2. Choose lesson" : "2. اختر الحصة"}</label>
             <select
               value={lessonId}
               onChange={(e) => {
@@ -133,7 +135,7 @@ export function AttendanceWorkshop({
               disabled={!groupId}
               className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
             >
-              <option value="">اختر حصة…</option>
+              <option value="">{en ? "Choose lesson…" : "اختر حصة…"}</option>
               {groupLessons.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.topic} — {new Date(l.date).toLocaleDateString()}
@@ -147,28 +149,28 @@ export function AttendanceWorkshop({
       {!groupId || !lessonId ? (
         <EmptyState
           icon={CalendarCheck}
-          title="اختر مجموعة وحصة"
-          description="اختر المجموعة ثم الحصة لبدء تسجيل الحضور."
+          title={en ? "Choose a group and lesson" : "اختر مجموعة وحصة"}
+          description={en ? "Choose a group and lesson to start recording attendance." : "اختر المجموعة ثم الحصة لبدء تسجيل الحضور."}
         />
       ) : roster.length === 0 ? (
-        <EmptyState icon={Users} title="لا يوجد طلاب في هذه المجموعة" description="سجّل الطلاب أولًا." />
+        <EmptyState icon={Users} title={en ? "No students in this group" : "لا يوجد طلاب في هذه المجموعة"} description={en ? "Add students first." : "سجّل الطلاب أولًا."} />
       ) : (
         <>
           {/* Summary + bulk actions */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap gap-2">
-              <Badge variant="success">حاضر {counts.present}</Badge>
-              <Badge variant="warning">متأخر {counts.late}</Badge>
-              <Badge variant="destructive">غائب {counts.absent}</Badge>
-              <Badge variant="info">النسبة {counts.rate}%</Badge>
+              <Badge variant="success">{en ? "Present" : "حاضر"} {counts.present}</Badge>
+              <Badge variant="warning">{en ? "Late" : "متأخر"} {counts.late}</Badge>
+              <Badge variant="destructive">{en ? "Absent" : "غائب"} {counts.absent}</Badge>
+              <Badge variant="info">{en ? "Rate" : "النسبة"} {counts.rate}%</Badge>
             </div>
             <div className="flex gap-2">
               <QrCheckin lessonId={lessonId} />
               <Button variant="outline" size="sm" onClick={() => setAll("PRESENT")}>
-                <CheckCheck className="h-4 w-4 text-emerald-600" /> تسجيل الكل حاضرًا
+                <CheckCheck className="h-4 w-4 text-emerald-600" /> {en ? "Mark all present" : "تسجيل الكل حاضرًا"}
               </Button>
               <Button variant="outline" size="sm" onClick={() => setAll("ABSENT")}>
-                <XCircle className="h-4 w-4 text-rose-600" /> تسجيل الكل غائبًا
+                <XCircle className="h-4 w-4 text-rose-600" /> {en ? "Mark all absent" : "تسجيل الكل غائبًا"}
               </Button>
             </div>
           </div>
@@ -202,7 +204,7 @@ export function AttendanceWorkshop({
                               active ? opt.active : cn("border-border", opt.idle),
                             )}
                           >
-                            <Icon className="h-3.5 w-3.5" /> {opt.label}
+                            <Icon className="h-3.5 w-3.5" /> {en ? (opt.value === "PRESENT" ? "Present" : opt.value === "LATE" ? "Late" : "Absent") : opt.label}
                           </button>
                         );
                       })}
@@ -216,7 +218,7 @@ export function AttendanceWorkshop({
           <div className="sticky bottom-4 flex justify-end">
             <Button onClick={save} disabled={saving} className="shadow-elevated">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              Save attendance
+              {en ? "Save attendance" : "حفظ الحضور"}
             </Button>
           </div>
         </>

@@ -22,6 +22,8 @@ import { Badge } from "@/components/ui/badge";
 import { StudentsService, GroupsService, MiscService, requireScopedRole } from "@/services";
 import { archiveStudentAction } from "@/app/actions/students";
 import type { StudentFilters } from "@/types";
+import { cookies } from "next/headers";
+import { getLangFromCookie } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,8 @@ export default async function StudentsPage(
   }
 ) {
   const searchParams = await props.searchParams;
+  const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
+  const en = lang === "en";
   const user = await requireScopedRole("ADMIN", "TEACHER");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
@@ -50,19 +54,19 @@ export default async function StudentsPage(
   const parents = await MiscService.listParents(user.academy_id);
 
   const groupOptions = [
-    { value: "ALL", label: "كل المجموعات" },
+    { value: "ALL", label: en ? "All groups" : "كل المجموعات" },
     ...groups.map((g) => ({ value: g.id, label: g.name })),
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
-        title="الطلاب"
-        description="إدارة ملفات الطلاب والتسجيل والحالة في أكاديميتك."
+        title={en ? "Students" : "الطلاب"}
+        description={en ? "Manage student profiles, enrollment, and status in your academy." : "إدارة ملفات الطلاب والتسجيل والحالة في أكاديميتك."}
       >
         <div className="flex gap-2">
           <Button asChild variant="outline">
-            <Link href="/students/import">استيراد من Excel</Link>
+            <Link href="/students/import">{en ? "Import from Excel" : "استيراد من Excel"}</Link>
           </Button>
           <CreateAccountsButton />
           <AddStudentDialog parents={parents} groups={groups} />
@@ -71,22 +75,22 @@ export default async function StudentsPage(
 
       <div className="card-surface p-4">
         <ToolbarRoot>
-          <ToolbarSearch placeholder="بحث بالاسم أو الموبايل أو المدرسة…" />
-          <ToolbarSelect paramKey="status" label="تصفية بالحالة" options={[
-            { value: "ALL", label: "كل الحالات" },
-            { value: "ACTIVE", label: "نشط" },
-            { value: "INACTIVE", label: "غير نشط" },
-            { value: "ARCHIVED", label: "مؤرشف" },
+          <ToolbarSearch placeholder={en ? "Search by name, phone, or school…" : "بحث بالاسم أو الموبايل أو المدرسة…"} />
+          <ToolbarSelect paramKey="status" label={en ? "Filter by status" : "تصفية بالحالة"} options={[
+            { value: "ALL", label: en ? "All statuses" : "كل الحالات" },
+            { value: "ACTIVE", label: en ? "Active" : "نشط" },
+            { value: "INACTIVE", label: en ? "Inactive" : "غير نشط" },
+            { value: "ARCHIVED", label: en ? "Archived" : "مؤرشف" },
           ]} />
-          <ToolbarSelect paramKey="group" label="تصفية بمجموعة" options={groupOptions} />
+          <ToolbarSelect paramKey="group" label={en ? "Filter by group" : "تصفية بمجموعة"} options={groupOptions} />
         </ToolbarRoot>
       </div>
 
       {result.items.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="لا يوجد طلاب بعد"
-          description="أضف أول طالب لبدء متابعة الحضور والمصاريف والدرجات."
+          title={en ? "No students yet" : "لا يوجد طلاب بعد"}
+          description={en ? "Add your first student to start tracking attendance, payments, and grades." : "أضف أول طالب لبدء متابعة الحضور والمصاريف والدرجات."}
           action={<AddStudentDialog parents={parents} groups={groups} />}
         />
       ) : (
@@ -96,12 +100,12 @@ export default async function StudentsPage(
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>الطالب</TableHead>
-                  <TableHead>ولي الأمر</TableHead>
-                  <TableHead>الصف الدراسي</TableHead>
-                  <TableHead>المجموعات</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead className="text-left">إجراءات</TableHead>
+                  <TableHead>{en ? "Student" : "الطالب"}</TableHead>
+                  <TableHead>{en ? "Parent" : "ولي الأمر"}</TableHead>
+                  <TableHead>{en ? "Grade" : "الصف الدراسي"}</TableHead>
+                  <TableHead>{en ? "Groups" : "المجموعات"}</TableHead>
+                  <TableHead>{en ? "Status" : "الحالة"}</TableHead>
+                  <TableHead className="text-left">{en ? "Actions" : "إجراءات"}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -152,7 +156,7 @@ export default async function StudentsPage(
                     </TableCell>
                     <TableCell className="text-left">
                       <div className="flex items-center justify-start gap-1">
-                        <Button asChild variant="ghost" size="icon-sm" aria-label="عرض">
+                        <Button asChild variant="ghost" size="icon-sm" aria-label={en ? "View" : "عرض"}>
                           <Link href={`/students/${s.id}`}>
                             <Eye className="h-4 w-4" />
                           </Link>
@@ -162,13 +166,13 @@ export default async function StudentsPage(
                           <ConfirmDialog
                             destructive
                             trigger={
-                              <Button variant="ghost" size="icon-sm" aria-label="أرشفة">
-                                <span className="sr-only">أرشفة</span>
+                              <Button variant="ghost" size="icon-sm" aria-label={en ? "Archive" : "أرشفة"}>
+                                <span className="sr-only">{en ? "Archive" : "أرشفة"}</span>
                               </Button>
                             }
-                            title="أرشفة الطالب؟"
-                            description={`سيُخفى ${s.first_name} ${s.last_name} من القوائم النشطة مع الاحتفاظ ببياناته.`}
-                            confirmLabel="أرشفة"
+                            title={en ? "Archive student?" : "أرشفة الطالب؟"}
+                            description={en ? `${s.first_name} ${s.last_name} will be hidden from active lists while their data is retained.` : `سيُخفى ${s.first_name} ${s.last_name} من القوائم النشطة مع الاحتفاظ ببياناته.`}
+                            confirmLabel={en ? "Archive" : "أرشفة"}
                             onConfirm={archiveStudentAction.bind(null, s.id)}
                           />
                         )}
@@ -198,7 +202,7 @@ export default async function StudentsPage(
                     </p>
                     {s.parent && (
                       <p className="truncate text-xs text-muted-foreground">
-                        ولي الأمر: {s.parent.first_name} {s.parent.last_name}
+                        {en ? "Parent: " : "ولي الأمر: "}{s.parent.first_name} {s.parent.last_name}
                       </p>
                     )}
                   </div>

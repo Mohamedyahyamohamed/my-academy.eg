@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreateHomeworkDialog } from "@/components/homework/create-homework-dialog";
-import { HomeworkService, GroupsService, requireRole } from "@/services";
+import { HomeworkService, GroupsService, requireScopedRole } from "@/services";
 import { collections } from "@/services/data/store";
 import { formatDate } from "@/lib/utils";
 
@@ -18,7 +18,7 @@ export default async function HomeworkPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  requireRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
   const result = await HomeworkService.listHomework({
@@ -26,8 +26,8 @@ export default async function HomeworkPage(
     groupId: sp("group") ?? "ALL",
     page: sp("page") ? Number(sp("page")) : 1,
     pageSize: 12,
-  });
-  const groups = await GroupsService.listGroups();
+  }, user.academy_id, user.id);
+  const groups = await GroupsService.listGroups("", user.academy_id);
 
   const subStats = (hwId: string) => {
     const subs = collections().submissions.filter((s) => s.homework_id === hwId);

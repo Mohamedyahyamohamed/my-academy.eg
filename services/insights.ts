@@ -12,13 +12,13 @@ export interface AtRiskStudent {
   severity: "high" | "medium" | "low";
 }
 
-export async function atRiskStudents(): Promise<AtRiskStudent[]> {
+export async function atRiskStudents(academyId?: string): Promise<AtRiskStudent[]> {
   const [students, attendance, allGrades, payments, exams] = await Promise.all([
-    fetchTableRLS<any>("students"),
-    fetchTableRLS<any>("attendance"),
-    fetchTableRLS<any>("grades"),
-    fetchTableRLS<any>("payments"),
-    fetchTableRLS<any>("exams"),
+    fetchTableRLS<any>("students", academyId),
+    fetchTableRLS<any>("attendance", academyId),
+    fetchTableRLS<any>("grades", academyId),
+    fetchTableRLS<any>("payments", academyId),
+    fetchTableRLS<any>("exams", academyId),
   ]);
 
   const examMap = new Map(exams.map((e: any) => [e.id, e]));
@@ -56,12 +56,12 @@ export async function atRiskStudents(): Promise<AtRiskStudent[]> {
   return out;
 }
 
-export async function generateReportComment(studentId: string): Promise<string> {
+export async function generateReportComment(studentId: string, academyId?: string): Promise<string> {
   const [students, attendance, allGrades, exams] = await Promise.all([
-    fetchTableRLS<any>("students"),
-    fetchTableRLS<any>("attendance"),
-    fetchTableRLS<any>("grades"),
-    fetchTableRLS<any>("exams"),
+    fetchTableRLS<any>("students", academyId),
+    fetchTableRLS<any>("attendance", academyId),
+    fetchTableRLS<any>("grades", academyId),
+    fetchTableRLS<any>("exams", academyId),
   ]);
   const examMap = new Map(exams.map((e: any) => [e.id, e]));
   const s = students.find((x: any) => x.id === studentId);

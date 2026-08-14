@@ -12,7 +12,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { PaymentsService, StudentsService, GroupsService, requireRole } from "@/services";
+import { PaymentsService, StudentsService, GroupsService, requireScopedRole } from "@/services";
 import type { PaymentFilters } from "@/services/payments";
 import { formatCurrency } from "@/lib/utils";
 import type { PaymentStatus } from "@/types";
@@ -25,7 +25,7 @@ export default async function PaymentsPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  requireRole("ADMIN");
+  const user = await requireScopedRole("ADMIN");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
 
@@ -38,12 +38,12 @@ export default async function PaymentsPage(
     pageSize: 10,
   };
 
-  const result = await PaymentsService.listPayments(filters);
-  const metrics = await PaymentsService.getPaymentMetrics();
-  const students = (await StudentsService.listStudents({ pageSize: 500 })).items;
-  const groups = await GroupsService.listGroups();
+  const result = await PaymentsService.listPayments(filters, user.academy_id);
+  const metrics = await PaymentsService.getPaymentMetrics(6, user.academy_id);
+  const students = (await StudentsService.listStudents({ pageSize: 500 }, user.academy_id)).items;
+  const groups = await GroupsService.listGroups("", user.academy_id);
 
-  const months = Array.from(new Set((await PaymentsService.listPayments({ pageSize: 500 })).items.map((p) => p.month))).sort().reverse();
+  const months = Array.from(new Set((await PaymentsService.listPayments({ pageSize: 500 }, user.academy_id)).items.map((p) => p.month))).sort().reverse();
 
   return (
     <div className="space-y-6">

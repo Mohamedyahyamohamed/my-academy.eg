@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StudentAvatar } from "@/components/shared/student-avatar";
 import { StudentStatusBadge } from "@/components/shared/badges";
-import { requireRole } from "@/services";
+import { requireScopedRole } from "@/services";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export default async function ParentDetailPage(
   }
 ) {
   const params = await props.params;
-  requireRole("ADMIN", "TEACHER");
+  await requireScopedRole("ADMIN", "TEACHER");
   const { createServerSupabaseClient } = await import("@/lib/supabase/server");
   const client = await createServerSupabaseClient();
 

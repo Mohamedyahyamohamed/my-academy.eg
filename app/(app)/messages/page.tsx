@@ -1,6 +1,6 @@
 import { MessagesPageContent } from "@/components/messages/messages-page";
 import { getInbox, getSentMessages, getContacts } from "@/services/messaging";
-import { requireRole } from "@/services";
+import { requireScopedRole } from "@/services";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { MessageSquare } from "lucide-react";
@@ -8,10 +8,10 @@ import { MessageSquare } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function MessagesRoute() {
-  requireRole("ADMIN", "TEACHER", "PARENT");
-  const inbox = getInbox();
-  const sent = getSentMessages();
-  const contacts = getContacts();
+  const user = await requireScopedRole("ADMIN", "TEACHER", "PARENT");
+  const inbox = getInbox(user);
+  const sent = getSentMessages(user);
+  const contacts = getContacts(user);
 
   return (
     <div className="space-y-6">

@@ -3,16 +3,16 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { StatCard } from "@/components/shared/stat-card";
 import { TrendArea, GroupedBars, LineTrend, Bars } from "@/components/charts";
-import { DashboardService, LifecycleAnalyticsService, requireRole } from "@/services";
+import { DashboardService, LifecycleAnalyticsService, requireScopedRole } from "@/services";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function AnalyticsPage() {
-  requireRole("ADMIN");
-  const a = await DashboardService.getAnalytics();
-  const d = await DashboardService.getDashboardData();
-  const lifecycle = await LifecycleAnalyticsService.getLifecycleAnalytics();
+  const user = await requireScopedRole("ADMIN");
+  const a = await DashboardService.getAnalytics(user.academy_id);
+  const d = await DashboardService.getDashboardData("month", user.academy_id);
+  const lifecycle = await LifecycleAnalyticsService.getLifecycleAnalytics(user.academy_id);
 
   return (
     <div className="space-y-6">

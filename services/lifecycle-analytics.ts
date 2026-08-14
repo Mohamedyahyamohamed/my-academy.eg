@@ -20,7 +20,7 @@ export type LifecycleAnalytics = {
  * Audit logs are queried with a hard limit so an unusually large academy cannot
  * turn the admin dashboard into an unbounded database read.
  */
-export async function getLifecycleAnalytics(): Promise<LifecycleAnalytics> {
+export async function getLifecycleAnalytics(academyIdOverride?: string): Promise<LifecycleAnalytics> {
   const empty: LifecycleAnalytics = {
     signups: 0,
     onboardingCompleted: 0,
@@ -35,7 +35,7 @@ export async function getLifecycleAnalytics(): Promise<LifecycleAnalytics> {
     recentEvents: [],
   };
 
-  const academyId = currentAcademyId();
+  const academyId = academyIdOverride ?? currentAcademyId();
   const client = nodeSupabaseClient();
   if (!academyId || !client) return empty;
 

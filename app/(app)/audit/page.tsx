@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { requireRole } from "@/services";
+import { requireScopedRole } from "@/services";
 import { listAuditLogs } from "@/services/audit";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ export default async function AuditLogsPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  requireRole("ADMIN");
+  const user = await requireScopedRole("ADMIN");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
 
@@ -28,7 +28,7 @@ export default async function AuditLogsPage(
     entity_type: sp("entity") ?? "ALL",
     page: sp("page") ? Number(sp("page")) : 1,
     pageSize: 30,
-  });
+  }, user.academy_id);
 
   const actionColor = (a: string) =>
     a.includes("create") ? "success" : a.includes("delete") || a.includes("archive") ? "destructive" : a.includes("update") || a.includes("record") || a.includes("save") ? "info" : "secondary";

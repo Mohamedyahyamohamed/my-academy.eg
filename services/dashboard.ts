@@ -48,20 +48,20 @@ function currentMonthKey() {
 }
 
 // ─── RLS-backed data fetch for dashboard aggregations ────────────
-async function getRLSData() {
+async function getRLSData(academyId?: string) {
   const [students, groups, exams, payments, courses, lessons, attendance, grades, teachers, homework, submissions] =
     await Promise.all([
-      fetchTableRLS<Student>("students"),
-      fetchTableRLS<any>("groups"),
-      fetchTableRLS<any>("exams"),
-      fetchTableRLS<Payment>("payments"),
-      fetchTableRLS<any>("courses"),
-      fetchTableRLS<any>("lessons"),
-      fetchTableRLS<any>("attendance"),
-      fetchTableRLS<any>("grades"),
-      fetchTableRLS<any>("teachers"),
-      fetchTableRLS<any>("homework"),
-      fetchTableRLS<any>("homework_submissions"),
+      fetchTableRLS<Student>("students", academyId),
+      fetchTableRLS<any>("groups", academyId),
+      fetchTableRLS<any>("exams", academyId),
+      fetchTableRLS<Payment>("payments", academyId),
+      fetchTableRLS<any>("courses", academyId),
+      fetchTableRLS<any>("lessons", academyId),
+      fetchTableRLS<any>("attendance", academyId),
+      fetchTableRLS<any>("grades", academyId),
+      fetchTableRLS<any>("teachers", academyId),
+      fetchTableRLS<any>("homework", academyId),
+      fetchTableRLS<any>("homework_submissions", academyId),
     ]);
 
   // Apply teacher scope if applicable.
@@ -92,8 +92,9 @@ async function getRLSData() {
 
 export async function getDashboardData(
   period: "month" | "quarter" | "year" = "month",
+  academyId?: string,
 ): Promise<DashboardData> {
-  const d = await getRLSData();
+  const d = await getRLSData(academyId);
   const { students, groups, exams, payments, attendance, grades } = d;
 
   const totalStudents = students.length;
@@ -103,7 +104,7 @@ export async function getDashboardData(
   // نطاق الرسم البياني + عدد شهور التحصيل حسب الفترة المختارة.
   const chartRange = period === "year" ? 12 : 6;
   const collectedPeriodMonths = period === "month" ? 1 : period === "quarter" ? 3 : 12;
-  const pay = await getPaymentMetrics(chartRange);
+  const pay = await getPaymentMetrics(chartRange, academyId);
   const collectedForPeriod = pay.revenueByMonth
     .slice(-collectedPeriodMonths)
     .reduce((s, r) => s + r.collected, 0);
@@ -216,8 +217,8 @@ export async function getDashboardData(
   };
 }
 
-export async function getAnalytics(): Promise<AnalyticsData> {
-  const d = await getRLSData();
+export async function getAnalytics(academyId?: string): Promise<AnalyticsData> {
+  const d = await getRLSData(academyId);
   const { students, groups, exams, payments, courses, attendance, grades } = d;
 
   const growth: { month: string; students: number }[] = [];
@@ -228,7 +229,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
     growth.push({ month: monthLabel(`${dt.getFullYear()}-${dt.getMonth() + 1}`), students: count });
   }
 
-  const pm = await getPaymentMetrics();
+  const pm = await getPaymentMetrics(6, academyId);
   const monthlyRevenue = pm.revenueByMonth.map((r: any) => ({ month: monthLabel(r.month), revenue: r.revenue, collected: r.collected }));
 
   const attTrend: { month: string; rate: number }[] = [];

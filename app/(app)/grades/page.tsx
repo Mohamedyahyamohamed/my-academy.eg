@@ -5,18 +5,18 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreateExamDialog } from "@/components/grades/create-exam-dialog";
-import { GradesService, MiscService, GroupsService, requireRole } from "@/services";
+import { GradesService, MiscService, GroupsService, requireScopedRole } from "@/services";
 import { performanceColor, performanceLevel, performanceLabel } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
 export default async function GradesPage() {
-  requireRole("ADMIN", "TEACHER");
-  const exams = await GradesService.listExams();
-  const courses = await MiscService.listCourses();
-  const groups = await GroupsService.listGroups();
+  const user = await requireScopedRole("ADMIN", "TEACHER");
+  const exams = await GradesService.listExams(user.academy_id, user.id);
+  const courses = await MiscService.listCourses(user.academy_id);
+  const groups = await GroupsService.listGroups("", user.academy_id);
   // Pre-fetch all grades to compute counts (avoids await inside .map()).
-  const allGrades = (await GradesService.listGrades({ pageSize: 5000 })).items;
+  const allGrades = (await GradesService.listGrades({ pageSize: 5000 }, user.academy_id)).items;
   const gradeCountFor = (examId: string) => allGrades.filter((g: any) => g.exam_id === examId).length;
 
   return (

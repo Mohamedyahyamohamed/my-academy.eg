@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import {
   StudentsService, getParentDashboard, childSummary,
-  resolveParent, studentLessons, requireRole,
+  resolveParent, studentLessons, requireScopedRole,
   PaymentsService, GradesService, HomeworkService, AttendanceService, MiscService,
 } from "@/services";
 import { collections } from "@/services/data/store";
@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ParentChildPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  const user = requireRole("PARENT");
+  const user = await requireScopedRole("PARENT");
   // Authorization via DB (مش الكاش)
   const { createServerSupabaseClient } = await import("@/lib/supabase/server");
   const client = await createServerSupabaseClient();

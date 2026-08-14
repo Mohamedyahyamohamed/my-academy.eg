@@ -4,13 +4,13 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { HomeworkBadge } from "@/components/shared/badges";
 import { StudentAvatar } from "@/components/shared/student-avatar";
-import { getParentDashboard, HomeworkService, requireRole } from "@/services";
+import { getParentDashboard, HomeworkService, requireScopedRole } from "@/services";
 import { formatDate, fullName } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function ParentHomeworkPage() {
-  const user = requireRole("PARENT");
+  const user = await requireScopedRole("PARENT");
   const { children } = await getParentDashboard(user);
 
   // Pre-fetch homework for each child (can't await inside .map()).

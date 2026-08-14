@@ -6,13 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StudentAvatar } from "@/components/shared/student-avatar";
 import { EmptyState } from "@/components/shared/empty-state";
-import { getParentDashboard, requireRole } from "@/services";
+import { getParentDashboard, requireScopedRole } from "@/services";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function ParentDashboard() {
-  const user = requireRole("PARENT");
+  const user = await requireScopedRole("PARENT");
   const { children = [], summaries = {} } = await getParentDashboard(user);
   const displayName = user.full_name?.trim() || user.email || "ولي الأمر";
   const firstName = displayName.split(/\s+/)[0] || displayName;

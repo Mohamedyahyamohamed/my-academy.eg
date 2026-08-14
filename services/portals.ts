@@ -49,15 +49,15 @@ export interface ChildSummary {
   pendingHomework: number;
 }
 
-export async function childSummary(studentId: string): Promise<ChildSummary> {
+export async function childSummary(studentId: string, academyId?: string): Promise<ChildSummary> {
   // RLS-backed fetch.
   const [attendance, allGrades, payments, lessons, homework, exams] = await Promise.all([
-    fetchTableRLS<any>("attendance"),
-    fetchTableRLS<any>("grades"),
-    fetchTableRLS<any>("payments"),
-    fetchTableRLS<any>("lessons"),
-    fetchTableRLS<any>("homework_submissions"),
-    fetchTableRLS<any>("exams"),
+    fetchTableRLS<any>("attendance", academyId),
+    fetchTableRLS<any>("grades", academyId),
+    fetchTableRLS<any>("payments", academyId),
+    fetchTableRLS<any>("lessons", academyId),
+    fetchTableRLS<any>("homework_submissions", academyId),
+    fetchTableRLS<any>("exams", academyId),
   ]);
 
   const att = attendance.filter((a: any) => a.student_id === studentId);
@@ -89,10 +89,10 @@ export async function childSummary(studentId: string): Promise<ChildSummary> {
 }
 
 /** Lessons a student will attend (across their groups). */
-export async function studentLessons(studentId: string) {
+export async function studentLessons(studentId: string, academyId?: string) {
   const [lessons, groups] = await Promise.all([
-    fetchTableRLS<any>("lessons"),
-    fetchTableRLS<any>("groups"),
+    fetchTableRLS<any>("lessons", academyId),
+    fetchTableRLS<any>("groups", academyId),
   ]);
   const groupIds = groupsForStudent(studentId).map((g: any) => g.id);
   return lessons
@@ -163,18 +163,21 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
 
   // RLS-backed fetch.
   const [allGroups, allLessons, allAttendance, allHomework, allSubmissions, allStudents, allCourses, allGroupStudents] = await Promise.all([
-    fetchTableRLS<any>("groups"),
-    fetchTableRLS<any>("lessons"),
-    fetchTableRLS<any>("attendance"),
-    fetchTableRLS<any>("homework"),
-    fetchTableRLS<any>("homework_submissions"),
-    fetchTableRLS<any>("students"),
-    fetchTableRLS<any>("courses"),
-    fetchTableRLS<any>("group_students"),
+    fetchTableRLS<any>("groups", user.academy_id),
+    fetchTableRLS<any>("lessons", user.academy_id),
+    fetchTableRLS<any>("attendance", user.academy_id),
+    fetchTableRLS<any>("homework", user.academy_id),
+    fetchTableRLS<any>("homework_submissions", user.academy_id),
+    fetchTableRLS<any>("students", user.academy_id),
+    fetchTableRLS<any>("courses", user.academy_id),
+    fetchTableRLS<any>("group_students", user.academy_id),
   ]);
 
-  const scope = teacherGroupScope();
-  const groupIds = scope ?? new Set(allGroups.filter((g: any) => g.teacher_id === teacher.id).map((g: any) => g.id));
+  const ownGroupIds = allGroups.filter((g: any) => g.teacher_id === teacher.id).map((g: any) => g.id);
+  const assistantGroupIds = collections().groupAssistants
+    .filter((ga: any) => ga.teacher_id === teacher.id && allGroups.some((g: any) => g.id === ga.group_id))
+    .map((ga: any) => ga.group_id);
+  const groupIds = new Set([...ownGroupIds, ...assistantGroupIds]);
   const myGroups = allGroups.filter((g: any) => groupIds.has(g.id))
     .map((g: any) => ({ ...g, course: allCourses.find((c: any) => c.id === g.course_id) }));
 
@@ -277,20 +280,20 @@ export async function getStudentDashboard(user: SessionUser): Promise<StudentDas
   if (!student) return null;
 
   const [attendance, allGrades, exams, lessons, homework, payments] = await Promise.all([
-    fetchTableRLS<any>("attendance"),
-    fetchTableRLS<any>("grades"),
-    fetchTableRLS<any>("exams"),
-    fetchTableRLS<any>("lessons"),
-    fetchTableRLS<any>("homework_submissions"),
-    fetchTableRLS<any>("payments"),
+    fetchTableRLS<any>("attendance", user.academy_id),
+    fetchTableRLS<any>("grades", user.academy_id),
+    fetchTableRLS<any>("exams", user.academy_id),
+    fetchTableRLS<any>("lessons", user.academy_id),
+    fetchTableRLS<any>("homework_submissions", user.academy_id),
+    fetchTableRLS<any>("payments", user.academy_id),
   ]);
 
   const groups = groupsForStudent(student.id);
-  const summary = await childSummary(student.id);
+  const summary = await childSummary(student.id, user.academy_id);
   const examMap = new Map(exams.map((e: any) => [e.id, e]));
 
   const groupIds = groups.map((g: any) => g.id);
-  const myLessons = await studentLessons(student.id);
+  const myLessons = await studentLessons(student.id, user.academy_id);
 
   const grades = allGrades.filter((g: any) => g.student_id === student.id).map((g: any) => {
     const ex = examMap.get(g.exam_id);

@@ -29,10 +29,26 @@ export interface HomeworkFilters {
 
 export async function listHomework(
   filters: HomeworkFilters = {},
+  academyId?: string,
+  teacherProfileId?: string,
 ): Promise<PaginatedResult<Homework>> {
   const { search = "", groupId = "ALL", page = 1, pageSize = 12 } = filters;
-  let items = await fetchTableRLS<Homework>("homework");
-  const tScope = teacherGroupScope();
+  let items = await fetchTableRLS<Homework>("homework", academyId);
+  const teacher = teacherProfileId
+    ? collections().teachers.find(
+        (t) => t.academy_id === academyId && (t.profile_id === teacherProfileId || t.email.toLowerCase() === getCurrentUser()?.email?.toLowerCase()),
+      )
+    : null;
+  const tScope = teacher
+    ? new Set([
+        ...collections().groups.filter((g) => g.academy_id === academyId && g.teacher_id === teacher.id).map((g) => g.id),
+        ...collections().groupAssistants
+          .filter((ga) => ga.teacher_id === teacher.id && collections().groups.some((g) => g.academy_id === academyId && g.id === ga.group_id))
+          .map((ga) => ga.group_id),
+      ])
+    : teacherProfileId
+      ? new Set<string>()
+      : teacherGroupScope();
   if (tScope) items = items.filter((h) => tScope.has(h.group_id));
   if (search.trim()) {
     const q = search.toLowerCase();
@@ -256,10 +272,10 @@ export function reviewSubmission(
 }
 
 /** Homework assigned to a student (via their groups). */
-export async function homeworkForStudent(studentId: string): Promise<HomeworkSubmission[]> {
+export async function homeworkForStudent(studentId: string, academyId?: string): Promise<HomeworkSubmission[]> {
   const [homework, submissions] = await Promise.all([
-    fetchTableRLS<Homework>("homework"),
-    fetchTableRLS<any>("homework_submissions"),
+    fetchTableRLS<Homework>("homework", academyId),
+    fetchTableRLS<any>("homework_submissions", academyId),
   ]);
   const groupIds = collections()
     .groupStudents.filter((gs) => gs.student_id === studentId)

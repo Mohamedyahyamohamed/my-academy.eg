@@ -5,13 +5,13 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StudentAvatar } from "@/components/shared/student-avatar";
-import { getParentDashboard, requireRole } from "@/services";
+import { getParentDashboard, requireScopedRole } from "@/services";
 import { formatCurrency, fullName } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function ParentChildrenPage() {
-  const user = requireRole("PARENT");
+  const user = await requireScopedRole("PARENT");
   const { children, summaries } = await getParentDashboard(user);
 
   return (

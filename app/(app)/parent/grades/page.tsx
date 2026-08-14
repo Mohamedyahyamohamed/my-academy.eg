@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StudentAvatar } from "@/components/shared/student-avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getParentDashboard, GradesService, requireRole } from "@/services";
+import { getParentDashboard, GradesService, requireScopedRole } from "@/services";
 import { collections } from "@/services/data/store";
 import { fullName } from "@/lib/utils";
 import { performanceLevel, performanceColor, performanceLabel } from "@/lib/constants";
@@ -13,10 +13,10 @@ import { performanceLevel, performanceColor, performanceLabel } from "@/lib/cons
 export const dynamic = "force-dynamic";
 
 export default async function ParentGradesPage() {
-  const user = requireRole("PARENT");
+  const user = await requireScopedRole("PARENT");
   const { children } = await getParentDashboard(user);
   const childGrades = await Promise.all(
-    children.map((c) => GradesService.listGrades({ studentId: c.id, pageSize: 50 })),
+    children.map((c) => GradesService.listGrades({ studentId: c.id, pageSize: 50 }, user.academy_id)),
   );
 
   return (

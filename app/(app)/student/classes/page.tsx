@@ -5,14 +5,14 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { resolveStudent, requireRole } from "@/services";
+import { resolveStudent, requireScopedRole } from "@/services";
 import { groupsForStudent } from "@/services/_shared";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function StudentClassesPage() {
-  const user = requireRole("STUDENT");
+  const user = await requireScopedRole("STUDENT");
   const student = resolveStudent(user);
   const groups = student ? groupsForStudent(student.id) : [];
 

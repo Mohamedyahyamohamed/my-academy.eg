@@ -6,14 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SubmissionReview } from "@/components/homework/submission-review";
-import { HomeworkService, requireRole } from "@/services";
+import { HomeworkService, requireScopedRole } from "@/services";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomeworkDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  requireRole("ADMIN", "TEACHER");
+  await requireScopedRole("ADMIN", "TEACHER");
   const hw = await HomeworkService.getHomework(params.id);
   if (!hw) notFound();
   const submissions = await HomeworkService.listSubmissions(params.id);

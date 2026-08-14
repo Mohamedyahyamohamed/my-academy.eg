@@ -55,15 +55,15 @@ export default async function DashboardPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  await requireScopedRole("ADMIN");
+  const user = await requireScopedRole("ADMIN");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
   const period: DashboardPeriod =
     sp("period") === "quarter" || sp("period") === "year" ? (sp("period") as DashboardPeriod) : "month";
   const [d, atRiskResult, teachers] = await Promise.all([
-    DashboardService.getDashboardData(period),
-    atRiskStudents(),
-    MiscService.listTeachers(),
+    DashboardService.getDashboardData(period, user.academy_id),
+    atRiskStudents(user.academy_id),
+    MiscService.listTeachers(user.academy_id),
   ]);
   const atRisk = atRiskResult.slice(0, 6);
   const collectionTrend = d.collectionTrend ?? 0;

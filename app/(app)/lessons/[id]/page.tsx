@@ -14,7 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  LessonsService, AttendanceService, MiscService, requireRole,
+  LessonsService, AttendanceService, MiscService, requireScopedRole,
 } from "@/services";
 import { collections } from "@/services/data/store";
 import { studentsInGroup } from "@/services/_shared";
@@ -28,7 +28,7 @@ export default async function LessonDetailPage(
   }
 ) {
   const params = await props.params;
-  requireRole("ADMIN", "TEACHER");
+  await requireScopedRole("ADMIN", "TEACHER");
   const lesson = await LessonsService.getLesson(params.id);
   if (!lesson) notFound();
 

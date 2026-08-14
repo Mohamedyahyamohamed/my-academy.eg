@@ -72,6 +72,7 @@ function assertStudentMutationScope(studentId: string): Student {
 
 function listStudentsFromCache(
   filters: StudentFilters = {},
+  academyId?: string,
 ): PaginatedResult<Student> {
   const {
     search = "",
@@ -83,7 +84,7 @@ function listStudentsFromCache(
     sortDir = "asc",
   } = filters;
 
-  let items = byAcademy(collections().students);
+  let items = byAcademy(collections().students, academyId);
   const tScope = teacherStudentScope();
   if (tScope) items = items.filter((s) => tScope.has(s.id));
 
@@ -158,9 +159,10 @@ function getStudentFromCache(id: string): Student | null {
  */
 export async function listStudents(
   filters: StudentFilters = {},
+  academyId?: string,
 ): Promise<PaginatedResult<Student>> {
   if (!isSupabaseConfigured()) {
-    return listStudentsFromCache(filters);
+    return listStudentsFromCache(filters, academyId);
   }
 
   const { createServerSupabaseClient } = await import("@/lib/supabase/server");

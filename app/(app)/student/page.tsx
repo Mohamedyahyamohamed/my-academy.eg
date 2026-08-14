@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { AttendanceBadge, HomeworkBadge } from "@/components/shared/badges";
-import { getStudentDashboard, requireRole, MiscService } from "@/services";
+import { getStudentDashboard, requireScopedRole, MiscService } from "@/services";
 import { getStudentRank, getLeaderboard } from "@/services/gamification";
 import { StudentQrCard } from "@/components/attendance/student-qr-card";
 import { collections } from "@/services/data/store";
@@ -17,7 +17,7 @@ import { performanceLevel, performanceColor } from "@/lib/constants";
 export const dynamic = "force-dynamic";
 
 export default async function StudentDashboard() {
-  const user = requireRole("STUDENT");
+  const user = await requireScopedRole("STUDENT");
   const d = await getStudentDashboard(user);
   if (!d) {
     return (
@@ -28,9 +28,9 @@ export default async function StudentDashboard() {
     );
   }
 
-  const rank = await getStudentRank(d.student.id);
-  const leaderboard = await getLeaderboard(5);
-  const academyName = MiscService.getAcademy().name;
+  const rank = await getStudentRank(d.student.id, user.academy_id);
+  const leaderboard = await getLeaderboard(5, user.academy_id);
+  const academyName = MiscService.getAcademy(user.academy_id).name;
 
   return (
     <div className="space-y-6">

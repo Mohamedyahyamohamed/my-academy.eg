@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { AttendanceService, GradesService, PaymentsService, currentAcademyId, requireRole } from "@/services";
+import { AttendanceService, GradesService, PaymentsService, currentAcademyId, requireScopedRole } from "@/services";
 import { collections } from "@/services/data/store";
 import { formatCurrency, formatDate, fullName } from "@/lib/utils";
 import { performanceLevel, performanceLabel } from "@/lib/constants";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ParentStudentReportPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  const user = requireRole("PARENT");
+  const user = await requireScopedRole("PARENT");
   const academyId = currentAcademyId();
   const { createServerSupabaseClient } = await import("@/lib/supabase/server");
   const client = await createServerSupabaseClient();

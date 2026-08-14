@@ -91,9 +91,10 @@ export async function audit(entry: AuditEntry, actor?: { id: string; role: strin
 /** List audit logs for the current academy (admin only). */
 export function listAuditLogs(
   filters: { search?: string; action?: string; entity_type?: string; actor?: string; page?: number; pageSize?: number } = {},
+  academyId?: string,
 ) {
   let items = ((collections() as any).auditLogs ?? []) as AuditLog[];
-  const aid = currentAcademyId();
+  const aid = academyId ?? currentAcademyId();
   items = items.filter((l) => l.academy_id === aid);
   if (filters.search) {
     const q = filters.search.toLowerCase();

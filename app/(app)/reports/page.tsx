@@ -10,7 +10,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   DashboardService, StudentsService, PaymentsService, GradesService,
-  AttendanceService, GroupsService, MiscService, requireRole,
+  AttendanceService, GroupsService, MiscService, requireScopedRole,
 } from "@/services";
 import { collections } from "@/services/data/store";
 import { APP_CONFIG, performanceLevel, performanceColor } from "@/lib/constants";
@@ -31,7 +31,7 @@ export default async function ReportsPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  requireRole("ADMIN");
+  await requireScopedRole("ADMIN");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
   const groupId = sp("group") ?? "ALL";

@@ -13,7 +13,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { requireRole } from "@/services";
+import { requireScopedRole } from "@/services";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { PLANS } from "@/services/saas";
 
@@ -27,7 +27,7 @@ const formatDate = (value: string | null | undefined) =>
   value ? new Date(value).toLocaleDateString("ar-EG") : "—";
 
 export default async function PlatformPage() {
-  requireRole("SUPER_ADMIN");
+  await requireScopedRole("SUPER_ADMIN");
   const client = nodeSupabaseClient();
 
   const [

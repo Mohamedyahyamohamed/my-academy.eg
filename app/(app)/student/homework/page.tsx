@@ -4,15 +4,15 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { HomeworkBadge } from "@/components/shared/badges";
 import { SubmitHomework } from "@/components/homework/submit-homework";
-import { resolveStudent, HomeworkService, requireRole } from "@/services";
+import { resolveStudent, HomeworkService, requireScopedRole } from "@/services";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function StudentHomeworkPage() {
-  const user = requireRole("STUDENT");
+  const user = await requireScopedRole("STUDENT");
   const student = resolveStudent(user);
-  const homework = student ? await HomeworkService.homeworkForStudent(student.id) : [];
+  const homework = student ? await HomeworkService.homeworkForStudent(student.id, user.academy_id) : [];
 
   return (
     <div className="space-y-6">

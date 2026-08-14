@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { StudentsService, GroupsService, MiscService, requireRole } from "@/services";
+import { StudentsService, GroupsService, MiscService, requireScopedRole } from "@/services";
 import { archiveStudentAction } from "@/app/actions/students";
 import type { StudentFilters } from "@/types";
 
@@ -31,7 +31,7 @@ export default async function StudentsPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  requireRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
 
@@ -45,9 +45,9 @@ export default async function StudentsPage(
     sortDir: "asc",
   };
 
-  const result = await StudentsService.listStudents(filters);
-  const groups = await GroupsService.listGroups();
-  const parents = await MiscService.listParents();
+  const result = await StudentsService.listStudents(filters, user.academy_id);
+  const groups = await GroupsService.listGroups("", user.academy_id);
+  const parents = await MiscService.listParents(user.academy_id);
 
   const groupOptions = [
     { value: "ALL", label: "كل المجموعات" },

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { CreateAssistantDialog } from "@/components/assistants/create-assistant-dialog";
-import { requireRole, currentTeacherId } from "@/services";
+import { requireScopedRole, currentTeacherId } from "@/services";
 import { teacherGroupScope } from "@/services/_shared";
 import { collections } from "@/services/data/store";
 import { initials } from "@/lib/utils";
@@ -14,7 +14,7 @@ import { initials } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function TeacherAssistantsPage() {
-  const user = requireRole("TEACHER");
+  const user = await requireScopedRole("TEACHER");
   const tid = currentTeacherId();
 
   // Groups this teacher can access (owns + assists).

@@ -2,7 +2,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { requireRole } from "@/services";
+import { requireScopedRole } from "@/services";
 import { listPlans, getPlan, getUsage, getSubscriptionStatus } from "@/services/saas";
 import { formatCurrency } from "@/lib/utils";
 import { PlanCheckoutButton } from "@/components/billing/plan-checkout-button";
@@ -13,7 +13,7 @@ import { measureStorageUsage } from "@/lib/storage-quota";
 export const dynamic = "force-dynamic";
 
 export default async function BillingPage() {
-  const currentUser = requireRole("ADMIN");
+  const currentUser = await requireScopedRole("ADMIN");
   const plans = listPlans();
   const currentPlan = getPlan(currentUser.academy_id);
   const usage = getUsage(currentUser.academy_id);

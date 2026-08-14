@@ -7,14 +7,14 @@ import { StudentAvatar } from "@/components/shared/student-avatar";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { getParentDashboard, AttendanceService, requireRole } from "@/services";
+import { getParentDashboard, AttendanceService, requireScopedRole } from "@/services";
 import { collections } from "@/services/data/store";
 import { formatDate, fullName, percentage } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function ParentAttendancePage() {
-  const user = requireRole("PARENT");
+  const user = await requireScopedRole("PARENT");
   const { children } = await getParentDashboard(user);
 
   return (

@@ -32,8 +32,18 @@ function attach(g: Group): Group {
   };
 }
 
-export async function listGroups(search = ""): Promise<Group[]> {
-  let items = applyTeacherGroupScope(await fetchTableRLS<Group>("groups"));
+export async function listGroups(search = "", academyId?: string, teacherProfileId?: string): Promise<Group[]> {
+  const teacher = teacherProfileId
+    ? collections().teachers.find(
+        (t) => t.academy_id === academyId && (t.profile_id === teacherProfileId || t.email.toLowerCase() === collections().profiles.find((p: any) => p.id === teacherProfileId)?.email?.toLowerCase()),
+      )
+    : null;
+  const scopedItems = await fetchTableRLS<Group>("groups", academyId);
+  let items = teacher
+    ? scopedItems.filter((g) => g.teacher_id === teacher.id || collections().groupAssistants.some((ga) => ga.teacher_id === teacher.id && ga.group_id === g.id))
+    : teacherProfileId
+      ? []
+      : applyTeacherGroupScope(scopedItems);
   if (search.trim()) {
     const q = search.toLowerCase();
     items = items.filter(

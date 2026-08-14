@@ -4,14 +4,14 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { TrendArea } from "@/components/charts";
-import { resolveStudent, GradesService, AttendanceService, requireRole } from "@/services";
+import { resolveStudent, GradesService, AttendanceService, requireScopedRole } from "@/services";
 import { collections } from "@/services/data/store";
 import { round, percentage } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function StudentProgressPage() {
-  const user = requireRole("STUDENT");
+  const user = await requireScopedRole("STUDENT");
   const student = resolveStudent(user);
   if (!student) {
     return (
@@ -22,8 +22,8 @@ export default async function StudentProgressPage() {
     );
   }
 
-  const grades = (await GradesService.listGrades({ studentId: student.id, pageSize: 100 })).items;
-  const att = AttendanceService.studentAttendanceSummary(student.id);
+  const grades = (await GradesService.listGrades({ studentId: student.id, pageSize: 100 }, user.academy_id)).items;
+  const att = AttendanceService.studentAttendanceSummary(student.id, user.academy_id);
   const attendanceRate = percentage(att.present + att.late, att.total);
   const avgGrade = grades.length ? round(grades.reduce((s, g) => s + (g.percentage ?? 0), 0) / grades.length, 0) : 0;
   const trend = grades.slice(-6).map((g, i) => ({

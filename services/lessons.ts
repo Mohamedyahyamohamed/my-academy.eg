@@ -3,7 +3,7 @@
  */
 import type { Lesson, PaginatedResult } from "@/types";
 import { collections } from "./data/store";
-import { currentAcademyId } from "./session";
+import { currentAcademyId, getCurrentUser } from "./session";
 import { persistInsert, persistUpdate, persistDelete } from "./data/store";
 import { getGroup, getTeacher, byAcademy, teacherGroupScope, fetchTableRLS } from "./_shared";
 
@@ -30,6 +30,8 @@ export interface LessonFilters {
 
 export async function listLessons(
   filters: LessonFilters = {},
+  academyId?: string,
+  teacherProfileId?: string,
 ): Promise<PaginatedResult<Lesson>> {
   const {
     search = "",
@@ -40,9 +42,23 @@ export async function listLessons(
     pageSize = 12,
   } = filters;
   const now = Date.now();
-  let items = await fetchTableRLS<Lesson>("lessons");
+  let items = await fetchTableRLS<Lesson>("lessons", academyId);
   // Teachers only see lessons in their groups.
-  const tScope = teacherGroupScope();
+  const teacher = teacherProfileId
+    ? collections().teachers.find(
+        (t) => t.academy_id === academyId && (t.profile_id === teacherProfileId || t.email.toLowerCase() === getCurrentUser()?.email?.toLowerCase()),
+      )
+    : null;
+  const tScope = teacher
+    ? new Set([
+        ...collections().groups.filter((g) => g.academy_id === academyId && g.teacher_id === teacher.id).map((g) => g.id),
+        ...collections().groupAssistants
+          .filter((ga) => ga.teacher_id === teacher.id && collections().groups.some((g) => g.academy_id === academyId && g.id === ga.group_id))
+          .map((ga) => ga.group_id),
+      ])
+    : teacherProfileId
+      ? new Set<string>()
+      : teacherGroupScope();
   if (tScope) items = items.filter((l) => tScope.has(l.group_id));
   if (search.trim()) {
     const q = search.toLowerCase();

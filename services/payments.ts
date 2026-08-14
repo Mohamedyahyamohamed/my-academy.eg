@@ -34,6 +34,7 @@ export interface PaymentFilters {
 
 export async function listPayments(
   filters: PaymentFilters = {},
+  academyId?: string,
 ): Promise<PaginatedResult<Payment>> {
   const {
     search = "",
@@ -45,7 +46,7 @@ export async function listPayments(
     pageSize = 10,
   } = filters;
 
-  let items = (await fetchTableRLS<Payment>("payments")).filter((p: any) => !p.deleted_at).map(derivePayment);
+  let items = (await fetchTableRLS<Payment>("payments", academyId)).filter((p: any) => !p.deleted_at).map(derivePayment);
 
   if (status !== "ALL") items = items.filter((p) => p.status === status);
   if (month !== "ALL") items = items.filter((p) => p.month === month);
@@ -212,8 +213,8 @@ function currentMonthKey() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export async function getPaymentMetrics(months = 6): Promise<PaymentMetrics> {
-  const pays = (await fetchTableRLS<Payment>("payments")).map(derivePayment);
+export async function getPaymentMetrics(months = 6, academyId?: string): Promise<PaymentMetrics> {
+  const pays = (await fetchTableRLS<Payment>("payments", academyId)).map(derivePayment);
   const cm = currentMonthKey();
   const thisMonth = pays.filter((p) => p.month === cm);
   const monthlyRevenue = thisMonth.reduce((s, p) => s + p.amount_due, 0);

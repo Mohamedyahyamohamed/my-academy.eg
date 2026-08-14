@@ -2,7 +2,7 @@ import { BookOpen } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LessonForm } from "@/components/lessons/lesson-form";
-import { GroupsService, MiscService, requireRole } from "@/services";
+import { GroupsService, MiscService, requireScopedRole } from "@/services";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export default async function NewLessonPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  requireRole("ADMIN", "TEACHER");
+  await requireScopedRole("ADMIN", "TEACHER");
   const groups = await GroupsService.listGroups();
   const teachers = await MiscService.listTeachers();
   const defaultGroup =

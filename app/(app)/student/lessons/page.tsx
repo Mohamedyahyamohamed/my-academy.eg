@@ -6,15 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { resolveStudent, studentLessons, requireRole } from "@/services";
+import { resolveStudent, studentLessons, requireScopedRole } from "@/services";
 import { formatDate, formatTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function StudentLessonsPage() {
-  const user = requireRole("STUDENT");
+  const user = await requireScopedRole("STUDENT");
   const student = resolveStudent(user);
-  const lessons = student ? await studentLessons(student.id) : [];
+  const lessons = student ? await studentLessons(student.id, user.academy_id) : [];
   const upcoming = lessons.filter((l) => +new Date(l.date) >= Date.now());
   const past = lessons.filter((l) => +new Date(l.date) < Date.now());
 

@@ -10,13 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { HomeworkBadge } from "@/components/shared/badges";
-import { getTeacherDashboard, requireRole } from "@/services";
+import { getTeacherDashboard, requireScopedRole } from "@/services";
 import { formatDate, formatTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function TeacherDashboard() {
-  const user = requireRole("TEACHER");
+  const user = await requireScopedRole("TEACHER");
   const displayName = user.full_name?.trim() || user.email || "المعلّم";
   const d = await getTeacherDashboard(user);
   if (!d) {

@@ -31,13 +31,13 @@ const BADGE_DEFS: Omit<Badge, "earned">[] = [
   { id: "consistent", label: "Consistent", icon: "🎯", hint: "10+ attendances" },
 ];
 
-export async function computeScore(studentId: string): Promise<Omit<StudentScore, "rank">> {
+export async function computeScore(studentId: string, academyId?: string): Promise<Omit<StudentScore, "rank">> {
   // RLS-backed fetch for all data.
   const [attendance, allGrades, submissions, students] = await Promise.all([
-    fetchTableRLS<any>("attendance"),
-    fetchTableRLS<any>("grades"),
-    fetchTableRLS<any>("homework_submissions"),
-    fetchTableRLS<any>("students"),
+    fetchTableRLS<any>("attendance", academyId),
+    fetchTableRLS<any>("grades", academyId),
+    fetchTableRLS<any>("homework_submissions", academyId),
+    fetchTableRLS<any>("students", academyId),
   ]);
 
   const att = attendance.filter((a: any) => a.student_id === studentId);
@@ -80,16 +80,16 @@ export async function computeScore(studentId: string): Promise<Omit<StudentScore
   };
 }
 
-export async function getLeaderboard(limit = 10): Promise<StudentScore[]> {
-  const students = await fetchTableRLS<any>("students");
-  const scores = await Promise.all(students.map((s: any) => computeScore(s.id)));
+export async function getLeaderboard(limit = 10, academyId?: string): Promise<StudentScore[]> {
+  const students = await fetchTableRLS<any>("students", academyId);
+  const scores = await Promise.all(students.map((s: any) => computeScore(s.id, academyId)));
   scores.sort((a, b) => b.points - a.points);
   return scores.slice(0, limit).map((s, i) => ({ ...s, rank: i + 1 }));
 }
 
-export async function getStudentRank(studentId: string): Promise<StudentScore | null> {
-  const students = await fetchTableRLS<any>("students");
-  const scores = await Promise.all(students.map((s: any) => computeScore(s.id)));
+export async function getStudentRank(studentId: string, academyId?: string): Promise<StudentScore | null> {
+  const students = await fetchTableRLS<any>("students", academyId);
+  const scores = await Promise.all(students.map((s: any) => computeScore(s.id, academyId)));
   scores.sort((a, b) => b.points - a.points);
   const idx = scores.findIndex((s) => s.studentId === studentId);
   if (idx === -1) return null;

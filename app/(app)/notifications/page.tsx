@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { MarkAllReadButton } from "@/components/notifications/mark-all-read";
-import { NotificationsService, requireRole } from "@/services";
+import { NotificationsService, requireScopedRole } from "@/services";
 import { cn, formatRelative } from "@/lib/utils";
 import type { NotificationType } from "@/types";
 
@@ -22,7 +22,7 @@ const dotColor: Record<NotificationType, string> = {
 export const dynamic = "force-dynamic";
 
 export default async function NotificationsPage() {
-  const user = requireRole("ADMIN", "TEACHER", "PARENT", "STUDENT");
+  const user = await requireScopedRole("ADMIN", "TEACHER", "PARENT", "STUDENT");
   const items = await NotificationsService.listNotifications(user.id);
 
   return (

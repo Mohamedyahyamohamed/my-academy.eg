@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { StudentsService, GroupsService, PaymentsService, GradesService, AttendanceService, MiscService, requireRole } from "@/services";
+import { StudentsService, GroupsService, PaymentsService, GradesService, AttendanceService, MiscService, requireScopedRole } from "@/services";
 import { collections } from "@/services/data/store";
 import { formatCurrency, formatDate, fullName } from "@/lib/utils";
 import { performanceLevel, performanceColor, performanceLabel } from "@/lib/constants";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function StudentReportPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  requireRole("ADMIN", "TEACHER");
+  await requireScopedRole("ADMIN", "TEACHER");
   const detail = await StudentsService.getStudentDetail(params.id);
   if (!detail) notFound();
 

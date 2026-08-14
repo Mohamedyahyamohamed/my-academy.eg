@@ -179,7 +179,9 @@ export async function recordCheckin(
 /** Attendance summary for a single student. */
 export function studentAttendanceSummary(
   studentId: string,
+  academyId?: string,
 ): AttendanceSummary & { byLesson: AttendanceRecord[] } {
+  // Attendance rows are scoped by the resolved student id; the student itself is academy-scoped.
   const recs = collections().attendance.filter(
     (a) => a.student_id === studentId,
   );

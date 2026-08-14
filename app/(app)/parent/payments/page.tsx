@@ -6,18 +6,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { StudentAvatar } from "@/components/shared/student-avatar";
 import { PaymentStatusBadge } from "@/components/shared/badges";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getParentDashboard, PaymentsService, requireRole } from "@/services";
+import { getParentDashboard, PaymentsService, requireScopedRole } from "@/services";
 import { formatCurrency, fullName } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function ParentPaymentsPage() {
-  const user = requireRole("PARENT");
+  const user = await requireScopedRole("PARENT");
   const { children } = await getParentDashboard(user);
 
   // Pre-fetch each child's payments (can't await inside flatMap).
   const paymentsByChild = await Promise.all(
-    children.map((c) => PaymentsService.listPayments({ studentId: c.id, pageSize: 100 })),
+    children.map((c) => PaymentsService.listPayments({ studentId: c.id, pageSize: 100 }, user.academy_id)),
   );
   const allPayments = paymentsByChild.flatMap((r) => r.items);
   const outstanding = allPayments.reduce((s, p) => s + p.remaining, 0);

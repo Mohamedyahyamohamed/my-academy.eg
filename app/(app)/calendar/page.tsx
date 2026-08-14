@@ -1,13 +1,13 @@
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { CalendarView } from "@/components/calendar/calendar-view";
-import { requireRole, GroupsService, LessonsService } from "@/services";
+import { requireScopedRole, GroupsService, LessonsService } from "@/services";
 import { collections } from "@/services/data/store";
 
 export const dynamic = "force-dynamic";
 
 export default async function CalendarPage() {
-  requireRole("ADMIN", "TEACHER");
+  await requireScopedRole("ADMIN", "TEACHER");
   const lessons = collections().lessons.map((l) => ({
     ...l,
     group: collections().groups.find((g) => g.id === l.group_id),

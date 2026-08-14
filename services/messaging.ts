@@ -68,8 +68,8 @@ export async function sendMessage(
 }
 
 /** Inbox for the current user. */
-export function getInbox(): Message[] {
-  const user = requireRole("ADMIN", "TEACHER", "PARENT");
+export function getInbox(userOverride?: ReturnType<typeof requireRole>): Message[] {
+  const user = userOverride ?? requireRole("ADMIN", "TEACHER", "PARENT");
   const all = ((collections() as any).messages ?? []) as Message[];
   return all
     .filter((m) => m.recipient_id === user.id)
@@ -77,8 +77,8 @@ export function getInbox(): Message[] {
 }
 
 /** Sent messages for the current user. */
-export function getSentMessages(): Message[] {
-  const user = requireRole("ADMIN", "TEACHER", "PARENT");
+export function getSentMessages(userOverride?: ReturnType<typeof requireRole>): Message[] {
+  const user = userOverride ?? requireRole("ADMIN", "TEACHER", "PARENT");
   const all = ((collections() as any).messages ?? []) as Message[];
   return all
     .filter((m) => m.sender_id === user.id)
@@ -86,14 +86,14 @@ export function getSentMessages(): Message[] {
 }
 
 /** Unread count. */
-export function unreadMessageCount(): number {
-  return getInbox().filter((m) => !m.read).length;
+export function unreadMessageCount(userOverride?: ReturnType<typeof requireRole>): number {
+  return getInbox(userOverride).filter((m) => !m.read).length;
 }
 
 /** Get contacts (people the user can message). */
-export function getContacts() {
-  const user = requireRole("ADMIN", "TEACHER", "PARENT");
-  const profiles = byAcademy(collections().profiles).filter((p) => p.id !== user.id);
+export function getContacts(userOverride?: ReturnType<typeof requireRole>) {
+  const user = userOverride ?? requireRole("ADMIN", "TEACHER", "PARENT");
+  const profiles = byAcademy(collections().profiles, user.academy_id).filter((p) => p.id !== user.id);
 
   if (user.role === "PARENT") {
     // Parents → teachers + admins of their children's groups.

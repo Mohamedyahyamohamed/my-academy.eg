@@ -54,8 +54,8 @@ export function deleteCourse(id: string): boolean {
 
 /* ---------------- Parents ---------------- */
 
-export async function listParents(): Promise<Parent[]> {
-  const items = await fetchTableRLS<Parent>("parents");
+export async function listParents(academyId?: string): Promise<Parent[]> {
+  const items = await fetchTableRLS<Parent>("parents", academyId);
   return items.slice().sort((a, b) => fullName(a).localeCompare(fullName(b)));
 }
 
@@ -81,8 +81,8 @@ export function childrenOf(parentId: string) {
 
 /* ---------------- Teachers ---------------- */
 
-export async function listTeachers(): Promise<Teacher[]> {
-  const items = await fetchTableRLS<Teacher>("teachers");
+export async function listTeachers(academyId?: string): Promise<Teacher[]> {
+  const items = await fetchTableRLS<Teacher>("teachers", academyId);
   return items.filter((t) => t.is_active);
 }
 

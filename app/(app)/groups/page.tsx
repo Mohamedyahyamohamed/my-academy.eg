@@ -6,18 +6,18 @@ import { AddGroupDialog } from "@/components/groups/group-dialogs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { GroupsService, MiscService, requireRole, getCurrentUser, currentTeacherId } from "@/services";
+import { GroupsService, MiscService, requireScopedRole, getCurrentUser, currentTeacherId } from "@/services";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function GroupsPage() {
-  const user = requireRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
   const isTeacher = user.role === "TEACHER";
   const tid = isTeacher ? currentTeacherId() : null;
-  const groups = await GroupsService.listGroups();
-  const courses = await MiscService.listCourses();
-  const teachers = await MiscService.listTeachers();
+  const groups = await GroupsService.listGroups("", user.academy_id, isTeacher ? user.id : undefined);
+  const courses = await MiscService.listCourses(user.academy_id);
+  const teachers = await MiscService.listTeachers(user.academy_id);
   const groupCreationBlocked = isTeacher ? !tid : teachers.length === 0;
 
   return (

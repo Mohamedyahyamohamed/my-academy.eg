@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GradeEntry } from "@/components/grades/grade-entry";
-import { GradesService, requireRole } from "@/services";
+import { GradesService, requireScopedRole } from "@/services";
 import { collections } from "@/services/data/store";
 import { fullName, formatDate } from "@/lib/utils";
 
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ExamGradePage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  requireRole("ADMIN", "TEACHER");
+  await requireScopedRole("ADMIN", "TEACHER");
   const exam = await GradesService.getExam(params.id);
   if (!exam) notFound();
   const roster = GradesService.gradesForExam(params.id);

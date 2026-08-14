@@ -4,6 +4,7 @@ import { createHmac, randomUUID, timingSafeEqual } from "crypto";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { isSupabaseConfigured } from "@/services/supabase/config";
 import { PLANS, setPlan, type Plan } from "@/services/saas";
+import { sendSubscriptionSuspensionEmail } from "@/lib/email";
 
 export type BillingProvider = "stripe" | "paymob";
 
@@ -310,6 +311,34 @@ export async function storeBillingEvent(event: VerifiedPayment): Promise<{ ok: b
     .update({ status: "processed", processed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq("provider", event.provider)
     .eq("provider_event_id", event.providerEventId);
+
+  const suspensionStatus = status === "past_due" || status === "expired" || status === "canceled" ? status : null;
+  const wasSuspended = current?.status === "past_due" || current?.status === "expired" || current?.status === "canceled";
+  const enteredSuspendedState = Boolean(suspensionStatus) && !wasSuspended;
+  if (enteredSuspendedState && suspensionStatus) {
+    try {
+      const [{ data: academy }, { data: admins }] = await Promise.all([
+        client.from("academies").select("name").eq("id", academyId).maybeSingle(),
+        client.from("profiles").select("email,role").eq("academy_id", academyId).in("role", ["ADMIN", "TEACHER"]).eq("is_active", true).limit(50),
+      ]);
+      const profiles = (admins ?? []) as Array<{ email?: string | null; role?: string }>;
+      const adminProfiles = profiles.filter((profile) => profile.role === "ADMIN");
+      const recipientProfiles = adminProfiles.length ? adminProfiles : profiles.filter((profile) => profile.role === "TEACHER").slice(0, 1);
+      const recipients = recipientProfiles
+        .map((profile) => profile.email?.trim())
+        .filter((email): email is string => Boolean(email));
+      for (const email of recipients) {
+        await sendSubscriptionSuspensionEmail({
+          email,
+          academyName: academy?.name || "MY Academy",
+          status: suspensionStatus as "past_due" | "expired" | "canceled",
+          language: "ar",
+        });
+      }
+    } catch (error) {
+      console.error("[billing] subscription suspension email failed:", (error as Error).message);
+    }
+  }
 
   return { ok: true };
 }

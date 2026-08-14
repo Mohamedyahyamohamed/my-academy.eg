@@ -159,6 +159,38 @@ export async function sendPasswordRecoveryEmail(email: string, resetUrl: string)
   );
 }
 
+export async function sendSubscriptionSuspensionEmail(input: {
+  email: string;
+  academyName: string;
+  status: "past_due" | "expired" | "canceled";
+  language?: "ar" | "en";
+  billingUrl?: string;
+}): Promise<boolean> {
+  const english = input.language === "en";
+  const statusLabel = english
+    ? ({ past_due: "past due", expired: "expired", canceled: "canceled" } as Record<string, string>)[input.status]
+    : ({ past_due: "متأخر السداد", expired: "منتهي", canceled: "ملغى" } as Record<string, string>)[input.status];
+  const billingUrl = input.billingUrl || `${process.env.NEXT_PUBLIC_APP_URL || "https://my-academy-eg.vercel.app"}/billing`;
+  const safeUrl = escapeHtml(billingUrl);
+  const subject = english
+    ? `Service suspended for ${input.academyName} — ${APP_CONFIG.name}`
+    : `إيقاف خدمة ${input.academyName} — ${APP_CONFIG.name}`;
+  const html = english
+    ? `<div dir="ltr" style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:24px;line-height:1.7;color:#0f172a">
+      <h2>Subscription service suspended</h2>
+      <p>The subscription for <strong>${escapeHtml(input.academyName)}</strong> is now <strong>${escapeHtml(statusLabel)}</strong>, so platform access has been suspended for this academy.</p>
+      <p style="margin:28px 0"><a href="${safeUrl}" style="display:inline-block;background:#b91c1c;color:#fff;text-decoration:none;border-radius:8px;padding:12px 22px;font-weight:700">Review subscription</a></p>
+      <p>If you have already completed payment, please allow the payment provider to confirm it or contact platform support.</p>
+    </div>`
+    : `<div dir="rtl" style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:24px;line-height:1.7;color:#0f172a">
+      <h2>تم إيقاف خدمة الاشتراك</h2>
+      <p>أصبح اشتراك <strong>${escapeHtml(input.academyName)}</strong> في حالة <strong>${escapeHtml(statusLabel)}</strong>، لذلك تم إيقاف الوصول إلى المنصة لهذه الأكاديمية مؤقتًا.</p>
+      <p style="margin:28px 0"><a href="${safeUrl}" style="display:inline-block;background:#b91c1c;color:#fff;text-decoration:none;border-radius:8px;padding:12px 22px;font-weight:700">مراجعة الاشتراك</a></p>
+      <p>إذا كنت قد أتممت السداد بالفعل، يرجى انتظار تأكيد بوابة الدفع أو التواصل مع دعم المنصة.</p>
+    </div>`;
+  return send(input.email, subject, html);
+}
+
 export async function sendPaymentReminder(
   email: string,
   studentName: string,

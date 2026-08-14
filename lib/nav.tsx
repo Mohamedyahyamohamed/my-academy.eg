@@ -1,6 +1,8 @@
 import type { ComponentType } from "react";
 import {
   LayoutDashboard,
+  UserPlus,
+  Plus,
   Users,
   UsersRound,
   CalendarDays,
@@ -37,6 +39,14 @@ export interface NavSection {
 export const ADMIN_NAV: NavSection[] = [
   {
     items: [{ titleAr: "لوحة التحكم", titleEn: "Dashboard", href: "/dashboard", icon: LayoutDashboard }],
+  },
+  {
+    titleAr: "البداية السريعة", titleEn: "Quick Start",
+    items: [
+      { titleAr: "دعوة مدرس", titleEn: "Invite Teacher", href: "/settings?tab=users#invite", icon: UserPlus },
+      { titleAr: "إضافة طالب", titleEn: "Add Student", href: "/students", icon: Plus },
+      { titleAr: "إنشاء مجموعة", titleEn: "Create Group", href: "/groups", icon: Plus },
+    ],
   },
   {
     titleAr: "التشغيل الأكاديمي", titleEn: "Academic Operations",

@@ -120,8 +120,20 @@ export default function OnboardingPage() {
         )}
         {step === 2 && (
           <>
-            <h2 className="font-semibold">جهّز أول مجموعة</h2>
-            <p className="text-sm leading-6 text-muted-foreground">تتطلب كل مجموعة مدرسًا معيّنًا للحفاظ على حضور الطلاب وحصصهم وصلاحياتهم بدقة. بعد إرسال دعوة المدرس وقبوله لها، أنشئ المجموعة من صفحة المجموعات وحدد المادة والمدرس والموعد.</p>
+            <h2 className="font-semibold">أضف أول مدرس ثم جهّز المجموعة</h2>
+            <p className="text-sm leading-6 text-muted-foreground">لا تحتاج إلى فتح الإعدادات. أرسل دعوة المدرس من هنا، وبعد قبوله لها أنشئ المجموعة من صفحة المجموعات وحدد المادة والمدرس والموعد. ويمكنك إضافة الطلاب قبل إنشاء المجموعة أو بعدها.</p>
+            <div className="rounded-lg border bg-muted/20 p-4">
+              {inviteSent ? (
+                <p className="flex items-center gap-2 text-sm text-emerald-700"><CheckCircle2 className="h-4 w-4" /> تم إنشاء دعوة المدرس بنجاح. يمكنك متابعة الإعداد الآن.</p>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 font-medium"><Mail className="h-4 w-4 text-primary" /> دعوة المدرس</div>
+                  <Input value={teacherInvite.fullName} onChange={(e) => setTeacherInvite(v => ({ ...v, fullName: e.target.value }))} placeholder="اسم المدرس (اختياري)" />
+                  <Input dir="ltr" type="email" value={teacherInvite.email} onChange={(e) => setTeacherInvite(v => ({ ...v, email: e.target.value }))} placeholder="teacher@example.com" />
+                  <Button variant="outline" size="sm" onClick={sendTeacherInvite} disabled={sendingInvite}>{sendingInvite && <Loader2 className="h-3.5 w-3.5 animate-spin" />} إرسال الدعوة</Button>
+                </div>
+              )}
+            </div>
           </>
         )}
         {step === 3 && (
@@ -152,7 +164,7 @@ export default function OnboardingPage() {
         )}
       </CardContent></Card>
       <div className="flex justify-between">
-        <Button variant="ghost" onClick={() => step > 0 ? setStep(step - 1) : router.push("/dashboard")}>{step > 0 ? "السابق" : "تخطّي الآن"}</Button>
+        <Button variant="ghost" onClick={() => step > 0 ? setStep(step - 1) : complete()} disabled={loading}>{step > 0 ? "السابق" : "تخطّي الآن"}</Button>
         <Button onClick={next} disabled={loading}>{loading && <Loader2 className="h-4 w-4 animate-spin" />} {step === 3 ? "الذهاب إلى لوحة التحكم" : "التالي"}</Button>
       </div>
     </div>

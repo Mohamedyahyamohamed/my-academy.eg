@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { MiscService, requireScopedRole } from "@/services";
 import type { AcademyValues, CourseValues } from "@/schemas";
@@ -15,6 +16,14 @@ export async function updateAcademyAction(input: AcademyValues) {
 
 export async function completeOnboardingAction(metadata: { hasAcademy: boolean; hasCourse: boolean; hasGroup: boolean; importedStudents?: number }) {
   const user = await requireScopedRole("ADMIN");
+  const cookieStore = await cookies();
+  cookieStore.set("myacademy_onboarding_done", "1", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
   void audit({ action: "onboarding.complete", entity_type: "academy", metadata });
   return { ok: true, userId: user.id };
 }

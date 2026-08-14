@@ -19,17 +19,19 @@ export function AddGroupDialog({
   teachers,
   defaultTeacherId,
   lockedTeacher,
+  disabled,
 }: {
   courses: Course[];
   teachers: Teacher[];
   defaultTeacherId?: string | null;
   lockedTeacher?: boolean;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button><Plus className="h-4 w-4" /> مجموعة جديدة</Button>
+        <Button disabled={disabled}><Plus className="h-4 w-4" /> مجموعة جديدة</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

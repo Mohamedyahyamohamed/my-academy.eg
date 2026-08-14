@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { UsersRound, Calendar, ArrowRight } from "lucide-react";
+import { UsersRound, Calendar, ArrowRight, UserPlus } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { AddGroupDialog } from "@/components/groups/group-dialogs";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GroupsService, MiscService, requireRole, getCurrentUser, currentTeacherId } from "@/services";
 import { formatCurrency } from "@/lib/utils";
@@ -17,6 +18,7 @@ export default async function GroupsPage() {
   const groups = await GroupsService.listGroups();
   const courses = await MiscService.listCourses();
   const teachers = await MiscService.listTeachers();
+  const groupCreationBlocked = isTeacher ? !tid : teachers.length === 0;
 
   return (
     <div className="space-y-6">
@@ -29,15 +31,37 @@ export default async function GroupsPage() {
           teachers={teachers}
           defaultTeacherId={tid}
           lockedTeacher={isTeacher}
+          disabled={groupCreationBlocked}
         />
       </PageHeader>
+
+      {groupCreationBlocked && (
+        <Card className="border-amber-200 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/20">
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <UserPlus className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-400" />
+              <div>
+                <p className="font-medium">أنشئ مدرسًا أو اربط حسابك أولًا</p>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  كل مجموعة تحتاج مدرسًا مسؤولًا عنها. أرسل دعوة للمدرس من الإعدادات، ثم ارجع إلى هنا لإنشاء المجموعة. يمكنك كتابة مادة جديدة داخل نموذج المجموعة دون إعدادها مسبقًا.
+                </p>
+              </div>
+            </div>
+            {!isTeacher && (
+              <Button asChild variant="outline" className="shrink-0">
+                <Link href="/settings?tab=users#invite">دعوة مدرس</Link>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {groups.length === 0 ? (
         <EmptyState
           icon={UsersRound}
           title="لا توجد مجموعات بعد"
           description="أنشئ أول مجموعة لبدء جدولة الحصص ومتابعة الحضور."
-          action={<AddGroupDialog courses={courses} teachers={teachers} />}
+          action={<AddGroupDialog courses={courses} teachers={teachers} disabled={groupCreationBlocked} />}
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

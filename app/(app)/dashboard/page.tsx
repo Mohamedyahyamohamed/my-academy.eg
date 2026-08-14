@@ -10,6 +10,8 @@ import {
   ArrowRight,
   Clock,
   AlertTriangle,
+  Rocket,
+  CheckCircle2,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -19,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PaymentStatusBadge } from "@/components/shared/badges";
 import { TrendArea, Donut, LineTrend } from "@/components/charts";
-import { DashboardService, requireRole } from "@/services";
+import { DashboardService, MiscService, requireRole } from "@/services";
 import { atRiskStudents } from "@/services/insights";
 import { formatCurrency, formatDate, formatTime, initials } from "@/lib/utils";
 import type { DashboardPeriod } from "@/types";
@@ -58,10 +60,24 @@ export default async function DashboardPage(
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
   const period: DashboardPeriod =
     sp("period") === "quarter" || sp("period") === "year" ? (sp("period") as DashboardPeriod) : "month";
-  const d = await DashboardService.getDashboardData(period);
-  const atRisk = (await atRiskStudents()).slice(0, 6);
-
+  const [d, atRiskResult, teachers] = await Promise.all([
+    DashboardService.getDashboardData(period),
+    atRiskStudents(),
+    MiscService.listTeachers(),
+  ]);
+  const atRisk = atRiskResult.slice(0, 6);
   const collectionTrend = d.collectionTrend ?? 0;
+  const setupSteps = [
+    teachers.length === 0
+      ? { title: "دعوة أول مدرس", description: "أرسل دعوة للمدرس من داخل المنصة.", href: "/settings?tab=users#invite" }
+      : null,
+    d.totalStudents === 0
+      ? { title: "إضافة أول طالب", description: "أضف بيانات الطالب مباشرة، ويمكن ربطه بمجموعة لاحقًا.", href: "/students" }
+      : null,
+    d.totalGroups === 0
+      ? { title: "إنشاء أول مجموعة", description: "بعد توفر مدرس، أنشئ المجموعة وحدد المادة والموعد.", href: "/groups" }
+      : null,
+  ].filter((step): step is { title: string; description: string; href: string } => Boolean(step));
 
   return (
     <div className="space-y-6">
@@ -78,6 +94,35 @@ export default async function DashboardPage(
           </Link>
         </Button>
       </PageHeader>
+
+      {setupSteps.length > 0 && (
+        <Card className="border-primary/20 bg-primary/[0.03]">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Rocket className="h-5 w-5 text-primary" /> خطوات البداية
+            </CardTitle>
+            <CardDescription>اتبع هذه الخطوات بالترتيب المقترح. لا تحتاج إلى تجهيز إعدادات مخفية قبل البدء.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-3">
+              {setupSteps.map((step, index) => (
+                <Link key={step.href} href={step.href} className="group rounded-xl border bg-background p-4 transition-colors hover:border-primary/50 hover:bg-primary/[0.03]">
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">{index + 1}</span>
+                    <div>
+                      <p className="font-medium group-hover:text-primary">{step.title}</p>
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">{step.description}</p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" /> يمكنك إضافة الطالب قبل إنشاء المجموعة؛ المجموعة فقط تحتاج مدرسًا مسؤولًا.
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Period filter */}
       <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 w-fit">

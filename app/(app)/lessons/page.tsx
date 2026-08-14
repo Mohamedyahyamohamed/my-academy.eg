@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, Plus, Clock, Calendar } from "lucide-react";
+import { BookOpen, Plus, Clock, Calendar, UsersRound } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { ToolbarRoot, ToolbarSearch, ToolbarSelect, ToolbarActions } from "@/components/shared/toolbar";
 import { PaginationBar } from "@/components/shared/pagination";
@@ -41,8 +41,23 @@ export default async function LessonsPage(
         title="الحصص"
         description="جدوِل وتابع الحصص عبر كل مجموعاتك."
       >
-        <Button asChild><Link href="/lessons/new"><Plus className="h-4 w-4" /> إضافة حصة</Link></Button>
+        <Button asChild disabled={groups.length === 0}><Link href={groups.length === 0 ? "/groups" : "/lessons/new"}><Plus className="h-4 w-4" /> {groups.length === 0 ? "أنشئ مجموعة أولًا" : "إضافة حصة"}</Link></Button>
       </PageHeader>
+
+      {groups.length === 0 && (
+        <Card className="border-amber-200 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/20">
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <UsersRound className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-400" />
+              <div>
+                <p className="font-medium">لا يمكن جدولة حصة بدون مجموعة</p>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">أنشئ مجموعة أولًا وحدد مدرسها وموعدها، ثم ستتمكن من إضافة الحصص وتسجيل الحضور والواجبات.</p>
+              </div>
+            </div>
+            <Button asChild variant="outline" className="shrink-0"><Link href="/groups">الانتقال إلى المجموعات</Link></Button>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="card-surface p-4">
         <ToolbarRoot>
@@ -60,7 +75,7 @@ export default async function LessonsPage(
           icon={BookOpen}
           title="لا توجد حصص بعد"
           description="أضف أول حصة لتسجيل الحضور وتكليف الواجبات."
-          action={<Button asChild><Link href="/lessons/new"><Plus className="h-4 w-4" /> إضافة حصة</Link></Button>}
+          action={groups.length === 0 ? <Button asChild><Link href="/groups"><UsersRound className="h-4 w-4" /> إنشاء مجموعة أولًا</Link></Button> : <Button asChild><Link href="/lessons/new"><Plus className="h-4 w-4" /> إضافة حصة</Link></Button>}
         />
       ) : (
         <>

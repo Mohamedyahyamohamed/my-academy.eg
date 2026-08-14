@@ -16,7 +16,16 @@ import { PAYMENT_METHODS, paymentMethodLabel } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const requestedTab = Array.isArray(params.tab) ? params.tab[0] : params.tab;
+  const initialTab = ["academy", "users", "courses", "payments", "security", "roles"].includes(requestedTab ?? "")
+    ? requestedTab!
+    : "academy";
   // صفحات App Router قد تُرسم بالتوازي مع التخطيط؛ نُحمّل لقطة المستأجر
   // صراحةً قبل أي قراءة متزامنة من المخزن حتى لا تفشل جلسة صحيحة مؤقتًا.
   await requireScopedRole("ADMIN");
@@ -29,7 +38,7 @@ export default async function SettingsPage() {
     <div className="space-y-6">
       <PageHeader title="الإعدادات" description="إدارة أكاديميتك: المستخدمين والمواد والإعدادات." />
 
-      <Tabs defaultValue="academy">
+      <Tabs defaultValue={initialTab}>
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="academy"><Building2 className="h-4 w-4" /> الأكاديمية</TabsTrigger>
           <TabsTrigger value="users"><Users className="h-4 w-4" /> المستخدمون</TabsTrigger>
@@ -89,7 +98,7 @@ export default async function SettingsPage() {
               </div>
             </CardContent>
           </Card>
-          <div className="mt-4">
+          <div id="invite" className="mt-4 scroll-mt-6">
             <InviteManager initialInvites={invites} />
           </div>
         </TabsContent>

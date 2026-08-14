@@ -33,16 +33,23 @@ export function SignupForm({ initialLang = "ar" }: { initialLang?: Lang }) {
     setLoading(true);
     try {
       const result = await signupAction(form);
-      if (result?.ok === false) {
-        toast.error(result.error ?? (en ? "Unable to create the workspace." : "تعذّر إنشاء المساحة."));
+      if (!result || result.ok !== true) {
+        toast.error(result?.error ?? (en ? "Unable to create the workspace." : "تعذّر إنشاء المساحة."));
+        return;
+      }
+      const redirectTo = result.redirectTo;
+      if (!redirectTo) {
+        toast.error(en ? "The workspace was created but could not be opened." : "تم إنشاء المساحة لكن تعذّر فتحها.");
         return;
       }
       toast.success(form.workspaceType === "TEACHER"
         ? (en ? "Your teacher workspace was created successfully." : "تم إنشاء مساحة المدرس الخاصة بك بنجاح.")
         : (en ? "Your academy was created successfully." : "تم إنشاء أكاديميتك بنجاح."));
+      router.replace(redirectTo);
       router.refresh();
-    } catch {
-      // redirect() from the server action transfers the owner to onboarding.
+    } catch (error) {
+      console.error("[signup-form] signup failed:", error);
+      toast.error(en ? "The workspace could not be created. Please try again." : "تعذّر إنشاء المساحة. حاول مرة أخرى.");
     } finally {
       setLoading(false);
     }

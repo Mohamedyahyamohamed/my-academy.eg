@@ -2,7 +2,6 @@
 
 import { audit } from "@/services/audit";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { SESSION_COOKIE } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/services/supabase/config";
@@ -114,7 +113,9 @@ export async function signupAction(input: SignupInput) {
   }
 
   invalidateStore();
-  void sendWelcomeEmail(email, fullName, workspaceType === "TEACHER" ? "TEACHER" : "ADMIN");
+  void sendWelcomeEmail(email, fullName, workspaceType === "TEACHER" ? "TEACHER" : "ADMIN").catch((error) => {
+    console.error("[signup] welcome email failed after account creation:", error);
+  });
   const user: SessionUser = { id: userId, email, role: workspaceType === "TEACHER" ? "TEACHER" : "ADMIN", full_name: fullName, avatar_url: null, academy_id: academy.id };
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, createSignedSession(user), {
@@ -126,7 +127,10 @@ export async function signupAction(input: SignupInput) {
   });
   void audit({ action: workspaceType === "TEACHER" ? "teacher.workspace.create" : "academy.create", entity_type: "academy", entity_id: academy.id }, { id: userId, role: workspaceType === "TEACHER" ? "TEACHER" : "ADMIN" });
   revalidatePath(workspaceType === "TEACHER" ? "/teacher" : "/dashboard");
-  redirect(workspaceType === "TEACHER" ? "/teacher" : "/onboarding");
+  return {
+    ok: true as const,
+    redirectTo: workspaceType === "TEACHER" ? "/teacher" : "/onboarding",
+  };
 }
 
 /**

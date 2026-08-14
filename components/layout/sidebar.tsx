@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Logo } from "@/components/shared/logo";
 import { cn } from "@/lib/utils";
 import type { NavSection } from "@/lib/nav";
+import { useClientLang } from "@/lib/i18n-client";
 
 interface SidebarProps {
   sections: NavSection[];
@@ -15,12 +16,7 @@ interface SidebarProps {
 /** Desktop sidebar — renders the role-based navigation. */
 export function Sidebar({ sections, academyName }: SidebarProps) {
   const pathname = usePathname();
-  const [lang, setLang] = React.useState<"ar" | "en">("ar");
-
-  React.useEffect(() => {
-    const stored = localStorage.getItem("ma_lang") || "ar";
-    setLang(stored as "ar" | "en");
-  }, []);
+  const lang = useClientLang();
 
   const homeHref = sections[0]?.items[0]?.href || "/dashboard";
 

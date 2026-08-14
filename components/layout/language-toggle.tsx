@@ -1,27 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { changeClientLang, useClientLang } from "@/lib/i18n-client";
 
 export function LanguageToggle() {
-  const router = useRouter();
-  const [lang, setLang] = React.useState<"ar" | "en">("ar");
-
-  React.useEffect(() => {
-    const stored = localStorage.getItem("ma_lang") || "ar";
-    setLang(stored as "ar" | "en");
-  }, []);
+  const lang = useClientLang();
+  const en = lang === "en";
 
   const toggle = () => {
-    const next = lang === "ar" ? "en" : "ar";
-    setLang(next);
-    localStorage.setItem("ma_lang", next);
-    document.cookie = `ma_lang=${next}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
-    document.documentElement.dir = next === "ar" ? "rtl" : "ltr";
-    document.documentElement.lang = next;
-    router.refresh();
+    const next = en ? "ar" : "en";
+    changeClientLang(next);
+    window.location.reload();
   };
 
   return (
@@ -30,10 +21,11 @@ export function LanguageToggle() {
       size="sm"
       onClick={toggle}
       className="gap-1.5"
-      title={lang === "ar" ? "التبديل إلى الإنجليزية" : "التبديل إلى العربية"}
+      title={en ? "Switch to Arabic" : "التبديل إلى الإنجليزية"}
+      aria-label={en ? "Switch to Arabic" : "التبديل إلى الإنجليزية"}
     >
       <Languages className="h-4 w-4" />
-      <span className="text-xs font-medium">{lang === "ar" ? "EN" : "ع"}</span>
+      <span className="text-xs font-medium">{en ? "ع" : "EN"}</span>
     </Button>
   );
 }

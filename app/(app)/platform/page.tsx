@@ -17,11 +17,13 @@ import { requireScopedRole } from "@/services";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { PLANS } from "@/services/saas";
 import { PlatformAcademyControls, PlatformUserControls } from "@/components/platform/platform-admin-controls";
+import { cookies } from "next/headers";
+import { getLangFromCookie } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
-const EGP = (value: number) =>
-  new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 0 }).format(value || 0) + " ج.م";
+const EGP = (value: number, en = false) =>
+  new Intl.NumberFormat(en ? "en-EG" : "ar-EG", { maximumFractionDigits: 0 }).format(value || 0) + (en ? " EGP" : " ج.م");
 const percent = (numerator: number, denominator: number) =>
   denominator ? Math.round((numerator / denominator) * 100) : 0;
 const formatDate = (value: string | null | undefined) =>
@@ -29,6 +31,8 @@ const formatDate = (value: string | null | undefined) =>
 
 export default async function PlatformPage() {
   await requireScopedRole("SUPER_ADMIN");
+  const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
+  const en = lang === "en";
   const client = nodeSupabaseClient();
 
   const [
@@ -107,17 +111,17 @@ export default async function PlatformPage() {
   const newAcademies30d = academyRows.filter((academy: any) => new Date(academy.created_at).getTime() >= lastThirtyDays).length;
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
-        title="لوحة مالك المنصة"
-        description="صورة تشغيلية موحدة للنمو، التفعيل، الإيراد، والأكاديميات التي تحتاج متابعة."
+        title={en ? "Platform owner dashboard" : "لوحة مالك المنصة"}
+        description={en ? "A unified view of growth, activation, revenue, and academies requiring attention." : "صورة تشغيلية موحدة للنمو، التفعيل، الإيراد، والأكاديميات التي تحتاج متابعة."}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard icon={<Banknote className="h-4 w-4" />} label="إيراد SaaS شهري فعلي" value={EGP(mrr)} hint={`${activeSubscriptions.length} اشتراك نشط`} tone="emerald" />
-        <MetricCard icon={<TrendingUp className="h-4 w-4" />} label="إيراد محتمل بعد التجارب" value={EGP(potentialMrr)} hint={`${trialSubscriptions.length} أكاديمية في تجربة`} tone="violet" />
-        <MetricCard icon={<Activity className="h-4 w-4" />} label="تفعيل الأكاديميات" value={`${percent(activatedAcademies, academyRows.length)}%`} hint={`${activatedAcademies} من ${academyRows.length} لديها طلاب`} tone="sky" />
-        <MetricCard icon={<ShieldCheck className="h-4 w-4" />} label="اشتراكات تحتاج متابعة" value={String(atRiskSubscriptions.length)} hint="متأخرات أو إلغاء مجدول" tone="amber" />
+        <MetricCard icon={<Banknote className="h-4 w-4" />} label={en ? "Actual monthly SaaS revenue" : "إيراد SaaS شهري فعلي"} value={EGP(mrr, en)} hint={`${activeSubscriptions.length} ${en ? "active subscriptions" : "اشتراك نشط"}`} tone="emerald" />
+        <MetricCard icon={<TrendingUp className="h-4 w-4" />} label={en ? "Potential revenue after trials" : "إيراد محتمل بعد التجارب"} value={EGP(potentialMrr, en)} hint={`${trialSubscriptions.length} ${en ? "academies on trial" : "أكاديمية في تجربة"}`} tone="violet" />
+        <MetricCard icon={<Activity className="h-4 w-4" />} label={en ? "Academy activation" : "تفعيل الأكاديميات"} value={`${percent(activatedAcademies, academyRows.length)}%`} hint={en ? `${activatedAcademies} of ${academyRows.length} have students` : `${activatedAcademies} من ${academyRows.length} لديها طلاب`} tone="sky" />
+        <MetricCard icon={<ShieldCheck className="h-4 w-4" />} label={en ? "Subscriptions needing attention" : "اشتراكات تحتاج متابعة"} value={String(atRiskSubscriptions.length)} hint={en ? "Past due or scheduled cancellation" : "متأخرات أو إلغاء مجدول"} tone="amber" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -125,30 +129,30 @@ export default async function PlatformPage() {
           <CardContent className="p-5">
             <div className="mb-5 flex items-center justify-between gap-3">
               <div>
-                <h2 className="font-semibold">قمع النمو والتحويل</h2>
-                <p className="text-xs text-muted-foreground">يعتمد على أحداث التسجيل والتهيئة والفوترة المسجلة في النظام.</p>
+                <h2 className="font-semibold">{en ? "Growth and conversion funnel" : "قمع النمو والتحويل"}</h2>
+                <p className="text-xs text-muted-foreground">{en ? "Based on registration, onboarding, and billing events recorded in the system." : "يعتمد على أحداث التسجيل والتهيئة والفوترة المسجلة في النظام."}</p>
               </div>
-              <Badge variant="secondary">آخر تحديث: الآن</Badge>
+              <Badge variant="secondary">{en ? "Updated: now" : "آخر تحديث: الآن"}</Badge>
             </div>
             <div className="grid gap-3 sm:grid-cols-4">
-              <FunnelStep label="أكاديميات جديدة" value={academyRows.length} hint={`${newAcademies30d} خلال 30 يوم`} />
-              <FunnelStep label="أكملت التهيئة" value={completedOnboarding} hint={`${percent(completedOnboarding, academyRows.length)}% من المسجلين`} />
-              <FunnelStep label="بدأت الدفع" value={checkoutAcademies} hint={`${percent(checkoutAcademies, completedOnboarding)}% من المهيأين`} />
-              <FunnelStep label="تحويلات مدفوعة" value={convertedAcademies} hint={`${percent(convertedAcademies, checkoutAcademies)}% من البدايات`} final />
+              <FunnelStep label={en ? "New academies" : "أكاديميات جديدة"} value={academyRows.length} hint={en ? `${newAcademies30d} in 30 days` : `${newAcademies30d} خلال 30 يوم`} />
+              <FunnelStep label={en ? "Completed onboarding" : "أكملت التهيئة"} value={completedOnboarding} hint={`${percent(completedOnboarding, academyRows.length)}% ${en ? "of registered academies" : "من المسجلين"}`} />
+              <FunnelStep label={en ? "Started checkout" : "بدأت الدفع"} value={checkoutAcademies} hint={`${percent(checkoutAcademies, completedOnboarding)}% ${en ? "of onboarded" : "من المهيأين"}`} />
+              <FunnelStep label={en ? "Paid conversions" : "تحويلات مدفوعة"} value={convertedAcademies} hint={`${percent(convertedAcademies, checkoutAcademies)}% ${en ? "of checkouts" : "من البدايات"}`} final />
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="space-y-4 p-5">
             <div>
-              <h2 className="font-semibold">نظرة تشغيلية</h2>
-              <p className="text-xs text-muted-foreground">مقاييس استخدام المنصة عبر كل الأكاديميات.</p>
+              <h2 className="font-semibold">{en ? "Operational overview" : "نظرة تشغيلية"}</h2>
+              <p className="text-xs text-muted-foreground">{en ? "Platform usage metrics across all academies." : "مقاييس استخدام المنصة عبر كل الأكاديميات."}</p>
             </div>
-            <OperationalRow label="أكاديميات مدفوعة" value={`${paidAcademies}`} />
-            <OperationalRow label="طلاب على المنصة" value={`${students?.length ?? 0}`} />
-            <OperationalRow label="مدرسون نشطون" value={`${teachers?.length ?? 0}`} />
-            <OperationalRow label="مستخدمون مسجلون" value={`${profileRows.length}`} />
-            <OperationalRow label="تحصيل أولياء الأمور" value={EGP(sumPaid())} />
+            <OperationalRow label={en ? "Paid academies" : "أكاديميات مدفوعة"} value={`${paidAcademies}`} />
+            <OperationalRow label={en ? "Students on platform" : "طلاب على المنصة"} value={`${students?.length ?? 0}`} />
+            <OperationalRow label={en ? "Active teachers" : "مدرسون نشطون"} value={`${teachers?.length ?? 0}`} />
+            <OperationalRow label={en ? "Registered users" : "مستخدمون مسجلون"} value={`${profileRows.length}`} />
+            <OperationalRow label={en ? "Parent collections" : "تحصيل أولياء الأمور"} value={EGP(sumPaid(), en)} />
           </CardContent>
         </Card>
       </div>
@@ -157,10 +161,10 @@ export default async function PlatformPage() {
         <CardContent className="p-0">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
             <div>
-              <h2 className="font-semibold">الأكاديميات والإيرادات والاستخدام</h2>
-              <p className="text-xs text-muted-foreground">ركّز على الأكاديميات غير المفعلة أو التي لديها حالة اشتراك تحتاج متابعة.</p>
+              <h2 className="font-semibold">{en ? "Academies, revenue, and usage" : "الأكاديميات والإيرادات والاستخدام"}</h2>
+              <p className="text-xs text-muted-foreground">{en ? "Focus on inactive academies or subscriptions needing attention." : "ركّز على الأكاديميات غير المفعلة أو التي لديها حالة اشتراك تحتاج متابعة."}</p>
             </div>
-            <span className="text-xs text-muted-foreground">العملة: جنيه مصري</span>
+            <span className="text-xs text-muted-foreground">{en ? "Currency: Egyptian pound" : "العملة: جنيه مصري"}</span>
           </div>
           <div className="divide-y">
             {academyRows.map((academy: any) => {
@@ -174,24 +178,24 @@ export default async function PlatformPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{academy.name || "أكاديمية بلا اسم"}</p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {studentCount} طالب · {teacherCount} مدرس · انضمّت {formatDate(academy.created_at)}
+                      {studentCount} {en ? "students" : "طالب"} · {teacherCount} {en ? "teachers" : "مدرس"} · {en ? "Joined" : "انضمّت"} {formatDate(academy.created_at)}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <Badge variant={studentCount > 0 ? "success" : "secondary"}>{studentCount > 0 ? "مفعّلة" : "تحتاج تهيئة"}</Badge>
+                    <Badge variant={studentCount > 0 ? "success" : "secondary"}>{studentCount > 0 ? (en ? "Active" : "مفعّلة") : (en ? "Needs setup" : "تحتاج تهيئة")}</Badge>
                     <Badge variant={atRisk ? "destructive" : status === "active" ? "success" : "secondary"}>
-                      {atRisk ? "تحتاج متابعة" : status}
+                      {atRisk ? (en ? "Needs attention" : "تحتاج متابعة") : status}
                     </Badge>
-                    <Badge variant="secondary">{plan?.name ?? "مجانية"}</Badge>
+                    <Badge variant="secondary">{plan?.name ?? (en ? "Free" : "مجانية")}</Badge>
                     <div className="min-w-28 text-left">
-                      <p className="font-semibold text-emerald-700">{EGP(price)}<span className="text-xs font-normal text-muted-foreground">/شهر</span></p>
-                      <p className="text-xs text-muted-foreground">تحصيل: {EGP(sumPaid(academy.id))}</p>
+                      <p className="font-semibold text-emerald-700">{EGP(price, en)}<span className="text-xs font-normal text-muted-foreground">/{en ? "month" : "شهر"}</span></p>
+                      <p className="text-xs text-muted-foreground">{en ? "Collected:" : "تحصيل:"} {EGP(sumPaid(academy.id), en)}</p>
                     </div>
                   </div>
                 </div>
               );
             })}
-            {academyRows.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">لا توجد أكاديميات بعد.</p>}
+            {academyRows.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">{en ? "No academies yet." : "لا توجد أكاديميات بعد."}</p>}
           </div>
         </CardContent>
       </Card>
@@ -200,8 +204,8 @@ export default async function PlatformPage() {
         <Card>
           <CardContent className="space-y-4 p-5">
             <div>
-              <h2 className="font-semibold">إدارة المستخدمين على مستوى المنصة</h2>
-              <p className="text-xs text-muted-foreground">يمكنك إيقاف أو حذف أي حساب، باستثناء حساب مالك المنصة.</p>
+              <h2 className="font-semibold">{en ? "Platform-wide user management" : "إدارة المستخدمين على مستوى المنصة"}</h2>
+              <p className="text-xs text-muted-foreground">{en ? "Suspend or delete any account except the platform owner." : "يمكنك إيقاف أو حذف أي حساب، باستثناء حساب مالك المنصة."}</p>
             </div>
             <PlatformUserControls users={managedUsers.map((profile: any) => ({ id: profile.id, email: profile.email, role: profile.role, is_active: profile.is_active }))} />
           </CardContent>
@@ -209,8 +213,8 @@ export default async function PlatformPage() {
         <Card>
           <CardContent className="space-y-4 p-5">
             <div>
-              <h2 className="font-semibold">إدارة الأكاديميات</h2>
-              <p className="text-xs text-muted-foreground">حذف الأكاديمية يحذف بياناتها التابعة نهائيًا، بينما تظل أكاديمية المالك محمية.</p>
+              <h2 className="font-semibold">{en ? "Academy management" : "إدارة الأكاديميات"}</h2>
+              <p className="text-xs text-muted-foreground">{en ? "Deleting an academy permanently deletes its data; the owner's academy remains protected." : "حذف الأكاديمية يحذف بياناتها التابعة نهائيًا، بينما تظل أكاديمية المالك محمية."}</p>
             </div>
             <PlatformAcademyControls academies={managedAcademies.map((academy: any) => ({ id: academy.id, name: academy.name }))} />
           </CardContent>
@@ -218,7 +222,7 @@ export default async function PlatformPage() {
       </div>
 
       <p className="text-center text-xs text-muted-foreground">
-        إيراد SaaS الشهري الفعلي يعتمد على الاشتراكات النشطة فقط. لا تُحسب التجارب ضمنه، وتظهر منفصلة ضمن الإيراد المحتمل.
+        {en ? "Actual monthly SaaS revenue includes active subscriptions only. Trials are shown separately as potential revenue." : "إيراد SaaS الشهري الفعلي يعتمد على الاشتراكات النشطة فقط. لا تُحسب التجارب ضمنه، وتظهر منفصلة ضمن الإيراد المحتمل."}
       </p>
     </div>
   );

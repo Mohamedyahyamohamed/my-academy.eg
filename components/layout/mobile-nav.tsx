@@ -29,13 +29,13 @@ export function MobileNav({ sections }: { sections: NavSection[] }) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="lg:hidden" aria-label="فتح القائمة">
+        <Button variant="ghost" size="icon" className="lg:hidden" aria-label={lang === "ar" ? "فتح القائمة" : "Open menu"}>
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-72 p-0">
+      <SheetContent side={lang === "ar" ? "right" : "left"} className="w-72 p-0">
         <SheetHeader className="h-16 justify-center border-b border-sidebar-border">
-          <SheetTitle className="text-left">
+          <SheetTitle className={lang === "ar" ? "text-right" : "text-left"}>
             <Logo />
           </SheetTitle>
         </SheetHeader>

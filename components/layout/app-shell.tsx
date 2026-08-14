@@ -16,7 +16,7 @@ export function AppShell({ user, academyName, children }: AppShellProps) {
   const sections = navForRole(user.role);
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar sections={sections} academyName={academyName} />
+      <Sidebar sections={sections} academyName={academyName} role={user.role} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar user={user} sections={sections} />
         <main className="print-area flex-1 overflow-y-auto">

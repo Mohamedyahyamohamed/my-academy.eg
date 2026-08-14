@@ -146,9 +146,14 @@ export const STUDENT_NAV: NavSection[] = [
 
 export const SUPER_ADMIN_NAV: NavSection[] = [
   {
+    titleAr: "إدارة المنصة", titleEn: "Platform Management",
     items: [{ titleAr: "المنصة", titleEn: "Platform", href: "/platform", icon: Crown }],
   },
-  ...ADMIN_NAV,
+  {
+    titleAr: "تشغيل الأكاديمية", titleEn: "Academy Operations",
+    items: ADMIN_NAV[0].items,
+  },
+  ...ADMIN_NAV.slice(1),
 ];
 
 /** Academy managers handle administration; teaching operations stay with teachers. */

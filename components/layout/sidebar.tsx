@@ -6,26 +6,39 @@ import { usePathname } from "next/navigation";
 import { Logo } from "@/components/shared/logo";
 import { cn } from "@/lib/utils";
 import type { NavSection } from "@/lib/nav";
+import type { Role } from "@/types";
 import { useClientLang } from "@/lib/i18n-client";
 
 interface SidebarProps {
   sections: NavSection[];
   academyName: string;
+  role: Role;
 }
 
 /** Desktop sidebar — renders the role-based navigation. */
-export function Sidebar({ sections, academyName }: SidebarProps) {
+export function Sidebar({ sections, academyName, role }: SidebarProps) {
   const pathname = usePathname();
   const lang = useClientLang();
 
   const homeHref = sections[0]?.items[0]?.href || "/dashboard";
+  const roleLabel = {
+    SUPER_ADMIN: lang === "ar" ? "مالك المنصة" : "Platform Owner",
+    ADMIN: lang === "ar" ? "مدير أكاديمية" : "Academy Manager",
+    TEACHER: lang === "ar" ? "مدرس" : "Teacher",
+    PARENT: lang === "ar" ? "ولي أمر" : "Parent",
+    STUDENT: lang === "ar" ? "طالب" : "Student",
+  }[role];
 
   return (
-    <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
+    <aside className="hidden h-full w-72 shrink-0 flex-col border-e border-sidebar-border bg-sidebar lg:flex">
       <div className="flex h-16 items-center px-5">
         <Link href={homeHref} className="transition-opacity hover:opacity-80">
           <Logo />
         </Link>
+      </div>
+      <div className="mx-3 mb-2 rounded-xl border border-sidebar-border bg-sidebar-accent/40 px-3 py-2.5">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{roleLabel}</p>
+        <p className="mt-0.5 truncate text-sm font-medium text-sidebar-foreground" title={academyName}>{academyName}</p>
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
@@ -70,7 +83,8 @@ export function Sidebar({ sections, academyName }: SidebarProps) {
       </nav>
 
       <div className="border-t border-sidebar-border px-4 py-3">
-        <p className="truncate text-xs text-muted-foreground">{academyName}</p>
+        <p className="text-[11px] text-muted-foreground">{lang === "ar" ? "مساحة العمل الحالية" : "Current workspace"}</p>
+        <p className="truncate text-xs font-medium text-sidebar-foreground">{academyName}</p>
       </div>
     </aside>
   );

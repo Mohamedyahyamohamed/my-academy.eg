@@ -208,7 +208,7 @@ export default async function PlatformPage() {
               <h2 className="font-semibold">{en ? "Platform-wide user management" : "إدارة المستخدمين على مستوى المنصة"}</h2>
               <p className="text-xs text-muted-foreground">{en ? "Suspend or delete any account except the platform owner." : "يمكنك إيقاف أو حذف أي حساب، باستثناء حساب مالك المنصة."}</p>
             </div>
-            <PlatformUserControls users={managedUsers.map((profile: any) => ({ id: profile.id, email: profile.email, role: profile.role, is_active: profile.is_active }))} />
+            <PlatformUserControls en={en} users={managedUsers.map((profile: any) => ({ id: profile.id, email: profile.email, role: profile.role, is_active: profile.is_active }))} />
           </CardContent>
         </Card>
         <Card>
@@ -217,7 +217,7 @@ export default async function PlatformPage() {
               <h2 className="font-semibold">{en ? "Academy management" : "إدارة الأكاديميات"}</h2>
               <p className="text-xs text-muted-foreground">{en ? "Deleting an academy permanently deletes its data; the owner's academy remains protected." : "حذف الأكاديمية يحذف بياناتها التابعة نهائيًا، بينما تظل أكاديمية المالك محمية."}</p>
             </div>
-            <PlatformAcademyControls academies={managedAcademies.map((academy: any) => ({ id: academy.id, name: academy.name, is_active: academy.is_active !== false }))} />
+            <PlatformAcademyControls en={en} academies={managedAcademies.map((academy: any) => ({ id: academy.id, name: academy.name, is_active: academy.is_active !== false }))} />
           </CardContent>
         </Card>
       </div>

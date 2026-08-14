@@ -193,10 +193,23 @@ export async function requestPasswordReset(email: string): Promise<LoginResult> 
   const normalizedEmail = email.trim().toLowerCase();
   if (isSupabaseConfigured()) {
     try {
-      const { createServerSupabaseClient } = await import("@/lib/supabase/server");
-      const client = await createServerSupabaseClient();
+      // Password recovery links are opened from email clients and may be
+      // completed in a different browser context. Use the implicit flow here
+      // so the link carries the short-lived recovery tokens itself instead of
+      // requiring the PKCE verifier cookie from the requesting browser.
+      const { createClient } = await import("@supabase/supabase-js");
+      const { getSupabaseUrl, getSupabaseAnonKey } = await import("./supabase/config");
+      const client = createClient(getSupabaseUrl()!, getSupabaseAnonKey()!, {
+        auth: {
+          flowType: "implicit",
+          autoRefreshToken: false,
+          persistSession: false,
+          detectSessionInUrl: false,
+        },
+      });
       const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://my-academy-eg.vercel.app"}/reset-password`;
-      await client.auth.resetPasswordForEmail(normalizedEmail, { redirectTo });
+      const { error } = await client.auth.resetPasswordForEmail(normalizedEmail, { redirectTo });
+      if (error) console.error("[auth] password reset request failed:", error.message);
     } catch {
       // Keep the public response uniform even when the provider is unavailable.
     }

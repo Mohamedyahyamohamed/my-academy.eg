@@ -7,7 +7,7 @@ import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { createRecoverySupabaseClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/services/supabase/config";
 
 function cleanRecoveryUrl() {
@@ -25,7 +25,7 @@ function cleanRecoveryUrl() {
 
 export default function ResetPasswordPage() {
   const supabase = React.useMemo(
-    () => (isSupabaseConfigured() ? createBrowserSupabaseClient() : null),
+    () => (isSupabaseConfigured() ? createRecoverySupabaseClient() : null),
     [],
   );
   const [checking, setChecking] = React.useState(true);
@@ -141,17 +141,43 @@ export default function ResetPasswordPage() {
     }
 
     setSubmitting(true);
-    const { error: updateError } = await supabase.auth.updateUser({ password });
 
-    if (updateError) {
-      setError("تعذر تحديث كلمة المرور. قد يكون رابط الاستعادة منتهي الصلاحية، اطلب رابطًا جديدًا.");
+    try {
+      // On mobile browsers the recovery session can be persisted a moment
+      // after the URL token is exchanged. Read it again, then refresh it when
+      // necessary, before calling updateUser.
+      let { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (!sessionData.session && !sessionError) {
+        const refreshed = await supabase.auth.refreshSession();
+        sessionData = refreshed.data;
+        sessionError = refreshed.error;
+      }
+
+      if (sessionError || !sessionData.session) {
+        setError("انتهت جلسة الاستعادة. اطلب رابطًا جديدًا وافتحه مرة واحدة فقط.");
+        return;
+      }
+
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) {
+        const message = updateError.message.toLowerCase();
+        if (message.includes("password") && (message.includes("weak") || message.includes("least") || message.includes("characters"))) {
+          setError("كلمة المرور لا تستوفي شروط الأمان. استخدم كلمة مرور أطول وأكثر تعقيدًا.");
+        } else if (message.includes("session") || message.includes("reauthor") || message.includes("expired")) {
+          setError("انتهت جلسة الاستعادة. اطلب رابطًا جديدًا وافتحه مرة واحدة فقط.");
+        } else {
+          setError("تعذر تحديث كلمة المرور حاليًا. حاول باستخدام رابط استعادة جديد.");
+        }
+        return;
+      }
+
+      setUpdated(true);
+      await supabase.auth.signOut();
+    } catch {
+      setError("حدث خطأ غير متوقع أثناء حفظ كلمة المرور. اطلب رابط استعادة جديدًا وحاول مرة أخرى.");
+    } finally {
       setSubmitting(false);
-      return;
     }
-
-    setUpdated(true);
-    setSubmitting(false);
-    await supabase.auth.signOut();
   };
 
   return (

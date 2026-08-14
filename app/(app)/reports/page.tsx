@@ -31,22 +31,22 @@ export default async function ReportsPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  await requireScopedRole("ADMIN");
+  const user = await requireScopedRole("ADMIN");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
   const groupId = sp("group") ?? "ALL";
 
-  const d = await DashboardService.getDashboardData();
-  const groups = await GroupsService.listGroups();
-  const academy = MiscService.getAcademy();
+  const d = await DashboardService.getDashboardData("month", user.academy_id);
+  const groups = await GroupsService.listGroups("", user.academy_id);
+  const academy = MiscService.getAcademy(user.academy_id);
 
-  const students = (await StudentsService.listStudents({ status: "ACTIVE", pageSize: 500 })).items
+  const students = (await StudentsService.listStudents({ status: "ACTIVE", pageSize: 500 }, user.academy_id)).items
     .filter((s) => groupId === "ALL" || (s.groups ?? []).some((g) => g.id === groupId));
 
-  const payments = (await PaymentsService.listPayments({ pageSize: 500 })).items
+  const payments = (await PaymentsService.listPayments({ pageSize: 500 }, user.academy_id)).items
     .filter((p) => groupId === "ALL" || p.group_id === groupId);
 
-  const grades = (await GradesService.listGrades({ pageSize: 500 })).items;
+  const grades = (await GradesService.listGrades({ pageSize: 500 }, user.academy_id)).items;
 
   const collected = payments.reduce((s, p) => s + p.amount_paid, 0);
   const outstanding = payments.reduce((s, p) => s + p.remaining, 0);

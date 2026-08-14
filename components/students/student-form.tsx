@@ -25,6 +25,7 @@ import {
 } from "@/app/actions/students";
 import { STUDENT_DEFAULT_PASSWORD } from "@/lib/auth";
 import type { Group, Parent } from "@/types";
+import { useClientLang } from "@/lib/i18n-client";
 
 interface StudentFormProps {
   student?: {
@@ -50,6 +51,7 @@ interface StudentFormProps {
 
 export function StudentForm({ student, parents: initialParents, groups, onDone }: StudentFormProps) {
   const router = useRouter();
+  const en = useClientLang() === "en";
   const [saving, setSaving] = React.useState(false);
   const [parents] = React.useState<Parent[]>(initialParents);
   const [parentMode, setParentMode] = React.useState<"existing" | "new">(
@@ -90,7 +92,7 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
       if (parentMode === "new") {
         const fn = newParent.first_name.trim();
         if (!fn) {
-          toast.error("الاسم الأول لولي الأمر مطلوب.");
+          toast.error(en ? "Parent first name is required." : "الاسم الأول لولي الأمر مطلوب.");
           return;
         }
         const { createParentAction } = await import("@/app/actions/parents");
@@ -100,30 +102,30 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
           phone: newParent.phone.trim() || undefined,
         });
         if (!res.ok) {
-          toast.error(res.error ?? "تعذّر إضافة ولي الأمر.");
+          toast.error(res.error ?? (en ? "Could not add the parent." : "تعذّر إضافة ولي الأمر."));
           return;
         }
         parentId = res.parent!.id;
       } else if (!parentId) {
-        toast.error("اختر ولي أمر أو أضف ولي أمر جديدًا.");
+        toast.error(en ? "Choose a parent or add a new one." : "اختر ولي أمر أو أضف ولي أمر جديدًا.");
         return;
       }
 
       const payload = { ...values, parent_id: parentId };
       if (student) {
         await updateStudentAction(student.id, payload);
-        toast.success("تم تحديث بيانات الطالب.");
+        toast.success(en ? "Student details updated." : "تم تحديث بيانات الطالب.");
       } else {
         const s = await createStudentAction(payload);
         toast.success(
-          `تم إضافة ${s.first_name} ✅ — حساب الدخول: ${s.email} | الباسورد: ${STUDENT_DEFAULT_PASSWORD}`,
+          en ? `Student ${s.first_name} added ✅ — Login: ${s.email} | Password: ${STUDENT_DEFAULT_PASSWORD}` : `تم إضافة ${s.first_name} ✅ — حساب الدخول: ${s.email} | الباسورد: ${STUDENT_DEFAULT_PASSWORD}`,
           { duration: 10000 },
         );
       }
       onDone?.();
       router.refresh();
     } catch {
-      toast.error("حدث خطأ غير متوقع.");
+      toast.error(en ? "An unexpected error occurred." : "حدث خطأ غير متوقع.");
     } finally {
       setSaving(false);
     }
@@ -132,22 +134,22 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="الاسم الأول" error={errors.first_name?.message} required>
+        <Field label={en ? "First name" : "الاسم الأول"} error={errors.first_name?.message} required>
           <Input {...register("first_name")} placeholder="Ahmed" />
         </Field>
-        <Field label="اسم العائلة" error={errors.last_name?.message} required>
+        <Field label={en ? "Last name" : "اسم العائلة"} error={errors.last_name?.message} required>
           <Input {...register("last_name")} placeholder="Ali" />
         </Field>
-        <Field label="الموبايل" error={errors.phone?.message}>
+        <Field label={en ? "Phone" : "الموبايل"} error={errors.phone?.message}>
           <Input {...register("phone")} placeholder="+20 100 000 0000" />
         </Field>
-        <Field label="البريد الإلكتروني" error={errors.email?.message}>
+        <Field label={en ? "Email" : "البريد الإلكتروني"} error={errors.email?.message}>
           <Input type="email" {...register("email")} placeholder="student@email.com" />
         </Field>
-        <Field label="تاريخ الميلاد">
+        <Field label={en ? "Date of birth" : "تاريخ الميلاد"}>
           <Input type="date" {...register("date_of_birth")} />
         </Field>
-        <Field label="النوع">
+        <Field label={en ? "Gender" : "النوع"}>
           <Controller
             control={control}
             name="gender"
@@ -157,24 +159,24 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
                 onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="اختر" />
+                  <SelectValue placeholder={en ? "Choose" : "اختر"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">غير محدد</SelectItem>
-                  <SelectItem value="male">ذكر</SelectItem>
-                  <SelectItem value="female">أنثى</SelectItem>
+                  <SelectItem value="__none__">{en ? "Not specified" : "غير محدد"}</SelectItem>
+                  <SelectItem value="male">{en ? "Male" : "ذكر"}</SelectItem>
+                  <SelectItem value="female">{en ? "Female" : "أنثى"}</SelectItem>
                 </SelectContent>
               </Select>
             )}
           />
         </Field>
-        <Field label="الصف / المستوى">
-          <Input {...register("grade")} placeholder="مثال: الصف الثالث الإعدادي" />
+        <Field label={en ? "Grade / level" : "الصف / المستوى"}>
+          <Input {...register("grade")} placeholder={en ? "e.g. Grade 9" : "مثال: الصف الثالث الإعدادي"} />
         </Field>
-        <Field label="المدرسة">
-          <Input {...register("school")} placeholder="اسم المدرسة" />
+        <Field label={en ? "School" : "المدرسة"}>
+          <Input {...register("school")} placeholder={en ? "School name" : "اسم المدرسة"} />
         </Field>
-        <Field label="ولي الأمر أو الوصي" required error={errors.parent_id?.message}>
+        <Field label={en ? "Parent or guardian" : "ولي الأمر أو الوصي"} required error={errors.parent_id?.message}>
           <div className="mb-2 flex gap-1 rounded-lg border border-border p-1">
             <button
               type="button"
@@ -185,7 +187,7 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
                   : "text-muted-foreground hover:bg-accent"
               }`}
             >
-              + New parent
+              {en ? "+ New parent" : "+ ولي أمر جديد"}
             </button>
             <button
               type="button"
@@ -196,7 +198,7 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
                   : "text-muted-foreground hover:bg-accent"
               }`}
             >
-              Existing
+              {en ? "Existing" : "ولي أمر موجود"}
             </button>
           </div>
 
@@ -210,10 +212,10 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
                   onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="اختر ولي الأمر" />
+                    <SelectValue placeholder={en ? "Choose parent" : "اختر ولي الأمر"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">لا يوجد ولي أمر مرتبط</SelectItem>
+                    <SelectItem value="__none__">{en ? "No linked parent" : "لا يوجد ولي أمر مرتبط"}</SelectItem>
                     {parents.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.first_name} {p.last_name}
@@ -227,28 +229,28 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
             <div className="space-y-2">
               <div className="grid grid-cols-2 gap-2">
                 <Input
-                  placeholder="اسم ولي الأمر الأول"
+                  placeholder={en ? "Parent first name" : "اسم ولي الأمر الأول"}
                   value={newParent.first_name}
                   onChange={(e) => setNewParent((p) => ({ ...p, first_name: e.target.value }))}
                 />
                 <Input
-                  placeholder="اسم عائلة ولي الأمر"
+                  placeholder={en ? "Parent last name" : "اسم عائلة ولي الأمر"}
                   value={newParent.last_name}
                   onChange={(e) => setNewParent((p) => ({ ...p, last_name: e.target.value }))}
                 />
               </div>
               <Input
-                placeholder="موبايل ولي الأمر (اختياري)"
+                placeholder={en ? "Parent phone (optional)" : "موبايل ولي الأمر (اختياري)"}
                 value={newParent.phone}
                 onChange={(e) => setNewParent((p) => ({ ...p, phone: e.target.value }))}
               />
               <p className="text-xs text-muted-foreground">
-                The parent is created automatically when you save this student.
+                {en ? "The parent is created automatically when you save this student." : "سيتم إنشاء ولي الأمر تلقائيًا عند حفظ الطالب."}
               </p>
             </div>
           )}
         </Field>
-        <Field label="الحالة">
+        <Field label={en ? "Status" : "الحالة"}>
           <Controller
             control={control}
             name="status"
@@ -258,9 +260,9 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ACTIVE">نشط</SelectItem>
-                  <SelectItem value="INACTIVE">غير نشط</SelectItem>
-                  <SelectItem value="ARCHIVED">مؤرشف</SelectItem>
+                  <SelectItem value="ACTIVE">{en ? "Active" : "نشط"}</SelectItem>
+                  <SelectItem value="INACTIVE">{en ? "Inactive" : "غير نشط"}</SelectItem>
+                  <SelectItem value="ARCHIVED">{en ? "Archived" : "مؤرشف"}</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -268,7 +270,7 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
         </Field>
       </div>
 
-      <Field label="المجموعات" hint="سجّل الطالب في مجموعة واحدة أو أكثر">
+      <Field label={en ? "Groups" : "المجموعات"} hint={en ? "Enroll the student in one or more groups" : "سجّل الطالب في مجموعة واحدة أو أكثر"}>
         <Controller
           control={control}
           name="groupIds"
@@ -299,8 +301,8 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
         />
       </Field>
 
-      <Field label="ملاحظات" error={errors.notes?.message}>
-        <Textarea {...register("notes")} placeholder="ملاحظات داخلية عن الطالب…" />
+      <Field label={en ? "Notes" : "ملاحظات"} error={errors.notes?.message}>
+        <Textarea {...register("notes")} placeholder={en ? "Internal notes about the student…" : "ملاحظات داخلية عن الطالب…"} />
       </Field>
 
       <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
@@ -315,9 +317,9 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
           )}
         />
         <div className="text-sm">
-          <span className="font-medium">موافقة ولي الأمر أو الوصي *</span>
+          <span className="font-medium">{en ? "Parent or guardian consent *" : "موافقة ولي الأمر أو الوصي *"}</span>
           <p className="text-xs text-muted-foreground">
-            أقرّ بأن ولي الأمر أو الوصي وافق على جمع بيانات هذا الطالب ومعالجتها وفقًا لـ <a href="/privacy" className="text-primary underline">سياسة الخصوصية</a>.
+            {en ? <>I confirm that the parent or guardian consented to collecting and processing this student's data under the <a href="/privacy" className="text-primary underline">Privacy Policy</a>.</> : <>أقرّ بأن ولي الأمر أو الوصي وافق على جمع بيانات هذا الطالب ومعالجتها وفقًا لـ <a href="/privacy" className="text-primary underline">سياسة الخصوصية</a>.</>}
           </p>
         </div>
       </label>
@@ -326,12 +328,12 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
       <div className="flex justify-end gap-2 pt-2">
         {onDone && (
           <Button type="button" variant="outline" onClick={onDone}>
-            Cancel
+            {en ? "Cancel" : "إلغاء"}
           </Button>
         )}
         <Button type="submit" disabled={saving}>
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-          {student ? "حفظ التعديلات" : "إضافة طالب"}
+          {student ? (en ? "Save changes" : "حفظ التعديلات") : (en ? "Add student" : "إضافة طالب")}
         </Button>
       </div>
     </form>

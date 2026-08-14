@@ -17,11 +17,13 @@ import { academySchema, courseSchema, type AcademyValues, type CourseValues } fr
 import { updateAcademyAction, createCourseAction, deleteCourseAction } from "@/app/actions/settings";
 import { APP_CONFIG } from "@/lib/constants";
 import type { Academy, Course } from "@/types";
+import { useClientLang } from "@/lib/i18n-client";
 
 const COLORS = ["#7c5cfc", "#0ea5e9", "#10b981", "#f59e0b", "#f43f5e", "#8b5cf6", "#14b8a6", "#ec4899"];
 
 export function AcademySettingsForm({ academy }: { academy: Academy }) {
   const router = useRouter();
+  const en = useClientLang() === "en";
   const [saving, setSaving] = React.useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm<AcademyValues>({
     resolver: zodResolver(academySchema),
@@ -39,7 +41,7 @@ export function AcademySettingsForm({ academy }: { academy: Academy }) {
     setSaving(true);
     try {
       await updateAcademyAction(values);
-      toast.success("تم حفظ إعدادات الأكاديمية.");
+      toast.success(en ? "Academy settings saved." : "تم حفظ إعدادات الأكاديمية.");
       router.refresh();
     } finally {
       setSaving(false);
@@ -49,27 +51,27 @@ export function AcademySettingsForm({ academy }: { academy: Academy }) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="اسم الأكاديمية" error={errors.name?.message}>
+        <Field label={en ? "Academy name" : "اسم الأكاديمية"} error={errors.name?.message}>
           <Input {...register("name")} />
         </Field>
-        <Field label="العملة" error={errors.currency?.message}>
+        <Field label={en ? "Currency" : "العملة"} error={errors.currency?.message}>
           <Input {...register("currency")} />
         </Field>
-        <Field label="البريد الإلكتروني" error={errors.email?.message}>
+        <Field label={en ? "Email" : "البريد الإلكتروني"} error={errors.email?.message}>
           <Input {...register("email")} />
         </Field>
-        <Field label="الموبايل">
+        <Field label={en ? "Phone" : "الموبايل"}>
           <Input {...register("phone")} />
         </Field>
-        <Field label="الدولة">
+        <Field label={en ? "Country" : "الدولة"}>
           <Input {...register("country")} />
         </Field>
-        <Field label="العنوان">
+        <Field label={en ? "Address" : "العنوان"}>
           <Input {...register("address")} />
         </Field>
       </div>
       <Button type="submit" disabled={saving}>
-        {saving && <Loader2 className="h-4 w-4 animate-spin" />} حفظ التغييرات
+        {saving && <Loader2 className="h-4 w-4 animate-spin" />} {en ? "Save changes" : "حفظ التغييرات"}
       </Button>
     </form>
   );
@@ -77,6 +79,7 @@ export function AcademySettingsForm({ academy }: { academy: Academy }) {
 
 export function CoursesManager({ courses }: { courses: Course[] }) {
   const router = useRouter();
+  const en = useClientLang() === "en";
   const [open, setOpen] = React.useState(false);
   const [name, setName] = React.useState("");
   const [desc, setDesc] = React.useState("");
@@ -84,11 +87,11 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
   const [saving, setSaving] = React.useState(false);
 
   const create = async () => {
-    if (!name.trim()) { toast.error("الاسم مطلوب."); return; }
+    if (!name.trim()) { toast.error(en ? "Name is required." : "الاسم مطلوب."); return; }
     setSaving(true);
     try {
       await createCourseAction({ name: name.trim(), description: desc.trim(), color });
-      toast.success("تم إنشاء المادة.");
+      toast.success(en ? "Course created." : "تم إنشاء المادة.");
       setName(""); setDesc(""); setColor(COLORS[0]); setOpen(false);
       router.refresh();
     } finally {
@@ -100,13 +103,13 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
     <div className="space-y-4">
       <div className="flex justify-end">
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4" /> إضافة مادة</Button></DialogTrigger>
+          <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4" /> {en ? "Add course" : "إضافة مادة"}</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>مادة جديدة</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{en ? "New course" : "مادة جديدة"}</DialogTitle></DialogHeader>
             <div className="space-y-4">
-              <Field label="الاسم"><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: أحياء" /></Field>
-              <Field label="الوصف"><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={2} /></Field>
-              <Field label="اللون">
+              <Field label={en ? "Name" : "الاسم"}><Input value={name} onChange={(e) => setName(e.target.value)} placeholder={en ? "e.g. Biology" : "مثال: أحياء"} /></Field>
+              <Field label={en ? "Description" : "الوصف"}><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={2} /></Field>
+              <Field label={en ? "Color" : "اللون"}>
                 <div className="flex flex-wrap gap-2">
                   {COLORS.map((c) => (
                     <button key={c} type="button" onClick={() => setColor(c)} className={`h-8 w-8 rounded-full border-2 ${color === c ? "border-foreground" : "border-transparent"}`} style={{ background: c }} aria-label={c} />
@@ -115,8 +118,8 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
               </Field>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>إلغاء</Button>
-              <Button onClick={create} disabled={saving}>{saving && <Loader2 className="h-4 w-4 animate-spin" />} إنشاء</Button>
+              <Button variant="outline" onClick={() => setOpen(false)}>{en ? "Cancel" : "إلغاء"}</Button>
+              <Button onClick={create} disabled={saving}>{saving && <Loader2 className="h-4 w-4 animate-spin" />} {en ? "Create" : "إنشاء"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -127,15 +130,15 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
             <span className="h-8 w-8 shrink-0 rounded-lg" style={{ background: c.color ?? "#7c5cfc" }} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{c.name}</p>
-              <p className="truncate text-xs text-muted-foreground">{c.description ?? "لا يوجد وصف"}</p>
+              <p className="truncate text-xs text-muted-foreground">{c.description ?? (en ? "No description" : "لا يوجد وصف")}</p>
             </div>
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label="حذف المادة"
+              aria-label={en ? "Delete course" : "حذف المادة"}
               onClick={async () => {
                 await deleteCourseAction(c.id);
-                toast.success("تم حذف المادة.");
+                toast.success(en ? "Course deleted." : "تم حذف المادة.");
                 router.refresh();
               }}
             >

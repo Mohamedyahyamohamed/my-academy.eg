@@ -7,7 +7,8 @@ import { PrintReportButton } from "@/components/shared/print-report-button";
 
 export const dynamic = "force-dynamic";
 
-export default async function StudentReportPage({ params }: { params: { id: string } }) {
+export default async function StudentReportPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   requireRole("ADMIN", "TEACHER");
   const detail = await StudentsService.getStudentDetail(params.id);
   if (!detail) notFound();

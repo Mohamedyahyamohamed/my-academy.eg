@@ -13,7 +13,10 @@ export const runtime = "nodejs";
 
 export async function GET() {
   const started = Date.now();
-  const checks: Record<string, string> = { app: "ok" };
+  const checks: Record<string, string> = {
+    app: "ok",
+    qr: process.env.QR_SESSION_SECRET && process.env.QR_SESSION_SECRET.length >= 32 ? "ok" : "unavailable",
+  };
 
   // DB connectivity (readiness). RLS scopes results; we only care the query
   // resolves without error → Supabase is reachable.
@@ -22,7 +25,7 @@ export async function GET() {
       checks.db = "not-configured (dev mode)";
     } else {
       const { createServerSupabaseClient } = await import("@/lib/supabase/server");
-      const client = createServerSupabaseClient();
+      const client = await createServerSupabaseClient();
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 4000);
       try {
@@ -31,13 +34,13 @@ export async function GET() {
           .select("id")
           .limit(1)
           .abortSignal(controller.signal);
-        checks.db = error ? `error: ${error.message}` : "ok";
+        checks.db = error ? "unavailable" : "ok";
       } finally {
         clearTimeout(timeout);
       }
     }
-  } catch (e) {
-    checks.db = `unreachable: ${(e as Error)?.message ?? "unknown"}`;
+  } catch {
+    checks.db = "unavailable";
   }
 
   const ok = Object.values(checks).every((v) => v === "ok" || v.startsWith("not-configured"));

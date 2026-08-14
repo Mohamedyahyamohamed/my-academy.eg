@@ -37,7 +37,7 @@ export async function changePasswordAction(currentPassword: string, newPassword:
   }
   try {
     const { createServerSupabaseClient } = await import("@/lib/supabase/server");
-    const client = createServerSupabaseClient();
+    const client = await createServerSupabaseClient();
     const { error } = await client.auth.updateUser({ password: newPassword });
     if (error) {
       return { ok: false, error: error.message };

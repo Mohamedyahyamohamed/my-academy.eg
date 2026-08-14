@@ -388,6 +388,7 @@ export async function acceptAcademyInviteAction(input: {
     .maybeSingle();
   if (redeemError || !redeemed) return { ok: false, error: "تعذّر تأكيد قبول الدعوة. أعد المحاولة." };
 
+  const cookieStore = await cookies();
   const signedUser: SessionUser = {
     id: userId,
     email: invite.email,
@@ -396,7 +397,7 @@ export async function acceptAcademyInviteAction(input: {
     avatar_url: avatarUrl,
     academy_id: invite.academy_id,
   };
-  cookies().set(SESSION_COOKIE, createSignedSession(signedUser), {
+  cookieStore.set(SESSION_COOKIE, createSignedSession(signedUser), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

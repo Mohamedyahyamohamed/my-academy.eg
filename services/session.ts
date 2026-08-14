@@ -11,6 +11,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Role, SessionUser } from "@/types";
 import { collections } from "./data/store";
+import { getRequestUser, setRequestContext } from "./request-context";
 import { isSupabaseConfigured } from "./supabase/config";
 import {
   SESSION_COOKIE,
@@ -26,6 +27,8 @@ import {
 
 // Re-export so server consumers can import from the service barrel.
 export { DEMO_ACCOUNTS, roleHome, SESSION_COOKIE };
+
+type SyncCookieStore = { get(name: string): { value?: string } | undefined };
 
 /** Resolve a local demo user from an email. */
 function resolveLocalUser(email: string): SessionUser | null {
@@ -47,9 +50,18 @@ function resolveLocalUser(email: string): SessionUser | null {
  * Read the current session (server-only).
  * Returns null if not authenticated.
  */
+export async function loadCurrentUser(): Promise<SessionUser | null> {
+  const cached = getRequestUser();
+  if (cached) return cached;
+  const cookieStore = await cookies();
+  const raw = cookieStore.get(SESSION_COOKIE)?.value;
+  const user = readSignedSession(raw);
+  setRequestContext(user);
+  return user;
+}
+
 export function getCurrentUser(): SessionUser | null {
-  const raw = cookies().get(SESSION_COOKIE)?.value;
-  return readSignedSession(raw);
+  return getRequestUser();
 }
 
 /** Require an authenticated user, else redirect to login. */
@@ -112,6 +124,10 @@ export async function login(
   email: string,
   password: string,
 ): Promise<LoginResult> {
+  const isProduction = process.env.NODE_ENV === "production";
+  if (isProduction) {
+    return { ok: false, error: "Demo authentication is disabled in production." };
+  }
   if (isSupabaseConfigured()) {
     // Production: const { data, error } = await supabase.auth.signInWithPassword(...)
   }
@@ -124,10 +140,10 @@ export async function login(
     return { ok: false, error: "No account found for this email." };
   }
   if (isSupabaseConfigured() === false) {
-    cookies().set(SESSION_COOKIE, createSignedSession(user), {
+    (await cookies()).set(SESSION_COOKIE, createSignedSession(user), {
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: isProduction,
       path: "/",
       maxAge: sessionMaxAgeSeconds(),
     });
@@ -145,18 +161,27 @@ export async function logout(): Promise<void> {
   try {
     if (isSupabaseConfigured()) {
       const { createServerSupabaseClient } = await import("@/lib/supabase/server");
-      const client = createServerSupabaseClient();
+      const client = await createServerSupabaseClient();
       await client.auth.signOut();
     }
   } catch {}
-  cookies().delete(SESSION_COOKIE);
+  (await cookies()).delete(SESSION_COOKIE);
 }
 
 /** Reset password stub — in production this calls Supabase resetPasswordForEmail. */
 export async function requestPasswordReset(email: string): Promise<LoginResult> {
   await new Promise((r) => setTimeout(r, 400));
-  const user = resolveLocalUser(email.trim());
-  if (!user) return { ok: false, error: "No account found for this email." };
-  // Demo: pretend a reset link was sent.
-  return { ok: true, user };
+  const normalizedEmail = email.trim().toLowerCase();
+  if (isSupabaseConfigured()) {
+    try {
+      const { createServerSupabaseClient } = await import("@/lib/supabase/server");
+      const client = await createServerSupabaseClient();
+      const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://my-academy-eg.vercel.app"}/reset-password`;
+      await client.auth.resetPasswordForEmail(normalizedEmail, { redirectTo });
+    } catch {
+      // Keep the public response uniform even when the provider is unavailable.
+    }
+  }
+  // Never disclose whether the address belongs to an account.
+  return { ok: true };
 }

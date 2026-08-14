@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export const dynamic = "force-dynamic";
 
-export default async function InviteAcceptancePage({ params }: { params: { token: string } }) {
+export default async function InviteAcceptancePage(props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const invite = await getAcademyInvitePreview(params.token);
 
   if (!invite) {

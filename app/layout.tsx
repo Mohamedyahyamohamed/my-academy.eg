@@ -17,12 +17,13 @@ export const metadata: Metadata = {
   description: APP_CONFIG.description,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const lang = getLangFromCookie(cookies().get("ma_lang")?.value);
+  const cookieStore = await cookies();
+  const lang = getLangFromCookie(cookieStore.get("ma_lang")?.value);
   const dir = isRTL(lang) ? "rtl" : "ltr";
 
   return (

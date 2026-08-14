@@ -23,11 +23,12 @@ import { performanceLevel, performanceColor, performanceLabel } from "@/lib/cons
 
 export const dynamic = "force-dynamic";
 
-export default async function ParentChildPage({ params }: { params: { id: string } }) {
+export default async function ParentChildPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const user = requireRole("PARENT");
   // Authorization via DB (مش الكاش)
   const { createServerSupabaseClient } = await import("@/lib/supabase/server");
-  const client = createServerSupabaseClient();
+  const client = await createServerSupabaseClient();
   const { data: parent } = await client
     .from("parents").select("*").eq("email", user.email).maybeSingle();
   const { data: childDB } = await client

@@ -5,7 +5,7 @@ import { collections } from "@/services/data/store";
 import { AttendanceService } from "@/services";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 
-/** Student self check-in via secure QR token (or legacy lesson param). */
+/** Student self check-in via a tenant-scoped, short-lived QR token. */
 export async function POST(req: NextRequest) {
   const user = getCurrentUser();
   if (!user || user.role !== "STUDENT") {
@@ -16,24 +16,16 @@ export async function POST(req: NextRequest) {
   const rl = await rateLimit(`checkin:${user.id}`, LIMITS.checkin.max, LIMITS.checkin.window);
   if (!rl.allowed) return NextResponse.json({ ok: false, error: "Too many check-in attempts." }, { status: 429 });
 
-  const { token, lessonId: lessonIdParam } = await req.json();
-
-  // Verify the QR token (secure path) or fall back to lesson param (legacy).
-  let lessonId: string | null = null;
-  if (token) {
-    const session = verifyQrSession(token);
-    if (!session) {
-      return NextResponse.json({ ok: false, error: "QR token invalid or expired." }, { status: 403 });
-    }
-    lessonId = session.lessonId;
-  } else if (lessonIdParam) {
-    // Legacy: no token, just lessonId (less secure, for backward compat).
-    lessonId = lessonIdParam;
+  const { token } = await req.json();
+  if (typeof token !== "string" || !token) {
+    return NextResponse.json({ ok: false, error: "A valid QR token is required." }, { status: 403 });
   }
 
-  if (!lessonId) {
-    return NextResponse.json({ ok: false, error: "Missing check-in data." }, { status: 400 });
+  const session = verifyQrSession(token);
+  if (!session || session.academyId !== user.academy_id) {
+    return NextResponse.json({ ok: false, error: "QR token invalid or expired." }, { status: 403 });
   }
+  const lessonId = session.lessonId;
 
   // Resolve student.
   const student = resolveStudent(user);
@@ -42,7 +34,9 @@ export async function POST(req: NextRequest) {
   }
 
   // Verify the lesson exists and student is enrolled.
-  const lesson = collections().lessons.find((l) => l.id === lessonId);
+  const lesson = collections().lessons.find(
+    (l) => l.id === lessonId && l.academy_id === user.academy_id,
+  );
   if (!lesson) return NextResponse.json({ ok: false, error: "Lesson not found." }, { status: 404 });
 
   // Lesson must be active (today or within a time window).

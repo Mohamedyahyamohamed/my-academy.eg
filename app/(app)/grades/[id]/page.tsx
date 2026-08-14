@@ -11,7 +11,8 @@ import { fullName, formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function ExamGradePage({ params }: { params: { id: string } }) {
+export default async function ExamGradePage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   requireRole("ADMIN", "TEACHER");
   const exam = await GradesService.getExam(params.id);
   if (!exam) notFound();

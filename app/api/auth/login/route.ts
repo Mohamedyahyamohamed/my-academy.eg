@@ -9,12 +9,19 @@ import type { SessionUser } from "@/types";
 import { createSignedSession, sessionMaxAgeSeconds } from "@/lib/session-cookie";
 
 export async function POST(req: NextRequest) {
+  const cookieStore = await cookies();
   // The test runner uses the seeded demo fixture only when this explicit flag
   // is present. A normal production deployment still refuses authentication
   // unless Supabase is configured.
   const useE2eDemoFixture = process.env.E2E_DEMO_MODE === "true";
   const useSupabase = isSupabaseConfigured() && !useE2eDemoFixture;
-  if (process.env.NODE_ENV === "production" && !useSupabase && !useE2eDemoFixture) {
+  if (process.env.NODE_ENV === "production" && useE2eDemoFixture) {
+    return NextResponse.json(
+      { error: "Demo authentication is disabled in production." },
+      { status: 503 },
+    );
+  }
+  if (process.env.NODE_ENV === "production" && !useSupabase) {
     return NextResponse.json(
       { error: "إعدادات خدمة الحسابات غير مكتملة. تواصل مع إدارة المنصة." },
       { status: 503 },
@@ -48,7 +55,7 @@ export async function POST(req: NextRequest) {
     // Use the SERVER client (cookie-bound) → signInWithPassword sets the
     // Supabase auth cookies so RLS works on subsequent requests.
     try {
-      const client = createServerSupabaseClient();
+      const client = await createServerSupabaseClient();
       const { data: authData, error: authError } = await client.auth.signInWithPassword({
         email,
         password,
@@ -92,7 +99,7 @@ export async function POST(req: NextRequest) {
           { status: 403 },
         );
       }
-      const membership = memberships.find((item) => item.academy_id === profile.academy_id) ?? memberships[0];
+      const membership = memberships.find((item: { academy_id: string }) => item.academy_id === profile.academy_id) ?? memberships[0];
 
       // Issue BOTH cookies:
       // 1. ma_session (for sync getCurrentUser in existing code)
@@ -105,7 +112,7 @@ export async function POST(req: NextRequest) {
         avatar_url: profile.avatar_url,
         academy_id: membership.academy_id,
       };
-      cookies().set(SESSION_COOKIE, createSignedSession(user), {
+      cookieStore.set(SESSION_COOKIE, createSignedSession(user), {
         httpOnly: true,
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
@@ -157,7 +164,7 @@ export async function POST(req: NextRequest) {
       avatar_url: profile.avatar_url,
       academy_id: profile.academy_id,
     };
-    cookies().set(SESSION_COOKIE, createSignedSession(user), {
+    cookieStore.set(SESSION_COOKIE, createSignedSession(user), {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",

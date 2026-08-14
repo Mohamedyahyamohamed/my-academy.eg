@@ -76,7 +76,7 @@ export async function GET() {
         files_metadata: files,
       });
     } else {
-      const client = createServerSupabaseClient();
+      const client = await createServerSupabaseClient();
       const academyRows = async (table: string) => {
         const { data: rows, error } = await client.from(table).select("*").eq("academy_id", academyId);
         if (error) throw new Error(`Unable to export ${table}`);

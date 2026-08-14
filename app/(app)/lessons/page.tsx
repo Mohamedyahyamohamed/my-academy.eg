@@ -15,11 +15,12 @@ import { formatDate, formatTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function LessonsPage({
-  searchParams,
-}: {
-  searchParams: Record<string, string | string[] | undefined>;
-}) {
+export default async function LessonsPage(
+  props: {
+    searchParams: Promise<Record<string, string | string[] | undefined>>;
+  }
+) {
+  const searchParams = await props.searchParams;
   requireRole("ADMIN", "TEACHER");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];

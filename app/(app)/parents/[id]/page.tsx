@@ -10,14 +10,15 @@ import { requireRole } from "@/services";
 
 export const dynamic = "force-dynamic";
 
-export default async function ParentDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function ParentDetailPage(
+  props: {
+    params: Promise<{ id: string }>;
+  }
+) {
+  const params = await props.params;
   requireRole("ADMIN", "TEACHER");
   const { createServerSupabaseClient } = await import("@/lib/supabase/server");
-  const client = createServerSupabaseClient();
+  const client = await createServerSupabaseClient();
 
   const { data: parent } = await client
     .from("parents")

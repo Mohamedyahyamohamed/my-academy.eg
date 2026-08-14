@@ -22,11 +22,12 @@ import { formatDate, formatTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function LessonDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function LessonDetailPage(
+  props: {
+    params: Promise<{ id: string }>;
+  }
+) {
+  const params = await props.params;
   requireRole("ADMIN", "TEACHER");
   const lesson = await LessonsService.getLesson(params.id);
   if (!lesson) notFound();

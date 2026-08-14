@@ -7,11 +7,9 @@
  * tenant's rows.
  */
 import { AsyncLocalStorage } from "node:async_hooks";
-import { cookies } from "next/headers";
 import { createSeedData, type SeedData } from "./seed";
 import { isSupabaseConfigured } from "../supabase/config";
-import { SESSION_COOKIE } from "@/lib/auth";
-import { readSignedSession } from "@/lib/session-cookie";
+import { getRequestAcademyId } from "../request-context";
 
 class LocalDB {
   data: SeedData;
@@ -36,6 +34,7 @@ export const db: LocalDB =
 
 const requestData = new AsyncLocalStorage<SeedData>();
 
+
 declare global {
   // eslint-disable-next-line no-var
   var __MY_ACADEMY_TENANT_SNAPSHOTS__: Map<string, SeedData> | undefined;
@@ -49,11 +48,7 @@ const tenantSnapshots =
   (globalThis.__MY_ACADEMY_TENANT_SNAPSHOTS__ = new Map<string, SeedData>());
 
 function activeAcademyId(): string | null {
-  try {
-    return readSignedSession(cookies().get(SESSION_COOKIE)?.value)?.academy_id ?? null;
-  } catch {
-    return null;
-  }
+  return getRequestAcademyId();
 }
 
 function emptyData(): SeedData {
@@ -106,7 +101,7 @@ async function hydrateFromSupabase(academyId: string): Promise<SeedData | null> 
     // service key is not present, fall back to the request-bound user client;
     // this still enforces Supabase RLS and avoids a false empty snapshot.
     const client = getAdminClient() ??
-      (await import("@/lib/supabase/server")).createServerSupabaseClient();
+      await (await import("@/lib/supabase/server")).createServerSupabaseClient();
 
     const { data: academy, error: academyError } = await client
       .from("academies")

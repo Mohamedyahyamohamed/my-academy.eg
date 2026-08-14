@@ -94,7 +94,8 @@ export async function signupAction(input: SignupInput) {
   invalidateStore();
   void sendWelcomeEmail(email, fullName, "ADMIN");
   const user: SessionUser = { id: userId, email, role: "ADMIN", full_name: fullName, avatar_url: null, academy_id: academy.id };
-  cookies().set(SESSION_COOKIE, createSignedSession(user), {
+  const cookieStore = await cookies();
+  cookieStore.set(SESSION_COOKIE, createSignedSession(user), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

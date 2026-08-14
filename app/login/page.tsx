@@ -74,32 +74,34 @@ export default function LoginPage() {
           <div className="mt-6">
             <LoginForm />
           </div>
-          <div className="mt-6 rounded-lg border border-dashed border-border bg-muted/40 p-4 text-center">
-            <p className="text-xs font-medium text-muted-foreground">
-              جرّب المنصة بحساب تجريبي مباشر
-            </p>
-            <div className="mt-1.5 space-y-0.5 text-xs text-muted-foreground">
-              <p>
-                البريد:{" "}
-                <code className="rounded bg-background px-1.5 py-0.5 font-mono text-[11px]">
-                  admin@myacademy.edu
-                </code>
+          {process.env.NODE_ENV !== "production" && (
+            <div className="mt-6 rounded-lg border border-dashed border-border bg-muted/40 p-4 text-center">
+              <p className="text-xs font-medium text-muted-foreground">
+                جرّب المنصة بحساب تجريبي مباشر
               </p>
-              <p>
-                كلمة المرور:{" "}
-                <code className="rounded bg-background px-1.5 py-0.5 font-mono text-[11px]">
-                  demo1234
-                </code>
-              </p>
+              <div className="mt-1.5 space-y-0.5 text-xs text-muted-foreground">
+                <p>
+                  البريد:{" "}
+                  <code className="rounded bg-background px-1.5 py-0.5 font-mono text-[11px]">
+                    admin@myacademy.edu
+                  </code>
+                </p>
+                <p>
+                  كلمة المرور:{" "}
+                  <code className="rounded bg-background px-1.5 py-0.5 font-mono text-[11px]">
+                    demo1234
+                  </code>
+                </p>
+              </div>
+              <DemoLoginButton
+                email="admin@myacademy.edu"
+                password="demo1234"
+                label="دخول تجريبي كأدمن"
+                fullWidth
+                className="mt-3"
+              />
             </div>
-            <DemoLoginButton
-              email="admin@myacademy.edu"
-              password="demo1234"
-              label="دخول تجريبي كأدمن"
-              fullWidth
-              className="mt-3"
-            />
-          </div>
+          )}
           <p className="mt-3 text-center text-sm text-muted-foreground">
             جديد عندنا؟{" "}
             <Link href="/signup" className="font-medium text-primary hover:underline">

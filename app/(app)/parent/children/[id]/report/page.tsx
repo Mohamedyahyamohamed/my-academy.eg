@@ -7,11 +7,12 @@ import { PrintReportButton } from "@/components/shared/print-report-button";
 
 export const dynamic = "force-dynamic";
 
-export default async function ParentStudentReportPage({ params }: { params: { id: string } }) {
+export default async function ParentStudentReportPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const user = requireRole("PARENT");
   const academyId = currentAcademyId();
   const { createServerSupabaseClient } = await import("@/lib/supabase/server");
-  const client = createServerSupabaseClient();
+  const client = await createServerSupabaseClient();
 
   const { data: profileParent } = await client
     .from("parents")

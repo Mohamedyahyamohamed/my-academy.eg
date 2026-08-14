@@ -11,7 +11,8 @@ import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomeworkDetailPage({ params }: { params: { id: string } }) {
+export default async function HomeworkDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   requireRole("ADMIN", "TEACHER");
   const hw = await HomeworkService.getHomework(params.id);
   if (!hw) notFound();

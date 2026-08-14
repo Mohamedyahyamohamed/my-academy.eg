@@ -43,11 +43,12 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function GroupDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function GroupDetailPage(
+  props: {
+    params: Promise<{ id: string }>;
+  }
+) {
+  const params = await props.params;
   const user = requireRole("ADMIN", "TEACHER");
   const isTeacher = user.role === "TEACHER";
   const tid = isTeacher ? currentTeacherId() : null;

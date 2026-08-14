@@ -39,7 +39,7 @@ export async function fetchTableRLS<T = any>(table: string): Promise<T[]> {
   }
   try {
     const { createServerSupabaseClient } = await import("@/lib/supabase/server");
-    const client = createServerSupabaseClient();
+    const client = await createServerSupabaseClient();
     const { data, error } = await client.from(table).select("*");
     if (error || !data) {
       // Fallback on error.

@@ -27,7 +27,7 @@ import { LanguageToggle } from "@/components/layout/language-toggle";
 import { DemoLoginButton } from "@/components/auth/demo-login-button";
 import { Button } from "@/components/ui/button";
 import { APP_CONFIG } from "@/lib/constants";
-import { getCurrentUser, roleHome } from "@/services";
+import { loadCurrentUser, roleHome } from "@/services";
 import { redirect } from "next/navigation";
 
 const features = [
@@ -53,8 +53,8 @@ const faqs = [
   { q: "هل بيانات الأكاديمية محمية؟", a: "نعم. تعتمد المنصة على صلاحيات مرتبطة بالدور والأكاديمية، مع حماية على مستوى قاعدة البيانات وفحص للصلاحيات على الخادم." },
 ];
 
-export default function LandingPage() {
-  const user = getCurrentUser();
+export default async function LandingPage() {
+  const user = await loadCurrentUser();
   if (user) redirect(roleHome(user.role));
 
   const salesWhatsAppUrl = process.env.NEXT_PUBLIC_WHATSAPP_SALES_URL?.trim();

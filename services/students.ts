@@ -164,7 +164,7 @@ export async function listStudents(
   }
 
   const { createServerSupabaseClient } = await import("@/lib/supabase/server");
-  const client = createServerSupabaseClient();
+  const client = await createServerSupabaseClient();
 
   const {
     search = "",
@@ -259,7 +259,7 @@ export async function getStudentDetail(
   }
 
   const { createServerSupabaseClient } = await import("@/lib/supabase/server");
-  const client = createServerSupabaseClient();
+  const client = await createServerSupabaseClient();
 
   const { data, error } = await client
     .from("students")
@@ -292,7 +292,7 @@ export async function getStudent(id: string): Promise<Student | null> {
   }
 
   const { createServerSupabaseClient } = await import("@/lib/supabase/server");
-  const client = createServerSupabaseClient();
+  const client = await createServerSupabaseClient();
 
   const { data, error } = await client
     .from("students")

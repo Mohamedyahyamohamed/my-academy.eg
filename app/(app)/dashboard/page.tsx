@@ -47,11 +47,12 @@ const PERIOD_LABELS: Record<DashboardPeriod, string> = {
 
 const PERIODS: DashboardPeriod[] = ["month", "quarter", "year"];
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Record<string, string | string[] | undefined>;
-}) {
+export default async function DashboardPage(
+  props: {
+    searchParams: Promise<Record<string, string | string[] | undefined>>;
+  }
+) {
+  const searchParams = await props.searchParams;
   requireRole("ADMIN");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];

@@ -25,11 +25,12 @@ const GRADE_LEVEL_AR: Record<string, string> = {
   "Needs Improvement": "يحتاج تحسين",
 };
 
-export default async function ReportsPage({
-  searchParams,
-}: {
-  searchParams: Record<string, string | string[] | undefined>;
-}) {
+export default async function ReportsPage(
+  props: {
+    searchParams: Promise<Record<string, string | string[] | undefined>>;
+  }
+) {
+  const searchParams = await props.searchParams;
   requireRole("ADMIN");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];

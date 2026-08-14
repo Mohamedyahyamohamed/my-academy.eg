@@ -6,11 +6,12 @@ import { GroupsService, MiscService, requireRole } from "@/services";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewLessonPage({
-  searchParams,
-}: {
-  searchParams: Record<string, string | string[] | undefined>;
-}) {
+export default async function NewLessonPage(
+  props: {
+    searchParams: Promise<Record<string, string | string[] | undefined>>;
+  }
+) {
+  const searchParams = await props.searchParams;
   requireRole("ADMIN", "TEACHER");
   const groups = await GroupsService.listGroups();
   const teachers = await MiscService.listTeachers();

@@ -41,7 +41,7 @@ export async function audit(entry: AuditEntry, actor?: { id: string; role: strin
     let ip: string | null = null;
     let ua: string | null = null;
     try {
-      const h = headers();
+      const h = await headers();
       ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
       ua = h.get("user-agent") ?? null;
     } catch {}

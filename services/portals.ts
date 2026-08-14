@@ -123,7 +123,7 @@ async function resolveTeacherForDashboard(user: SessionUser) {
   if (cached || !isSupabaseConfigured()) return cached;
   try {
     const { createServerSupabaseClient } = await import("@/lib/supabase/server");
-    const client = createServerSupabaseClient();
+    const client = await createServerSupabaseClient();
     const byProfile = await client
       .from("teachers")
       .select("*")
@@ -225,7 +225,7 @@ export async function getParentDashboard(user: SessionUser): Promise<ParentDashb
   try {
     if (isSupabaseConfigured()) {
       const { createServerSupabaseClient } = await import("@/lib/supabase/server");
-      const client = createServerSupabaseClient();
+      const client = await createServerSupabaseClient();
       const { data: parent } = await client
         .from("parents")
         .select("*")

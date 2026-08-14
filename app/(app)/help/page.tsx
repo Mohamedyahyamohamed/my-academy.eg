@@ -144,7 +144,7 @@ export default function HelpPage() {
             <Headphones className="h-6 w-6 text-sky-700" />
             <h2 className="mt-4 font-semibold">هل ما زلت تحتاج مساعدة؟</h2>
             <p className="mt-2 flex-1 text-sm leading-6 text-muted-foreground">اكتب وصفًا واضحًا للمشكلة، وحدد الصفحة التي ظهرت فيها. فريق الدعم سيتابع الطلب من داخل المنصة.</p>
-            <Button asChild className="mt-5 w-full"><Link href="/support"><MessageSquareText className="ml-2 h-4 w-4" />تواصل مع الدعم</Link></Button>
+            <Button asChild className="mt-5 w-full"><Link href="/support/tickets"><MessageSquareText className="ml-2 h-4 w-4" />تواصل مع الدعم</Link></Button>
           </CardContent>
         </Card>
       </section>

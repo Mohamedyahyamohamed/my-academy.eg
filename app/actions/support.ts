@@ -18,6 +18,6 @@ export async function createSupportTicketAction(input: CreateSupportTicketInput)
   const user = requireUser();
   const ticket = await createSupportTicket(user, input);
   void audit({ action: "support_ticket.created", entity_type: "support_ticket", entity_id: ticket.id, metadata: { category: ticket.category } });
-  revalidatePath("/support");
+  revalidatePath("/support/tickets");
   return ticket;
 }

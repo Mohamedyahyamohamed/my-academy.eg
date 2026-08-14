@@ -111,13 +111,18 @@ export const PARENT_NAV: NavSection[] = [
     items: [{ titleAr: "لوحة التحكم", titleEn: "Dashboard", href: "/parent", icon: LayoutDashboard }],
   },
   {
-    titleAr: "أبنائي", titleEn: "My Children",
+    titleAr: "متابعة الأبناء", titleEn: "Children Overview",
     items: [
       { titleAr: "الأبناء", titleEn: "Children", href: "/parent/children", icon: Users },
       { titleAr: "الحضور", titleEn: "Attendance", href: "/parent/attendance", icon: CalendarCheck },
       { titleAr: "الواجبات", titleEn: "Homework", href: "/parent/homework", icon: ClipboardList },
       { titleAr: "الدرجات", titleEn: "Grades", href: "/parent/grades", icon: GraduationCap },
-      { titleAr: "المصاريف", titleEn: "Payments", href: "/parent/payments", icon: Wallet },
+      { titleAr: "المدفوعات", titleEn: "Payments", href: "/parent/payments", icon: Wallet },
+    ],
+  },
+  {
+    titleAr: "التواصل", titleEn: "Communication",
+    items: [
       { titleAr: "الرسائل", titleEn: "Messages", href: "/messages", icon: Bell },
       { titleAr: "الإشعارات", titleEn: "Notifications", href: "/notifications", icon: Bell },
       { titleAr: "المساعدة والدعم", titleEn: "Help & Support", href: "/support", icon: CircleHelp },

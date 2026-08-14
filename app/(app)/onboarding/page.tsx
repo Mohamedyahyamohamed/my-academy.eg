@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, CheckCircle2, Building2, BookOpen, Users, Rocket, Mail, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -28,7 +27,7 @@ export default function OnboardingPage() {
   const [sendingInvite, setSendingInvite] = React.useState(false);
   const [inviteSent, setInviteSent] = React.useState(false);
 
-  const complete = async () => {
+  const complete = async (destination = "/dashboard") => {
     setLoading(true);
     try {
       if (academy.name) {
@@ -47,7 +46,7 @@ export default function OnboardingPage() {
         hasGroup: false,
       });
       toast.success("تم تجهيز الأكاديمية بنجاح");
-      router.push("/dashboard");
+      router.push(destination);
     } catch {
       toast.error("حدثت مشكلة. يمكنك إكمال الإعداد لاحقًا من الإعدادات.");
       router.push("/dashboard");
@@ -145,7 +144,15 @@ export default function OnboardingPage() {
               <div className="rounded-lg border bg-muted/20 p-4">
                 <div className="mb-2 flex items-center gap-2 font-medium"><Upload className="h-4 w-4 text-primary" /> استيراد الطلاب</div>
                 <p className="mb-3 text-xs leading-5 text-muted-foreground">ارفع ملف CSV أو الصق البيانات لإضافة الطلاب وأولياء الأمور دفعة واحدة.</p>
-                <Button variant="outline" size="sm" asChild><Link href="/students/import">فتح استيراد الطلاب</Link></Button>
+                          <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => complete("/students/import")}
+                  disabled={loading}
+                >
+                  {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  فتح استيراد الطلاب
+                </Button>
               </div>
               <div className="rounded-lg border bg-muted/20 p-4">
                 <div className="mb-2 flex items-center gap-2 font-medium"><Mail className="h-4 w-4 text-primary" /> دعوة أول مدرس</div>

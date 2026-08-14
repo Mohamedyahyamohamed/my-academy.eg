@@ -12,6 +12,7 @@ import { StudentAvatar } from "@/components/shared/student-avatar";
 import { saveGradesAction } from "@/app/actions/grades";
 import { performanceLevel, performanceColor, performanceLabel } from "@/lib/constants";
 import { fullName, round } from "@/lib/utils";
+import { useClientLang } from "@/lib/i18n-client";
 
 interface GradeEntryProps {
   examId: string;
@@ -21,6 +22,7 @@ interface GradeEntryProps {
 
 export function GradeEntry({ examId, maxScore, roster }: GradeEntryProps) {
   const router = useRouter();
+  const en = useClientLang() === "en";
   const [scores, setScores] = React.useState<Record<string, string>>({});
   const [saving, setSaving] = React.useState(false);
 
@@ -45,18 +47,18 @@ export function GradeEntry({ examId, maxScore, roster }: GradeEntryProps) {
       if (raw === "" || raw == null) continue;
       const n = Number(raw);
       if (Number.isNaN(n)) {
-        toast.error(`درجة غير صالحة للطالب ${r.name}.`);
+        toast.error(en ? `Invalid score for ${r.name}.` : `درجة غير صالحة للطالب ${r.name}.`);
         return;
       }
-      if (n < 0) { toast.error(`لا يمكن أن تكون الدرجات سالبة.`); return; }
-      if (n > maxScore) { toast.error(`تتجاوز درجة ${r.name} الحد الأقصى (${maxScore}).`); return; }
+      if (n < 0) { toast.error(en ? "Scores cannot be negative." : "لا يمكن أن تكون الدرجات سالبة."); return; }
+      if (n > maxScore) { toast.error(en ? `${r.name}'s score exceeds the maximum (${maxScore}).` : `تتجاوز درجة ${r.name} الحد الأقصى (${maxScore}).`); return; }
       entries.push({ studentId: r.studentId, score: n });
     }
     setSaving(true);
     try {
       const res = await saveGradesAction(examId, entries);
-      if (!res.ok) { toast.error(res.error ?? "تعذّر حفظ الدرجات."); return; }
-      toast.success(`تم حفظ درجات ${entries.length} طالب.`);
+      if (!res.ok) { toast.error(res.error ?? (en ? "Could not save grades." : "تعذّر حفظ الدرجات.")); return; }
+      toast.success(en ? `Grades saved for ${entries.length} student(s).` : `تم حفظ درجات ${entries.length} طالب.`);
       router.refresh();
     } finally {
       setSaving(false);
@@ -64,13 +66,13 @@ export function GradeEntry({ examId, maxScore, roster }: GradeEntryProps) {
   };
 
   return (
-    <>
-      <div className="mb-4 flex items-center gap-3">
-        <Badge variant="secondary">متوسط المجموعة</Badge>
+    <div dir={en ? "ltr" : "rtl"}>
+      <div className="mb-4 flex items-center gap-3" dir={en ? "ltr" : "rtl"}>
+        <Badge variant="secondary">{en ? "Group average" : "متوسط المجموعة"}</Badge>
         <span className="text-lg font-semibold">{avg}%</span>
         <Badge className={performanceColor(performanceLevel(avg))}>{performanceLabel(performanceLevel(avg))}</Badge>
         <Button onClick={save} disabled={saving} className="ml-auto">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} حفظ الدرجات
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {en ? "Save grades" : "حفظ الدرجات"}
         </Button>
       </div>
       <Card>
@@ -107,6 +109,6 @@ export function GradeEntry({ examId, maxScore, roster }: GradeEntryProps) {
           })}
         </CardContent>
       </Card>
-    </>
+    </div>
   );
 }

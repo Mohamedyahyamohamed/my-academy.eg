@@ -76,6 +76,7 @@ export function normalizePhoneE164(
 export interface SendResult {
   ok: boolean;
   messageId?: string;
+  mediaId?: string;
   error?: string;
 }
 
@@ -154,4 +155,120 @@ export async function sendWhatsAppTemplate(
   };
   if (components) template.components = components;
   return postMessage({ to: number, type: "template", template });
+}
+
+/**
+ * رفع صورة مؤقتة إلى WhatsApp Cloud API. لا نسجل محتوى الصورة أو التوكن.
+ * Meta تحتفظ بالوسيط لمدة محدودة؛ يستدعي المرسل delete بعد نجاح الإرسال.
+ */
+async function uploadWhatsAppMedia(
+  image: Uint8Array,
+  mimeType = "image/png",
+  fileName = "student-qr.png",
+): Promise<{ ok: boolean; mediaId?: string; error?: string }> {
+  const { token, phoneNumberId } = getCreds();
+  if (!token || !phoneNumberId) {
+    return {
+      ok: false,
+      error:
+        "WhatsApp not configured (missing WHATSAPP_TOKEN or WHATSAPP_PHONE_NUMBER_ID).",
+    };
+  }
+
+  try {
+    const form = new FormData();
+    form.append("messaging_product", "whatsapp");
+    form.append("type", mimeType);
+    const arrayBuffer = new ArrayBuffer(image.byteLength);
+    new Uint8Array(arrayBuffer).set(image);
+    form.append("file", new Blob([arrayBuffer], { type: mimeType }), fileName);
+    const res = await fetch(`${BASE_URL}/${phoneNumberId}/media`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || typeof data?.id !== "string") {
+      return {
+        ok: false,
+        error: String(data?.error?.message || data?.error?.error_user_msg || "WhatsApp media upload failed"),
+      };
+    }
+    return { ok: true, mediaId: data.id };
+  } catch (e) {
+    return { ok: false, error: (e as Error)?.message || "WhatsApp media upload failed" };
+  }
+}
+
+async function deleteWhatsAppMedia(mediaId: string): Promise<void> {
+  const { token, phoneNumberId } = getCreds();
+  if (!token || !phoneNumberId || !mediaId) return;
+  try {
+    await fetch(`${BASE_URL}/${mediaId}?phone_number_id=${encodeURIComponent(phoneNumberId)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    // التنظيف best-effort ولا يجب أن يغيّر نتيجة التسليم.
+  }
+}
+
+/** إرسال صورة PNG مرفوعة كوسيط WhatsApp مع caption اختياري. */
+export async function sendWhatsAppImage(
+  to: string,
+  image: Uint8Array,
+  caption?: string,
+): Promise<SendResult> {
+  const number = normalizePhoneE164(to);
+  if (!number) return { ok: false, error: "Invalid phone number" };
+  const uploaded = await uploadWhatsAppMedia(image);
+  if (!uploaded.ok || !uploaded.mediaId) return uploaded;
+
+  const result = await postMessage({
+    to: number,
+    type: "image",
+    image: { id: uploaded.mediaId, ...(caption ? { caption } : {}) },
+  });
+  if (result.ok) {
+    await deleteWhatsAppMedia(uploaded.mediaId);
+  }
+  return { ...result, mediaId: uploaded.mediaId };
+}
+
+/**
+ * إرسال QR داخل قالب Utility معتمد يحتوي على image header.
+ * هذا هو المسار المفضل للرسائل التي تبدأها الأكاديمية خارج نافذة 24 ساعة.
+ */
+export async function sendWhatsAppTemplateWithImage(
+  to: string,
+  image: Uint8Array,
+  templateName: string,
+  languageCode = "ar",
+  bodyText?: string,
+): Promise<SendResult> {
+  const number = normalizePhoneE164(to);
+  if (!number) return { ok: false, error: "Invalid phone number" };
+  if (!templateName.trim()) return { ok: false, error: "Missing WhatsApp template name" };
+  const uploaded = await uploadWhatsAppMedia(image);
+  if (!uploaded.ok || !uploaded.mediaId) return uploaded;
+
+  const components: unknown[] = [
+    { type: "header", parameters: [{ type: "image", image: { id: uploaded.mediaId } }] },
+  ];
+  if (bodyText) {
+    components.push({ type: "body", parameters: [{ type: "text", text: bodyText }] });
+  }
+  const result = await postMessage({
+    to: number,
+    type: "template",
+    template: {
+      name: templateName,
+      language: { code: languageCode },
+      components,
+    },
+  });
+  if (result.ok) {
+    await deleteWhatsAppMedia(uploaded.mediaId);
+  }
+  return { ...result, mediaId: uploaded.mediaId };
 }

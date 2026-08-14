@@ -26,7 +26,21 @@
 | `WHATSAPP_PHONE_NUMBER_ID` | `1259123917281557` | ✅ نعم |
 | `WHATSAPP_NOTIFICATION_TEMPLATE` | اسم قالب معتمد (مثل `hello_world`) | اختياري |
 | `WHATSAPP_TEMPLATE_LANG` | كود اللغة (افتراضي `ar`) | اختياري |
-| `WHATSAPP_API_VERSION` | إصدار Graph API (افتراضي `v21.0`) | اختياري |
+| `WHATSAPP_API_VERSION` | إصدار Graph API (افتراضي `v26.0`) | اختياري |
+| `WHATSAPP_MODE` | `live` لتفعيل الإرسال الفعلي؛ القيمة الافتراضية الآمنة `demo` | ✅ للتفعيل |
+| `WHATSAPP_QR_AUTO_SEND` | `true` لتسليم QR تلقائيًا عند إنشاء الطالب | ✅ للتفعيل |
+| `WHATSAPP_QR_RECIPIENT` | `student` لإرسال QR لرقم الطالب، أو `parent` لرقم ولي الأمر | اختياري |
+| `WHATSAPP_STUDENT_QR_TEMPLATE` | اسم قالب Utility معتمد له image header؛ يفضّل ضبطه للرسائل التي تبدأها الأكاديمية | اختياري، لكنه موصى به |
+
+---
+
+## 🪪 إرسال QR الطالب تلقائيًا
+
+بعد إنشاء طالب جديد من شاشة الطلاب، يقرأ النظام رقم الهاتف المسجل في حقل الطالب ويرسل إليه صورة PNG تحتوي على نفس QR المستخدم في شاشة الحضور (`MA:<studentId>`). العملية لا تمنع حفظ الطالب إذا كان واتساب غير مضبوط أو فشل الإرسال، وتُسجل النتيجة في `whatsapp_message_logs` تحت الحدث `STUDENT_QR`.
+
+لتفعيل ذلك في Vercel Production، اضبط `WHATSAPP_MODE=live` و`WHATSAPP_QR_AUTO_SEND=true`. الإعداد الافتراضي للمستلم هو `student`. ولحماية الإرسال، يجب أن تكون موافقة واتساب مسجلة في نموذج الطالب؛ وإذا اخترت `parent` فيجب أن يكون ولي الأمر لديه سجل opt-in فعال في `whatsapp_preferences`.
+
+هذا المسار يستخدم رفع الوسيط إلى Meta ثم إرسال صورة، وبعدها يحاول حذف الوسيط من Meta. عند ضبط `WHATSAPP_STUDENT_QR_TEMPLATE` يستخدم النظام قالبًا معتمدًا يحتوي على `image header`، ويضع اسم الطالب في body parameter اختياري. إذا تُرك المتغير فارغًا يستخدم image message مباشرًا، وهو مناسب فقط عندما تسمح نافذة المحادثة بذلك. أنشئ القالب في WhatsApp Manager كنوع Utility، واجعل الصورة في Header، وأضف متغيرًا نصيًا في Body إذا أردت عرض اسم الطالب.
 
 ---
 

@@ -1,8 +1,11 @@
+import QRCode from "qrcode";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import {
   isWhatsAppLiveEnabled,
   normalizePhoneE164,
+  sendWhatsAppImage,
   sendWhatsAppTemplate,
+  sendWhatsAppTemplateWithImage,
 } from "@/lib/whatsapp";
 
 /** لا نرسل سوى تنبيهات تشغيلية Utility؛ لا يوجد إرسال تسويقي في هذا المسار. */
@@ -10,12 +13,14 @@ export type WhatsAppEventType =
   | "ATTENDANCE_ABSENCE"
   | "GRADE_POSTED"
   | "PAYMENT_RECORDED"
+  | "STUDENT_QR"
   | "GENERAL";
 
 const TEMPLATE_BY_EVENT: Record<WhatsAppEventType, string> = {
   ATTENDANCE_ABSENCE: "WHATSAPP_ATTENDANCE_TEMPLATE",
   GRADE_POSTED: "WHATSAPP_GRADE_TEMPLATE",
   PAYMENT_RECORDED: "WHATSAPP_PAYMENT_TEMPLATE",
+  STUDENT_QR: "WHATSAPP_STUDENT_QR_TEMPLATE",
   GENERAL: "WHATSAPP_NOTIFICATION_TEMPLATE",
 };
 
@@ -85,7 +90,7 @@ async function parentHasWhatsAppOptIn(academyId: string, parentId: string): Prom
 
 async function logWhatsAppAttempt(input: {
   academyId: string;
-  parentId: string;
+  parentId: string | null;
   studentId: string;
   eventType: WhatsAppEventType;
   templateName?: string | null;
@@ -111,6 +116,98 @@ async function logWhatsAppAttempt(input: {
     });
   } catch {
     // يبقى سجل الإرسال ميزة مراقبة فقط، ولا يعطل العملية التعليمية الأساسية.
+  }
+}
+
+/**
+ * إرسال QR الطالب كصورة فعلية إلى الرقم المسجل للطالب أو ولي الأمر.
+ * الإرسال best-effort ومفصول عن مسار إنشاء الطالب.
+ */
+export async function notifyStudentQrWhatsApp(
+  studentId: string,
+  consentGivenOverride = false,
+): Promise<void> {
+  const client = nodeSupabaseClient();
+  if (!client) return;
+
+  const { data } = await client
+    .from("students")
+    .select("academy_id,id,first_name,last_name,phone,consent_given,parent_id,parent:parents!parent_id(id,phone)")
+    .eq("id", studentId)
+    .maybeSingle();
+  const student = data as any;
+  if (!student?.academy_id || student.id !== studentId) return;
+
+  const parent = Array.isArray(student.parent) ? student.parent[0] : student.parent;
+  const mode = (process.env.WHATSAPP_QR_RECIPIENT || "student").toLowerCase();
+  const recipientKind = mode === "parent" ? "parent" : "student";
+  const recipientPhone = recipientKind === "parent" ? parent?.phone : student.phone;
+  const parentId = parent?.id ?? student.parent_id ?? null;
+  const studentName = [student.first_name, student.last_name].filter(Boolean).join(" ") || "الطالب";
+
+  const log = (input: {
+    status: "SKIPPED" | "ACCEPTED" | "FAILED";
+    phone?: string | null;
+    failureReason?: string;
+    externalMessageId?: string;
+  }) => logWhatsAppAttempt({
+    academyId: student.academy_id,
+    parentId,
+    studentId,
+    eventType: "STUDENT_QR",
+    phone: input.phone ?? recipientPhone,
+    status: input.status,
+    failureReason: input.failureReason,
+    externalMessageId: input.externalMessageId,
+  });
+
+  if (process.env.WHATSAPP_QR_AUTO_SEND?.toLowerCase() !== "true") {
+    await log({ status: "SKIPPED", failureReason: "Automatic student QR delivery is disabled" });
+    return;
+  }
+  if (!isWhatsAppLiveEnabled()) {
+    await log({ status: "SKIPPED", failureReason: "WhatsApp live mode is disabled" });
+    return;
+  }
+  if (recipientKind === "student" && student.consent_given !== true && consentGivenOverride !== true) {
+    await log({ status: "SKIPPED", failureReason: "Student WhatsApp consent is missing" });
+    return;
+  }
+  if (recipientKind === "parent" && (!parentId || !(await parentHasWhatsAppOptIn(student.academy_id, parentId)))) {
+    await log({ status: "SKIPPED", failureReason: "Parent WhatsApp opt-in is missing" });
+    return;
+  }
+  const normalized = normalizePhoneE164(recipientPhone);
+  if (!normalized) {
+    await log({ status: "SKIPPED", failureReason: `The ${recipientKind} phone is missing or invalid` });
+    return;
+  }
+
+  try {
+    const qrPng = await QRCode.toBuffer(`MA:${studentId}`, {
+      type: "png",
+      width: 600,
+      margin: 2,
+      errorCorrectionLevel: "M",
+    });
+    const qrMessage = `بطاقة QR الخاصة بالطالب ${studentName}. اعرضها للمدرس عند تسجيل الحضور.`;
+    const qrTemplate = templateFor("STUDENT_QR");
+    const result = qrTemplate
+      ? await sendWhatsAppTemplateWithImage(
+          normalized,
+          qrPng,
+          qrTemplate,
+          templateLanguage(),
+          studentName,
+        )
+      : await sendWhatsAppImage(normalized, qrPng, qrMessage);
+    await log({
+      status: result.ok ? "ACCEPTED" : "FAILED",
+      externalMessageId: result.messageId,
+      failureReason: result.error,
+    });
+  } catch (error) {
+    await log({ status: "FAILED", failureReason: (error as Error)?.message || "QR delivery failed" });
   }
 }
 

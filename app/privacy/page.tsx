@@ -1,11 +1,11 @@
 import { AlertTriangle, Download, ShieldCheck } from "lucide-react";
 import { APP_CONFIG } from "@/lib/constants";
-import { getCurrentUser } from "@/services";
+import { loadCurrentUser } from "@/services/session";
 
 export const metadata = { title: "سياسة الخصوصية" };
 
-export default function PrivacyPage() {
-  const user = getCurrentUser();
+export default async function PrivacyPage() {
+  const user = await loadCurrentUser();
   const canExport = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
 
   return (

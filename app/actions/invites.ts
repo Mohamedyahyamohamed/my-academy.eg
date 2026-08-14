@@ -4,7 +4,7 @@ import { createHash, randomBytes } from "crypto";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { audit } from "@/services/audit";
-import { currentAcademyId, getCurrentUser, requireScopedRole, roleHome } from "@/services/session";
+import { getCurrentUser, requireScopedRole, roleHome } from "@/services/session";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { isSupabaseConfigured } from "@/services/supabase/config";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
@@ -99,6 +99,10 @@ export async function createAcademyInviteAction(input: {
   expiresInDays?: number;
 }): Promise<{ ok: boolean; error?: string; emailSent?: boolean; inviteUrl?: string }> {
   const actor = await requireScopedRole("ADMIN");
+  // Keep the tenant id attached to the authenticated actor. Reading it again
+  // from AsyncLocalStorage after several awaited database calls can lose the
+  // request context in Server Actions and incorrectly throw a generic error.
+  const academyId = actor.academy_id;
   const email = normalizeEmail(input.email);
   const fullName = input.fullName?.trim() || undefined;
   const phone = input.phone?.trim() || undefined;
@@ -115,7 +119,6 @@ export async function createAcademyInviteAction(input: {
   const client = nodeSupabaseClient();
   if (!client) return { ok: false, error: "تعذّر الاتصال بقاعدة البيانات." };
 
-  const academyId = currentAcademyId();
   const now = new Date();
   const days = Math.min(Math.max(Number(input.expiresInDays) || DEFAULT_EXPIRY_DAYS, 1), MAX_EXPIRY_DAYS);
   const expiresAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000).toISOString();
@@ -205,12 +208,12 @@ export async function createAcademyInviteAction(input: {
 
 /** Admin-only revocation; accepted invitations are retained as an audit record. */
 export async function revokeAcademyInviteAction(inviteId: string): Promise<{ ok: boolean; error?: string }> {
-  await requireScopedRole("ADMIN");
+  const actor = await requireScopedRole("ADMIN");
   if (!inviteId) return { ok: false, error: "معرّف الدعوة غير صالح." };
   const client = nodeSupabaseClient();
   if (!client) return { ok: false, error: "تعذّر الاتصال بقاعدة البيانات." };
 
-  const academyId = currentAcademyId();
+  const academyId = actor.academy_id;
   const now = new Date().toISOString();
   const { data, error } = await client
     .from("academy_invites")

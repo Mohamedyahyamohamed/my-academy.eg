@@ -9,6 +9,7 @@ import { StudentAvatar } from "@/components/shared/student-avatar";
 import { scanCheckinAction } from "@/app/actions/attendance";
 import { fullName } from "@/lib/utils";
 import type { Group, Lesson, Student } from "@/types";
+import { useClientLang } from "@/lib/i18n-client";
 
 export function ScanWorkshop({
   groups, lessons, students,
@@ -17,6 +18,7 @@ export function ScanWorkshop({
   lessons: Lesson[];
   students: Student[];
 }) {
+  const en = useClientLang() === "en";
   const [groupId, setGroupId] = React.useState("");
   const [lessonId, setLessonId] = React.useState("");
   const [scanning, setScanning] = React.useState(false);
@@ -45,7 +47,7 @@ export function ScanWorkshop({
         () => {},
       )
       .catch((e) => {
-        setError("تعذّر تشغيل الكاميرا. تأكّد من الإذن ومن أنك على HTTPS.");
+        setError(en ? "Could not start the camera. Check camera permission and make sure you are using HTTPS." : "تعذّر تشغيل الكاميرا. تأكّد من الإذن ومن أنك على HTTPS.");
         setScanning(false);
       });
   };
@@ -70,32 +72,32 @@ export function ScanWorkshop({
 
     const student = students.find((s) => s.id === studentId);
     if (!student) {
-      setLog((l) => [{ name: "كود غير معروف", status: "غير معروف", at: new Date().toLocaleTimeString() }, ...l]);
+      setLog((l) => [{ name: en ? "Unknown code" : "كود غير معروف", status: en ? "Unknown" : "غير معروف", at: new Date().toLocaleTimeString(en ? "en-GB" : "ar-EG") }, ...l]);
       return;
     }
     const res = await scanCheckinAction(lessonId, studentId);
     setLog((l) => [
-      { name: fullName(student), status: res?.ok ? "تم تسجيل الحضور ✓" : "فشل", at: new Date().toLocaleTimeString() },
+      { name: fullName(student), status: res?.ok ? (en ? "Attendance recorded ✓" : "تم تسجيل الحضور ✓") : (en ? "Failed" : "فشل"), at: new Date().toLocaleTimeString(en ? "en-GB" : "ar-EG") },
       ...l,
     ]);
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" dir={en ? "ltr" : "rtl"}>
       {/* Setup */}
       <Card>
         <CardContent className="grid gap-4 p-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">1. اختر الجروب</label>
+            <label className="text-sm font-medium">{en ? "1. Choose group" : "1. اختر الجروب"}</label>
             <select value={groupId} onChange={(e) => { setGroupId(e.target.value); setLessonId(""); }} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-              <option value="">اختر…</option>
+              <option value="">{en ? "Choose…" : "اختر…"}</option>
               {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">2. اختر الدرس</label>
+            <label className="text-sm font-medium">{en ? "2. Choose lesson" : "2. اختر الدرس"}</label>
             <select value={lessonId} onChange={(e) => setLessonId(e.target.value)} disabled={!groupId} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50">
-              <option value="">اختر…</option>
+              <option value="">{en ? "Choose…" : "اختر…"}</option>
               {groupLessons.map((l) => <option key={l.id} value={l.id}>{l.topic} — {new Date(l.date).toLocaleDateString()}</option>)}
             </select>
           </div>
@@ -103,7 +105,7 @@ export function ScanWorkshop({
       </Card>
 
       {!groupId || !lessonId ? (
-        <p className="text-center text-sm text-muted-foreground">اختر جروب ودرس الأول عشان تبدأ المسح.</p>
+        <p className="text-center text-sm text-muted-foreground">{en ? "Choose a group and lesson to start scanning." : "اختر جروب ودرس الأول عشان تبدأ المسح."}</p>
       ) : (
         <>
           {/* Scanner */}
@@ -111,19 +113,19 @@ export function ScanWorkshop({
             <CardContent className="p-4">
               {!scanning ? (
                 <Button onClick={startCamera} className="w-full">
-                  <Camera className="h-4 w-4" /> ابدأ المسح بالكاميرا
+                  <Camera className="h-4 w-4" /> {en ? "Start camera scanning" : "ابدأ المسح بالكاميرا"}
                 </Button>
               ) : (
                 <div className="space-y-3">
                   <div id="qr-reader" className="mx-auto overflow-hidden rounded-xl" />
                   <Button onClick={stopCamera} variant="outline" className="w-full">
-                    <CameraOff className="h-4 w-4" /> إيقاف الكاميرا
+                    <CameraOff className="h-4 w-4" /> {en ? "Stop camera" : "إيقاف الكاميرا"}
                   </Button>
                 </div>
               )}
               {error && <p className="mt-2 text-center text-sm text-destructive">{error}</p>}
               <p className="mt-2 flex items-center justify-center gap-1 text-center text-xs text-muted-foreground">
-                <ScanLine className="h-3.5 w-3.5" /> وجّه الكاميرا لكود الطالب
+                <ScanLine className="h-3.5 w-3.5" /> {en ? "Point the camera at the student's code" : "وجّه الكاميرا لكود الطالب"}
               </p>
             </CardContent>
           </Card>
@@ -131,9 +133,9 @@ export function ScanWorkshop({
           {/* Log */}
           <Card>
             <CardContent className="p-0">
-              <div className="border-b px-4 py-2.5 text-sm font-semibold">سجل الحضور ({log.length})</div>
+              <div className="border-b px-4 py-2.5 text-sm font-semibold">{en ? "Attendance log" : "سجل الحضور"} ({log.length})</div>
               {log.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">امسح كود طالب ليظهر هنا…</p>
+                <p className="py-6 text-center text-sm text-muted-foreground">{en ? "Scan a student code to see it here…" : "امسح كود طالب ليظهر هنا…"}</p>
               ) : (
                 <div className="divide-y">
                   {log.map((entry, i) => (

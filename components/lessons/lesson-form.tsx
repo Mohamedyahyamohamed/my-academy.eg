@@ -20,6 +20,7 @@ import {
 import { lessonSchema, type LessonValues } from "@/schemas";
 import { createLessonAction, updateLessonAction } from "@/app/actions/lessons";
 import type { Group, Lesson, Teacher } from "@/types";
+import { useClientLang } from "@/lib/i18n-client";
 
 interface LessonFormProps {
   lesson?: Lesson;
@@ -31,6 +32,7 @@ interface LessonFormProps {
 
 export function LessonForm({ lesson, groups, teachers, defaultGroupId, onDone }: LessonFormProps) {
   const router = useRouter();
+  const en = useClientLang() === "en";
   const [saving, setSaving] = React.useState(false);
 
   const {
@@ -61,16 +63,16 @@ export function LessonForm({ lesson, groups, teachers, defaultGroupId, onDone }:
     try {
       if (lesson) {
         await updateLessonAction(lesson.id, values);
-        toast.success("تم تحديث الحصة.");
+        toast.success(en ? "Lesson updated." : "تم تحديث الحصة.");
         onDone?.();
       } else {
         const l = await createLessonAction(values);
-        toast.success("تم إنشاء الحصة.");
+        toast.success(en ? "Lesson created." : "تم إنشاء الحصة.");
         router.push(`/lessons/${l.id}`);
       }
       router.refresh();
     } catch {
-      toast.error("حدث خطأ غير متوقع.");
+      toast.error(en ? "An unexpected error occurred." : "حدث خطأ غير متوقع.");
     } finally {
       setSaving(false);
     }
@@ -79,7 +81,7 @@ export function LessonForm({ lesson, groups, teachers, defaultGroupId, onDone }:
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="المجموعة" error={errors.group_id?.message} required>
+        <Field label={en ? "Group" : "المجموعة"} error={errors.group_id?.message} required>
           <Controller
             control={control}
             name="group_id"
@@ -94,7 +96,7 @@ export function LessonForm({ lesson, groups, teachers, defaultGroupId, onDone }:
                   }
                 }}
               >
-                <SelectTrigger><SelectValue placeholder="اختر المجموعة" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={en ? "Choose group" : "اختر المجموعة"} /></SelectTrigger>
                 <SelectContent>
                   {groups.map((g) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
                 </SelectContent>
@@ -102,13 +104,13 @@ export function LessonForm({ lesson, groups, teachers, defaultGroupId, onDone }:
             )}
           />
         </Field>
-        <Field label="المعلّم" error={errors.teacher_id?.message} required>
+        <Field label={en ? "Teacher" : "المعلّم"} error={errors.teacher_id?.message} required>
           <Controller
             control={control}
             name="teacher_id"
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger><SelectValue placeholder="اختر المعلّم" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={en ? "Choose teacher" : "اختر المعلّم"} /></SelectTrigger>
                 <SelectContent>
                   {teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.first_name} {t.last_name}</SelectItem>)}
                 </SelectContent>
@@ -116,32 +118,32 @@ export function LessonForm({ lesson, groups, teachers, defaultGroupId, onDone }:
             )}
           />
         </Field>
-        <Field label="التاريخ" error={errors.date?.message} required>
+        <Field label={en ? "Date" : "التاريخ"} error={errors.date?.message} required>
           <Input type="date" {...register("date")} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="وقت البداية" error={errors.start_time?.message} required>
+          <Field label={en ? "Start time" : "وقت البداية"} error={errors.start_time?.message} required>
             <Input type="time" {...register("start_time")} />
           </Field>
-          <Field label="وقت النهاية" error={errors.end_time?.message} required>
+          <Field label={en ? "End time" : "وقت النهاية"} error={errors.end_time?.message} required>
             <Input type="time" {...register("end_time")} />
           </Field>
         </div>
       </div>
-      <Field label="الموضوع" error={errors.topic?.message} required>
-        <Input {...register("topic")} placeholder="مثال: المعادلات الخطية" />
+      <Field label={en ? "Topic" : "الموضوع"} error={errors.topic?.message} required>
+        <Input {...register("topic")} placeholder={en ? "e.g. Linear equations" : "مثال: المعادلات الخطية"} />
       </Field>
-      <Field label="الوصف">
-        <Textarea {...register("description")} placeholder="ما الذي ستغطيه هذه الحصة؟" />
+      <Field label={en ? "Description" : "الوصف"}>
+        <Textarea {...register("description")} placeholder={en ? "What will this lesson cover?" : "ما الذي ستغطيه هذه الحصة؟"} />
       </Field>
-      <Field label="ملاحظات">
-        <Textarea {...register("notes")} placeholder="ملاحظات تدريسية خاصة…" />
+      <Field label={en ? "Notes" : "ملاحظات"}>
+        <Textarea {...register("notes")} placeholder={en ? "Private teaching notes…" : "ملاحظات تدريسية خاصة…"} />
       </Field>
       <div className="flex justify-end gap-2 pt-2">
-        {onDone && <Button type="button" variant="outline" onClick={onDone}>إلغاء</Button>}
+        {onDone && <Button type="button" variant="outline" onClick={onDone}>{en ? "Cancel" : "إلغاء"}</Button>}
         <Button type="submit" disabled={saving}>
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-          {lesson ? "حفظ التعديلات" : "إنشاء حصة"}
+          {lesson ? (en ? "Save changes" : "حفظ التعديلات") : (en ? "Create lesson" : "إنشاء حصة")}
         </Button>
       </div>
     </form>

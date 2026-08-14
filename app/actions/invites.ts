@@ -65,15 +65,18 @@ function displayNameParts(fullName: string): { firstName: string; lastName: stri
 }
 
 /** Admin-only list of invitations for the current academy. */
-export async function listAcademyInvites(): Promise<AcademyInviteView[]> {
-  await requireScopedRole("ADMIN");
+export async function listAcademyInvites(academyId?: string): Promise<AcademyInviteView[]> {
+  const user = await requireScopedRole("ADMIN");
   const client = nodeSupabaseClient();
   if (!client) return [];
+
+  const scopedAcademyId = academyId ?? user.academy_id;
+  if (scopedAcademyId !== user.academy_id) return [];
 
   const { data, error } = await client
     .from("academy_invites")
     .select("id,email,role,expires_at,accepted_at,revoked_at,created_at,metadata")
-    .eq("academy_id", currentAcademyId())
+    .eq("academy_id", scopedAcademyId)
     .order("created_at", { ascending: false })
     .limit(100);
 

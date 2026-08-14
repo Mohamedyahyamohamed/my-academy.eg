@@ -13,6 +13,8 @@ import { persistInsert, persistDelete } from "./data/store";
 import { fullName, groupsForStudent, byAcademy, fetchTableRLS } from "./_shared";
 import { currentAcademyId } from "./session";
 import { APP_CONFIG } from "@/lib/constants";
+import { isSupabaseConfigured } from "./supabase/config";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 /* ---------------- Courses ---------------- */
 
@@ -157,6 +159,29 @@ export function getAcademy(academyId?: string): Academy {
   const academy = collections().academies.find((item) => item.id === activeAcademyId);
   if (!academy) throw new Error("Academy data is unavailable for the active session.");
   return academy;
+}
+
+/**
+ * Resolve academy metadata for async Server Components. The in-memory snapshot
+ * remains the fast path, while the direct request-bound query prevents a
+ * transient AsyncLocalStorage/hydration miss from taking down the whole app.
+ */
+export async function getAcademyAsync(academyId?: string): Promise<Academy> {
+  const activeAcademyId = academyId ?? currentAcademyId();
+  const cached = collections().academies.find((item) => item.id === activeAcademyId);
+  if (cached) return cached;
+
+  if (isSupabaseConfigured()) {
+    const client = await createServerSupabaseClient();
+    const { data, error } = await client
+      .from("academies")
+      .select("*")
+      .eq("id", activeAcademyId)
+      .maybeSingle();
+    if (!error && data) return data as Academy;
+  }
+
+  throw new Error("Academy data is unavailable for the active session.");
 }
 
 export function updateAcademy(input: Partial<Academy>): Academy {

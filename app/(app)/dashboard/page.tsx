@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PaymentStatusBadge } from "@/components/shared/badges";
 import { TrendArea, Donut, LineTrend } from "@/components/charts";
-import { DashboardService, MiscService, requireRole } from "@/services";
+import { DashboardService, MiscService, requireScopedRole } from "@/services";
 import { atRiskStudents } from "@/services/insights";
 import { formatCurrency, formatDate, formatTime, initials } from "@/lib/utils";
 import type { DashboardPeriod } from "@/types";
@@ -55,7 +55,7 @@ export default async function DashboardPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  requireRole("ADMIN");
+  await requireScopedRole("ADMIN");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
   const period: DashboardPeriod =

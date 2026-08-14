@@ -29,10 +29,10 @@ export default async function SettingsPage({
   // صفحات App Router قد تُرسم بالتوازي مع التخطيط؛ نُحمّل لقطة المستأجر
   // صراحةً قبل أي قراءة متزامنة من المخزن حتى لا تفشل جلسة صحيحة مؤقتًا.
   const user = await requireScopedRole("ADMIN");
-  const academy = MiscService.getAcademy(user.academy_id);
+  const academy = await MiscService.getAcademyAsync(user.academy_id);
   const courses = await MiscService.listCourses(user.academy_id);
   const users = MiscService.listProfiles(user.academy_id);
-  const invites = await listAcademyInvites();
+  const invites = await listAcademyInvites(user.academy_id);
 
   return (
     <div className="space-y-6">

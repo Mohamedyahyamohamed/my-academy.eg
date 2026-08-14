@@ -8,9 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import { useClientLang } from "@/lib/i18n-client";
 
 /** Teacher shows a signed, short-lived QR for student self check-in. */
 export function QrCheckin({ lessonId }: { lessonId: string }) {
+  const en = useClientLang() === "en";
   const [open, setOpen] = React.useState(false);
   const [origin, setOrigin] = React.useState("");
   const [token, setToken] = React.useState("");
@@ -43,13 +45,13 @@ export function QrCheckin({ lessonId }: { lessonId: string }) {
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v && !token) generate(); }}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm"><QrCode className="h-4 w-4" /> تسجيل الحضور بالـ QR</Button>
+        <Button variant="outline" size="sm"><QrCode className="h-4 w-4" /> {en ? "QR attendance" : "تسجيل الحضور بالـ QR"}</Button>
       </DialogTrigger>
       <DialogContent className="max-w-sm text-center">
         <DialogHeader>
-          <DialogTitle>حضور آمن بالـ QR</DialogTitle>
+          <DialogTitle>{en ? "Secure QR attendance" : "حضور آمن بالـ QR"}</DialogTitle>
           <DialogDescription>
-            Token expires in {remaining > 0 ? `${remaining}s` : "—"}. Students scan to check in.
+            {en ? "Token expires in" : "ينتهي الرمز خلال"} {remaining > 0 ? `${remaining}s` : "—"}. {en ? "Students scan to check in." : "يمسح الطلاب الرمز لتسجيل الحضور."}
           </DialogDescription>
         </DialogHeader>
         {token ? (
@@ -62,15 +64,15 @@ export function QrCheckin({ lessonId }: { lessonId: string }) {
                 <Clock className="h-3 w-3" /> {remaining}s
               </Badge>
               <Button size="sm" variant="ghost" onClick={generate}>
-                <RefreshCw className="h-3.5 w-3.5" /> تحديث
+                <RefreshCw className="h-3.5 w-3.5" /> {en ? "Refresh" : "تحديث"}
               </Button>
             </div>
           </div>
         ) : (
-          <Button onClick={generate}><RefreshCw className="h-4 w-4" /> إنشاء رمز QR</Button>
+          <Button onClick={generate}><RefreshCw className="h-4 w-4" /> {en ? "Generate QR code" : "إنشاء رمز QR"}</Button>
         )}
         <Button variant="outline" onClick={() => setOpen(false)}>
-          <X className="h-4 w-4" /> إغلاق
+          <X className="h-4 w-4" /> {en ? "Close" : "إغلاق"}
         </Button>
       </DialogContent>
     </Dialog>

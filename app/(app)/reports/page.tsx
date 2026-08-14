@@ -14,6 +14,8 @@ import {
 } from "@/services";
 import { APP_CONFIG, performanceLevel, performanceColor } from "@/lib/constants";
 import { formatCurrency, formatDate, fullName, percentage } from "@/lib/utils";
+import { cookies } from "next/headers";
+import { getLangFromCookie } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +32,8 @@ export default async function ReportsPage(
   }
 ) {
   const searchParams = await props.searchParams;
+  const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
+  const en = lang === "en";
   const user = await requireScopedRole("ADMIN");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
@@ -59,29 +63,29 @@ export default async function ReportsPage(
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <div className="no-print">
         <PageHeader
-          title="التقارير"
-          description="أنشئ واطبع تقارير الأكاديمية. استخدم الفلاتر للتركيز على مجموعة محددة."
+          title={en ? "Reports" : "التقارير"}
+          description={en ? "Create and print academy reports. Use filters to focus on a specific group." : "أنشئ واطبع تقارير الأكاديمية. استخدم الفلاتر للتركيز على مجموعة محددة."}
         >
-          <PrintButton label="طباعة التقرير" />
+          <PrintButton label={en ? "Print report" : "طباعة التقرير"} />
           <ExportCSV
             filename={`تقرير-الطلاب-${new Date().toISOString().slice(0, 10)}`}
             rows={exportRows}
             columns={[
-              { key: "name", label: "الطالب" },
-              { key: "grade", label: "الصف الدراسي" },
-              { key: "status", label: "الحالة" },
-              { key: "groups", label: "المجموعات" },
+              { key: "name", label: en ? "Student" : "الطالب" },
+              { key: "grade", label: en ? "Grade" : "الصف الدراسي" },
+              { key: "status", label: en ? "Status" : "الحالة" },
+              { key: "groups", label: en ? "Groups" : "المجموعات" },
             ]}
-            label="تصدير Excel"
+            label={en ? "Export Excel" : "تصدير Excel"}
           />
         </PageHeader>
         <div className="card-surface p-4">
           <ToolbarRoot>
-            <ToolbarSelect paramKey="group" label="تصفية بمجموعة" options={[
-              { value: "ALL", label: "كل المجموعات" },
+            <ToolbarSelect paramKey="group" label={en ? "Filter by group" : "تصفية بمجموعة"} options={[
+              { value: "ALL", label: en ? "All groups" : "كل المجموعات" },
               ...groups.map((g) => ({ value: g.id, label: g.name })),
             ]} />
           </ToolbarRoot>
@@ -95,30 +99,30 @@ export default async function ReportsPage(
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">{academy.name}</p>
-                <CardTitle>تقرير الأكاديمية الشهري</CardTitle>
+                <CardTitle>{en ? "Monthly academy report" : "تقرير الأكاديمية الشهري"}</CardTitle>
               </div>
               <p className="text-sm text-muted-foreground">{formatDate(new Date())}</p>
             </div>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <ReportStat label="الطلاب" value={String(students.length)} />
-              <ReportStat label="المجموعات النشطة" value={String(d.totalGroups)} />
-              <ReportStat label="المحصّل" value={formatCurrency(collected)} />
-              <ReportStat label="المتبقي" value={formatCurrency(outstanding)} />
-              <ReportStat label="نسبة الحضور" value={`${d.attendanceRate}%`} />
-              <ReportStat label="متوسط الدرجات" value={`${d.averageGrade}%`} />
-              <ReportStat label="الإيراد الشهري" value={formatCurrency(d.monthlyRevenue)} />
-              <ReportStat label="الحصص القادمة" value={String(d.upcomingLessons.length)} />
+              <ReportStat label={en ? "Students" : "الطلاب"} value={String(students.length)} />
+              <ReportStat label={en ? "Active groups" : "المجموعات النشطة"} value={String(d.totalGroups)} />
+              <ReportStat label={en ? "Collected" : "المحصّل"} value={formatCurrency(collected)} />
+              <ReportStat label={en ? "Outstanding" : "المتبقي"} value={formatCurrency(outstanding)} />
+              <ReportStat label={en ? "Attendance rate" : "نسبة الحضور"} value={`${d.attendanceRate}%`} />
+              <ReportStat label={en ? "Average grade" : "متوسط الدرجات"} value={`${d.averageGrade}%`} />
+              <ReportStat label={en ? "Monthly revenue" : "الإيراد الشهري"} value={formatCurrency(d.monthlyRevenue)} />
+              <ReportStat label={en ? "Upcoming lessons" : "الحصص القادمة"} value={String(d.upcomingLessons.length)} />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">كشف الطلاب</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{en ? "Student roster" : "كشف الطلاب"}</CardTitle></CardHeader>
           <CardContent className="p-0">
             <Table>
-              <TableHeader><TableRow><TableHead>الطالب</TableHead><TableHead>الصف الدراسي</TableHead><TableHead>الحالة</TableHead><TableHead>المجموعات</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>{en ? "Student" : "الطالب"}</TableHead><TableHead>{en ? "Grade" : "الصف الدراسي"}</TableHead><TableHead>{en ? "Status" : "الحالة"}</TableHead><TableHead>{en ? "Groups" : "المجموعات"}</TableHead></TableRow></TableHeader>
               <TableBody>
                 {students.map((s) => (
                   <TableRow key={s.id}>
@@ -135,10 +139,10 @@ export default async function ReportsPage(
 
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
-            <CardHeader><CardTitle className="text-base">ملخص المدفوعات</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">{en ? "Payment summary" : "ملخص المدفوعات"}</CardTitle></CardHeader>
             <CardContent className="p-0">
               <Table>
-                <TableHeader><TableRow><TableHead>الشهر</TableHead><TableHead>المستحق</TableHead><TableHead>المحصّل</TableHead><TableHead>المتبقي</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>{en ? "Month" : "الشهر"}</TableHead><TableHead>{en ? "Due" : "المستحق"}</TableHead><TableHead>{en ? "Collected" : "المحصّل"}</TableHead><TableHead>{en ? "Outstanding" : "المتبقي"}</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {d.revenueByMonth.map((r) => (
                     <TableRow key={r.month}>
@@ -154,14 +158,14 @@ export default async function ReportsPage(
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="text-base">أداء الدرجات</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">{en ? "Grade performance" : "أداء الدرجات"}</CardTitle></CardHeader>
             <CardContent className="p-0">
               <Table>
-                <TableHeader><TableRow><TableHead>المستوى</TableHead><TableHead>العدد</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>{en ? "Level" : "المستوى"}</TableHead><TableHead>{en ? "Count" : "العدد"}</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {d.gradePerformance.map((g) => (
                     <TableRow key={g.level}>
-                      <TableCell className="font-medium">{GRADE_LEVEL_AR[g.level] ?? g.level}</TableCell>
+                      <TableCell className="font-medium">{en ? g.level : (GRADE_LEVEL_AR[g.level] ?? g.level)}</TableCell>
                       <TableCell>{g.count}</TableCell>
                     </TableRow>
                   ))}
@@ -172,7 +176,7 @@ export default async function ReportsPage(
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
-          تم الإنشاء بواسطة {APP_CONFIG.name} · {formatDate(new Date())}
+          {en ? "Generated by" : "تم الإنشاء بواسطة"} {APP_CONFIG.name} · {formatDate(new Date())}
         </p>
       </div>
     </div>

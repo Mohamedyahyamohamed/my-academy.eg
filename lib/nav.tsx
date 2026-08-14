@@ -100,7 +100,6 @@ export const TEACHER_NAV: NavSection[] = [
       { titleAr: "الواجبات", titleEn: "Homework", href: "/homework", icon: ClipboardList },
       { titleAr: "الدرجات", titleEn: "Grades", href: "/grades", icon: GraduationCap },
       { titleAr: "الطلاب", titleEn: "Students", href: "/students", icon: Users },
-      { titleAr: "المساعدون", titleEn: "Assistants", href: "/teacher/assistants", icon: UsersRound },
       { titleAr: "الرسائل", titleEn: "Messages", href: "/messages", icon: Bell },
       { titleAr: "المساعدة والدعم", titleEn: "Help & Support", href: "/support", icon: CircleHelp },
     ],

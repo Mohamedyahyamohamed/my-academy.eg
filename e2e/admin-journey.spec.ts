@@ -39,7 +39,7 @@ test.describe("Admin Journey", () => {
 
   test("navigate to billing", async ({ adminPage }) => {
     await adminPage.goto("/billing");
-    await expect(adminPage.locator("h1")).toContainText("الاشتراكات والخطط");
+    await expect(adminPage.locator("h1")).toContainText("خطط الأكاديميات والفوترة");
   });
 
   test("navigate to audit logs", async ({ adminPage }) => {

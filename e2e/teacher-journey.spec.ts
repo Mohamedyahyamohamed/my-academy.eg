@@ -38,8 +38,8 @@ test.describe("Teacher Journey", () => {
     await expect(teacherPage).toHaveURL(/\/teacher/);
   });
 
-  test("cannot access admin billing", async ({ teacherPage }) => {
+  test("cannot access academy billing", async ({ teacherPage }) => {
     await teacherPage.goto("/billing");
-    await expect(teacherPage).not.toHaveURL(/\/billing/);
+    await expect(teacherPage).toHaveURL(/\/teacher/);
   });
 });

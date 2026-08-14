@@ -3,7 +3,7 @@ import "server-only";
 import { createHmac, randomUUID, timingSafeEqual } from "crypto";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { isSupabaseConfigured } from "@/services/supabase/config";
-import { PLANS, setPlan, type Plan } from "@/services/saas";
+import { getWorkspaceType, PLANS, resolvePlanIdForWorkspace, setPlan, type Plan, type WorkspaceType } from "@/services/saas";
 import { sendSubscriptionSuspensionEmail } from "@/lib/email";
 
 export type BillingProvider = "stripe" | "paymob";
@@ -56,8 +56,9 @@ function providerPeriodEnd(payload: Record<string, unknown>): string | null {
   return null;
 }
 
-function getPaidPlan(planId: string): Plan | null {
-  const plan = PLANS[planId];
+function getPaidPlan(planId: string, workspaceType?: WorkspaceType): Plan | null {
+  const resolvedPlanId = workspaceType ? resolvePlanIdForWorkspace(planId, workspaceType) : planId;
+  const plan = resolvedPlanId ? PLANS[resolvedPlanId] : null;
   return plan && plan.price > 0 ? plan : null;
 }
 
@@ -191,8 +192,10 @@ async function createPaymobCheckout(actor: CheckoutActor, plan: Plan): Promise<C
 
 /** Start a hosted checkout. A paid plan is never activated by this method. */
 export async function createCheckout(actor: CheckoutActor, planId: string): Promise<CheckoutResult> {
-  const plan = getPaidPlan(planId);
-  if (!plan) return { ok: false, error: "الخطة المحددة غير متاحة للدفع." };
+  const workspaceType = getWorkspaceType(actor.academyId);
+  const resolvedPlanId = resolvePlanIdForWorkspace(planId, workspaceType);
+  const plan = resolvedPlanId ? getPaidPlan(resolvedPlanId, workspaceType) : null;
+  if (!plan) return { ok: false, error: "الخطة المحددة غير متاحة لنوع مساحة العمل الحالية." };
 
   try {
     if (process.env.STRIPE_SECRET_KEY) return await createStripeCheckout(actor, plan);
@@ -268,7 +271,8 @@ export async function storeBillingEvent(event: VerifiedPayment): Promise<{ ok: b
     return { ok: false };
   }
 
-  const plan = getPaidPlan(planId);
+  const workspaceType = academyId ? getWorkspaceType(academyId) : undefined;
+  const plan = workspaceType && planId ? getPaidPlan(planId, workspaceType) : planId ? getPaidPlan(planId) : null;
   if (!plan) {
     await client.from("billing_events")
       .update({ status: "failed", failure_reason: "Unknown paid plan", updated_at: new Date().toISOString() })

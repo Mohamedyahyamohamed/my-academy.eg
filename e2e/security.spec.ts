@@ -40,9 +40,9 @@ test.describe("Security E2E", () => {
     await expect(parentPage).not.toHaveURL(/\/settings/);
   });
 
-  test("(escalation) teacher cannot access /billing", async ({ teacherPage }) => {
+  test("(escalation) academy teacher cannot access billing", async ({ teacherPage }) => {
     await teacherPage.goto("/billing");
-    await expect(teacherPage).not.toHaveURL(/\/billing/);
+    await expect(teacherPage).toHaveURL(/\/teacher/);
   });
 
   test("(escalation) teacher cannot access academy payments", async ({ teacherPage }) => {

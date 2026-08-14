@@ -4,7 +4,7 @@ import { createCheckout } from "@/services/billing";
 import { requireScopedRole } from "@/services";
 
 export async function startBillingCheckoutAction(planId: string) {
-  const user = await requireScopedRole("ADMIN");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
   const result = await createCheckout({
     academyId: user.academy_id,
     email: user.email,

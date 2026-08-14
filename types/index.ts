@@ -59,6 +59,8 @@ export interface Academy {
   country: string | null;
   currency: string;
   timezone: string;
+  /** Distinguishes an independent teacher workspace from an academy workspace. */
+  workspace_type?: "ACADEMY" | "TEACHER";
   phone: string | null;
   email: string | null;
   address: string | null;

@@ -30,6 +30,26 @@ type VerifiedPayment = {
 
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
+function providerPeriodEnd(payload: Record<string, unknown>): string | null {
+  const candidates = [
+    valueAtPath(payload, "current_period_end"),
+    valueAtPath(payload, "subscription.current_period_end"),
+    valueAtPath(payload, "data.object.current_period_end"),
+    valueAtPath(payload, "period_end"),
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "number" && Number.isFinite(candidate)) {
+      const date = new Date(candidate > 10_000_000_000 ? candidate : candidate * 1000);
+      if (!Number.isNaN(date.getTime())) return date.toISOString();
+    }
+    if (typeof candidate === "string" && candidate.trim()) {
+      const date = new Date(candidate);
+      if (!Number.isNaN(date.getTime())) return date.toISOString();
+    }
+  }
+  return null;
+}
+
 function getPaidPlan(planId: string): Plan | null {
   const plan = PLANS[planId];
   return plan && plan.price > 0 ? plan : null;
@@ -54,13 +74,15 @@ async function createStripeCheckout(actor: CheckoutActor, plan: Plan): Promise<C
 
   const baseUrl = appBaseUrl();
   const payload = new URLSearchParams({
-    mode: "payment",
+            mode: "subscription",
+
     success_url: `${baseUrl}/billing?payment=success&provider=stripe&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${baseUrl}/billing?payment=cancelled`,
     customer_email: actor.email,
     "line_items[0][price_data][currency]": "egp",
     "line_items[0][price_data][unit_amount]": String(Math.round(plan.price * 100)),
     "line_items[0][price_data][product_data][name]": `MY Academy — ${plan.name} (شهري)`,
+    "line_items[0][price_data][recurring][interval]": "month",
     "line_items[0][quantity]": "1",
     "metadata[academy_id]": actor.academyId,
     "metadata[plan_id]": plan.id,
@@ -224,7 +246,8 @@ export async function storeBillingEvent(event: VerifiedPayment): Promise<{ ok: b
     return { ok: false };
   }
 
-  const currentPeriodEnd = new Date(Date.now() + MONTH_MS).toISOString();
+  const providerEnd = providerPeriodEnd(event.payload);
+  const currentPeriodEnd = providerEnd ?? new Date(Date.now() + MONTH_MS).toISOString();
   const subscription = await client.from("subscriptions").upsert({
     academy_id: event.academyId,
     plan_id: event.planId,
@@ -234,7 +257,10 @@ export async function storeBillingEvent(event: VerifiedPayment): Promise<{ ok: b
     provider_subscription_id: event.providerSubscriptionId || null,
     current_period_end: currentPeriodEnd,
     cancel_at_period_end: false,
-    metadata: { last_provider_event_id: event.providerEventId },
+    metadata: {
+      last_provider_event_id: event.providerEventId,
+      period_end_source: providerEnd ? "provider" : "fallback_30_days",
+    },
     updated_at: new Date().toISOString(),
   }, { onConflict: "academy_id" });
 

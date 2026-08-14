@@ -253,11 +253,35 @@ function hasValidAcademyId(row: unknown): boolean {
   return typeof academyId !== "string" || UUID_RE.test(academyId);
 }
 
+// These tables carry academy_id directly. Relationship tables such as
+// attendance and homework_submissions are intentionally excluded because they
+// are scoped through their parent ids by the calling service.
+const DIRECT_ACADEMY_TABLES = new Set([
+  "academies", "profiles", "courses", "teachers", "parents", "students",
+  "groups", "lessons", "payments", "exams", "homework", "notifications",
+  "notes", "files", "messages", "subscriptions", "audit_logs", "support_tickets",
+  "invite_tokens",
+]);
+
+function scopedAcademyId(table: string): string | null {
+  if (!DIRECT_ACADEMY_TABLES.has(table)) return null;
+  return activeAcademyId();
+}
+
 export async function persistInsert(table: string, row: any) {
   const client = getAdminClient();
   if (!client) return;
   if (!hasValidAcademyId(row)) {
     console.warn(`persistInsert ${table} skipped: non-production academy id.`);
+    return;
+  }
+  const academyId = scopedAcademyId(table);
+  if (DIRECT_ACADEMY_TABLES.has(table) && !academyId) {
+    console.warn(`persistInsert ${table} skipped: no authenticated academy scope.`);
+    return;
+  }
+  if (academyId && row && !Array.isArray(row) && row.academy_id !== academyId) {
+    console.warn(`persistInsert ${table} skipped: academy scope mismatch.`);
     return;
   }
   try {
@@ -273,12 +297,19 @@ export async function persistInsert(table: string, row: any) {
   }
 }
 
-/** Update a row in Supabase (write-through). Logs errors loudly. */
+/** Update a row in Supabase (write-through), always narrowed by academy_id when the table carries it. */
 export async function persistUpdate(table: string, id: string, patch: any) {
   const client = getAdminClient();
   if (!client) return;
+  const academyId = scopedAcademyId(table);
+  if (DIRECT_ACADEMY_TABLES.has(table) && !academyId) {
+    console.warn(`persistUpdate ${table} skipped: no authenticated academy scope.`);
+    return;
+  }
   try {
-    const { error } = await client.from(table).update(patch).eq("id", id);
+    let query = client.from(table).update(patch).eq("id", id);
+    if (academyId) query = query.eq("academy_id", academyId);
+    const { error } = await query;
     if (error) {
       console.error(
         `persistUpdate ${table} FAILED [${error.code}]: ${error.message} (id=${id})`,
@@ -289,16 +320,22 @@ export async function persistUpdate(table: string, id: string, patch: any) {
   }
 }
 
-/** Delete rows in Supabase by filter (write-through). Logs errors loudly. */
+/** Delete rows in Supabase by filter (write-through), narrowed by academy_id when available. */
 export async function persistDelete(
   table: string,
   filters: Record<string, string>,
 ) {
   const client = getAdminClient();
   if (!client) return;
+  const academyId = scopedAcademyId(table);
+  if (DIRECT_ACADEMY_TABLES.has(table) && !academyId) {
+    console.warn(`persistDelete ${table} skipped: no authenticated academy scope.`);
+    return;
+  }
   try {
     let query = client.from(table).delete();
     for (const [column, value] of Object.entries(filters)) query = query.eq(column, value);
+    if (academyId) query = query.eq("academy_id", academyId);
     const { error } = await query;
     if (error) {
       console.error(

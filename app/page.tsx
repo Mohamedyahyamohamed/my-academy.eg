@@ -185,6 +185,21 @@ export default function LandingPage() {
           </div>
         </section>
 
+        <section className="border-y border-border/60 bg-muted/25 py-20 sm:py-24">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            <SectionIntro eyebrow="وضوح قبل الاشتراك" title="اعرف ما الذي تحصل عليه وما الذي يحتاج إعدادًا" description="نوضح حدود الخطط والتكاملات من البداية، حتى تختار بهدوء وتبني تشغيلك على توقعات واقعية." />
+            <div className="mt-12 grid gap-4 md:grid-cols-3">
+              <TrustCard icon={ShieldCheck} title="صلاحيات حسب الدور" text="يصل كل مستخدم إلى المساحة المرتبطة بدوره وأكاديميته، مع فحص للصلاحيات على الخادم." />
+              <TrustCard icon={MessageSquare} title="التكاملات اختيارية" text="واتساب والدفع الإلكتروني لا يُفعلان إلا بعد إعداد القناة والتحقق من الإعدادات والموافقة." />
+              <TrustCard icon={LineChart} title="قرارات مبنية على بياناتك" text="تبدأ بالمؤشرات الأساسية، ثم تتوسع إلى تقارير الحضور والتحصيل والإيرادات مع نمو الأكاديمية." />
+            </div>
+            <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-2xl border border-brand-200 bg-brand-50/70 p-6 text-center sm:flex-row sm:text-right">
+              <div><p className="font-black">تدير أكثر من فرع أو تحتاج إعدادًا خاصًا؟</p><p className="mt-1 text-sm leading-6 text-muted-foreground">ابدأ مجانًا أو اطلب مسارًا مخصصًا لخطة المؤسسات ودعم الانتقال.</p></div>
+              <div className="flex flex-wrap justify-center gap-3"><Button asChild variant="outline" className="rounded-xl bg-white"><Link href="/pricing">قارن الخطط</Link></Button><Button asChild className="rounded-xl"><Link href="/status">تحقق من حالة الخدمة <ArrowLeft className="h-4 w-4" /></Link></Button></div>
+            </div>
+          </div>
+        </section>
+
         <section className="border-y border-border/60 bg-[#17152b] py-20 text-white sm:py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <div className="grid gap-10 lg:grid-cols-[.85fr_1.15fr] lg:items-end">
@@ -201,7 +216,7 @@ export default function LandingPage() {
         <section className="px-4 pb-20 sm:px-6 sm:pb-24"><div className="relative mx-auto max-w-5xl overflow-hidden rounded-[1.75rem] bg-gradient-to-bl from-brand-600 via-brand-700 to-[#2b1e66] px-6 py-14 text-center text-white shadow-2xl shadow-brand-900/20 sm:px-12"><div className="absolute -left-16 -top-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" /><div className="absolute -bottom-32 -right-10 h-72 w-72 rounded-full bg-violet-300/15 blur-3xl" /><div className="relative"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/20"><GraduationCap className="h-7 w-7" /></div><h2 className="mt-6 text-3xl font-black sm:text-4xl">جاهز لترتيب أكاديميتك؟</h2><p className="mx-auto mt-4 max-w-xl leading-7 text-white/75">ابدأ مجانًا، أضف أول طلابك، وشاهد كيف تصبح المتابعة اليومية أبسط.</p><div className="mt-8 flex flex-wrap justify-center gap-3"><Button asChild size="lg" variant="secondary" className="h-12 rounded-xl px-6"><Link href="/signup">أنشئ أكاديميتك مجانًا <ArrowLeft className="h-4 w-4" /></Link></Button>{hasSalesWhatsApp ? <Button asChild size="lg" variant="outline" className="h-12 rounded-xl border-white/30 bg-white/10 px-6 text-white hover:bg-white/20 hover:text-white"><a href={salesWhatsAppUrl} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> اطلب تجربة موجهة</a></Button> : <Button asChild size="lg" variant="outline" className="h-12 rounded-xl border-white/30 bg-white/10 px-6 text-white hover:bg-white/20 hover:text-white"><Link href="/pricing">قارن الخطط والأسعار</Link></Button>}</div><div className="mt-7 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-white/65">{["دون التزام", "دعم بالعربية", "إعداد في دقائق"].map((item) => <span key={item} className="flex items-center gap-1.5"><Check className="h-4 w-4 text-violet-200" /> {item}</span>)}</div></div></div></section>
       </main>
 
-      <footer className="border-t border-border py-8"><div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 text-sm text-muted-foreground sm:flex-row sm:px-6"><Logo /><p>© {new Date().getFullYear()} {APP_CONFIG.name}. جميع الحقوق محفوظة.</p><div className="flex gap-4"><Link href="/login" className="transition hover:text-foreground">تسجيل الدخول</Link><Link href="/pricing" className="transition hover:text-foreground">الأسعار</Link><Link href="/signup" className="transition hover:text-foreground">إنشاء حساب</Link></div></div></footer>
+      <footer className="border-t border-border py-8"><div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 text-sm text-muted-foreground sm:flex-row sm:px-6"><Logo /><p>© {new Date().getFullYear()} {APP_CONFIG.name}. جميع الحقوق محفوظة.</p><div className="flex gap-4"><Link href="/login" className="transition hover:text-foreground">تسجيل الدخول</Link><Link href="/pricing" className="transition hover:text-foreground">الأسعار</Link><Link href="/status" className="transition hover:text-foreground">حالة الخدمة</Link><Link href="/signup" className="transition hover:text-foreground">إنشاء حساب</Link></div></div></footer>
     </div>
   );
 }
@@ -217,6 +232,10 @@ function FeatureCard({ icon: Icon, title, desc, tone }: { icon: typeof Users; ti
 
 function Step({ n, title, text }: { n: string; title: string; text: string }) {
   return <div className="relative text-center"><div className="relative z-10 mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600 text-lg font-black text-white shadow-lg shadow-brand-500/25">{n}</div><h3 className="mt-6 font-bold">{title}</h3><p className="mx-auto mt-2 max-w-xs text-sm leading-7 text-muted-foreground">{text}</p></div>;
+}
+
+function TrustCard({ icon: Icon, title, text }: { icon: typeof ShieldCheck; title: string; text: string }) {
+  return <div className="rounded-2xl border border-border/80 bg-card p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-brand-900/5"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><Icon className="h-5 w-5" /></div><h3 className="mt-5 font-bold">{title}</h3><p className="mt-2 text-sm leading-7 text-muted-foreground">{text}</p></div>;
 }
 
 function DarkValue({ icon: Icon, title, text }: { icon: typeof Database; title: string; text: string }) {

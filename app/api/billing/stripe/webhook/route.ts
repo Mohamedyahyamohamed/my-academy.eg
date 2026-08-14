@@ -13,6 +13,7 @@ type StripeEvent = {
       payment_status?: string;
       customer?: string;
       subscription?: string;
+      current_period_end?: number;
       metadata?: { academy_id?: string; plan_id?: string };
     };
   };
@@ -66,7 +67,14 @@ export async function POST(request: Request) {
     providerEventId: event.id,
     academyId,
     planId,
-    payload: { event_type: event.type, checkout_id: checkout?.id || null, payment_status: checkout?.payment_status || null },
+          payload: {
+        event_type: event.type,
+        checkout_id: checkout?.id || null,
+        payment_status: checkout?.payment_status || null,
+        current_period_end: checkout?.current_period_end || null,
+        subscription: checkout?.subscription || null,
+      },
+
     successful: checkout?.payment_status === "paid",
     providerCustomerId: checkout?.customer || null,
     providerSubscriptionId: checkout?.subscription || null,

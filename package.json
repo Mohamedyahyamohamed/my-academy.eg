@@ -25,6 +25,7 @@
     "@radix-ui/react-tooltip": "^1.2.16",
     "@sentry/nextjs": "^10.69.0",
     "@sentry/webpack-plugin": "^5.4.0",
+    "@supabase/realtime-js": "2.112.3",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.109.0",
     "@types/qrcode": "^1.5.6",

@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useClientLang } from "@/lib/i18n-client";
 
 export function AcademyBranding({ academy }: { academy: any }) {
+  const en = useClientLang() === "en";
   const [color, setColor] = React.useState(academy.primary_color ?? "#7c5cfc");
   const [logoUrl, setLogoUrl] = React.useState(academy.logo_url ?? "");
   const [saving, setSaving] = React.useState(false);
@@ -23,9 +25,9 @@ export function AcademyBranding({ academy }: { academy: any }) {
         logo_url: logoUrl || undefined,
       });
       document.documentElement.style.setProperty("--brand-600", color);
-      toast.success("تم حفظ هوية الأكاديمية ✅");
+      toast.success(en ? "Academy branding saved." : "تم حفظ هوية الأكاديمية");
     } catch {
-      toast.error("فشل الحفظ");
+      toast.error(en ? "Unable to save branding." : "فشل الحفظ");
     } finally {
       setSaving(false);
     }
@@ -34,12 +36,12 @@ export function AcademyBranding({ academy }: { academy: any }) {
   return (
     <Card className="max-w-lg">
       <CardHeader>
-        <CardTitle className="text-base">هوية الأكاديمية</CardTitle>
-        <CardDescription>خصّص شعارك ولونك — يظهر في كل الموقع + الكشوفات.</CardDescription>
+        <CardTitle className="text-base">{en ? "Academy branding" : "هوية الأكاديمية"}</CardTitle>
+        <CardDescription>{en ? "Customize your logo and color — they appear across the platform and reports." : "خصّص شعارك ولونك — يظهر في كل الموقع + الكشوفات."}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-1.5">
-          <Label>اللون الأساسي</Label>
+          <Label>{en ? "Primary color" : "اللون الأساسي"}</Label>
           <div className="flex items-center gap-3">
             <input
               type="color"
@@ -49,12 +51,12 @@ export function AcademyBranding({ academy }: { academy: any }) {
             />
             <Input value={color} onChange={(e) => setColor(e.target.value)} className="max-w-[120px] font-mono" />
             <div className="flex-1 rounded-lg p-3 text-center text-sm font-medium text-white" style={{ backgroundColor: color }}>
-              معاينة
+              {en ? "Preview" : "معاينة"}
             </div>
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label>رابط الشعار (URL)</Label>
+          <Label>{en ? "Logo URL" : "رابط الشعار (URL)"}</Label>
           <Input
             value={logoUrl}
             onChange={(e) => setLogoUrl(e.target.value)}
@@ -66,7 +68,7 @@ export function AcademyBranding({ academy }: { academy: any }) {
         </div>
         <Button onClick={save} disabled={saving}>
           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          حفظ الهوية
+          {en ? "Save branding" : "حفظ الهوية"}
         </Button>
       </CardContent>
     </Card>

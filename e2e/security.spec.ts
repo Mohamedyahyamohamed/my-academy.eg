@@ -3,7 +3,7 @@ import { test, expect } from "./helpers";
 test.describe("Security E2E", () => {
   // ─── Cross-Tenant Isolation ───────────────────────────────────────
   test("(cross-tenant) Admin A cannot view Academy B student", async ({ adminPage }) => {
-    // Academy B student ID (REAL, exists in DB).
+    // Academy B student ID from the deterministic local E2E fixture.
     const response = await adminPage.goto("/students/7946a8cf-2497-4614-820e-6e2603d1f3fa");
     expect(response?.status()).toBe(404);
   });
@@ -78,7 +78,7 @@ test.describe("Security E2E", () => {
     expect(res.status()).toBe(200);
     const data = await res.json();
     expect(data.students).toBeDefined();
-    // Verify NO Academy B student in export.
+    // Verify the Academy A export contains no Academy B fixture student.
     const bStudents = (data.students ?? []).filter((s: any) => s.first_name === "BStudent");
     expect(bStudents).toHaveLength(0);
   });

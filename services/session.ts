@@ -51,13 +51,20 @@ function resolveLocalUser(email: string): SessionUser | null {
  * Returns null if not authenticated.
  */
 export async function loadCurrentUser(): Promise<SessionUser | null> {
-  const cached = getRequestUser();
-  if (cached) return cached;
+  // Always resolve the current request's cookie first. AsyncLocalStorage can
+  // retain a previous request's context in some Next.js render paths; trusting
+  // that cached value before reading cookies can redirect a valid session to
+  // /login or, worse, associate a request with the wrong tenant.
   const cookieStore = await cookies();
   const raw = cookieStore.get(SESSION_COOKIE)?.value;
   const user = readSignedSession(raw);
-  setRequestContext(user);
-  return user;
+  if (user) {
+    setRequestContext(user);
+    return user;
+  }
+
+  setRequestContext(null);
+  return null;
 }
 
 export function getCurrentUser(): SessionUser | null {

@@ -1,9 +1,9 @@
 /**
  * E2E Route-Level Cross-Tenant Isolation Tests — CORRECT VERSION.
  *
- * Uses REAL IDs that EXIST in Academy B's database.
+ * Uses deterministic IDs from the local Academy B test fixture.
  * Academy A admin tries to access them → MUST get 404.
- * This proves RLS works: the data EXISTS but is BLOCKED.
+ * Academy B admin can access them → proves the IDs exist and the tenant boundary holds.
  *
  * Run: npx vitest run tests/cross-tenant-route.test.ts
  * Requires: dev server on localhost:3000
@@ -13,7 +13,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 
 const BASE = "http://localhost:3000";
 
-// REAL Academy B data (exists in Supabase).
+// Deterministic Academy B fixture data (exists in local E2E mode).
 const ACADEMY_B_STUDENT_ID = "7946a8cf-2497-4614-820e-6e2603d1f3fa"; // BStudent Real — EXISTS
 const ACADEMY_B_GROUP_ID = "fa7c6506-e822-480a-9d5b-eabe6effb097";   // B Group — EXISTS
 const FAKE_NONEXISTENT_ID = "00000000-0000-0000-0000-000000000999";  // Does NOT exist
@@ -27,14 +27,14 @@ async function login(email: string, password: string): Promise<string> {
   if (!res.ok) return "";
   const setCookie = res.headers.get("set-cookie") ?? "";
   const match = setCookie.match(/ma_session=([^;]+)/);
-  return match ? `ma_session=${match[1]}` : "";
+  return match ? `ma_session=${match[1]}; myacademy_onboarding_done=1` : "";
 }
 
 function fetchWith(cookie: string, path: string): Promise<Response> {
   return fetch(`${BASE}${path}`, { headers: { Cookie: cookie }, redirect: "manual" });
 }
 
-describe("Route-Level Cross-Tenant — REAL IDs", () => {
+describe("Route-Level Cross-Tenant — local fixture IDs", () => {
   let adminA: string;
 
   beforeAll(async () => {
@@ -48,8 +48,8 @@ describe("Route-Level Cross-Tenant — REAL IDs", () => {
     expect(res.status).toBe(404);
   });
 
-  // THE REAL TEST: Academy B's student EXISTS in DB but Academy A must NOT see it.
-  it("(students) Academy A cannot view Academy B's REAL student (ID exists in DB)", async () => {
+  // The isolation test: Academy B's student exists in the fixture but Academy A must NOT see it.
+  it("(students) Academy A cannot view Academy B's fixture student", async () => {
     const res = await fetchWith(adminA, `/students/${ACADEMY_B_STUDENT_ID}`);
     // MUST be 404 — the student exists but belongs to another academy.
     // If this returned 200, RLS is broken.
@@ -59,7 +59,7 @@ describe("Route-Level Cross-Tenant — REAL IDs", () => {
     expect(res.status).toBe(404);
   });
 
-  it("(groups) Academy A cannot view Academy B's REAL group", async () => {
+  it("(groups) Academy A cannot view Academy B's fixture group", async () => {
     const res = await fetchWith(adminA, `/groups/${ACADEMY_B_GROUP_ID}`);
     expect(res.status).not.toBe(200);
   });
@@ -97,7 +97,7 @@ describe("Route-Level Cross-Tenant — REAL IDs", () => {
   });
 });
 
-// Verify Academy B admin CAN see their own data (proves the IDs actually exist).
+// Verify Academy B admin CAN see its own fixture data (existence proof).
 describe("Route-Level — Academy B sees own data (existence proof)", () => {
   let adminB: string;
 

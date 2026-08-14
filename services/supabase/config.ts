@@ -9,6 +9,10 @@
  * is exposed via NEXT_PUBLIC_*.
  */
 export function isSupabaseConfigured(): boolean {
+  // E2E_DEMO_MODE intentionally forces the deterministic local fixture. This
+  // prevents a developer machine's Supabase variables from making tests use a
+  // hybrid data path while production continues to use Supabase normally.
+  if (process.env.E2E_DEMO_MODE === "true") return false;
   return (
     Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
     process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http") === true

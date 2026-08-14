@@ -1,74 +1,90 @@
-# 🚀 Deploy Guide — MY Academy to production
+# دليل تشغيل MYAcademy على الإنتاج
 
-Your Supabase backend is **fully set up** (schema, triggers fixed, data seeded,
-storage bucket created). The only thing left is to put the **frontend online**.
-Easiest path = **Vercel** (made by the Next.js team, free tier is enough).
+هذا الدليل مخصص لتشغيل نسخة الإنتاج الحالية من منصة MYAcademy باستخدام Next.js وSupabase وVercel. لا تستخدم بيانات demo أو أوامر seed المدمّرة على مشروع يحتوي بيانات حقيقية.
 
----
+## 1. متطلبات الإنتاج
 
-## Step 1 — Push the code to GitHub
-1. Create a new repo on GitHub (e.g. `my-academy`).
-2. From the project folder:
+يجب تشغيل المشروع على Node.js 22.x، وربط مستودع GitHub الحالي بمشروع Vercel. تأكد من أن الفرع المنشور هو `main` وأن بيئة Vercel المستخدمة هي **Production**.
+
+### المتغيرات الأساسية المطلوبة
+
+| المتغير | الاستخدام |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | رابط مشروع Supabase العام |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | مفتاح Supabase العام الآمن للمتصفح |
+| `SUPABASE_SERVICE_ROLE_KEY` | عمليات الخادم فقط؛ لا تعرضه للمتصفح ولا تضعه في Git |
+| `SESSION_SECRET` | توقيع جلسات التطبيق؛ يجب أن يكون عشوائيًا وطوله 32 حرفًا على الأقل |
+| `SESSION_MAX_AGE_SECONDS` | مدة الجلسة، والافتراضي 28800 ثانية |
+| `CRON_SECRET` | حماية مسار إشعارات الفوترة المجدول |
+| `QR_SESSION_SECRET` | توقيع جلسات QR؛ يجب أن يكون مختلفًا عن `SESSION_SECRET` |
+| `E2E_DEMO_MODE` | يجب أن تكون قيمته `false` أو غير موجودة في الإنتاج |
+
+أنشئ الأسرار مثلًا باستخدام `openssl rand -base64 48`، ولا تعِد استخدام كلمة مرور أو مفتاح من بيئة أخرى.
+
+### المتغيرات الاختيارية حسب الميزات
+
+للبريد الإلكتروني أضف `RESEND_API_KEY` و`EMAIL_FROM`. للدفع استخدم Stripe أو Paymob، وليس الاثنين إلا إذا كانت المسارات والـ webhooks مضبوطة ومختبرة. لواتساب أضف متغيرات Cloud API المطلوبة، واجعل `WHATSAPP_MODE=live` فقط بعد ضبط موافقة المستخدم والقالب المعتمد. لتحديد المعدل عبر أكثر من instance على Vercel أضف `UPSTASH_REDIS_REST_URL` و`UPSTASH_REDIS_REST_TOKEN`.
+
+القائمة المرجعية الكاملة موجودة في `.env.example`، لكن القيم الفعلية يجب أن تحفظ في Vercel Environment Variables فقط.
+
+## 2. خطوات النشر
+
+1. شغّل `npm ci` محليًا.
+2. شغّل `npm run lint` ثم `npm run build`.
+3. شغّل اختبارات الوحدة والعزل المحلية قبل الدفع إلى GitHub.
+4. ادفع التغييرات إلى `main`.
+5. راقب Vercel حتى تصبح حالة deployment `READY`.
+6. اختبر `https://YOUR_DOMAIN/api/health`، ثم اختبر تسجيل الدخول بحساب حقيقي من Supabase. لا تستخدم حساب demo في الإنتاج.
+
+## 3. فحوص قبول ما بعد النشر
+
+بعد كل نشر إنتاجي، نفّذ الفحوص التالية:
+
+| الفحص | النتيجة المطلوبة |
+|---|---|
+| الصفحة الرئيسية | استجابة HTTP 200 |
+| `/login` | استجابة 200 وظهور نموذج الدخول العربي |
+| `/api/health` | `app: ok` و`db: ok` و`qr: ok` |
+| تسجيل الدخول | نجاح حساب حقيقي من Supabase فقط |
+| `/dashboard` | فتح لوحة الأكاديمية الصحيحة |
+| `/students` | عرض طلاب الأكاديمية الحالية فقط |
+| `/groups` | عرض مجموعات الأكاديمية الحالية فقط |
+| `/settings` | فتح الإعدادات دون رسالة فقدان سياق الأكاديمية |
+| التصدير | متاح للمدير فقط ومحصور في أكاديميته |
+| تسجيل الخروج | إلغاء الجلسة وإعادة التوجيه إلى `/login` |
+
+اختبر أيضًا حسابًا من دور مدرس أو ولي أمر أو طالب، وتأكد أنه لا يستطيع فتح صفحات الإدارة أو بيانات أكاديمية أخرى.
+
+## 4. التشغيل اليومي للمدير
+
+بعد إنشاء الأكاديمية، ابدأ من خطوات البداية أو من قسم **البداية السريعة**. ادعُ مدرسًا، ثم أضف الطلاب، وبعدها أنشئ المجموعة مع تحديد مدرسها. يمكن إضافة الطالب قبل المجموعة؛ أما الحصة فتحتاج إلى مجموعة موجودة أولًا. ستظهر رسائل إرشادية واضحة إذا كان أحد المتطلبات ناقصًا.
+
+لا يحتاج تسجيل المدرس إلى إعداد مخفي مسبق. استخدم دعوة المدرس من onboarding أو من الإعدادات، ثم راقب حالة الدعوة وأرسل بيانات الدخول عبر قناة آمنة.
+
+## 5. WhatsApp وQR
+
+إرسال QR عبر WhatsApp يعتمد على اعتماد قالب Meta `student_qr`، وعلى وجود موافقة صريحة من المستلم ورقم هاتف صالح. بعد اعتماد القالب، أنشئ طالبًا اختباريًا برقم حقيقي وافحص وصول الرسالة وسجل التسليم قبل الاعتماد على الميزة في التشغيل اليومي.
+
+إذا كان القالب ما زال `In Review` فلا تعتبر الإرسال الآلي مؤكدًا، حتى لو كان التطبيق وواجهة الصحة يعملان.
+
+## 6. الفحوص المحلية
+
 ```bash
-git init
-git add .
-git commit -m "MY Academy — production-ready"
-git branch -M main
-git remote add origin https://github.com/<you>/my-academy.git
-git push -u origin main
-```
-> `.env*.local` is gitignored — your secret key will **not** be pushed. ✅
-
-## Step 2 — Import to Vercel
-1. Go to https://vercel.com → **Add New… → Project**.
-2. Import your `my-academy` repo.
-3. Framework stays **Next.js** (auto-detected).
-4. Open **Environment Variables** and add these 3 (from your Supabase → Settings → API):
-
-| Name | Value |
-|------|-------|
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://fpcdaiyktnoiwaulbhcn.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `sb_publishable_M_BwY18-...` |
-| `SUPABASE_SERVICE_ROLE_KEY` | `sb_secret_RylOB3pU...` |
-
-5. (Optional but recommended) **Settings → Functions → Node.js Version = 22.x**
-   (supabase-js prefers Node 22; Node 20 also works via the built-in polyfill.)
-6. **Deploy.** Wait ~1–2 min. You'll get a live URL like `my-academy.vercel.app`.
-
-## Step 3 — Log in 🎉
-Open the Vercel URL → sign in with `admin@myacademy.edu` / `demo1234`, or go to
-`/signup` to create a new academy.
-
----
-
-## ✅ Daily-use checklist (everything that works now)
-- **Admin**: dashboard, students (+profiles), groups, lessons, attendance, payments,
-  grades, homework, analytics, printable reports, settings, **create user accounts**.
-- **Teacher / Parent / Student** portals — fully isolated per academy.
-- **Self-service signup** — new academies register at `/signup`.
-- **File uploads** — homework attachments stored in Supabase Storage.
-- **Real auth + persistent data** on your Supabase project.
-- **Multi-tenant isolation** — each academy sees only its own data.
-
-## 🔧 Admin how-to (for the academy owner)
-1. Sign in as **admin**.
-2. **Settings → Users → Add user** → create accounts for your teachers / parents / students.
-3. Add **Students**, create **Groups**, schedule **Lessons**, take **Attendance**, record **Payments**.
-4. Hand parents/students their emails + passwords → they sign in to their portals.
-
-## 🧰 Useful ops commands
-```bash
-npm run dev       # local development
-npm run build     # type-check + production build
-npm run lint      # lint
-
-# Re-seed the database (wipes + reloads demo data):
-SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY npx tsx scripts/seed-supabase.ts
+npm ci
+npm run lint
+npx tsc --noEmit
+npm run build
+E2E_DEMO_MODE=true npx vitest run tests/cross-tenant-route.test.ts
+E2E_DEMO_MODE=true npx playwright test
+npm audit --omit=dev --audit-level=high
 ```
 
-## ⚠️ Notes for scaling later (not needed now)
-- The app uses a **write-through cache** (reads from memory, writes to Postgres).
-  Perfect for a single academy / one server. For many concurrent academies on
-  multiple instances, switch reads to per-request Supabase queries (RLS is already
-  defined in `supabase/schema.sql`).
-- Want **realtime** notifications and **email** invites? Those are the next add-ons.
+وضع `E2E_DEMO_MODE=true` مخصص للاختبارات المحلية فقط. لا تضفه إلى Production في Vercel. اختبارات العزل تستخدم fixture محليًا مستقلًا باسم Academy B ولا تعتمد على سجلات إنتاجية خارجية.
+
+## 7. النسخ الاحتياطي والاسترجاع
+
+فعّل النسخ الاحتياطي في Supabase، واحتفظ بنسخة دورية من البيانات المهمة وفق سياسة تشغيل واضحة. لا تشغّل `scripts/seed-supabase.ts` على مشروع الإنتاج؛ هذا الأمر مخصص لبيئة اختبار منفصلة فقط وقد يستبدل بيانات موجودة.
+
+## 8. قواعد أمنية إلزامية
+
+لا تضع أي ملف `.env` في Git. لا تعرض `SUPABASE_SERVICE_ROLE_KEY` أو مفاتيح الدفع أو WhatsApp في الواجهة. لا تغيّر `E2E_DEMO_MODE` إلى `true` في الإنتاج. راقب Vercel Runtime Logs وSupabase Auth وwebhook delivery بعد النشر، ودوّن أي خطأ قبل إعادة المحاولة.

@@ -103,6 +103,20 @@ export function createSeedData(): SeedData {
     created_at: iso(monthsAgo(10)),
     updated_at: iso(now),
   };
+  const academyB: Academy = {
+    id: "academy-b",
+    name: "Academy B Test Fixture",
+    slug: "academy-b-test",
+    logo_url: null,
+    country: "Egypt",
+    currency: "EGP",
+    timezone: "Africa/Cairo",
+    phone: null,
+    email: "admin-b@test.com",
+    address: null,
+    created_at: iso(monthsAgo(2)),
+    updated_at: iso(now),
+  };
 
   // ---- Profiles (auth users) ----
   const profiles: Profile[] = [
@@ -156,6 +170,20 @@ export function createSeedData(): SeedData {
     },
   ];
 
+  const academyBProfile: Profile = {
+    id: "prof-admin-b",
+    academy_id: academyB.id,
+    email: "admin-b@test.com",
+    role: "ADMIN",
+    full_name: "Academy B Admin",
+    phone: null,
+    avatar_url: null,
+    is_active: true,
+    created_at: iso(monthsAgo(2)),
+    updated_at: iso(now),
+  };
+  profiles.push(academyBProfile);
+
   // ---- Courses ----
   const courses: Course[] = [
     {
@@ -195,6 +223,15 @@ export function createSeedData(): SeedData {
       updated_at: iso(now),
     },
   ];
+  courses.push({
+    id: "course-b",
+    academy_id: academyB.id,
+    name: "Academy B Mathematics",
+    description: "Cross-tenant isolation fixture course.",
+    color: "#64748b",
+    created_at: iso(monthsAgo(2)),
+    updated_at: iso(now),
+  });
 
   // ---- Teachers ----
   const teachers: Teacher[] = [
@@ -225,6 +262,19 @@ export function createSeedData(): SeedData {
       updated_at: iso(now),
     },
   ];
+  teachers.push({
+    id: "teacher-b",
+    academy_id: academyB.id,
+    profile_id: null,
+    first_name: "B",
+    last_name: "Teacher",
+    email: "teacher-b@test.com",
+    phone: null,
+    bio: "Cross-tenant isolation fixture teacher.",
+    is_active: true,
+    created_at: iso(monthsAgo(2)),
+    updated_at: iso(now),
+  });
 
   // ---- Parents ----
   const parents: Parent[] = [
@@ -292,6 +342,26 @@ export function createSeedData(): SeedData {
     };
   });
 
+  const academyBStudent: Student = {
+    id: "7946a8cf-2497-4614-820e-6e2603d1f3fa",
+    academy_id: academyB.id,
+    first_name: "BStudent",
+    last_name: "Fixture",
+    date_of_birth: null,
+    gender: null,
+    phone: null,
+    email: "bstudent@test.com",
+    parent_id: null,
+    school: null,
+    grade: null,
+    notes: "Cross-tenant isolation fixture student.",
+    status: "ACTIVE",
+    enrolled_at: iso(monthsAgo(2)),
+    created_at: iso(monthsAgo(2)),
+    updated_at: iso(now),
+  };
+  students.push(academyBStudent);
+
   // ---- Groups ----
   const groups: Group[] = [
     {
@@ -347,6 +417,19 @@ export function createSeedData(): SeedData {
       updated_at: iso(now),
     },
   ];
+  groups.push({
+    id: "fa7c6506-e822-480a-9d5b-eabe6effb097",
+    academy_id: academyB.id,
+    name: "Academy B Test Group",
+    course_id: "course-b",
+    teacher_id: "teacher-b",
+    monthly_fee: 0,
+    schedule: "Test fixture only",
+    room: null,
+    status: "ACTIVE",
+    created_at: iso(monthsAgo(2)),
+    updated_at: iso(now),
+  });
 
   // ---- Enrollments ----
   const groupStudents = [
@@ -706,7 +789,7 @@ export function createSeedData(): SeedData {
   const files: FileRecord[] = [];
 
   return {
-    academies: [academy],
+    academies: [academy, academyB],
     profiles,
     courses,
     teachers,

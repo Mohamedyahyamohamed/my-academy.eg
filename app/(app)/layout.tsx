@@ -3,8 +3,8 @@ import { cookies } from "next/headers";
 import { AppShell } from "@/components/layout/app-shell";
 import { OnboardingGate } from "@/components/layout/onboarding-gate";
 import { DemoBanner } from "@/components/layout/demo-banner";
-import { loadCurrentUser, GroupsService, MiscService, StudentsService } from "@/services";
-import { ensureStoreLoaded } from "@/services/data/store";
+import { loadCurrentUser, MiscService } from "@/services";
+import { collections, ensureStoreLoaded } from "@/services/data/store";
 
 export default async function AuthenticatedLayout({
   children,
@@ -27,14 +27,15 @@ export default async function AuthenticatedLayout({
   let studentCount = 0;
   let groupCount = 0;
   if (shouldCheckOnboarding) {
-    const [teachers, students, groups] = await Promise.all([
-      MiscService.listTeachers(),
-      StudentsService.listStudents({ page: 1, pageSize: 1 }),
-      GroupsService.listGroups(),
-    ]);
-    teacherCount = teachers.length;
-    studentCount = students.pagination.total;
-    groupCount = groups.length;
+    // The user has already been authenticated and the academy snapshot has
+    // already been hydrated above. Filter the snapshot explicitly here instead
+    // of calling helpers that depend on AsyncLocalStorage during layout render.
+    // This keeps first-login onboarding safe even when the layout and page are
+    // rendered in separate server contexts.
+    const snapshot = collections();
+    teacherCount = snapshot.teachers.filter((item) => item.academy_id === user.academy_id).length;
+    studentCount = snapshot.students.filter((item) => item.academy_id === user.academy_id).length;
+    groupCount = snapshot.groups.filter((item) => item.academy_id === user.academy_id).length;
   }
   const needsOnboarding =
     shouldCheckOnboarding && teacherCount === 0 && studentCount === 0 && groupCount === 0;

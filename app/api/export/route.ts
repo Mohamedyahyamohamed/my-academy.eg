@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/services";
+import { loadCurrentUser } from "@/services";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/services/supabase/config";
 import { collections } from "@/services/data/store";
@@ -12,7 +12,7 @@ import { collections } from "@/services/data/store";
  * and should only be stored in the academy's approved location.
  */
 export async function GET() {
-  const user = getCurrentUser();
+  const user = await loadCurrentUser();
   if (!user) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Administrator access required" }, { status: 403 });

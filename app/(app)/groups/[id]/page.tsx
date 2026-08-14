@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   ArrowLeft,
   Users,
@@ -33,10 +33,11 @@ import {
   GroupsService,
   MiscService,
   StudentsService,
-  requireRole,
-  getCurrentUser,
+  loadCurrentUser,
+  roleHome,
   currentTeacherId,
 } from "@/services";
+import { setRequestContext } from "@/services/request-context";
 import { removeStudentFromGroupAction } from "@/app/actions/groups";
 import { collections } from "@/services/data/store";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -49,7 +50,10 @@ export default async function GroupDetailPage(
   }
 ) {
   const params = await props.params;
-  const user = requireRole("ADMIN", "TEACHER");
+  const user = await loadCurrentUser();
+  if (!user) redirect("/login");
+  setRequestContext(user);
+  if (user.role !== "ADMIN" && user.role !== "TEACHER") redirect(roleHome(user.role));
   const isTeacher = user.role === "TEACHER";
   const tid = isTeacher ? currentTeacherId() : null;
   const detail = await GroupsService.getGroupDetail(params.id);

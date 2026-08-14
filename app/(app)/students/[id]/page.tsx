@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   CalendarCheck,
   GraduationCap,
@@ -41,8 +41,10 @@ import {
   GradesService,
   HomeworkService,
   MiscService,
-  requireRole,
+  loadCurrentUser,
+  roleHome,
 } from "@/services";
+import { setRequestContext } from "@/services/request-context";
 import { groupsForStudent } from "@/services/_shared";
 import { collections } from "@/services/data/store";
 import { formatCurrency, formatDate, formatTime } from "@/lib/utils";
@@ -56,7 +58,10 @@ export default async function StudentProfilePage(
   }
 ) {
   const params = await props.params;
-  requireRole("ADMIN", "TEACHER");
+  const user = await loadCurrentUser();
+  if (!user) redirect("/login");
+  setRequestContext(user);
+  if (user.role !== "ADMIN" && user.role !== "TEACHER") redirect(roleHome(user.role));
   const detail = await StudentsService.getStudentDetail(params.id);
   if (!detail) notFound();
 

@@ -208,10 +208,42 @@ export async function requestPasswordReset(email: string): Promise<LoginResult> 
         },
       });
       const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://my-academy-eg.vercel.app"}/reset-password`;
+
+      // Prefer the app's verified mail provider when configured. Supabase's
+      // admin generateLink creates the one-time recovery URL without sending a
+      // second email, so Resend remains the only delivery path in this branch.
+      if (process.env.RESEND_API_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        try {
+          const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
+          const { sendPasswordRecoveryEmail } = await import("@/lib/email");
+          const admin = nodeSupabaseClient();
+          const { data: generated, error: generateError } = await admin.auth.admin.generateLink({
+            type: "recovery",
+            email: normalizedEmail,
+            options: { redirectTo },
+          });
+          if (generateError) throw generateError;
+          const actionLink = generated.properties?.action_link;
+          if (!actionLink) throw new Error("Supabase did not return a recovery action link");
+          if (await sendPasswordRecoveryEmail(normalizedEmail, actionLink)) {
+            return { ok: true };
+          }
+        } catch (error) {
+          console.error("[auth] Resend recovery delivery failed:", (error as Error).message);
+        }
+      }
+
       const { error } = await client.auth.resetPasswordForEmail(normalizedEmail, { redirectTo });
-      if (error) console.error("[auth] password reset request failed:", error.message);
-    } catch {
-      // Keep the public response uniform even when the provider is unavailable.
+      if (error) {
+        console.error("[auth] password reset request failed:", error.message);
+        if (/rate limit|rate_limit|too many/i.test(error.message)) {
+          return { ok: false, error: "خدمة البريد وصلت للحد المؤقت. انتظر دقيقة ثم اطلب رابطًا جديدًا." };
+        }
+        return { ok: false, error: "تعذر إرسال رابط الاستعادة حاليًا. حاول مرة أخرى بعد قليل." };
+      }
+    } catch (error) {
+      console.error("[auth] password reset provider unavailable:", (error as Error).message);
+      return { ok: false, error: "تعذر الاتصال بخدمة البريد حاليًا. حاول مرة أخرى بعد قليل." };
     }
   }
   // Never disclose whether the address belongs to an account.

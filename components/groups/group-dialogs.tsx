@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { GroupForm } from "./group-form";
 import type { Course, Group, Teacher } from "@/types";
+import { useClientLang } from "@/lib/i18n-client";
 
 export function AddGroupDialog({
   courses,
@@ -27,16 +28,17 @@ export function AddGroupDialog({
   lockedTeacher?: boolean;
   disabled?: boolean;
 }) {
+  const en = useClientLang() === "en";
   const [open, setOpen] = React.useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button disabled={disabled}><Plus className="h-4 w-4" /> مجموعة جديدة</Button>
+        <Button disabled={disabled}><Plus className="h-4 w-4" /> {en ? "New group" : "مجموعة جديدة"}</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>إنشاء مجموعة</DialogTitle>
-          <DialogDescription>نظّم الطلاب حسب المادة والمدرّس والجدول.</DialogDescription>
+          <DialogTitle>{en ? "Create group" : "إنشاء مجموعة"}</DialogTitle>
+          <DialogDescription>{en ? "Organize students by course, teacher, and schedule." : "نظّم الطلاب حسب المادة والمدرّس والجدول."}</DialogDescription>
         </DialogHeader>
         <GroupForm
           courses={courses}
@@ -63,15 +65,16 @@ export function EditGroupDialog({
   defaultTeacherId?: string | null;
   lockedTeacher?: boolean;
 }) {
+  const en = useClientLang() === "en";
   const [open, setOpen] = React.useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm"><Pencil className="h-4 w-4" /> تعديل</Button>
+        <Button variant="outline" size="sm"><Pencil className="h-4 w-4" /> {en ? "Edit" : "تعديل"}</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>تعديل المجموعة</DialogTitle>
+          <DialogTitle>{en ? "Edit group" : "تعديل المجموعة"}</DialogTitle>
         </DialogHeader>
         <GroupForm
           group={group}

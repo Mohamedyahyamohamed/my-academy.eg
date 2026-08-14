@@ -14,9 +14,11 @@ import { HomeworkBadge } from "@/components/shared/badges";
 import { reviewSubmissionAction } from "@/app/actions/homework";
 import { formatRelative } from "@/lib/utils";
 import type { HomeworkSubmission } from "@/types";
+import { useClientLang } from "@/lib/i18n-client";
 
 export function SubmissionReview({ submissions }: { submissions: HomeworkSubmission[] }) {
   const router = useRouter();
+  const en = useClientLang() === "en";
   const [openId, setOpenId] = React.useState<string | null>(null);
   const [feedback, setFeedback] = React.useState("");
   const [grade, setGrade] = React.useState("");
@@ -32,7 +34,7 @@ export function SubmissionReview({ submissions }: { submissions: HomeworkSubmiss
     setSaving(true);
     try {
       await reviewSubmissionAction(id, feedback, grade ? Number(grade) : undefined);
-      toast.success("تمت مراجعة التسليم.");
+      toast.success(en ? "Submission reviewed." : "تمت مراجعة التسليم.");
       setOpenId(null);
       router.refresh();
     } finally {
@@ -41,11 +43,11 @@ export function SubmissionReview({ submissions }: { submissions: HomeworkSubmiss
   };
 
   if (submissions.length === 0) {
-    return <p className="py-8 text-center text-sm text-muted-foreground">لا يوجد طلاب في هذه المجموعة بعد.</p>;
+    return <p className="py-8 text-center text-sm text-muted-foreground">{en ? "No students in this group yet." : "لا يوجد طلاب في هذه المجموعة بعد."}</p>;
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" dir={en ? "ltr" : "rtl"}>
       {submissions.map((s) => (
         <Card key={s.id}>
           <CardContent className="p-4">
@@ -55,11 +57,11 @@ export function SubmissionReview({ submissions }: { submissions: HomeworkSubmiss
                 {s.content ? (
                   <p className="mt-1 rounded-md bg-muted p-2 text-sm">{s.content}</p>
                 ) : (
-                  <p className="mt-1 text-sm text-muted-foreground">لا يوجد تسليم بعد.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{en ? "No submission yet." : "لا يوجد تسليم بعد."}</p>
                 )}
                 {s.feedback && openId !== s.id && (
                   <p className="mt-2 text-xs text-muted-foreground">
-                    <span className="font-medium">ملاحظات المعلّم:</span> {s.feedback}
+                    <span className="font-medium">{en ? "Teacher feedback:" : "ملاحظات المعلّم:"}</span> {s.feedback}
                   </p>
                 )}
               </div>
@@ -75,23 +77,23 @@ export function SubmissionReview({ submissions }: { submissions: HomeworkSubmiss
               openId === s.id ? (
                 <div className="mt-3 space-y-3 border-t pt-3">
                   <div className="space-y-1.5">
-                    <Label>ملاحظات المعلّم</Label>
-                    <Textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={2} placeholder="اكتب ملاحظاتك للطالب…" />
+                    <Label>{en ? "Teacher feedback" : "ملاحظات المعلّم"}</Label>
+                    <Textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={2} placeholder={en ? "Write feedback for the student…" : "اكتب ملاحظاتك للطالب…"} />
                   </div>
                   <div className="flex items-end gap-3">
                     <div className="w-32 space-y-1.5">
-                      <Label>الدرجة /10</Label>
+                      <Label>{en ? "Grade /10" : "الدرجة /10"}</Label>
                       <Input type="number" min={0} max={10} value={grade} onChange={(e) => setGrade(e.target.value)} />
                     </div>
                     <Button onClick={() => save(s.id)} disabled={saving} className="ml-auto">
-                      {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save review
+                      {saving && <Loader2 className="h-4 w-4 animate-spin" />} {en ? "Save review" : "حفظ المراجعة"}
                     </Button>
-                    <Button variant="ghost" onClick={() => setOpenId(null)}>إلغاء</Button>
+                    <Button variant="ghost" onClick={() => setOpenId(null)}>{en ? "Cancel" : "إلغاء"}</Button>
                   </div>
                 </div>
               ) : (
                 <Button variant="soft" size="sm" className="mt-3" onClick={() => start(s)}>
-                  <MessageSquare className="h-3.5 w-3.5" /> مراجعة
+                  <MessageSquare className="h-3.5 w-3.5" /> {en ? "Review" : "مراجعة"}
                 </Button>
               )
             ) : null}

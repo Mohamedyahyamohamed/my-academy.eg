@@ -12,7 +12,6 @@ import {
   DashboardService, StudentsService, PaymentsService, GradesService,
   AttendanceService, GroupsService, MiscService, requireScopedRole,
 } from "@/services";
-import { collections } from "@/services/data/store";
 import { APP_CONFIG, performanceLevel, performanceColor } from "@/lib/constants";
 import { formatCurrency, formatDate, fullName, percentage } from "@/lib/utils";
 
@@ -38,7 +37,7 @@ export default async function ReportsPage(
 
   const d = await DashboardService.getDashboardData("month", user.academy_id);
   const groups = await GroupsService.listGroups("", user.academy_id);
-  const academy = MiscService.getAcademy(user.academy_id);
+  const academy = await MiscService.getAcademyAsync(user.academy_id);
 
   const students = (await StudentsService.listStudents({ status: "ACTIVE", pageSize: 500 }, user.academy_id)).items
     .filter((s) => groupId === "ALL" || (s.groups ?? []).some((g) => g.id === groupId));

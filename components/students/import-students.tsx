@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { importStudentsAction, type ImportRow } from "@/app/actions/import";
+import { useClientLang } from "@/lib/i18n-client";
 
 const HEADER =
   "first_name,last_name,phone,grade,school,parent_name,parent_phone";
@@ -57,6 +58,7 @@ function parseCSV(text: string): ImportRow[] {
 
 export function ImportStudents() {
   const router = useRouter();
+  const en = useClientLang() === "en";
   const [text, setText] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [result, setResult] = React.useState<null | { created: number; errors: string[] }>(null);
@@ -81,7 +83,7 @@ export function ImportStudents() {
   const doImport = async () => {
     const rows = parseCSV(text);
     if (rows.length === 0) {
-      toast.error("مفيش بيانات. الصق الطلاب أو ارفع ملف.");
+      toast.error(en ? "No data. Paste students or upload a file." : "مفيش بيانات. الصق الطلاب أو ارفع ملف.");
       return;
     }
     setLoading(true);
@@ -89,35 +91,35 @@ export function ImportStudents() {
     try {
       const res = await importStudentsAction(rows);
       if (res.ok === false) {
-        toast.error(res.error ?? "فشل الاستيراد");
+        toast.error(res.error ?? (en ? "Import failed." : "فشل الاستيراد"));
       } else {
         setResult({ created: res.created ?? 0, errors: res.errors ?? [] });
-        toast.success(`تم استيراد ${res.created} طالب 🎉`);
+        toast.success(en ? `${res.created} student(s) imported.` : `تم استيراد ${res.created} طالب 🎉`);
         router.refresh();
       }
     } catch {
-      toast.error("حصل خطأ أثناء الاستيراد");
+      toast.error(en ? "An error occurred during import." : "حصل خطأ أثناء الاستيراد");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" dir={en ? "ltr" : "rtl"}>
       <Card>
         <CardContent className="space-y-4 p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <FileSpreadsheet className="h-4 w-4" />
-              الأعمدة: {HEADER}
+              {en ? "Columns:" : "الأعمدة:"} {HEADER}
             </div>
             <Button variant="outline" size="sm" onClick={downloadTemplate}>
-              <Upload className="mr-2 h-4 w-4" /> نزّل قالب Excel
+              <Upload className="mr-2 h-4 w-4" /> {en ? "Download Excel template" : "نزّل قالب Excel"}
             </Button>
           </div>
 
           <div className="space-y-1.5">
-            <Label>ارفع ملف CSV</Label>
+            <Label>{en ? "Upload CSV file" : "ارفع ملف CSV"}</Label>
             <input
               type="file"
               accept=".csv,text/csv"
@@ -125,12 +127,12 @@ export function ImportStudents() {
               className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-primary-foreground hover:file:bg-primary/90"
             />
             <p className="text-xs text-muted-foreground">
-              في Excel: File → Save As → CSV (Comma delimited) (*.csv). الحد الأقصى 1000 طالب في العملية الواحدة.
+              {en ? "In Excel: File → Save As → CSV (Comma delimited) (*.csv). Maximum 1,000 students per import." : "في Excel: File → Save As → CSV (Comma delimited) (*.csv). الحد الأقصى 1000 طالب في العملية الواحدة."}
             </p>
           </div>
 
           <div className="space-y-1.5">
-            <Label>أو الصق البيانات هنا</Label>
+            <Label>{en ? "Or paste data here" : "أو الصق البيانات هنا"}</Label>
             <Textarea
               rows={8}
               value={text}
@@ -144,10 +146,10 @@ export function ImportStudents() {
           <div className="flex gap-2">
             <Button onClick={doImport} disabled={loading}>
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              استيراد الطلاب
+              {en ? "Import students" : "استيراد الطلاب"}
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/students"><ArrowLeft className="mr-2 h-4 w-4" /> رجوع</Link>
+              <Link href="/students"><ArrowLeft className="mr-2 h-4 w-4" /> {en ? "Back" : "رجوع"}</Link>
             </Button>
           </div>
         </CardContent>
@@ -156,10 +158,10 @@ export function ImportStudents() {
       {result && (
         <Card>
           <CardContent className="p-5 text-sm">
-            <p className="font-semibold text-emerald-600">✅ تم استيراد {result.created} طالب</p>
+            <p className="font-semibold text-emerald-600">✅ {en ? `${result.created} student(s) imported` : `تم استيراد ${result.created} طالب`}</p>
             {result.errors.length > 0 && (
               <div className="mt-2">
-                <p className="font-medium text-destructive">في صفوف مارضتش ({result.errors.length}):</p>
+                <p className="font-medium text-destructive">{en ? `Rows with errors (${result.errors.length}):` : `في صفوف مارضتش (${result.errors.length}):`}</p>
                 <ul className="mt-1 list-inside list-disc text-xs text-muted-foreground">
                   {result.errors.map((e, i) => <li key={i}>{e}</li>)}
                 </ul>

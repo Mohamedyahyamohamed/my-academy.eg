@@ -435,13 +435,9 @@ export async function createStudent(input: StudentInput): Promise<Student> {
     updated_at: now,
   };
   collections().students.push(student);
-  // مؤقتًا: شيل حقول consent من الكتابة للـ DB عشان migration الـ phase19
-  // (consent columns) لسه مش متطبّق → الإضافة بتفشل بدونه. علشان تشغّلهم،
-  // شغّل supabase/fix-missing-consent-columns.sql وبعدها ممكن تشيل السطرين دول.
-  const { consent_given: _cg, consent_version: _cv, ...persistRow } = student;
-  void _cg;
-  void _cv;
-  await persistInsert("students", persistRow);
+  // أعمدة الموافقة موجودة في Production؛ نحفظها حتى تبقى موافقة WhatsApp قابلة للتدقيق
+  // وتستمر عمليات الإرسال اللاحقة في احترام قرار الطالب أو ولي الأمر.
+  await persistInsert("students", student);
 
   // ── إنشاء حساب دخول للطالب (إيميل + باسورد افتراضي) عشان يقدر يدخل ──
   try {
@@ -516,9 +512,8 @@ export function updateStudent(
     ...input,
     updated_at: new Date().toISOString(),
   });
-  const { groupIds: _g, consent_given: _cg, ...patch } = input;
+  const { groupIds: _g, ...patch } = input;
   void _g;
-  void _cg;
   // حوّل التاريخ الفاضي ("") لـ null عشان الداتابيز يقبلّه
   if (patch.date_of_birth === "") patch.date_of_birth = null;
   void persistUpdate("students", id, { ...patch, updated_at: new Date().toISOString() });

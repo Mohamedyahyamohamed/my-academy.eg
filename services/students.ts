@@ -373,8 +373,10 @@ function uid() {
   return crypto.randomUUID();
 }
 
-export async function createStudent(input: StudentInput): Promise<Student> {
-  const academyId = currentAcademyId();
+export async function createStudent(input: StudentInput, authenticatedAcademyId?: string): Promise<Student> {
+  // Server Actions can cross an async boundary where AsyncLocalStorage context is lost.
+  // Prefer the academy resolved by requireScopedRole; keep the fallback for existing callers.
+  const academyId = authenticatedAcademyId ?? currentAcademyId();
   const groupIdsForAuthorization = input.groupIds ?? [];
   assertRequestedGroupScope(groupIdsForAuthorization, academyId);
   if (input.parent_id) {
@@ -416,7 +418,7 @@ export async function createStudent(input: StudentInput): Promise<Student> {
   const now = new Date().toISOString();
   const student: Student = {
     id: uid(),
-    academy_id: currentAcademyId(),
+    academy_id: academyId,
     first_name: rest.first_name,
     last_name: rest.last_name,
     phone: rest.phone ?? null,

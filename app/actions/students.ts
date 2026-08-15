@@ -10,7 +10,7 @@ export async function createStudentAction(input: StudentInput) {
   try {
     const user = await requireScopedRole("ADMIN", "TEACHER");
     console.log("[createStudentAction] user OK:", user.email, "academy:", user.academy_id);
-    const student = await StudentsService.createStudent(input);
+    const student = await StudentsService.createStudent(input, user.academy_id);
     console.log("[createStudentAction] CREATED OK:", student.id);
     // إرسال QR تلقائيًا كأثر جانبي best-effort؛ لا نفشل إنشاء الطالب إذا تعذر مزود واتساب.
     try {

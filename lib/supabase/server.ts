@@ -7,7 +7,7 @@ import { getSupabaseUrl, getSupabaseAnonKey } from "@/services/supabase/config";
  * Uses the USER'S session (not service role) → RLS policies are enforced.
  * ws polyfill for Node < 22 (supabase-js realtime init).
  */
-export async function createServerSupabaseClient() {
+export async function createServerSupabaseClient(apiKey = getSupabaseAnonKey()) {
   // Polyfill WebSocket for Node < 22 (supabase-js realtime client).
   if (typeof globalThis !== "undefined" && !(globalThis as any).WebSocket) {
     try {
@@ -19,7 +19,7 @@ export async function createServerSupabaseClient() {
   const cookieStore = await cookies();
   return createServerClient(
     getSupabaseUrl()!,
-    getSupabaseAnonKey()!,
+    apiKey!,
     {
       cookies: {
         getAll() {

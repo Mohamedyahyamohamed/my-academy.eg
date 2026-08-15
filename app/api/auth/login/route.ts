@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ACTIVE_ACADEMY_COOKIE, SESSION_COOKIE, DEMO_PASSWORD } from "@/lib/auth";
 import { ensureStoreLoaded } from "@/services/data/store";
-import { isSupabaseConfigured } from "@/services/supabase/config";
+import { getSupabaseAnonKey, getSupabaseServiceRoleKey, isSupabaseConfigured } from "@/services/supabase/config";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import type { SessionUser } from "@/types";
@@ -59,7 +59,9 @@ export async function POST(req: NextRequest) {
     // Use the SERVER client (cookie-bound) → signInWithPassword sets the
     // Supabase auth cookies so RLS works on subsequent requests.
     try {
-      const client = await createServerSupabaseClient();
+      // Use the server-only key for this auth bootstrap route when available.
+      // The key never leaves the server; subsequent requests still use the user session.
+      const client = await createServerSupabaseClient(getSupabaseServiceRoleKey() ?? getSupabaseAnonKey());
       const { data: authData, error: authError } = await client.auth.signInWithPassword({
         email,
         password,

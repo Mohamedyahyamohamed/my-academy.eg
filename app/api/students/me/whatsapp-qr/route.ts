@@ -25,10 +25,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Invalid authentication." }, { status: 401 });
   }
 
+  const authEmail = authData.user.email?.trim().toLowerCase();
+  if (!authEmail) {
+    return NextResponse.json({ ok: false, error: "Authenticated account has no email." }, { status: 401 });
+  }
+
+  const { data: profile, error: profileError } = await adminClient
+    .from("profiles")
+    .select("academy_id,email,role,is_active")
+    .eq("id", authData.user.id)
+    .maybeSingle();
+  if (profileError || !profile || profile.is_active === false || profile.role !== "STUDENT") {
+    return NextResponse.json({ ok: false, error: "Student account could not be resolved." }, { status: 403 });
+  }
+
   const { data: student, error: studentError } = await adminClient
     .from("students")
-    .select("id,profile_id,consent_given")
-    .eq("profile_id", authData.user.id)
+    .select("id,academy_id,email,consent_given")
+    .eq("academy_id", profile.academy_id)
+    .ilike("email", authEmail)
     .maybeSingle();
 
   if (studentError) {

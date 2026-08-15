@@ -42,7 +42,7 @@ export default async function HomeworkPage(
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
         title={en ? "Homework" : "الواجبات"}
         description={en ? "Assign homework to groups and review student submissions." : "حدّد واجبات للمجموعات وراجع تسليمات الطلاب."}
@@ -79,7 +79,7 @@ export default async function HomeworkPage(
                     <div className="flex items-start justify-between gap-2">
                       <p className="font-semibold">{h.title}</p>
                       <Badge variant={overdue ? "destructive" : "secondary"}>
-                        <Calendar className="h-3 w-3" /> {formatDate(h.deadline)}
+                        <Calendar className="h-3 w-3" /> {formatDate(h.deadline, undefined, en ? "en-EG" : "ar-EG")}
                       </Badge>
                     </div>
                     <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{h.description}</p>

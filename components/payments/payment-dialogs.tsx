@@ -42,7 +42,7 @@ export function RecordPaymentDialog({
 
   const onSubmit = async (values: RecordPaymentValues) => {
     if (values.amount > payment.remaining) {
-      toast.error(en ? `Amount exceeds the outstanding balance (${formatCurrency(payment.remaining)}).` : `المبلغ أكبر من الرصيد المتبقي (${formatCurrency(payment.remaining)}).`);
+      toast.error(en ? `Amount exceeds the outstanding balance (${formatCurrency(payment.remaining, "EGP", "en-EG")}).` : `المبلغ أكبر من الرصيد المتبقي (${formatCurrency(payment.remaining, "EGP", "ar-EG")}).`);
       return;
     }
     setSaving(true);
@@ -52,7 +52,7 @@ export function RecordPaymentDialog({
         toast.error(res.error ?? (en ? "Unable to complete the operation." : "تعذّر إتمام العملية."));
         return;
       }
-      toast.success(en ? `Recorded ${formatCurrency(values.amount)}` : `تم تسجيل ${formatCurrency(values.amount)}`);
+      toast.success(en ? `Recorded ${formatCurrency(values.amount, "EGP", "en-EG")}` : `تم تسجيل ${formatCurrency(values.amount, "EGP", "ar-EG")}`);
       setOpen(false);
       router.refresh();
     } finally {
@@ -75,7 +75,7 @@ export function RecordPaymentDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="rounded-lg bg-muted p-3 text-sm">
-          <div className="flex justify-between"><span className="text-muted-foreground">{en ? "Outstanding" : "المتبقي"}</span><span className="font-semibold text-rose-600">{formatCurrency(payment.remaining)}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{en ? "Outstanding" : "المتبقي"}</span><span className="font-semibold text-rose-600">{formatCurrency(payment.remaining, "EGP", en ? "en-EG" : "ar-EG")}</span></div>
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           <div className="space-y-1.5">
@@ -86,14 +86,14 @@ export function RecordPaymentDialog({
           <div className="space-y-1.5">
             <Label>{en ? "Payment method" : "طريقة الدفع"}</Label>
             <Input defaultValue="Cash" {...register("method")} list="methods" />
-            <datalist id="methods">{PAYMENT_METHODS.map((m) => <option key={m} value={m} label={paymentMethodLabel(m)} />)}</datalist>
+            <datalist id="methods">{PAYMENT_METHODS.map((m) => <option key={m} value={m} label={paymentMethodLabel(m, en)} />)}</datalist>
           </div>
           <div className="space-y-1.5">
             <Label>{en ? "Note (optional)" : "ملاحظة (اختياري)"}</Label>
             <Input {...register("note")} />
           </div>
           {amount > 0 && (
-            <p className="text-sm text-muted-foreground">{en ? "New outstanding: " : "المتبقي الجديد: "}<span className="font-medium text-foreground">{formatCurrency(Math.max(0, payment.remaining - amount))}</span></p>
+            <p className="text-sm text-muted-foreground">{en ? "New outstanding: " : "المتبقي الجديد: "}<span className="font-medium text-foreground">{formatCurrency(Math.max(0, payment.remaining - amount), "EGP", en ? "en-EG" : "ar-EG")}</span></p>
           )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>{en ? "Cancel" : "إلغاء"}</Button>
@@ -180,7 +180,7 @@ export function CreatePaymentDialog({
             <div className="space-y-1.5">
               <Label>{en ? "Payment method" : "طريقة الدفع"}</Label>
               <select value={method} onChange={(e) => setMethod(e.target.value)} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{paymentMethodLabel(m)}</option>)}
+                {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{paymentMethodLabel(m, en)}</option>)}
               </select>
             </div>
             <div className="space-y-1.5">
@@ -194,7 +194,7 @@ export function CreatePaymentDialog({
           </div>
           <div className="flex items-center justify-between rounded-lg bg-muted p-3 text-sm">
             <span className="text-muted-foreground">{en ? "Outstanding will be" : "المتبقي سيكون"}</span>
-            <span className="font-semibold">{formatCurrency(Math.max(0, amountDue - amountPaid))}</span>
+            <span className="font-semibold">{formatCurrency(Math.max(0, amountDue - amountPaid), "EGP", en ? "en-EG" : "ar-EG")}</span>
           </div>
         </div>
         <DialogFooter>

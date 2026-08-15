@@ -43,7 +43,7 @@ export default async function LessonDetailPage(
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
         title={lesson.topic}
         description={lesson.description ?? undefined}
@@ -61,7 +61,7 @@ export default async function LessonDetailPage(
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <InfoCard icon={Users} label={en ? "Group" : "المجموعة"} value={lesson.group?.name ?? "—"} />
-        <InfoCard icon={Calendar} label={en ? "Date" : "التاريخ"} value={formatDate(lesson.date)} />
+        <InfoCard icon={Calendar} label={en ? "Date" : "التاريخ"} value={formatDate(lesson.date, undefined, en ? "en-EG" : "ar-EG")} />
         <InfoCard icon={Clock} label={en ? "Time" : "الوقت"} value={`${lesson.start_time} – ${lesson.end_time}`} />
         <InfoCard icon={Users} label={en ? "Students" : "الطلاب"} value={String(roster.length)} />
       </div>
@@ -129,7 +129,7 @@ export default async function LessonDetailPage(
                   {homework.map((h) => (
                     <Link key={h.id} href={`/homework`} className="block rounded-lg border border-border p-3 hover:bg-accent/50">
                       <p className="text-sm font-medium">{h.title}</p>
-                      <p className="text-xs text-muted-foreground">{en ? "Due: " : "التسليم: "}{formatDate(h.deadline)}</p>
+                      <p className="text-xs text-muted-foreground">{en ? "Due: " : "التسليم: "}{formatDate(h.deadline, undefined, en ? "en-EG" : "ar-EG")}</p>
                     </Link>
                   ))}
                 </div>

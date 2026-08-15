@@ -75,7 +75,7 @@ export default async function TeacherDashboard() {
               d.upcomingLessons.map((l: any) => (
                 <Link key={l.id} href={`/lessons/${l.id}`} className="flex items-center gap-3 rounded-lg p-2.5 hover:bg-accent">
                   <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <span className="text-[10px] font-medium uppercase">{formatDate(l.date, { month: "short" }).split(" ")[0]}</span>
+                    <span className="text-[10px] font-medium uppercase">{formatDate(l.date, { month: "short" }, lang === "en" ? "en-EG" : "ar-EG").split(" ")[0]}</span>
                     <span className="text-sm font-semibold leading-none">{new Date(l.date).getDate()}</span>
                   </div>
                   <div className="min-w-0 flex-1">
@@ -84,7 +84,7 @@ export default async function TeacherDashboard() {
                   </div>
                   <span className="flex items-center gap-1 text-xs text-muted-foreground">
                     <CalendarClock className="h-3.5 w-3.5" />
-                    {formatTime(`${l.date.slice(0, 10)}T${l.start_time}:00`)}
+                    {formatTime(`${l.date.slice(0, 10)}T${l.start_time}:00`, lang === "en" ? "en-EG" : "ar-EG")}
                   </span>
                 </Link>
               ))
@@ -107,7 +107,7 @@ export default async function TeacherDashboard() {
                     <p className="text-sm font-medium">{l.topic}</p>
                     <p className="text-xs text-muted-foreground">{l.groupName}</p>
                   </div>
-                  <Badge variant="warning">{formatDate(l.date)}</Badge>
+                  <Badge variant="warning">{formatDate(l.date, undefined, lang === "en" ? "en-EG" : "ar-EG")}</Badge>
                 </Link>
               ))
             )}

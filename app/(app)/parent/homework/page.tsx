@@ -22,7 +22,7 @@ export default async function ParentHomeworkPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader title={en ? "Homework" : "الواجبات"} description={en ? "Assigned homework for all your children." : "الواجبات المُكلَّفة لكل أبنائك."} />
       {children.length === 0 ? (
         <EmptyState icon={ClipboardList} title={en ? "No data" : "لا توجد بيانات"} description={en ? "No children are linked to this account." : "لا يوجد أبناء مرتبطون بالحساب."} />
@@ -50,7 +50,7 @@ export default async function ParentHomeworkPage() {
                           </div>
                           <div className="text-right shrink-0">
                             <HomeworkBadge status={s.status} />
-                            <p className="mt-1 text-xs text-muted-foreground">{en ? "Due: " : "موعد التسليم: "}{formatDate(s.homework?.deadline)}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">{en ? "Due: " : "موعد التسليم: "}{formatDate(s.homework?.deadline, undefined, en ? "en-EG" : "ar-EG")}</p>
                           </div>
                         </div>
                       ))}

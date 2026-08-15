@@ -69,7 +69,7 @@ export function SubmissionReview({ submissions }: { submissions: HomeworkSubmiss
                 <HomeworkBadge status={s.status} />
                 {s.grade != null && <Badge variant="info">{s.grade}/10</Badge>}
                 {s.submitted_at && (
-                  <span className="text-[11px] text-muted-foreground">{formatRelative(s.submitted_at)}</span>
+                  <span className="text-[11px] text-muted-foreground">{formatRelative(s.submitted_at, en ? "en-EG" : "ar-EG")}</span>
                 )}
               </div>
             </div>

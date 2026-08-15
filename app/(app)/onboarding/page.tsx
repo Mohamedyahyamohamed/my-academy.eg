@@ -9,12 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-
-type Lang = "ar" | "en";
+import { useClientLang } from "@/lib/i18n-client";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [lang, setLang] = React.useState<Lang>("ar");
+  const lang = useClientLang();
   const [step, setStep] = React.useState(0);
   const [loading, setLoading] = React.useState(false);
   const [academy, setAcademy] = React.useState({ name: "", phone: "", address: "" });
@@ -25,10 +24,6 @@ export default function OnboardingPage() {
   const en = lang === "en";
   const steps = en ? ["Academy details", "First subject", "First teacher", "Ready to start"] : ["بيانات الأكاديمية", "أول مادة", "أول مجموعة", "جاهزة للبدء"];
 
-  React.useEffect(() => {
-    const stored = document.cookie.match(/(?:^|; )ma_lang=(en|ar)/)?.[1] as Lang | undefined;
-    if (stored) setLang(stored);
-  }, []);
 
   const complete = async (destination = "/dashboard") => {
     setLoading(true);

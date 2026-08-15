@@ -47,7 +47,7 @@ export default async function StudentReportPage(props: { params: Promise<{ id: s
         {detail.parent && (
           <div><span className="font-bold">{en ? "Parent:" : "ولي الأمر:"}</span> {detail.parent.first_name} {detail.parent.last_name}</div>
         )}
-        <div><span className="font-bold">الحالة:</span> {detail.status === "ACTIVE" ? (en ? "Active" : "نشط") : detail.status === "ARCHIVED" ? (en ? "Archived" : "مؤرشف") : (en ? "Inactive" : "غير نشط")}</div>
+        <div><span className="font-bold">{en ? "Status:" : "الحالة:"}</span> {detail.status === "ACTIVE" ? (en ? "Active" : "نشط") : detail.status === "ARCHIVED" ? (en ? "Archived" : "مؤرشف") : (en ? "Inactive" : "غير نشط")}</div>
       </div>
 
       {/* ملخص */}
@@ -61,17 +61,17 @@ export default async function StudentReportPage(props: { params: Promise<{ id: s
           <p className="text-xs text-gray-500">{en ? "Average grade" : "متوسط الدرجات"}</p>
         </div>
         <div className="rounded-lg border border-gray-300 p-3">
-          <p className="text-2xl font-bold text-gray-800">{formatCurrency(stats.totalPaid)}</p>
+          <p className="text-2xl font-bold text-gray-800">{formatCurrency(stats.totalPaid, "EGP", en ? "en-EG" : "ar-EG")}</p>
           <p className="text-xs text-gray-500">{en ? "Paid" : "المدفوع"}</p>
         </div>
         <div className="rounded-lg border border-gray-300 p-3">
-          <p className="text-2xl font-bold text-red-600">{formatCurrency(stats.outstanding)}</p>
+          <p className="text-2xl font-bold text-red-600">{formatCurrency(stats.outstanding, "EGP", en ? "en-EG" : "ar-EG")}</p>
           <p className="text-xs text-gray-500">{en ? "Remaining" : "المتبقي"}</p>
         </div>
       </div>
 
       {/* الدرجات */}
-      <h3 className="mt-6 mb-2 border-b border-gray-300 pb-1 text-lg font-bold">{en ? "Exams and grades" : "الدروع والدرجات"}</h3>
+      <h3 className="mt-6 mb-2 border-b border-gray-300 pb-1 text-lg font-bold">{en ? "Exams and grades" : "الاختبارات والدرجات"}</h3>
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b-2 border-gray-400 bg-gray-100">
@@ -90,10 +90,10 @@ export default async function StudentReportPage(props: { params: Promise<{ id: s
             return (
               <tr key={g.id} className="border-b border-gray-200">
                 <td className="p-2">{exam?.name ?? "—"}</td>
-                <td className="p-2 text-center">{exam ? formatDate(exam.date) : "—"}</td>
+                <td className="p-2 text-center">{exam ? formatDate(exam.date, undefined, en ? "en-EG" : "ar-EG") : "—"}</td>
                 <td className="p-2 text-center">{g.score} / {exam?.max_score ?? "—"}</td>
                 <td className="p-2 text-center font-bold">{pct}%</td>
-                <td className="p-2 text-center">{performanceLabel(lvl)}</td>
+                <td className="p-2 text-center">{performanceLabel(lvl, en)}</td>
               </tr>
             );
           })}
@@ -136,9 +136,9 @@ export default async function StudentReportPage(props: { params: Promise<{ id: s
           {payments.map((p) => (
             <tr key={p.id} className="border-b border-gray-200">
               <td className="p-2 font-medium">{p.month}</td>
-              <td className="p-2 text-center">{formatCurrency(p.amount_due)}</td>
-              <td className="p-2 text-center text-green-600">{formatCurrency(p.amount_paid)}</td>
-              <td className="p-2 text-center text-red-600">{formatCurrency(p.remaining)}</td>
+              <td className="p-2 text-center">{formatCurrency(p.amount_due, "EGP", en ? "en-EG" : "ar-EG")}</td>
+              <td className="p-2 text-center text-green-600">{formatCurrency(p.amount_paid, "EGP", en ? "en-EG" : "ar-EG")}</td>
+              <td className="p-2 text-center text-red-600">{formatCurrency(p.remaining, "EGP", en ? "en-EG" : "ar-EG")}</td>
               <td className="p-2 text-center">{p.status === "PAID" ? (en ? "Paid" : "مدفوع") : p.status === "PARTIAL" ? (en ? "Partial" : "جزئي") : (en ? "Unpaid" : "غير مدفوع")}</td>
             </tr>
           ))}

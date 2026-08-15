@@ -39,7 +39,7 @@ export default async function StudentClassesPage() {
                       <p className="text-xs text-muted-foreground">{g.course?.name}</p>
                     </div>
                   </div>
-                  <Badge variant="secondary">{formatCurrency(g.monthly_fee)}/{en ? "month" : "شهريًا"}</Badge>
+                  <Badge variant="secondary">{formatCurrency(g.monthly_fee, "EGP", en ? "en-EG" : "ar-EG")}/{en ? "month" : "شهريًا"}</Badge>
                 </div>
                 <div className="mt-4 space-y-1 text-sm text-muted-foreground">
                   <p>{en ? "Schedule:" : "الموعد:"} {g.schedule}</p>

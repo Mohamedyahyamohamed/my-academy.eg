@@ -42,7 +42,7 @@ export default async function ParentDetailPage(
   if (user.role === "TEACHER" && children.length === 0) notFound();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader title={`${parent.first_name} ${parent.last_name}`} description={en ? "Parent profile" : "ملف ولي الأمر"} />
 
       <Card>

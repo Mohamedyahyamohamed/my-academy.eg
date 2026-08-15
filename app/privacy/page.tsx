@@ -4,7 +4,10 @@ import { APP_CONFIG } from "@/lib/constants";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 import { loadCurrentUser } from "@/services/session";
 
-export const metadata = { title: "Privacy / الخصوصية" };
+export async function generateMetadata() {
+  const lang = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value);
+  return { title: lang === "en" ? "Privacy Policy" : "سياسة الخصوصية" };
+}
 
 export default async function PrivacyPage() {
   const lang = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value);

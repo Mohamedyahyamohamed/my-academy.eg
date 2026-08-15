@@ -27,10 +27,10 @@ interface AttendanceWorkshopProps {
   enrollments: { groupId: string; studentId: string }[];
 }
 
-const STATUS_OPTS: { value: AttendanceStatus; label: string; icon: any; active: string; idle: string }[] = [
-  { value: "PRESENT", label: "حاضر", icon: Check, active: "bg-emerald-500 text-white border-emerald-500", idle: "text-emerald-600 hover:bg-emerald-50" },
-  { value: "LATE", label: "متأخر", icon: Clock, active: "bg-amber-500 text-white border-amber-500", idle: "text-amber-600 hover:bg-amber-50" },
-  { value: "ABSENT", label: "غائب", icon: X, active: "bg-rose-500 text-white border-rose-500", idle: "text-rose-600 hover:bg-rose-50" },
+const STATUS_OPTS: { value: AttendanceStatus; ar: string; en: string; icon: any; active: string; idle: string }[] = [
+  { value: "PRESENT", ar: "حاضر", en: "Present", icon: Check, active: "bg-emerald-500 text-white border-emerald-500", idle: "text-emerald-600 hover:bg-emerald-50" },
+  { value: "LATE", ar: "متأخر", en: "Late", icon: Clock, active: "bg-amber-500 text-white border-amber-500", idle: "text-amber-600 hover:bg-amber-50" },
+  { value: "ABSENT", ar: "غائب", en: "Absent", icon: X, active: "bg-rose-500 text-white border-rose-500", idle: "text-rose-600 hover:bg-rose-50" },
 ];
 
 export function AttendanceWorkshop({
@@ -138,7 +138,7 @@ export function AttendanceWorkshop({
               <option value="">{en ? "Choose lesson…" : "اختر حصة…"}</option>
               {groupLessons.map((l) => (
                 <option key={l.id} value={l.id}>
-                  {l.topic} — {new Date(l.date).toLocaleDateString()}
+                  {l.topic} — {new Date(l.date).toLocaleDateString(en ? "en-EG" : "ar-EG")}
                 </option>
               ))}
             </select>
@@ -204,7 +204,7 @@ export function AttendanceWorkshop({
                               active ? opt.active : cn("border-border", opt.idle),
                             )}
                           >
-                            <Icon className="h-3.5 w-3.5" /> {en ? (opt.value === "PRESENT" ? "Present" : opt.value === "LATE" ? "Late" : "Absent") : opt.label}
+                            <Icon className="h-3.5 w-3.5" /> {en ? opt.en : opt.ar}
                           </button>
                         );
                       })}

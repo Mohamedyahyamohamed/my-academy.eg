@@ -23,7 +23,7 @@ export default async function ParentGradesPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader title={en ? "Grades" : "الدرجات"} description={en ? "Exam results for all your children." : "نتائج الامتحانات لكل أبنائك."} />
       {children.length === 0 ? (
         <EmptyState icon={GraduationCap} title={en ? "No data" : "لا توجد بيانات"} description={en ? "No children are linked to this account." : "لا يوجد أبناء مرتبطون بالحساب."} />

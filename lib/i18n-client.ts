@@ -7,11 +7,17 @@ export const LANGUAGE_EVENT = "myacademy:language-change";
 
 export function readClientLang(): Lang {
   if (typeof window === "undefined") return "ar";
-  return localStorage.getItem("ma_lang") === "en" ? "en" : "ar";
+  // The cookie is the server-side source of truth. Prefer it over stale
+  // localStorage so client components cannot render in a different language
+  // from the page that was just loaded.
+  const cookie = document.cookie.match(/(?:^|; )ma_lang=(en|ar)(?:;|$)/)?.[1];
+  if (cookie === "en" || cookie === "ar") return cookie;
+  const local = localStorage.getItem("ma_lang");
+  return local === "en" ? "en" : "ar";
 }
 
 export function useClientLang(): Lang {
-  const [lang, setLang] = React.useState<Lang>("ar");
+  const [lang, setLang] = React.useState<Lang>(() => readClientLang());
   React.useEffect(() => {
     const sync = () => setLang(readClientLang());
     sync();

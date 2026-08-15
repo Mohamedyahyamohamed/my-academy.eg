@@ -44,7 +44,7 @@ export default async function NotificationsPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
                     <p className={cn("text-sm", !n.read ? "font-semibold" : "font-medium")}>{n.title}</p>
-                    <span className="shrink-0 text-xs text-muted-foreground">{formatRelative(n.created_at)}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{formatRelative(n.created_at, en ? "en-EG" : "ar-EG")}</span>
                   </div>
                   <p className="text-sm text-muted-foreground">{n.message}</p>
                 </div>

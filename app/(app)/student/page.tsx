@@ -122,7 +122,7 @@ export default async function StudentDashboard() {
                     <p className="text-xs text-muted-foreground">{l.group?.name}</p>
                   </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <CalendarClock className="h-3.5 w-3.5" /> {formatDate(l.date)}
+                    <CalendarClock className="h-3.5 w-3.5" /> {formatDate(l.date, undefined, en ? "en-EG" : "ar-EG")}
                   </div>
                 </div>
               ))
@@ -170,7 +170,7 @@ export default async function StudentDashboard() {
               <div key={s.id} className="flex items-center justify-between rounded-lg p-2.5 hover:bg-accent">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{s.homework?.title}</p>
-                  <p className="text-xs text-muted-foreground">{en ? "Due:" : "موعد التسليم:"} {formatDate(s.homework?.deadline)}</p>
+                  <p className="text-xs text-muted-foreground">{en ? "Due:" : "موعد التسليم:"} {formatDate(s.homework?.deadline, undefined, en ? "en-EG" : "ar-EG")}</p>
                 </div>
                 <HomeworkBadge status={s.status} />
               </div>

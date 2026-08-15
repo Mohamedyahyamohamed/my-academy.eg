@@ -23,7 +23,7 @@ export default async function GradesPage() {
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
         title={en ? "Grades" : "الدرجات"}
         description={en ? "Create exams and record student grades to track performance." : "أنشئ الاختبارات وسجّل درجات الطلاب لمتابعة مستوى الأداء."}
@@ -65,7 +65,7 @@ export default async function GradesPage() {
                       </div>
                     </div>
                     <div className="mt-3 flex items-center justify-between border-t pt-3">
-                      <Badge className={performanceColor(level)}>{performanceLabel(level)}</Badge>
+                      <Badge className={performanceColor(level)}>{performanceLabel(level, en)}</Badge>
                       <span className="flex items-center gap-1 text-xs text-muted-foreground">
                         {en ? "Enter grades" : "إدخال الدرجات"} <ArrowRight className="h-3.5 w-3.5" />
                       </span>

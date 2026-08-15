@@ -90,7 +90,7 @@ export default async function StudentProfilePage(
   const stats = detail.stats!;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
         title={en ? "Student profile" : "ملف الطالب"}
         breadcrumbs={[
@@ -159,9 +159,9 @@ export default async function StudentProfilePage(
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <MiniStat label={en ? "Attendance" : "الحضور"} value={`${stats.attendanceRate}%`} icon={CalendarCheck} />
         <MiniStat label={en ? "Average grade" : "متوسط الدرجات"} value={`${stats.averageGrade}%`} icon={GraduationCap} />
-        <MiniStat label={en ? "Monthly fee" : "الرسوم الشهرية"} value={formatCurrency(stats.monthlyFee)} icon={Wallet} />
-        <MiniStat label={en ? "Paid" : "مدفوع"} value={formatCurrency(stats.totalPaid)} icon={Wallet} accent="success" />
-        <MiniStat label={en ? "Remaining" : "المتبقي"} value={formatCurrency(stats.outstanding)} icon={TrendingDown} accent="warning" />
+        <MiniStat label={en ? "Monthly fee" : "الرسوم الشهرية"} value={formatCurrency(stats.monthlyFee, "EGP", en ? "en-EG" : "ar-EG")} icon={Wallet} />
+        <MiniStat label={en ? "Paid" : "مدفوع"} value={formatCurrency(stats.totalPaid, "EGP", en ? "en-EG" : "ar-EG")} icon={Wallet} accent="success" />
+        <MiniStat label={en ? "Remaining" : "المتبقي"} value={formatCurrency(stats.outstanding, "EGP", en ? "en-EG" : "ar-EG")} icon={TrendingDown} accent="warning" />
       </div>
 
       <StudentProfileTabs
@@ -218,7 +218,7 @@ export default async function StudentProfilePage(
                     return (
                       <TableRow key={a.id}>
                         <TableCell className="text-sm">
-                          {lesson ? formatDate(lesson.date) : "—"}
+                          {lesson ? formatDate(lesson.date, undefined, en ? "en-EG" : "ar-EG") : "—"}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {group?.name ?? "—"}
@@ -256,10 +256,10 @@ export default async function StudentProfilePage(
                   {payments.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">{p.month}</TableCell>
-                      <TableCell>{formatCurrency(p.amount_due)}</TableCell>
-                      <TableCell>{formatCurrency(p.amount_paid)}</TableCell>
+                      <TableCell>{formatCurrency(p.amount_due, "EGP", en ? "en-EG" : "ar-EG")}</TableCell>
+                      <TableCell>{formatCurrency(p.amount_paid, "EGP", en ? "en-EG" : "ar-EG")}</TableCell>
                       <TableCell className={p.remaining > 0 ? "text-rose-600" : ""}>
-                        {formatCurrency(p.remaining)}
+                        {formatCurrency(p.remaining, "EGP", en ? "en-EG" : "ar-EG")}
                       </TableCell>
                       <TableCell><PaymentStatusBadge status={p.status} /></TableCell>
                     </TableRow>
@@ -295,12 +295,12 @@ export default async function StudentProfilePage(
                     return (
                       <TableRow key={g.id}>
                         <TableCell className="font-medium">{exam?.name ?? "—"}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{exam ? formatDate(exam.date) : "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{exam ? formatDate(exam.date, undefined, en ? "en-EG" : "ar-EG") : "—"}</TableCell>
                         <TableCell>{g.score} / {exam?.max_score}</TableCell>
                         <TableCell>{Math.round(g.percentage ?? 0)}%</TableCell>
                         <TableCell>
                           <Badge className={performanceColor(g.level ?? performanceLevel(g.percentage ?? 0))}>
-                            {performanceLabel(g.level ?? performanceLevel(g.percentage ?? 0))}
+                            {performanceLabel(g.level ?? performanceLevel(g.percentage ?? 0), en)}
                           </Badge>
                         </TableCell>
                       </TableRow>
@@ -339,7 +339,7 @@ export default async function StudentProfilePage(
                       <div className="text-right">
                         <HomeworkBadge status={s.status} />
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {en ? "Due date:" : "موعد التسليم:"} {formatDate(s.homework?.deadline)}
+                          {en ? "Due date:" : "موعد التسليم:"} {formatDate(s.homework?.deadline, undefined, en ? "en-EG" : "ar-EG")}
                         </p>
                       </div>
                     </div>
@@ -364,12 +364,12 @@ export default async function StudentProfilePage(
                 <TableBody>
                   {lessons.map((l) => (
                     <TableRow key={l.id}>
-                      <TableCell className="text-sm">{formatDate(l.date)}</TableCell>
+                      <TableCell className="text-sm">{formatDate(l.date, undefined, en ? "en-EG" : "ar-EG")}</TableCell>
                       <TableCell className="font-medium">
                         <Link href={`/lessons/${l.id}`} className="hover:text-primary">{l.topic}</Link>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{l.group?.name ?? "—"}</TableCell>
-                      <TableCell className="text-sm">{formatTime(`${l.date.slice(0, 10)}T${l.start_time}:00`)}</TableCell>
+                      <TableCell className="text-sm">{formatTime(`${l.date.slice(0, 10)}T${l.start_time}:00`, en ? "en-EG" : "ar-EG")}</TableCell>
                     </TableRow>
                   ))}
                   {lessons.length === 0 && (

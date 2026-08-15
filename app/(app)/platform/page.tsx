@@ -27,8 +27,8 @@ const EGP = (value: number, en = false) =>
   new Intl.NumberFormat(en ? "en-EG" : "ar-EG", { maximumFractionDigits: 0 }).format(value || 0) + (en ? " EGP" : " ج.م");
 const percent = (numerator: number, denominator: number) =>
   denominator ? Math.round((numerator / denominator) * 100) : 0;
-const formatDate = (value: string | null | undefined) =>
-  value ? new Date(value).toLocaleDateString("ar-EG") : "—";
+const formatDate = (value: string | null | undefined, en = false) =>
+  value ? new Date(value).toLocaleDateString(en ? "en-EG" : "ar-EG") : "—";
 
 export default async function PlatformPage() {
   await requireScopedRole("SUPER_ADMIN");
@@ -182,11 +182,11 @@ export default async function PlatformPage() {
               const suspended = academy.is_active === false;
               return (
                 <div key={academy.id} className="flex flex-wrap items-center gap-3 p-4">
-                  <Avatar><AvatarFallback>{(academy.name || "أ").slice(0, 2)}</AvatarFallback></Avatar>
+                  <Avatar><AvatarFallback>{(academy.name || (en ? "A" : "أكاديمية")).slice(0, 2)}</AvatarFallback></Avatar>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{academy.name || "أكاديمية بلا اسم"}</p>
+                    <p className="truncate font-medium">{academy.name || (en ? "Unnamed academy" : "أكاديمية بلا اسم")}</p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {studentCount} {en ? "students" : "طالب"} · {teacherCount} {en ? "teachers" : "مدرس"} · {en ? "Joined" : "انضمّت"} {formatDate(academy.created_at)}
+                      {studentCount} {en ? "students" : "طالب"} · {teacherCount} {en ? "teachers" : "مدرس"} · {en ? "Joined" : "انضمّت"} {formatDate(academy.created_at, en)}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-sm">

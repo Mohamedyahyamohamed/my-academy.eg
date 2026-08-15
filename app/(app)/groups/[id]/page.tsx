@@ -79,7 +79,7 @@ export default async function GroupDetailPage(
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
         title={detail.name}
         description={`${detail.course?.name} · ${detail.schedule}`}
@@ -247,7 +247,7 @@ export default async function GroupDetailPage(
               <TableBody>
                 {detail.lessons.slice(0, 8).map((l) => (
                   <TableRow key={l.id}>
-                    <TableCell className="text-sm">{formatDate(l.date)}</TableCell>
+                    <TableCell className="text-sm">{formatDate(l.date, undefined, en ? "en-EG" : "ar-EG")}</TableCell>
                     <TableCell className="font-medium">
                       <Link href={`/lessons/${l.id}`} className="hover:text-primary">{l.topic}</Link>
                     </TableCell>

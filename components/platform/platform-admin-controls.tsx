@@ -16,9 +16,9 @@ export function PlatformUserControls({ users, en = false }: { users: UserRow[]; 
   const run = (work: () => Promise<{ ok: boolean; error?: string }>) => {
     startTransition(async () => {
       const result = await work();
-      if (!result.ok) toast.error(result.error || "تعذر تنفيذ العملية");
+      if (!result.ok) toast.error(result.error || (en ? "Could not complete the operation." : "تعذر تنفيذ العملية"));
       else {
-        toast.success("تم تحديث بيانات المنصة");
+        toast.success(en ? "Platform data updated." : "تم تحديث بيانات المنصة");
         router.refresh();
       }
     });

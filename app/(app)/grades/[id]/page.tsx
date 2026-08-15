@@ -30,10 +30,10 @@ export default async function ExamGradePage(props: { params: Promise<{ id: strin
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
         title={exam.name}
-        description={`${exam.course?.name} · ${exam.group?.name} · ${formatDate(exam.date)}`}
+        description={`${exam.course?.name} · ${exam.group?.name} · ${formatDate(exam.date, undefined, en ? "en-EG" : "ar-EG")}`}
         breadcrumbs={[{ label: en ? "Grades" : "الدرجات", href: "/grades" }, { label: exam.name }]}
       >
         <Button asChild variant="outline">

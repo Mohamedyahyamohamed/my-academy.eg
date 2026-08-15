@@ -22,7 +22,7 @@ export default async function NewLessonPage(
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
         title={en ? "New lesson" : "حصة جديدة"}
         description={en ? "Schedule a lesson for one of your groups." : "حدّد موعد حصة لإحدى المجموعات."}

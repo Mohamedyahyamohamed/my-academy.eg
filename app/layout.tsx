@@ -7,13 +7,19 @@ import "./globals.css";
 
 // خط النظام بدل next/font/google — عشان يشتغل أوفلاين ومن غير إنترنت لـ Google.
 
-export const metadata: Metadata = {
-  title: {
-    default: `${APP_CONFIG.name} — ${APP_CONFIG.tagline}`,
-    template: `%s · ${APP_CONFIG.name}`,
-  },
-  description: APP_CONFIG.description,
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
+  const en = lang === "en";
+  return {
+    title: {
+      default: `${APP_CONFIG.name} — ${en ? "Run your academy with clarity and ease" : APP_CONFIG.tagline}`,
+      template: `%s · ${APP_CONFIG.name}`,
+    },
+    description: en
+      ? "A complete platform for managing students, groups, attendance, payments, grades, and role-based academy portals."
+      : APP_CONFIG.description,
+  };
+}
 
 export default async function RootLayout({
   children,

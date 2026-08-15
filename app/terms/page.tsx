@@ -1,7 +1,10 @@
 import { cookies } from "next/headers";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 
-export const metadata = { title: "Terms / الشروط" };
+export async function generateMetadata() {
+  const lang = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value);
+  return { title: lang === "en" ? "Terms of Use" : "شروط الاستخدام" };
+}
 
 export default async function TermsPage() {
   const ar = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "ar";

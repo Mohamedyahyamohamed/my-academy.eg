@@ -24,7 +24,7 @@ export default async function HomeworkDetailPage(props: { params: Promise<{ id: 
   const reviewed = submissions.filter((s) => s.status === "REVIEWED").length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
         title={hw.title}
         breadcrumbs={[{ label: en ? "Homework" : "الواجبات", href: "/homework" }, { label: hw.title }]}
@@ -39,7 +39,7 @@ export default async function HomeworkDetailPage(props: { params: Promise<{ id: 
           <p className="text-sm text-muted-foreground">{hw.description}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Badge variant="secondary">{hw.group?.name}</Badge>
-            <Badge variant="outline">{en ? "Due date:" : "موعد التسليم:"} {formatDate(hw.deadline)}</Badge>
+            <Badge variant="outline">{en ? "Due date:" : "موعد التسليم:"} {formatDate(hw.deadline, undefined, en ? "en-EG" : "ar-EG")}</Badge>
             <Badge variant="info">{submitted}/{submissions.length} {en ? "submitted" : "تم التسليم"}</Badge>
             <Badge variant="success">{reviewed} {en ? "reviewed" : "تمت المراجعة"}</Badge>
           </div>

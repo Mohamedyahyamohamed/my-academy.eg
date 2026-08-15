@@ -21,7 +21,7 @@ export default async function ParentAttendancePage() {
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader title={en ? "Attendance" : "الحضور"} description={en ? "Attendance records for all your children." : "سجلات الحضور لكل أبنائك."} />
       {children.length === 0 ? (
         <EmptyState icon={CalendarCheck} title={en ? "No data" : "لا توجد بيانات"} description={en ? "No children are linked to this account." : "لا يوجد أبناء مرتبطون بالحساب."} />
@@ -48,7 +48,7 @@ export default async function ParentAttendancePage() {
                         const group = lesson ? collections().groups.find((g) => g.id === lesson.group_id) : undefined;
                         return (
                           <TableRow key={a.id}>
-                            <TableCell className="text-sm">{lesson ? formatDate(lesson.date) : "—"}</TableCell>
+                            <TableCell className="text-sm">{lesson ? formatDate(lesson.date, undefined, en ? "en-EG" : "ar-EG") : "—"}</TableCell>
                             <TableCell className="text-sm text-muted-foreground">{group?.name ?? "—"}</TableCell>
                             <TableCell><AttendanceBadge status={a.status} /></TableCell>
                           </TableRow>

@@ -163,14 +163,14 @@ export default async function DashboardPage(
         />
         <StatCard
           label={`${en ? "Collected" : "المحصّل"} ${PERIOD_LABELS[period][en ? "en" : "ar"]}`}
-          value={formatCurrency(d.collectedForPeriod)}
+          value={formatCurrency(d.collectedForPeriod, "EGP", en ? "en-EG" : "ar-EG")}
           icon={Wallet}
           accent="success"
           trend={period === "month" ? { value: Math.abs(collectionTrend), positive: collectionTrend >= 0, label: en ? "Compared with last month" : "مقارنة بالشهر الماضي" } : undefined}
         />
         <StatCard
           label={en ? "Outstanding" : "المتبقي (المتأخرات)"}
-          value={formatCurrency(d.outstanding)}
+          value={formatCurrency(d.outstanding, "EGP", en ? "en-EG" : "ar-EG")}
           icon={TrendingDown}
           accent="warning"
         />
@@ -180,7 +180,7 @@ export default async function DashboardPage(
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label={en ? "Monthly revenue" : "الإيراد الشهري"}
-          value={formatCurrency(d.monthlyRevenue)}
+          value={formatCurrency(d.monthlyRevenue, "EGP", en ? "en-EG" : "ar-EG")}
           icon={Wallet}
           accent="primary"
         />
@@ -209,10 +209,10 @@ export default async function DashboardPage(
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div>
-              <CardTitle>الإيرادات حسب الشهر</CardTitle>
-              <CardDescription>الإيرادات المستحقة خلال آخر {period === "year" ? "12" : "6"} أشهر</CardDescription>
+              <CardTitle>{en ? "Revenue by month" : "الإيرادات حسب الشهر"}</CardTitle>
+              <CardDescription>{en ? `Revenue due over the last ${period === "year" ? "12" : "6"} months` : `الإيرادات المستحقة خلال آخر ${period === "year" ? "12" : "6"} أشهر`}</CardDescription>
             </div>
-            <Badge variant="secondary">جنيه</Badge>
+            <Badge variant="secondary">{en ? "EGP" : "جنيه"}</Badge>
           </CardHeader>
           <CardContent>
             <TrendArea
@@ -226,8 +226,8 @@ export default async function DashboardPage(
 
         <Card>
           <CardHeader>
-            <CardTitle>الطلاب حسب المادة</CardTitle>
-            <CardDescription>توزيع التسجيل</CardDescription>
+            <CardTitle>{en ? "Students by subject" : "الطلاب حسب المادة"}</CardTitle>
+            <CardDescription>{en ? "Enrollment distribution" : "توزيع التسجيل"}</CardDescription>
           </CardHeader>
           <CardContent>
             <Donut
@@ -237,7 +237,7 @@ export default async function DashboardPage(
                 color: s.color,
               }))}
               centerValue={String(d.totalStudents)}
-              centerLabel="طالب"
+              centerLabel={en ? "Students" : "طالب"}
             />
             <div className="mt-3 space-y-1.5">
               {d.studentsByCourse.map((s) => (
@@ -261,8 +261,8 @@ export default async function DashboardPage(
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>اتجاه الحضور</CardTitle>
-            <CardDescription>نسبة الحضور والتأخير عبر أحدث الحصص</CardDescription>
+            <CardTitle>{en ? "Attendance trend" : "اتجاه الحضور"}</CardTitle>
+            <CardDescription>{en ? "Attendance and lateness across recent lessons" : "نسبة الحضور والتأخير عبر أحدث الحصص"}</CardDescription>
           </CardHeader>
           <CardContent>
             <LineTrend data={d.attendanceTrend} dataKey="rate" xKey="week" color="#10b981" />
@@ -270,8 +270,8 @@ export default async function DashboardPage(
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>أداء الدرجات</CardTitle>
-            <CardDescription>توزيع أحدث النتائج</CardDescription>
+            <CardTitle>{en ? "Grade performance" : "أداء الدرجات"}</CardTitle>
+            <CardDescription>{en ? "Distribution of recent results" : "توزيع أحدث النتائج"}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -311,15 +311,15 @@ export default async function DashboardPage(
         {/* Upcoming lessons */}
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle>الحصص القادمة</CardTitle>
+            <CardTitle>{en ? "Upcoming lessons" : "الحصص القادمة"}</CardTitle>
             <Button asChild variant="ghost" size="sm">
-              <Link href="/lessons">عرض الكل</Link>
+              <Link href="/lessons">{en ? "View all" : "عرض الكل"}</Link>
             </Button>
           </CardHeader>
           <CardContent className="space-y-1">
             {d.upcomingLessons.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                لا توجد حصص قادمة مجدولة.
+                {en ? "No upcoming lessons scheduled." : "لا توجد حصص قادمة مجدولة."}
               </p>
             ) : (
               d.upcomingLessons.map((l) => (
@@ -330,7 +330,7 @@ export default async function DashboardPage(
                 >
                   <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <span className="text-[10px] font-medium uppercase">
-                      {formatDate(l.date, { month: "short" }).split(" ")[0]}
+                      {formatDate(l.date, { month: "short" }, en ? "en-EG" : "ar-EG").split(" ")[0]}
                     </span>
                     <span className="text-sm font-semibold leading-none">
                       {new Date(l.date).getDate()}
@@ -344,7 +344,7 @@ export default async function DashboardPage(
                   </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock className="h-3.5 w-3.5" />
-                    {formatTime(`${l.date.slice(0, 10)}T${l.start_time}:00`)}
+                    {formatTime(`${l.date.slice(0, 10)}T${l.start_time}:00`, en ? "en-EG" : "ar-EG")}
                   </div>
                 </Link>
               ))
@@ -356,14 +356,14 @@ export default async function DashboardPage(
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-500" /> تنبيهات ذكية — في خطر
+              <AlertTriangle className="h-4 w-4 text-amber-500" /> {en ? "Smart alerts — at risk" : "تنبيهات ذكية — في خطر"}
             </CardTitle>
-            <CardDescription>طلاب تم رصدهم تلقائيًا قد يحتاجون تدخلًا</CardDescription>
+            <CardDescription>{en ? "Students automatically flagged as needing attention" : "طلاب تم رصدهم تلقائيًا قد يحتاجون تدخلًا"}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-1">
             {atRisk.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                لا يوجد طلاب في خطر — الجميع على المسار 🎉
+                {en ? "No at-risk students — everyone is on track." : "لا يوجد طلاب في خطر — الجميع على المسار."}
               </p>
             ) : (
               atRisk.map((r) => (
@@ -390,15 +390,15 @@ export default async function DashboardPage(
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle>أحدث المدفوعات</CardTitle>
+            <CardTitle>{en ? "Recent payments" : "أحدث المدفوعات"}</CardTitle>
             <Button asChild variant="ghost" size="sm">
-              <Link href="/payments">عرض الكل</Link>
+              <Link href="/payments">{en ? "View all" : "عرض الكل"}</Link>
             </Button>
           </CardHeader>
           <CardContent className="space-y-1">
             {d.recentPayments.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                لا توجد مدفوعات مسجلة بعد.
+                {en ? "No payments recorded yet." : "لا توجد مدفوعات مسجلة بعد."}
               </p>
             ) : (
               d.recentPayments.map((p) => (
@@ -409,7 +409,7 @@ export default async function DashboardPage(
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="text-[11px]">
-                        {p.student ? initials(`${p.student.first_name} ${p.student.last_name}`) : "؟"}
+                        {p.student ? initials(`${p.student.first_name} ${p.student.last_name}`) : "?"}
                       </AvatarFallback>
                     </Avatar>
                     <div>
@@ -421,7 +421,7 @@ export default async function DashboardPage(
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium">
-                      {formatCurrency(p.amount_paid)}
+                      {formatCurrency(p.amount_paid, "EGP", en ? "en-EG" : "ar-EG")}
                     </p>
                     <PaymentStatusBadge status={p.status} />
                   </div>
@@ -433,13 +433,13 @@ export default async function DashboardPage(
 
         <Card>
           <CardHeader>
-            <CardTitle>المتأخرات هذا الشهر</CardTitle>
-            <CardDescription>غير مدفوعة أو مدفوعة جزئيًا</CardDescription>
+            <CardTitle>{en ? "Outstanding this month" : "المتأخرات هذا الشهر"}</CardTitle>
+            <CardDescription>{en ? "Unpaid or partially paid" : "غير مدفوعة أو مدفوعة جزئيًا"}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-1">
             {d.outstandingStudents.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                لا توجد متأخرات هذا الشهر 🎉
+                {en ? "No outstanding payments this month." : "لا توجد متأخرات هذا الشهر."}
               </p>
             ) : (
               d.outstandingStudents.map((p) => (
@@ -456,7 +456,7 @@ export default async function DashboardPage(
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-rose-600">
-                      {formatCurrency(p.remaining)}
+                      {formatCurrency(p.remaining, "EGP", en ? "en-EG" : "ar-EG")}
                     </p>
                     <PaymentStatusBadge status={p.status} />
                   </div>

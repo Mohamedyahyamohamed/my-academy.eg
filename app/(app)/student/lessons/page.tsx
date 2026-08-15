@@ -36,10 +36,10 @@ export default async function StudentLessonsPage() {
                 <TableBody>
                   {upcoming.map((l) => (
                     <TableRow key={l.id}>
-                      <TableCell className="text-sm">{formatDate(l.date)}</TableCell>
+                      <TableCell className="text-sm">{formatDate(l.date, undefined, en ? "en-EG" : "ar-EG")}</TableCell>
                       <TableCell className="font-medium">{l.topic}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{l.group?.name}</TableCell>
-                      <TableCell className="text-sm">{formatTime(`${l.date.slice(0, 10)}T${l.start_time}:00`)}</TableCell>
+                      <TableCell className="text-sm">{formatTime(`${l.date.slice(0, 10)}T${l.start_time}:00`, en ? "en-EG" : "ar-EG")}</TableCell>
                     </TableRow>
                   ))}
                   {upcoming.length === 0 && <TableRow><TableCell colSpan={4} className="py-6 text-center text-sm text-muted-foreground">{en ? "No upcoming lessons." : "لا توجد حصص قادمة."}</TableCell></TableRow>}
@@ -56,7 +56,7 @@ export default async function StudentLessonsPage() {
                 <TableBody>
                   {past.slice(0, 10).map((l) => (
                     <TableRow key={l.id}>
-                      <TableCell className="text-sm">{formatDate(l.date)}</TableCell>
+                      <TableCell className="text-sm">{formatDate(l.date, undefined, en ? "en-EG" : "ar-EG")}</TableCell>
                       <TableCell className="font-medium">{l.topic}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{l.group?.name}</TableCell>
                     </TableRow>

@@ -116,7 +116,7 @@ export function NotificationsMenu() {
                     {n.message}
                   </p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground/70">
-                    {formatRelative(n.created_at)}
+                    {formatRelative(n.created_at, en ? "en-EG" : "ar-EG")}
                   </p>
                 </div>
                 {!n.read && (

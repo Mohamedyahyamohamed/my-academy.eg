@@ -27,7 +27,7 @@ export default async function ParentPaymentsPage() {
   const collected = allPayments.reduce((s, p) => s + p.amount_paid, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader title={en ? "Payments" : "المصاريف"} description={en ? "Fee records and balances for your children." : "سجلات الرسوم والأرصدة لأبنائك."} />
       {children.length === 0 ? (
         <EmptyState icon={Wallet} title={en ? "No data" : "لا توجد بيانات"} description={en ? "No children are linked to this account." : "لا يوجد أبناء مرتبطون بالحساب."} />

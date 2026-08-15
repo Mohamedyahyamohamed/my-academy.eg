@@ -121,7 +121,7 @@ export default async function SettingsPage({
         </TabsContent>
 
         <TabsContent value="courses"><Card><CardHeader><CardTitle className="text-base">{text.coursesTitle}</CardTitle><CardDescription>{text.coursesDescription}</CardDescription></CardHeader><CardContent><CoursesManager courses={courses} /></CardContent></Card></TabsContent>
-        <TabsContent value="payments"><Card><CardHeader><CardTitle className="text-base">{text.paymentTitle}</CardTitle><CardDescription>{text.paymentDescription}</CardDescription></CardHeader><CardContent><div className="flex flex-wrap gap-2">{PAYMENT_METHODS.map((m) => <Badge key={m} variant="secondary">{paymentMethodLabel(m)}</Badge>)}</div></CardContent></Card></TabsContent>
+        <TabsContent value="payments"><Card><CardHeader><CardTitle className="text-base">{text.paymentTitle}</CardTitle><CardDescription>{text.paymentDescription}</CardDescription></CardHeader><CardContent><div className="flex flex-wrap gap-2">{PAYMENT_METHODS.map((m) => <Badge key={m} variant="secondary">{paymentMethodLabel(m, lang === "en")}</Badge>)}</div></CardContent></Card></TabsContent>
         <TabsContent value="security"><ChangePasswordForm /></TabsContent>
 
         <TabsContent value="roles">

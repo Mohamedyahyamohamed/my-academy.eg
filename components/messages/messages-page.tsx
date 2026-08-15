@@ -69,7 +69,7 @@ export function MessagesPageContent({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
                   <p className={cn("text-sm truncate", !m.read && "font-semibold")}>{m.sender_name}</p>
-                  <span className="text-[11px] text-muted-foreground shrink-0">{formatRelative(m.created_at)}</span>
+                  <span className="text-[11px] text-muted-foreground shrink-0">{formatRelative(m.created_at, en ? "en-EG" : "ar-EG")}</span>
                 </div>
                 <p className="text-sm text-muted-foreground truncate">{m.body}</p>
               </div>
@@ -85,7 +85,7 @@ export function MessagesPageContent({
                 <p className="text-sm font-medium">{en ? "To:" : "إلى:"} {m.recipient_name}</p>
                 <p className="text-sm text-muted-foreground truncate">{m.body}</p>
               </div>
-              <span className="text-[11px] text-muted-foreground shrink-0">{formatRelative(m.created_at)}</span>
+              <span className="text-[11px] text-muted-foreground shrink-0">{formatRelative(m.created_at, en ? "en-EG" : "ar-EG")}</span>
             </div>
           ))}
         </TabsContent>

@@ -32,11 +32,12 @@ export function formatCompact(value: number, locale: string = "en-US") {
 export function formatDate(
   date: string | Date | null | undefined,
   opts?: Intl.DateTimeFormatOptions,
+  locale: string = "ar-EG",
 ) {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
   if (Number.isNaN(d.getTime())) return "—";
-  return new Intl.DateTimeFormat("ar-EG", {
+  return new Intl.DateTimeFormat(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -45,11 +46,11 @@ export function formatDate(
 }
 
 /** Format an ISO date string to time only. */
-export function formatTime(date: string | Date | null | undefined) {
+export function formatTime(date: string | Date | null | undefined, locale: string = "ar-EG") {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
   if (Number.isNaN(d.getTime())) return "—";
-  return new Intl.DateTimeFormat("ar-EG", {
+  return new Intl.DateTimeFormat(locale, {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
@@ -57,19 +58,19 @@ export function formatTime(date: string | Date | null | undefined) {
 }
 
 /** Relative time, e.g. "2 days ago". */
-export function formatRelative(date: string | Date | null | undefined) {
+export function formatRelative(date: string | Date | null | undefined, locale: string = "ar-EG") {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
   const diff = d.getTime() - Date.now();
   const abs = Math.abs(diff);
-  const rtf = new Intl.RelativeTimeFormat("ar-EG", { numeric: "auto" });
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
   const min = 60_000,
     hr = 3_600_000,
     day = 86_400_000;
   if (abs < hr) return rtf.format(Math.round(diff / min), "minute");
   if (abs < day) return rtf.format(Math.round(diff / hr), "hour");
   if (abs < day * 30) return rtf.format(Math.round(diff / day), "day");
-  return formatDate(d);
+  return formatDate(d, undefined, locale);
 }
 
 /** Build initials from a name. */

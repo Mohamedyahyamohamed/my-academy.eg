@@ -98,7 +98,7 @@ export function ScanWorkshop({
             <label className="text-sm font-medium">{en ? "2. Choose lesson" : "2. اختر الدرس"}</label>
             <select value={lessonId} onChange={(e) => setLessonId(e.target.value)} disabled={!groupId} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50">
               <option value="">{en ? "Choose…" : "اختر…"}</option>
-              {groupLessons.map((l) => <option key={l.id} value={l.id}>{l.topic} — {new Date(l.date).toLocaleDateString()}</option>)}
+              {groupLessons.map((l) => <option key={l.id} value={l.id}>{l.topic} — {new Date(l.date).toLocaleDateString(en ? "en-EG" : "ar-EG")}</option>)}
             </select>
           </div>
         </CardContent>

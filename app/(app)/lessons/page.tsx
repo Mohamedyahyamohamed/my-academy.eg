@@ -101,8 +101,8 @@ export default async function LessonsPage(
                       <Link href={`/lessons/${l.id}`} className="hover:text-primary">{l.topic}</Link>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{l.group?.name}</TableCell>
-                    <TableCell className="text-sm">{formatDate(l.date)}</TableCell>
-                    <TableCell className="text-sm">{formatTime(`${l.date.slice(0, 10)}T${l.start_time}:00`)}</TableCell>
+                    <TableCell className="text-sm">{formatDate(l.date, undefined, en ? "en-EG" : "ar-EG")}</TableCell>
+                    <TableCell className="text-sm">{formatTime(`${l.date.slice(0, 10)}T${l.start_time}:00`, en ? "en-EG" : "ar-EG")}</TableCell>
                     <TableCell>
                       <Badge variant={l.attendance_taken ? "success" : "outline"}>
                         {l.attendance_taken ? (en ? "Recorded" : "تم تسجيله") : (en ? "Pending" : "معلّق")}
@@ -125,7 +125,7 @@ export default async function LessonsPage(
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{l.group?.name}</p>
                 <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {formatDate(l.date)}</span>
+                  <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {formatDate(l.date, undefined, en ? "en-EG" : "ar-EG")}</span>
                   <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {l.start_time}</span>
                 </div>
               </Link>

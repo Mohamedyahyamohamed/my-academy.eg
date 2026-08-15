@@ -99,7 +99,7 @@ export default async function ParentChildPage(props: { params: Promise<{ id: str
                   const group = lesson ? groups.find((g) => g.id === lesson.group_id) : undefined;
                   return (
                     <TableRow key={a.id}>
-                      <TableCell className="text-sm">{lesson ? formatDate(lesson.date) : "—"}</TableCell>
+                      <TableCell className="text-sm">{lesson ? formatDate(lesson.date, undefined, en ? "en-EG" : "ar-EG") : "—"}</TableCell>
                       <TableCell className="text-sm">{group?.name ?? "—"}</TableCell>
                       <TableCell><AttendanceBadge status={a.status} /></TableCell>
                     </TableRow>
@@ -162,7 +162,7 @@ export default async function ParentChildPage(props: { params: Promise<{ id: str
                     <p className="text-sm text-muted-foreground">{s.homework?.description}</p>
                     {s.feedback && <p className="mt-2 rounded-md bg-muted p-2 text-xs"><span className="font-medium">{en ? "Teacher feedback:" : "ملاحظات المعلّم:"}</span> {s.feedback}</p>}
                   </div>
-                  <div className="text-right"><HomeworkBadge status={s.status} /><p className="mt-1 text-xs text-muted-foreground">{en ? "Due:" : "موعد التسليم:"} {formatDate(s.homework?.deadline)}</p></div>
+                  <div className="text-right"><HomeworkBadge status={s.status} /><p className="mt-1 text-xs text-muted-foreground">{en ? "Due:" : "موعد التسليم:"} {formatDate(s.homework?.deadline, undefined, en ? "en-EG" : "ar-EG")}</p></div>
                 </div>
               </CardContent></Card>
             ))}
@@ -175,7 +175,7 @@ export default async function ParentChildPage(props: { params: Promise<{ id: str
               <TableBody>
                 {lessons.map((l) => (
                   <TableRow key={l.id}>
-                    <TableCell className="text-sm">{formatDate(l.date)}</TableCell>
+                    <TableCell className="text-sm">{formatDate(l.date, undefined, en ? "en-EG" : "ar-EG")}</TableCell>
                     <TableCell className="font-medium">{l.topic}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{l.group?.name}</TableCell>
                   </TableRow>

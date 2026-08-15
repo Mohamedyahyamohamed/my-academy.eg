@@ -67,7 +67,7 @@ export function StudentNotes({
                 <div className="min-w-0 flex-1">
                   <p className="text-sm">{n.content}</p>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    {n.author_name ?? (en ? "Unknown" : "غير معروف")} · {formatRelative(n.created_at)}
+                    {n.author_name ?? (en ? "Unknown" : "غير معروف")} · {formatRelative(n.created_at, en ? "en-EG" : "ar-EG")}
                   </p>
                 </div>
                 <Button

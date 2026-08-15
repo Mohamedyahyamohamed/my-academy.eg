@@ -14,8 +14,10 @@ import { useClientLang } from "@/lib/i18n-client";
 
 const HEADER =
   "first_name,last_name,phone,grade,school,parent_name,parent_phone";
-const EXAMPLE =
+const EXAMPLE_AR =
   "first_name,last_name,phone,grade,school,parent_name,parent_phone\nأحمد,محمود,01012345678,الصف الثالث,النور,سارة محمود,01012345678\nمريم,علي,01098765432,الصف الثاني,السلام,فاطمة علي,01098765432";
+const EXAMPLE_EN =
+  "first_name,last_name,phone,grade,school,parent_name,parent_phone\nAhmed,Mahmoud,01012345678,Grade 3,Al Noor,Sara Mahmoud,01012345678\nMaryem,Ali,01098765432,Grade 2,Al Salam,Fatima Ali,01098765432";
 
 function parseCSV(text: string): ImportRow[] {
   const lines = text.trim().split(/\r?\n/).filter((l) => l.trim());
@@ -71,7 +73,7 @@ export function ImportStudents() {
   };
 
   const downloadTemplate = () => {
-    const blob = new Blob([EXAMPLE], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob([en ? EXAMPLE_EN : EXAMPLE_AR], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -114,7 +116,7 @@ export function ImportStudents() {
               {en ? "Columns:" : "الأعمدة:"} {HEADER}
             </div>
             <Button variant="outline" size="sm" onClick={downloadTemplate}>
-              <Upload className="mr-2 h-4 w-4" /> {en ? "Download Excel template" : "نزّل قالب Excel"}
+              <Upload className="me-2 h-4 w-4" /> {en ? "Download Excel template" : "نزّل قالب Excel"}
             </Button>
           </div>
 
@@ -137,7 +139,7 @@ export function ImportStudents() {
               rows={8}
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder={EXAMPLE}
+              placeholder={en ? EXAMPLE_EN : EXAMPLE_AR}
               className="font-mono text-xs"
               dir="ltr"
             />
@@ -145,11 +147,11 @@ export function ImportStudents() {
 
           <div className="flex gap-2">
             <Button onClick={doImport} disabled={loading}>
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {loading ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : null}
               {en ? "Import students" : "استيراد الطلاب"}
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/students"><ArrowLeft className="mr-2 h-4 w-4" /> {en ? "Back" : "رجوع"}</Link>
+              <Link href="/students"><ArrowLeft className="me-2 h-4 w-4" /> {en ? "Back" : "رجوع"}</Link>
             </Button>
           </div>
         </CardContent>

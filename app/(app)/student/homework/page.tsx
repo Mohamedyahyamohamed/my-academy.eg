@@ -35,7 +35,7 @@ export default async function StudentHomeworkPage() {
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">{s.homework?.description}</p>
                     <p className="mt-2 text-xs text-muted-foreground">
-                      {s.homework?.group?.name} · {en ? "Due:" : "موعد التسليم:"} {formatDate(s.homework?.deadline)}
+                      {s.homework?.group?.name} · {en ? "Due:" : "موعد التسليم:"} {formatDate(s.homework?.deadline, undefined, en ? "en-EG" : "ar-EG")}
                     </p>
                     {s.content && (
                       <p className="mt-2 rounded-md bg-muted p-2 text-xs">

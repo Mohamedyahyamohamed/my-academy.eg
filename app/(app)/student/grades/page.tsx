@@ -47,7 +47,7 @@ export default async function StudentGradesPage() {
                     return (
                       <TableRow key={g.id}>
                         <TableCell className="font-medium">{exam?.name ?? "—"}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{exam ? formatDate(exam.date) : "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{exam ? formatDate(exam.date, undefined, en ? "en-EG" : "ar-EG") : "—"}</TableCell>
                         <TableCell>{g.score}/{exam?.max_score}</TableCell>
                         <TableCell className="font-medium">{Math.round(g.percentage ?? 0)}%</TableCell>
                         <TableCell><Badge className={performanceColor(lvl)}>{performanceLabel(lvl)}</Badge></TableCell>

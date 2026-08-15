@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHash, createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
@@ -28,6 +28,18 @@ export async function GET(request: NextRequest) {
   const mode = request.nextUrl.searchParams.get("hub.mode");
   const token = request.nextUrl.searchParams.get("hub.verify_token");
   const challenge = request.nextUrl.searchParams.get("hub.challenge");
+  const fingerprint = (value: string | null | undefined) =>
+    value ? createHash("sha256").update(value).digest("hex").slice(0, 12) : null;
+
+  // Temporary safe diagnostic: never log the token itself, only lengths and fingerprints.
+  console.warn("[whatsapp-webhook] verify_attempt", {
+    mode,
+    tokenLength: token?.length ?? 0,
+    tokenFingerprint: fingerprint(token),
+    expectedLength: verifyToken?.length ?? 0,
+    expectedFingerprint: fingerprint(verifyToken),
+    challengePresent: Boolean(challenge),
+  });
 
   if (!verifyToken) {
     return new NextResponse("WhatsApp webhook is not configured", { status: 503 });

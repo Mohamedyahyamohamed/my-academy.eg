@@ -83,6 +83,60 @@ export interface Course {
   updated_at: ISODate;
 }
 
+export interface ContentCourse {
+  id: UUID;
+  academy_id: UUID;
+  teacher_id: UUID;
+  group_id: UUID;
+  title: string;
+  description: string | null;
+  sort_order: number;
+  is_published: boolean;
+  created_at: ISODate;
+  updated_at: ISODate;
+  teacher?: Teacher;
+  group?: Group;
+  lessons?: ContentLesson[];
+  files?: ContentFile[];
+}
+
+export interface ContentLesson {
+  id: UUID;
+  academy_id: UUID;
+  course_id: UUID;
+  title: string;
+  description: string | null;
+  video_url: string | null;
+  sort_order: number;
+  is_published: boolean;
+  created_at: ISODate;
+  updated_at: ISODate;
+  files?: ContentFile[];
+  completed?: boolean;
+}
+
+export interface ContentFile {
+  id: UUID;
+  academy_id: UUID;
+  course_id: UUID;
+  lesson_id: UUID | null;
+  owner_id: UUID | null;
+  name: string;
+  storage_path: string;
+  size: number;
+  mime_type: string;
+  created_at: ISODate;
+  download_url?: string;
+}
+
+export interface ContentProgress {
+  id: UUID;
+  academy_id: UUID;
+  student_id: UUID;
+  lesson_id: UUID;
+  completed_at: ISODate;
+}
+
 export interface Teacher {
   id: UUID;
   academy_id: UUID;

@@ -5,7 +5,7 @@ import { requireScopedRole, resolveStudent } from "@/services";
 import { collections } from "@/services/data/store";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
-import { measureStorageUsage } from "@/lib/storage-quota";
+import { measureTenantStorageUsage } from "@/lib/storage-quota";
 import { getPlan } from "@/services/saas";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -88,7 +88,7 @@ export async function uploadHomeworkFile(formData: FormData) {
   if (!client) return { ok: false, error: "Storage not configured." };
 
   const plan = getPlan(user.academy_id);
-  const storageUsage = await measureStorageUsage(client, "homework", user.academy_id);
+  const storageUsage = await measureTenantStorageUsage(client, user.academy_id);
   if (!storageUsage.ok) return { ok: false, error: storageUsage.error };
 
   const incomingBytes = file.size;

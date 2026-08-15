@@ -11,6 +11,10 @@ import type {
   AppNotification,
   AttendanceRecord,
   Course,
+  ContentCourse,
+  ContentFile,
+  ContentLesson,
+  ContentProgress,
   Exam,
   FileRecord,
   Grade,
@@ -31,6 +35,10 @@ export interface SeedData {
   academies: Academy[];
   profiles: Profile[];
   courses: Course[];
+  contentCourses: ContentCourse[];
+  contentLessons: ContentLesson[];
+  contentFiles: ContentFile[];
+  contentProgress: ContentProgress[];
   teachers: Teacher[];
   parents: Parent[];
   students: Student[];
@@ -787,11 +795,45 @@ export function createSeedData(): SeedData {
   ];
 
   const files: FileRecord[] = [];
+  const contentCourses: ContentCourse[] = [
+    {
+      id: "content-course-math",
+      academy_id: academyId,
+      teacher_id: "teacher-1",
+      group_id: "group-1",
+      title: "Algebra Foundations",
+      description: "Short lessons and reference files for the algebra group.",
+      sort_order: 0,
+      is_published: true,
+      created_at: iso(daysAgo(12)),
+      updated_at: iso(now),
+    },
+  ];
+  const contentLessons: ContentLesson[] = [
+    {
+      id: "content-lesson-linear-equations",
+      academy_id: academyId,
+      course_id: "content-course-math",
+      title: "Linear equations",
+      description: "Solve and check one-variable equations.",
+      video_url: null,
+      sort_order: 0,
+      is_published: true,
+      created_at: iso(daysAgo(10)),
+      updated_at: iso(now),
+    },
+  ];
+  const contentFiles: ContentFile[] = [];
+  const contentProgress: ContentProgress[] = [];
 
   return {
     academies: [academy, academyB],
     profiles,
     courses,
+    contentCourses,
+    contentLessons,
+    contentFiles,
+    contentProgress,
     teachers,
     parents,
     students,

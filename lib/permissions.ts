@@ -10,6 +10,11 @@ export type Permission =
   | "groups.manage"
   | "lessons.read"
   | "lessons.manage"
+  | "lessons.write"
+  | "courses.read"
+  | "courses.write"
+  | "content.upload"
+  | "content.progress"
   | "attendance.record"
   | "grades.record"
   | "homework.manage"
@@ -24,26 +29,26 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   SUPER_ADMIN: [
     "academy.manage", "academy.billing.manage", "academy.members.manage",
     "students.read", "students.manage", "groups.read", "groups.manage",
-    "lessons.read", "lessons.manage", "attendance.record", "grades.record",
+    "lessons.read", "lessons.manage", "lessons.write", "courses.read", "courses.write", "content.upload", "content.progress", "attendance.record", "grades.record",
     "homework.manage", "homework.submit", "payments.read_own", "payments.manage",
     "reports.read", "messages.send", "audit.read",
   ],
   ADMIN: [
     "academy.manage", "academy.billing.manage", "academy.members.manage",
     "students.read", "students.manage", "groups.read", "groups.manage",
-    "payments.read_own", "payments.manage", "reports.read",
+    "payments.read_own", "payments.manage", "reports.read", "courses.read", "courses.write", "lessons.write",
     "messages.send", "audit.read",
   ],
   TEACHER: [
-    "students.read", "groups.read", "lessons.read", "lessons.manage",
+    "students.read", "groups.read", "lessons.read", "lessons.manage", "lessons.write", "courses.read", "courses.write", "content.upload",
     "attendance.record", "grades.record", "homework.manage", "messages.send",
   ],
   PARENT: [
-    "students.read", "groups.read", "lessons.read", "homework.submit",
+    "students.read", "groups.read", "lessons.read", "courses.read", "homework.submit",
     "payments.read_own", "messages.send",
   ],
   STUDENT: [
-    "students.read", "groups.read", "lessons.read", "homework.submit",
+    "students.read", "groups.read", "lessons.read", "courses.read", "content.progress", "homework.submit",
   ],
 };
 

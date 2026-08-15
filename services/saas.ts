@@ -20,6 +20,8 @@ export interface Plan {
   maxGroups: number;
   maxAcademies: number;
   maxStorageMb: number;
+  maxCourses: number;
+  maxLessons: number;
   price: number;
   currency: string;
 }
@@ -54,6 +56,8 @@ export const PLANS: Record<string, Plan> = {
     maxGroups: 5,
     maxAcademies: 1,
     maxStorageMb: 250,
+    maxCourses: 5,
+    maxLessons: 50,
     price: 0,
     currency: "EGP",
   },
@@ -69,6 +73,8 @@ export const PLANS: Record<string, Plan> = {
     maxGroups: 15,
     maxAcademies: 1,
     maxStorageMb: 1024,
+    maxCourses: 20,
+    maxLessons: 200,
     price: 99,
     currency: "EGP",
   },
@@ -84,6 +90,8 @@ export const PLANS: Record<string, Plan> = {
     maxGroups: 40,
     maxAcademies: 1,
     maxStorageMb: 5120,
+    maxCourses: 60,
+    maxLessons: 600,
     price: 199,
     currency: "EGP",
   },
@@ -99,6 +107,8 @@ export const PLANS: Record<string, Plan> = {
     maxGroups: 100,
     maxAcademies: 1,
     maxStorageMb: 10240,
+    maxCourses: 150,
+    maxLessons: 1500,
     price: 349,
     currency: "EGP",
   },
@@ -114,6 +124,8 @@ export const PLANS: Record<string, Plan> = {
     maxGroups: 5,
     maxAcademies: 1,
     maxStorageMb: 250,
+    maxCourses: 10,
+    maxLessons: 100,
     price: 0,
     currency: "EGP",
   },
@@ -129,6 +141,8 @@ export const PLANS: Record<string, Plan> = {
     maxGroups: 25,
     maxAcademies: 1,
     maxStorageMb: 2048,
+    maxCourses: 50,
+    maxLessons: 500,
     price: 399,
     currency: "EGP",
   },
@@ -144,6 +158,8 @@ export const PLANS: Record<string, Plan> = {
     maxGroups: 100,
     maxAcademies: 3,
     maxStorageMb: 10240,
+    maxCourses: 200,
+    maxLessons: 2000,
     price: 899,
     currency: "EGP",
   },
@@ -159,6 +175,8 @@ export const PLANS: Record<string, Plan> = {
     maxGroups: 500,
     maxAcademies: 10,
     maxStorageMb: 51200,
+    maxCourses: 1000,
+    maxLessons: 10000,
     price: 2499,
     currency: "EGP",
   },
@@ -215,6 +233,8 @@ export interface UsageCounts {
   students: number;
   teachers: number;
   groups: number;
+  courses: number;
+  lessons: number;
 }
 
 /** Count current usage for the workspace. */
@@ -225,17 +245,19 @@ export function getUsage(academyId?: string): UsageCounts {
     students: c.students.filter((s: any) => s.academy_id === aid).length,
     teachers: c.teachers.filter((t: any) => t.academy_id === aid).length,
     groups: c.groups.filter((g: any) => g.academy_id === aid).length,
+    courses: ((c as any).contentCourses ?? []).filter((item: any) => item.academy_id === aid).length,
+    lessons: ((c as any).contentLessons ?? []).filter((item: any) => item.academy_id === aid).length,
   };
 }
 
 /** Check if the workspace can add more of an entity type. */
 export function canCreate(
-  type: "students" | "teachers" | "groups",
+  type: "students" | "teachers" | "groups" | "courses" | "lessons",
   academyId?: string,
 ): { allowed: boolean; limit: number; current: number } {
   const plan = getPlan(academyId);
   const usage = getUsage(academyId);
-  const limit = type === "students" ? plan.maxStudents : type === "teachers" ? plan.maxTeachers : plan.maxGroups;
+  const limit = type === "students" ? plan.maxStudents : type === "teachers" ? plan.maxTeachers : type === "groups" ? plan.maxGroups : type === "courses" ? plan.maxCourses : plan.maxLessons;
   const current = usage[type];
   return { allowed: current < limit, limit, current };
 }

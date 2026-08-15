@@ -98,6 +98,7 @@ export const TEACHER_NAV: NavSection[] = [
       { titleAr: "الحصص", titleEn: "Lessons", href: "/lessons", icon: BookOpen },
       { titleAr: "الحضور", titleEn: "Attendance", href: "/attendance", icon: CalendarCheck },
       { titleAr: "الواجبات", titleEn: "Homework", href: "/homework", icon: ClipboardList },
+      { titleAr: "المحتوى التعليمي", titleEn: "Educational Content", href: "/teacher/content", icon: BookOpen },
       { titleAr: "الدرجات", titleEn: "Grades", href: "/grades", icon: GraduationCap },
       { titleAr: "الطلاب", titleEn: "Students", href: "/students", icon: Users },
       { titleAr: "الرسائل", titleEn: "Messages", href: "/messages", icon: Bell },
@@ -114,6 +115,7 @@ export const PARENT_NAV: NavSection[] = [
     titleAr: "متابعة الأبناء", titleEn: "Children Overview",
     items: [
       { titleAr: "الأبناء", titleEn: "Children", href: "/parent/children", icon: Users },
+      { titleAr: "تقدم المحتوى", titleEn: "Content Progress", href: "/parent/content", icon: BookOpen },
       { titleAr: "الحضور", titleEn: "Attendance", href: "/parent/attendance", icon: CalendarCheck },
       { titleAr: "الواجبات", titleEn: "Homework", href: "/parent/homework", icon: ClipboardList },
       { titleAr: "الدرجات", titleEn: "Grades", href: "/parent/grades", icon: GraduationCap },
@@ -140,6 +142,7 @@ export const STUDENT_NAV: NavSection[] = [
       { titleAr: "فصولي", titleEn: "My Classes", href: "/student/classes", icon: BookOpen },
       { titleAr: "الحصص", titleEn: "Lessons", href: "/student/lessons", icon: CalendarClock },
       { titleAr: "الواجبات", titleEn: "Homework", href: "/student/homework", icon: ClipboardList },
+      { titleAr: "المحتوى التعليمي", titleEn: "Educational Content", href: "/student/content", icon: BookOpen },
       { titleAr: "الدرجات", titleEn: "Grades", href: "/student/grades", icon: GraduationCap },
       { titleAr: "تقدّمي", titleEn: "Progress", href: "/student/progress", icon: TrendingUp },
       { titleAr: "الإشعارات", titleEn: "Notifications", href: "/notifications", icon: Bell },

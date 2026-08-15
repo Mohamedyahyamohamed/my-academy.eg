@@ -45,3 +45,16 @@ test.describe("Student Journey", () => {
     await expect(studentPage).not.toHaveURL(/\/teacher/);
   });
 });
+
+
+test.describe("Student Educational Content", () => {
+  test("can view educational content", async ({ studentPage }) => {
+    await studentPage.goto("/student/content");
+    await expect(studentPage.locator("h1")).toContainText("المحتوى التعليمي");
+  });
+
+  test("cannot open teacher content management", async ({ studentPage }) => {
+    await studentPage.goto("/teacher/content");
+    await expect(studentPage).not.toHaveURL(/\/teacher\/content/);
+  });
+});

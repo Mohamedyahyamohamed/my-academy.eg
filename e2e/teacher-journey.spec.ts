@@ -43,3 +43,16 @@ test.describe("Teacher Journey", () => {
     await expect(teacherPage).toHaveURL(/\/teacher/);
   });
 });
+
+
+test.describe("Teacher Educational Content", () => {
+  test("can access educational content", async ({ teacherPage }) => {
+    await teacherPage.goto("/teacher/content");
+    await expect(teacherPage.locator("h1")).toContainText("المحتوى التعليمي");
+  });
+
+  test("teacher content page only shows assigned groups", async ({ teacherPage }) => {
+    await teacherPage.goto("/teacher/content");
+    await expect(teacherPage.getByText("English Conversation")).not.toBeVisible({ timeout: 5_000 });
+  });
+});

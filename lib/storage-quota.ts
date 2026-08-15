@@ -68,3 +68,20 @@ export async function measureStorageUsage(
 
   return { ok: true, bytes, files };
 }
+
+/** Measure all tenant-owned educational storage buckets as one quota. */
+export async function measureTenantStorageUsage(
+  client: SupabaseClient,
+  academyId: string,
+  buckets = ["homework", "content"],
+): Promise<StorageUsageResult> {
+  let bytes = 0;
+  let files = 0;
+  for (const bucket of buckets) {
+    const usage = await measureStorageUsage(client, bucket, academyId);
+    if (!usage.ok) return usage;
+    bytes += usage.bytes;
+    files += usage.files;
+  }
+  return { ok: true, bytes, files };
+}

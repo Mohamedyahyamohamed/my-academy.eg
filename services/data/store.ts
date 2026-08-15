@@ -132,12 +132,15 @@ async function hydrateFromSupabase(academyId: string): Promise<SeedData | null> 
     };
 
     const [courses, teachers, parents, students, groups, lessons, payments, exams,
-      homework, notifications, notes, files, profiles, messages, subscriptions] = await Promise.all([
+      homework, notifications, notes, files, profiles, messages, subscriptions,
+      contentCourses, contentLessons, contentFiles, contentProgress] = await Promise.all([
       pickForAcademy("courses"), pickForAcademy("teachers"), pickForAcademy("parents"),
       pickForAcademy("students"), pickForAcademy("groups"), pickForAcademy("lessons"),
       pickForAcademy("payments"), pickForAcademy("exams"), pickForAcademy("homework"),
       pickForAcademy("notifications"), pickForAcademy("notes"), pickForAcademy("files"),
       pickForAcademy("profiles"), pickForAcademy("messages"), pickForAcademy("subscriptions"),
+      pickForAcademy("content_courses"), pickForAcademy("content_lessons"),
+      pickForAcademy("content_files"), pickForAcademy("content_progress"),
     ]);
 
     const groupIds = groups.map((group) => group.id as string);
@@ -174,6 +177,10 @@ async function hydrateFromSupabase(academyId: string): Promise<SeedData | null> 
       academies: [academy] as any,
       profiles: profiles as any,
       courses: courses as any,
+      contentCourses: contentCourses as any,
+      contentLessons: contentLessons as any,
+      contentFiles: contentFiles as any,
+      contentProgress: contentProgress as any,
       teachers: teachers as any,
       parents: parents as any,
       students: students as any,
@@ -254,7 +261,9 @@ function hasValidAcademyId(row: unknown): boolean {
 const DIRECT_ACADEMY_TABLES = new Set([
   "academies", "profiles", "courses", "teachers", "parents", "students",
   "groups", "lessons", "payments", "exams", "homework", "notifications",
-  "notes", "files", "messages", "subscriptions", "audit_logs", "support_tickets",
+        "notes", "files", "messages", "subscriptions", "content_courses", "content_lessons",
+      "content_files", "content_progress", "audit_logs", "support_tickets",
+
   "invite_tokens",
 ]);
 

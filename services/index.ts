@@ -10,6 +10,7 @@ export * as AttendanceService from "./attendance";
 export * as PaymentsService from "./payments";
 export * as GradesService from "./grades";
 export * as HomeworkService from "./homework";
+export * as ContentService from "./content";
 export * as DashboardService from "./dashboard";
 export * as LifecycleAnalyticsService from "./lifecycle-analytics";
 export * as NotificationsService from "./notifications";

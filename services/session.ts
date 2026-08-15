@@ -64,12 +64,50 @@ export async function loadCurrentUser(): Promise<SessionUser | null> {
   const user = readSignedSession(raw);
   if (user) {
     const normalizedUser = normalizePlatformOwner(user);
-    setRequestContext(normalizedUser);
-    return normalizedUser;
+    const hydratedUser = await hydrateTenantContext(normalizedUser);
+    setRequestContext(hydratedUser);
+    return hydratedUser;
   }
 
   setRequestContext(null);
   return null;
+}
+
+/**
+ * Repair legacy/stale signed sessions that predate academy_id being persisted.
+ * The tenant is resolved only from the server-side profile row; we never infer
+ * an academy from the first available record. Invalid or disabled profiles fail
+ * closed by returning null, which sends the browser back through login.
+ */
+async function hydrateTenantContext(user: SessionUser): Promise<SessionUser | null> {
+  if (user.academy_id) return user;
+
+  const client = nodeSupabaseClient();
+  if (!client) return user;
+
+  try {
+    const { data: profile, error } = await client
+      .from("profiles")
+      .select("academy_id,role,full_name,avatar_url,is_active")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (error || !profile || profile.is_active === false || !profile.academy_id) {
+      return null;
+    }
+
+    const hydrated: SessionUser = normalizePlatformOwner({
+      ...user,
+      academy_id: profile.academy_id,
+      role: profile.role ?? user.role,
+      full_name: profile.full_name ?? user.full_name,
+      avatar_url: profile.avatar_url ?? user.avatar_url,
+    });
+
+    return hydrated;
+  } catch (error) {
+    console.error("[session] unable to hydrate legacy academy context:", (error as Error).message);
+    return null;
+  }
 }
 
 export function getCurrentUser(): SessionUser | null {

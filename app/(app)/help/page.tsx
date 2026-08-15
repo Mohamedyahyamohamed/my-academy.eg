@@ -13,143 +13,52 @@ import {
   ShieldCheck,
   Users,
 } from "lucide-react";
+import { cookies } from "next/headers";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getCurrentUser } from "@/services";
 import type { Role } from "@/types";
+import { getLangFromCookie, LANG_COOKIE, type Lang } from "@/lib/i18n";
 
-const roleGuides: Record<Role, { title: string; description: string; steps: Array<{ title: string; description: string; href: string; icon: typeof Rocket }> }> = {
-  ADMIN: {
-    title: "ابدأ تشغيل أكاديميتك",
-    description: "رتّب الأكاديمية وابدأ بأول مجموعة وطلابك في خطوات بسيطة.",
-    steps: [
-      { title: "أكمل بيانات الأكاديمية", description: "أضف الاسم وبيانات التواصل واضبط الإعدادات الأساسية.", href: "/onboarding", icon: Rocket },
-      { title: "استورد الطلاب", description: "أضف قائمة الطلاب من ملف CSV بدل الإدخال اليدوي.", href: "/students/import", icon: FileSpreadsheet },
-      { title: "أنشئ مجموعة وعيّن مدرسًا", description: "نظّم الطلاب حسب المادة أو المرحلة أو الموعد.", href: "/groups", icon: Users },
-      { title: "تابع التحليلات", description: "راجع الحضور والواجبات والمدفوعات من لوحة واحدة.", href: "/analytics", icon: GraduationCap },
-    ],
+type GuideStep = { title: string; description: string; href: string; icon: typeof Rocket };
+type Guide = { title: string; description: string; steps: GuideStep[] };
+
+const guides: Record<Lang, Record<Role, Guide>> = {
+  ar: {
+    ADMIN: { title: "ابدأ تشغيل أكاديميتك", description: "رتّب الأكاديمية وابدأ بأول مجموعة وطلابك في خطوات بسيطة.", steps: [{ title: "أكمل بيانات الأكاديمية", description: "أضف الاسم وبيانات التواصل واضبط الإعدادات الأساسية.", href: "/onboarding", icon: Rocket }, { title: "استورد الطلاب", description: "أضف قائمة الطلاب من ملف CSV بدل الإدخال اليدوي.", href: "/students/import", icon: FileSpreadsheet }, { title: "أنشئ مجموعة وعيّن مدرسًا", description: "نظّم الطلاب حسب المادة أو المرحلة أو الموعد.", href: "/groups", icon: Users }, { title: "تابع التحليلات", description: "راجع الحضور والواجبات والمدفوعات من لوحة واحدة.", href: "/analytics", icon: GraduationCap }] },
+    SUPER_ADMIN: { title: "شغّل المنصة بثقة", description: "راقب نمو الأكاديميات والتفعيل والإيراد وحالات الاشتراك التي تحتاج تدخّلًا.", steps: [{ title: "راجع صحة المنصة", description: "تابع الإيراد الشهري والتفعيل وتجارب العملاء من لوحة المنصة.", href: "/platform", icon: Rocket }, { title: "تابع رحلة العميل", description: "استخدم تحليلات الأكاديميات لمعرفة أين تتعطل التهيئة أو الدعوات.", href: "/analytics", icon: GraduationCap }, { title: "راجع الخطط والاشتراكات", description: "تأكد من حدود الخطة وحالة اشتراك كل أكاديمية.", href: "/billing", icon: ShieldCheck }, { title: "أعد أول عميل للنجاح", description: "افتح رحلة تهيئة منظمة لتجربة جديدة أسرع.", href: "/onboarding", icon: Users }] },
+    TEACHER: { title: "نظّم يومك الدراسي", description: "ابدأ بمجموعاتك ثم سجّل الحضور والواجبات والدرجات بالترتيب الصحيح.", steps: [{ title: "راجع مجموعاتك", description: "اعرف طلابك والحصص المخصصة لك قبل بداية اليوم.", href: "/groups", icon: Users }, { title: "سجّل الحضور", description: "وثّق الحضور في نهاية كل حصة للحفاظ على دقة التقارير.", href: "/attendance", icon: CheckCircle2 }, { title: "أضف واجبًا", description: "انشر تعليمات واضحة وتاريخ تسليم للطلاب.", href: "/homework", icon: BookOpen }, { title: "انشر الدرجات", description: "شارك النتيجة عبر البوابة ولا تكتب التفاصيل الحساسة في الرسائل.", href: "/grades", icon: GraduationCap }] },
+    PARENT: { title: "تابع تقدّم ابنك", description: "كل ما تحتاجه للحضور والواجبات والنتائج والمصاريف موجود داخل البوابة.", steps: [{ title: "افتح ملف الابن", description: "راجع الملف التعليمي والبيانات الأساسية لكل ابن على حدة.", href: "/parent/children", icon: Users }, { title: "راجع الحضور", description: "تابع الحضور ووقت الحصص من دون انتظار رسالة خارجية.", href: "/parent/attendance", icon: CheckCircle2 }, { title: "تابع الواجبات", description: "تحقق من الواجبات المطلوبة ومواعيدها.", href: "/parent/homework", icon: BookOpen }, { title: "اطبع التقرير", description: "استخدم تقرير الابن لحفظ نسخة PDF خاصة بك.", href: "/parent/children", icon: FileSpreadsheet }] },
+    STUDENT: { title: "أنجز خطتك الدراسية", description: "اعرف حصصك وواجباتك وتقدمك من مكان واحد.", steps: [{ title: "راجع فصولك", description: "اعرف المجموعات المسجل فيها ومحتوى كل مادة.", href: "/student/classes", icon: Users }, { title: "جهّز للحصة", description: "راجع جدول الحصص القادم قبل الموعد.", href: "/student/lessons", icon: PlayCircle }, { title: "أنجز واجباتك", description: "تابع المطلوب منك وتواريخ التسليم.", href: "/student/homework", icon: BookOpen }, { title: "تابع تقدّمك", description: "راجع درجاتك وتطورك الدراسي داخل البوابة.", href: "/student/progress", icon: GraduationCap }] },
   },
-  SUPER_ADMIN: {
-    title: "شغّل المنصة بثقة",
-    description: "راقب نمو الأكاديميات، التفعيل، الإيراد، وحالات الاشتراك التي تحتاج تدخّلًا.",
-    steps: [
-      { title: "راجع صحة المنصة", description: "تابع الإيراد الشهري والتفعيل وتجارب العملاء من لوحة المنصة.", href: "/platform", icon: Rocket },
-      { title: "تابع رحلة العميل", description: "استخدم تحليلات الأكاديميات لمعرفة أين تتعطل التهيئة أو الدعوات.", href: "/analytics", icon: GraduationCap },
-      { title: "راجع الخطط والاشتراكات", description: "تأكد من حدود الخطة وحالة اشتراك كل أكاديمية.", href: "/billing", icon: ShieldCheck },
-      { title: "أعد أول عميل للنجاح", description: "افتح رحلة تهيئة منظمة لتجربة جديدة أسرع.", href: "/onboarding", icon: Users },
-    ],
-  },
-  TEACHER: {
-    title: "نظّم يومك الدراسي",
-    description: "ابدأ بمجموعاتك ثم سجّل الحضور والواجبات والدرجات في الترتيب الصحيح.",
-    steps: [
-      { title: "راجع مجموعاتك", description: "اعرف طلابك والحصص المخصصة لك قبل بداية اليوم.", href: "/groups", icon: Users },
-      { title: "سجّل الحضور", description: "وثّق الحضور في نهاية كل حصة للحفاظ على دقة التقارير.", href: "/attendance", icon: CheckCircle2 },
-      { title: "أضف واجبًا", description: "انشر تعليمات واضحة وتاريخ تسليم للطلاب.", href: "/homework", icon: BookOpen },
-      { title: "انشر الدرجات", description: "شارك النتيجة عبر البوابة؛ لا تكتب التفاصيل الحساسة في الرسائل.", href: "/grades", icon: GraduationCap },
-    ],
-  },
-  PARENT: {
-    title: "تابع تقدّم ابنك",
-    description: "كل ما تحتاجه للحضور والواجبات والنتائج والمصاريف موجود داخل البوابة.",
-    steps: [
-      { title: "افتح ملف الابن", description: "راجع الملف التعليمي والبيانات الأساسية لكل ابن على حدة.", href: "/parent/children", icon: Users },
-      { title: "راجع الحضور", description: "تابع الحضور ووقت الحصص من دون انتظار رسالة خارجية.", href: "/parent/attendance", icon: CheckCircle2 },
-      { title: "تابع الواجبات", description: "تحقق من الواجبات المطلوبة ومواعيدها.", href: "/parent/homework", icon: BookOpen },
-      { title: "اطبع التقرير", description: "استخدم تقرير الابن لحفظ نسخة PDF خاصة بك.", href: "/parent/children", icon: FileSpreadsheet },
-    ],
-  },
-  STUDENT: {
-    title: "أنجز خطتك الدراسية",
-    description: "اعرف حصصك وواجباتك وتقدمك من مكان واحد.",
-    steps: [
-      { title: "راجع فصولك", description: "اعرف المجموعات المسجل فيها ومحتوى كل مادة.", href: "/student/classes", icon: Users },
-      { title: "جهّز للحصة", description: "راجع جدول الحصص القادم قبل الموعد.", href: "/student/lessons", icon: PlayCircle },
-      { title: "أنجز واجباتك", description: "تابع المطلوب منك وتواريخ التسليم.", href: "/student/homework", icon: BookOpen },
-      { title: "تابع تقدّمك", description: "راجع درجاتك وتطورك الدراسي داخل البوابة.", href: "/student/progress", icon: GraduationCap },
-    ],
+  en: {
+    ADMIN: { title: "Start running your academy", description: "Set up your academy and get your first group and students moving in a few simple steps.", steps: [{ title: "Complete academy details", description: "Add your name and contact details, then configure the essentials.", href: "/onboarding", icon: Rocket }, { title: "Import students", description: "Add your student list from a CSV file instead of entering it manually.", href: "/students/import", icon: FileSpreadsheet }, { title: "Create a group and assign a teacher", description: "Organize students by subject, level, or schedule.", href: "/groups", icon: Users }, { title: "Review analytics", description: "Review attendance, homework, and payments from one dashboard.", href: "/analytics", icon: GraduationCap }] },
+    SUPER_ADMIN: { title: "Run the platform with confidence", description: "Monitor academy growth, activation, revenue, and subscriptions that need attention.", steps: [{ title: "Review platform health", description: "Follow monthly revenue, activation, and customer journeys from the platform dashboard.", href: "/platform", icon: Rocket }, { title: "Track customer journeys", description: "Use academy analytics to see where setup or invitations get stuck.", href: "/analytics", icon: GraduationCap }, { title: "Review plans and subscriptions", description: "Confirm plan limits and subscription status for every academy.", href: "/billing", icon: ShieldCheck }, { title: "Help the first customer succeed", description: "Open an organized onboarding journey for a faster first experience.", href: "/onboarding", icon: Users }] },
+    TEACHER: { title: "Organize your teaching day", description: "Start with your groups, then record attendance, homework, and grades in the right order.", steps: [{ title: "Review your groups", description: "Know your students and assigned lessons before the day begins.", href: "/groups", icon: Users }, { title: "Record attendance", description: "Document attendance after each lesson to keep reports accurate.", href: "/attendance", icon: CheckCircle2 }, { title: "Add homework", description: "Publish clear instructions and a due date for students.", href: "/homework", icon: BookOpen }, { title: "Publish grades", description: "Share results through the portal and avoid sensitive details in messages.", href: "/grades", icon: GraduationCap }] },
+    PARENT: { title: "Follow your child’s progress", description: "Attendance, homework, results, and payments are available in one secure portal.", steps: [{ title: "Open your child’s profile", description: "Review each child’s learning profile and basic information separately.", href: "/parent/children", icon: Users }, { title: "Review attendance", description: "Follow attendance and lesson times without waiting for an external message.", href: "/parent/attendance", icon: CheckCircle2 }, { title: "Follow homework", description: "Check assigned homework and due dates.", href: "/parent/homework", icon: BookOpen }, { title: "Export a report", description: "Use the child report to keep a private PDF copy.", href: "/parent/children", icon: FileSpreadsheet }] },
+    STUDENT: { title: "Complete your learning plan", description: "Keep your classes, homework, and progress together in one place.", steps: [{ title: "Review your classes", description: "See the groups you are enrolled in and the content for each subject.", href: "/student/classes", icon: Users }, { title: "Prepare for class", description: "Review your upcoming lesson schedule before it starts.", href: "/student/lessons", icon: PlayCircle }, { title: "Complete your homework", description: "Track your tasks and due dates.", href: "/student/homework", icon: BookOpen }, { title: "Track your progress", description: "Review your grades and academic development in the portal.", href: "/student/progress", icon: GraduationCap }] },
   },
 };
 
-const commonAnswers = [
-  ["كيف أحافظ على خصوصية بيانات الطلاب؟", "لا تشارك بيانات الدخول أو تقارير الأبناء، واستخدم البوابة فقط لمتابعة المستخدمين المرتبطين بحسابك."],
-  ["كيف أغيّر لغة الواجهة؟", "استخدم زر اللغة في أعلى التطبيق؛ سيتغير الاتجاه تلقائيًا بين العربية والإنجليزية."],
-  ["هل يمكن استخدام المنصة من الهاتف؟", "نعم. افتح المنصة من المتصفح، ثم استخدم زر تثبيت التطبيق عند ظهوره لإضافتها إلى الشاشة الرئيسية."],
-  ["كيف أتواصل مع الدعم؟", "استخدم مركز الدعم داخل التطبيق لشرح المشكلة، مع تجنب إرسال كلمات المرور أو بيانات دفع كاملة."],
-];
+const answers: Record<Lang, Array<[string, string]>> = {
+  ar: [["كيف أحافظ على خصوصية بيانات الطلاب؟", "لا تشارك بيانات الدخول أو تقارير الأبناء، واستخدم البوابة فقط لمتابعة المستخدمين المرتبطين بحسابك."], ["كيف أغيّر لغة الواجهة؟", "استخدم زر اللغة في أعلى التطبيق؛ سيتغير الاتجاه تلقائيًا بين العربية والإنجليزية."], ["هل يمكن استخدام المنصة من الهاتف؟", "نعم. افتح المنصة من المتصفح، ثم استخدم زر تثبيت التطبيق عند ظهوره لإضافتها إلى الشاشة الرئيسية."], ["كيف أتواصل مع الدعم؟", "استخدم مركز الدعم داخل التطبيق لشرح المشكلة، مع تجنب إرسال كلمات المرور أو بيانات الدفع الكاملة."]],
+  en: [["How do I protect student data?", "Do not share login details or child reports. Use the portal only to follow users connected to your account."], ["How do I change the interface language?", "Use the language button at the top of the app. The layout direction switches automatically between Arabic and English."], ["Can I use the platform on a phone?", "Yes. Open the platform in your browser and use the install prompt when it appears to add it to your home screen."], ["How do I contact support?", "Use the in-app support center to explain the issue, and never send passwords or full payment details."]],
+};
 
-export default function HelpPage() {
+export default async function HelpPage() {
   const user = getCurrentUser();
-  const guide = roleGuides[user?.role ?? "ADMIN"];
-
+  const lang = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value);
+  const guide = guides[lang][user?.role ?? "ADMIN"];
+  const isRTL = lang === "ar";
   return (
-    <div className="space-y-6" dir="rtl">
-      <PageHeader
-        title="مركز المساعدة والتدريب"
-        description="خطوات واضحة وسريعة لإنجاز المهام اليومية داخل MY Academy."
-      />
-
-      <Card className="overflow-hidden border-primary/20 bg-gradient-to-l from-primary/10 via-background to-background">
-        <CardContent className="grid gap-5 p-6 md:grid-cols-[1fr_auto] md:items-center">
-          <div>
-            <Badge variant="secondary" className="mb-3">دليل مخصص لدورك</Badge>
-            <h2 className="text-2xl font-bold">{guide.title}</h2>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{guide.description}</p>
-          </div>
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-            <CircleHelp className="h-7 w-7" />
-          </div>
-        </CardContent>
-      </Card>
-
-      <section>
-        <div className="mb-3 flex items-center gap-2"><Rocket className="h-5 w-5 text-primary" /><h2 className="font-semibold">خطوات البداية</h2></div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {guide.steps.map((step, index) => {
-            const Icon = step.icon;
-            return (
-              <Card key={step.title} className="transition-shadow hover:shadow-md">
-                <CardContent className="flex h-full flex-col p-5">
-                  <div className="mb-4 flex items-start justify-between"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">{index + 1}</span><Icon className="h-5 w-5 text-muted-foreground" /></div>
-                  <h3 className="font-semibold">{step.title}</h3>
-                  <p className="mt-2 flex-1 text-sm leading-6 text-muted-foreground">{step.description}</p>
-                  <Button asChild variant="ghost" className="mt-4 w-full justify-between px-0 text-primary hover:bg-transparent hover:text-primary">
-                    <Link href={step.href}>افتح الصفحة <ChevronLeft className="h-4 w-4" /></Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardContent className="p-5">
-            <div className="mb-4 flex items-center gap-2"><BookOpen className="h-5 w-5 text-primary" /><h2 className="font-semibold">أسئلة شائعة</h2></div>
-            <div className="divide-y">
-              {commonAnswers.map(([question, answer]) => (
-                <div key={question} className="py-4 first:pt-0 last:pb-0">
-                  <h3 className="font-medium">{question}</h3>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">{answer}</p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-sky-500/25 bg-sky-500/5">
-          <CardContent className="flex h-full flex-col p-5">
-            <Headphones className="h-6 w-6 text-sky-700" />
-            <h2 className="mt-4 font-semibold">هل ما زلت تحتاج مساعدة؟</h2>
-            <p className="mt-2 flex-1 text-sm leading-6 text-muted-foreground">اكتب وصفًا واضحًا للمشكلة، وحدد الصفحة التي ظهرت فيها. فريق الدعم سيتابع الطلب من داخل المنصة.</p>
-            <Button asChild className="mt-5 w-full"><Link href="/support/tickets"><MessageSquareText className="ml-2 h-4 w-4" />تواصل مع الدعم</Link></Button>
-          </CardContent>
-        </Card>
-      </section>
-
-      <p className="text-center text-xs text-muted-foreground">لا ترسل كلمة المرور أو رمز التحقق أو بيانات بطاقتك إلى فريق الدعم.</p>
+    <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>
+      <PageHeader title={lang === "ar" ? "مركز المساعدة والتدريب" : "Help and training center"} description={lang === "ar" ? "خطوات واضحة وسريعة لإنجاز المهام اليومية داخل MY Academy." : "Clear, practical steps for completing daily tasks in MY Academy."} />
+      <Card className="overflow-hidden border-primary/20 bg-gradient-to-l from-primary/10 via-background to-background"><CardContent className="grid gap-5 p-6 md:grid-cols-[1fr_auto] md:items-center"><div><Badge variant="secondary" className="mb-3">{lang === "ar" ? "دليل مخصص لدورك" : "Guide for your role"}</Badge><h2 className="text-2xl font-bold">{guide.title}</h2><p className="mt-2 max-w-2xl text-sm text-muted-foreground">{guide.description}</p></div><div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm"><CircleHelp className="h-7 w-7" /></div></CardContent></Card>
+      <section><div className="mb-3 flex items-center gap-2"><Rocket className="h-5 w-5 text-primary" /><h2 className="font-semibold">{lang === "ar" ? "خطوات البداية" : "Getting started"}</h2></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{guide.steps.map((step, index) => { const Icon = step.icon; return <Card key={step.title} className="transition-shadow hover:shadow-md"><CardContent className="flex h-full flex-col p-5"><div className="mb-4 flex items-start justify-between"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">{index + 1}</span><Icon className="h-5 w-5 text-muted-foreground" /></div><h3 className="font-semibold">{step.title}</h3><p className="mt-2 flex-1 text-sm leading-6 text-muted-foreground">{step.description}</p><Button asChild variant="ghost" className="mt-4 w-full justify-between px-0 text-primary hover:bg-transparent hover:text-primary"><Link href={step.href}>{lang === "ar" ? "افتح الصفحة" : "Open page"}<ChevronLeft className="h-4 w-4" /></Link></Button></CardContent></Card>; })}</div></section>
+      <section className="grid gap-4 lg:grid-cols-3"><Card className="lg:col-span-2"><CardContent className="p-5"><div className="mb-4 flex items-center gap-2"><BookOpen className="h-5 w-5 text-primary" /><h2 className="font-semibold">{lang === "ar" ? "أسئلة شائعة" : "Frequently asked questions"}</h2></div><div className="divide-y">{answers[lang].map(([question, answer]) => <div key={question} className="py-4 first:pt-0 last:pb-0"><h3 className="font-medium">{question}</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">{answer}</p></div>)}</div></CardContent></Card><Card className="border-sky-500/25 bg-sky-500/5"><CardContent className="flex h-full flex-col p-5"><Headphones className="h-6 w-6 text-sky-700" /><h2 className="mt-4 font-semibold">{lang === "ar" ? "هل ما زلت تحتاج مساعدة؟" : "Still need help?"}</h2><p className="mt-2 flex-1 text-sm leading-6 text-muted-foreground">{lang === "ar" ? "اكتب وصفًا واضحًا للمشكلة وحدد الصفحة التي ظهرت فيها. فريق الدعم سيتابع الطلب من داخل المنصة." : "Describe the issue clearly and mention the page where it appeared. The support team will follow up inside the platform."}</p><Button asChild className="mt-5 w-full"><Link href="/support/tickets"><MessageSquareText className="me-2 h-4 w-4" />{lang === "ar" ? "تواصل مع الدعم" : "Contact support"}</Link></Button></CardContent></Card></section>
+      <p className="text-center text-xs text-muted-foreground">{lang === "ar" ? "لا ترسل كلمة المرور أو رمز التحقق أو بيانات بطاقتك إلى فريق الدعم." : "Never send your password, verification code, or card details to support."}</p>
     </div>
   );
 }

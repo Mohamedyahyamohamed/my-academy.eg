@@ -5,8 +5,11 @@ import { useSearchParams } from "next/navigation";
 import { CheckCircle2, XCircle, Loader2, Clock } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { Card, CardContent } from "@/components/ui/card";
+import { useClientLang } from "@/lib/i18n-client";
 
 function CheckInInner() {
+  const lang = useClientLang();
+  const en = lang === "en";
   const params = useSearchParams();
   const token = params.get("token") ?? "";
   const lessonIdParam = params.get("lesson") ?? "";
@@ -16,7 +19,7 @@ function CheckInInner() {
   React.useEffect(() => {
     const doCheckin = async () => {
       if (!token && !lessonIdParam) {
-        setState("err"); setMsg("Invalid check-in link."); return;
+        setState("err"); setMsg(en ? "Invalid check-in link." : "رابط تسجيل الحضور غير صالح."); return;
       }
       try {
         const res = await fetch("/api/checkin", {
@@ -25,13 +28,13 @@ function CheckInInner() {
           body: JSON.stringify({ token, lessonId: lessonIdParam }),
         }).then((r) => r.json());
         if (res.ok) { setState("ok"); }
-        else { setState("err"); setMsg(res.error || "تعذّر تسجيل الحضور."); }
+        else { setState("err"); setMsg(res.error || (en ? "Unable to record attendance." : "تعذّر تسجيل الحضور.")); }
       } catch {
-        setState("err"); setMsg("Network error.");
+        setState("err"); setMsg(en ? "Network error. Please try again." : "حدث خطأ في الاتصال. حاول مرة أخرى.");
       }
     };
     doCheckin();
-  }, [token, lessonIdParam]);
+  }, [token, lessonIdParam, en]);
 
   return (
     <Card>
@@ -39,7 +42,7 @@ function CheckInInner() {
         {state === "loading" && (
           <>
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">جارٍ تسجيل حضورك…</p>
+            <p className="text-sm text-muted-foreground">{en ? "Recording your attendance…" : "جارٍ تسجيل حضورك…"}</p>
           </>
         )}
         {state === "ok" && (
@@ -47,8 +50,8 @@ function CheckInInner() {
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
               <CheckCircle2 className="h-8 w-8" />
             </div>
-            <h1 className="text-lg font-semibold">تم تسجيل حضورك بنجاح! 🎉</h1>
-            <p className="text-sm text-muted-foreground">تم تسجيل حضورك كحاضر.</p>
+            <h1 className="text-lg font-semibold">{en ? "Attendance recorded successfully" : "تم تسجيل حضورك بنجاح"}</h1>
+            <p className="text-sm text-muted-foreground">{en ? "You have been marked present." : "تم تسجيل حضورك كحاضر."}</p>
           </>
         )}
         {state === "err" && (
@@ -56,11 +59,11 @@ function CheckInInner() {
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-600">
               <XCircle className="h-8 w-8" />
             </div>
-            <h1 className="text-lg font-semibold">تعذّر تسجيل الحضور</h1>
+            <h1 className="text-lg font-semibold">{en ? "Unable to record attendance" : "تعذّر تسجيل الحضور"}</h1>
             <p className="text-sm text-muted-foreground">{msg}</p>
-            {msg.includes("expired") && (
+            {(msg.includes("expired") || msg.includes("منتهي")) && (
               <p className="flex items-center gap-1 text-xs text-amber-600">
-                <Clock className="h-3 w-3" /> اطلب من مدرّسك إنشاء رمز QR جديد.
+                <Clock className="h-3 w-3" /> {en ? "Ask your teacher to create a new QR code." : "اطلب من مدرّسك إنشاء رمز QR جديد."}
               </p>
             )}
           </>
@@ -71,15 +74,16 @@ function CheckInInner() {
 }
 
 export default function CheckInPage() {
+  const en = useClientLang() === "en";
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 px-6">
+    <div dir={en ? "ltr" : "rtl"} className="flex min-h-screen items-center justify-center bg-muted/30 px-6">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex justify-center"><Logo /></div>
         <React.Suspense
           fallback={
             <Card>
               <CardContent className="flex items-center justify-center gap-2 p-8 text-sm text-muted-foreground">
-                <Loader2 className="h-5 w-5 animate-spin" /> جارٍ التحميل…
+                <Loader2 className="h-5 w-5 animate-spin" /> {en ? "Loading…" : "جارٍ التحميل…"}
               </CardContent>
             </Card>
           }

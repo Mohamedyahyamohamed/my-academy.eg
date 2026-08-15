@@ -1,4 +1,6 @@
 import { GraduationCap } from "lucide-react";
+import { cookies } from "next/headers";
+import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,15 +17,16 @@ export const dynamic = "force-dynamic";
 export default async function ParentGradesPage() {
   const user = await requireScopedRole("PARENT");
   const { children } = await getParentDashboard(user);
+  const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
   const childGrades = await Promise.all(
     children.map((c) => GradesService.listGrades({ studentId: c.id, pageSize: 50 }, user.academy_id)),
   );
 
   return (
     <div className="space-y-6">
-      <PageHeader title="الدرجات" description="نتائج الامتحانات لكل أبنائك." />
+      <PageHeader title={en ? "Grades" : "الدرجات"} description={en ? "Exam results for all your children." : "نتائج الامتحانات لكل أبنائك."} />
       {children.length === 0 ? (
-        <EmptyState icon={GraduationCap} title="لا توجد بيانات" description="لا يوجد أبناء مرتبطون بالحساب." />
+        <EmptyState icon={GraduationCap} title={en ? "No data" : "لا توجد بيانات"} description={en ? "No children are linked to this account." : "لا يوجد أبناء مرتبطون بالحساب."} />
       ) : (
         <div className="space-y-6">
           {children.map((c, idx) => {
@@ -36,7 +39,7 @@ export default async function ParentGradesPage() {
                     <p className="font-semibold">{fullName(c)}</p>
                   </div>
                   <Table>
-                    <TableHeader><TableRow><TableHead>الاختبار</TableHead><TableHead>الدرجة</TableHead><TableHead>%</TableHead><TableHead>التقدير</TableHead></TableRow></TableHeader>
+                    <TableHeader><TableRow><TableHead>{en ? "Exam" : "الاختبار"}</TableHead><TableHead>{en ? "Score" : "الدرجة"}</TableHead><TableHead>%</TableHead><TableHead>{en ? "Rating" : "التقدير"}</TableHead></TableRow></TableHeader>
                     <TableBody>
                       {grades.map((g) => {
                         const exam = collections().exams.find((e) => e.id === g.exam_id);
@@ -50,7 +53,7 @@ export default async function ParentGradesPage() {
                           </TableRow>
                         );
                       })}
-                      {grades.length === 0 && <TableRow><TableCell colSpan={4} className="py-6 text-center text-sm text-muted-foreground">لا توجد درجات بعد.</TableCell></TableRow>}
+                      {grades.length === 0 && <TableRow><TableCell colSpan={4} className="py-6 text-center text-sm text-muted-foreground">{en ? "No grades yet." : "لا توجد درجات بعد."}</TableCell></TableRow>}
                     </TableBody>
                   </Table>
                 </CardContent>

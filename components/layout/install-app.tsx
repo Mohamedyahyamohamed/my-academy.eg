@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useClientLang } from "@/lib/i18n-client";
 
 type DeferredInstallPrompt = Event & {
   prompt: () => Promise<void>;
@@ -12,6 +13,7 @@ type DeferredInstallPrompt = Event & {
 const DISMISSED_KEY = "ma_install_prompt_dismissed";
 
 export function InstallApp() {
+  const en = useClientLang() === "en";
   const [deferredPrompt, setDeferredPrompt] = React.useState<DeferredInstallPrompt | null>(null);
   const [installed, setInstalled] = React.useState(false);
 
@@ -47,10 +49,10 @@ export function InstallApp() {
   if (installed || !deferredPrompt) return null;
 
   return (
-    <div className="hidden items-center gap-1 sm:flex" aria-label="تثبيت تطبيق MY Academy">
-      <Button variant="ghost" size="sm" onClick={install} title="تثبيت التطبيق">
+    <div className="hidden items-center gap-1 sm:flex" aria-label={en ? "Install MY Academy app" : "تثبيت تطبيق MY Academy"}>
+      <Button variant="ghost" size="sm" onClick={install} title={en ? "Install app" : "تثبيت التطبيق"}>
         <Download className="h-4 w-4" />
-        <span className="sr-only">تثبيت التطبيق</span>
+        <span className="sr-only">{en ? "Install app" : "تثبيت التطبيق"}</span>
       </Button>
       <Button
         variant="ghost"
@@ -60,10 +62,10 @@ export function InstallApp() {
           localStorage.setItem(DISMISSED_KEY, "true");
           setDeferredPrompt(null);
         }}
-        title="إخفاء اقتراح التثبيت"
+        title={en ? "Dismiss install suggestion" : "إخفاء اقتراح التثبيت"}
       >
         <X className="h-3.5 w-3.5" />
-        <span className="sr-only">إخفاء</span>
+        <span className="sr-only">{en ? "Dismiss" : "إخفاء"}</span>
       </Button>
     </div>
   );

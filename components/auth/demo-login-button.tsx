@@ -6,6 +6,7 @@ import { Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { roleHome } from "@/lib/auth";
 import { toast } from "sonner";
+import { useClientLang } from "@/lib/i18n-client";
 
 interface DemoLoginButtonProps {
   email: string;
@@ -23,12 +24,13 @@ interface DemoLoginButtonProps {
 export function DemoLoginButton({
   email,
   password,
-  label = "دخول تجريبي مباشر",
+  label,
   variant = "outline",
   className,
   fullWidth,
 }: DemoLoginButtonProps) {
   const router = useRouter();
+  const en = useClientLang() === "en";
   const [loading, setLoading] = React.useState(false);
 
   const handle = async () => {
@@ -41,14 +43,14 @@ export function DemoLoginButton({
       });
       const data = await res.json();
       if (data.ok) {
-        toast.success(`أهلاً ${data.user.full_name.split(" ")[0]}!`);
+        toast.success(en ? `Welcome ${data.user.full_name.split(" ")[0]}!` : `أهلاً ${data.user.full_name.split(" ")[0]}!`);
         router.push(roleHome(data.user.role));
         router.refresh();
       } else {
-        toast.error(data.error ?? "تعذّر الدخول التجريبي");
+        toast.error(data.error ?? (en ? "Demo sign-in failed" : "تعذّر الدخول التجريبي"));
       }
     } catch {
-      toast.error("حصل خطأ. حاول تاني.");
+      toast.error(en ? "Something went wrong. Please try again." : "حصل خطأ. حاول تاني.");
     } finally {
       setLoading(false);
     }
@@ -65,11 +67,11 @@ export function DemoLoginButton({
     >
       {loading ? (
         <>
-          <Loader2 className="h-4 w-4 animate-spin" /> جارٍ الدخول…
+          <Loader2 className="h-4 w-4 animate-spin" /> {en ? "Signing in…" : "جارٍ الدخول…"}
         </>
       ) : (
         <>
-          <Sparkles className="h-4 w-4" /> {label}
+          <Sparkles className="h-4 w-4" /> {label ?? (en ? "Try demo" : "دخول تجريبي مباشر")}
         </>
       )}
     </Button>

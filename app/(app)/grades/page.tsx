@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { GraduationCap, ArrowRight } from "lucide-react";
+import { cookies } from "next/headers";
+import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,12 +20,13 @@ export default async function GradesPage() {
   // Pre-fetch all grades to compute counts (avoids await inside .map()).
   const allGrades = (await GradesService.listGrades({ pageSize: 5000 }, user.academy_id)).items;
   const gradeCountFor = (examId: string) => allGrades.filter((g: any) => g.exam_id === examId).length;
+  const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="الدرجات"
-        description="أنشئ الاختبارات وسجّل درجات الطلاب لمتابعة مستوى الأداء."
+        title={en ? "Grades" : "الدرجات"}
+        description={en ? "Create exams and record student grades to track performance." : "أنشئ الاختبارات وسجّل درجات الطلاب لمتابعة مستوى الأداء."}
       >
         <CreateExamDialog courses={courses} groups={groups} />
       </PageHeader>
@@ -31,8 +34,8 @@ export default async function GradesPage() {
       {exams.length === 0 ? (
         <EmptyState
           icon={GraduationCap}
-          title="لا توجد اختبارات بعد"
-          description="أنشئ أول اختبار لبدء إدخال الدرجات."
+          title={en ? "No exams yet" : "لا توجد اختبارات بعد"}
+          description={en ? "Create your first exam to start recording grades." : "أنشئ أول اختبار لبدء إدخال الدرجات."}
           action={<CreateExamDialog courses={courses} groups={groups} />}
         />
       ) : (
@@ -55,16 +58,16 @@ export default async function GradesPage() {
                       </span>
                     </div>
                     <div className="mt-4 flex items-center justify-between">
-                      <Badge variant="secondary">{gradeCountFor(e.id)} درجات مسجّلة</Badge>
+                      <Badge variant="secondary">{gradeCountFor(e.id)} {en ? "grades recorded" : "درجات مسجّلة"}</Badge>
                       <div className="text-right">
                         <p className="text-lg font-semibold">{avg}%</p>
-                        <p className="text-[11px] text-muted-foreground">متوسط المجموعة</p>
+                        <p className="text-[11px] text-muted-foreground">{en ? "Group average" : "متوسط المجموعة"}</p>
                       </div>
                     </div>
                     <div className="mt-3 flex items-center justify-between border-t pt-3">
                       <Badge className={performanceColor(level)}>{performanceLabel(level)}</Badge>
                       <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        إدخال الدرجات <ArrowRight className="h-3.5 w-3.5" />
+                        {en ? "Enter grades" : "إدخال الدرجات"} <ArrowRight className="h-3.5 w-3.5" />
                       </span>
                     </div>
                   </CardContent>

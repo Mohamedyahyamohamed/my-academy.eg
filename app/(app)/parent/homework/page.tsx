@@ -1,4 +1,6 @@
 import { ClipboardList } from "lucide-react";
+import { cookies } from "next/headers";
+import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function ParentHomeworkPage() {
   const user = await requireScopedRole("PARENT");
   const { children } = await getParentDashboard(user);
+  const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
 
   // Pre-fetch homework for each child (can't await inside .map()).
   const childHomework = await Promise.all(
@@ -20,9 +23,9 @@ export default async function ParentHomeworkPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="الواجبات" description="الواجبات المُكلَّفة لكل أبنائك." />
+      <PageHeader title={en ? "Homework" : "الواجبات"} description={en ? "Assigned homework for all your children." : "الواجبات المُكلَّفة لكل أبنائك."} />
       {children.length === 0 ? (
-        <EmptyState icon={ClipboardList} title="لا توجد بيانات" description="لا يوجد أبناء مرتبطون بالحساب." />
+        <EmptyState icon={ClipboardList} title={en ? "No data" : "لا توجد بيانات"} description={en ? "No children are linked to this account." : "لا يوجد أبناء مرتبطون بالحساب."} />
       ) : (
         <div className="space-y-6">
           {children.map((c, idx) => {
@@ -35,7 +38,7 @@ export default async function ParentHomeworkPage() {
                     <p className="font-semibold">{fullName(c)}</p>
                   </div>
                   {hw.length === 0 ? (
-                    <p className="py-4 text-center text-sm text-muted-foreground">لا توجد واجبات مسندة.</p>
+                    <p className="py-4 text-center text-sm text-muted-foreground">{en ? "No assigned homework." : "لا توجد واجبات مسندة."}</p>
                   ) : (
                     <div className="space-y-2">
                       {hw.map((s: any) => (
@@ -43,11 +46,11 @@ export default async function ParentHomeworkPage() {
                           <div className="min-w-0">
                             <p className="text-sm font-medium">{s.homework?.title}</p>
                             <p className="truncate text-xs text-muted-foreground">{s.homework?.description}</p>
-                            {s.feedback && <p className="mt-1 text-xs"><span className="font-medium">ملاحظات المعلّم:</span> {s.feedback}</p>}
+                            {s.feedback && <p className="mt-1 text-xs"><span className="font-medium">{en ? "Teacher feedback:" : "ملاحظات المعلّم:"}</span> {s.feedback}</p>}
                           </div>
                           <div className="text-right shrink-0">
                             <HomeworkBadge status={s.status} />
-                            <p className="mt-1 text-xs text-muted-foreground">موعد التسليم: {formatDate(s.homework?.deadline)}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">{en ? "Due: " : "موعد التسليم: "}{formatDate(s.homework?.deadline)}</p>
                           </div>
                         </div>
                       ))}

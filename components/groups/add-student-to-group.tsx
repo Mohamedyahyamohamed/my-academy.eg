@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { addStudentToGroupAction } from "@/app/actions/groups";
 import { useRouter } from "next/navigation";
 import type { Student } from "@/types";
+import { useClientLang } from "@/lib/i18n-client";
 
 export function AddStudentToGroupDialog({
   groupId,
@@ -26,6 +27,7 @@ export function AddStudentToGroupDialog({
   availableStudents: Student[];
 }) {
   const [open, setOpen] = React.useState(false);
+  const en = useClientLang() === "en";
   const [selected, setSelected] = React.useState<string[]>([]);
   const [saving, setSaving] = React.useState(false);
   const router = useRouter();
@@ -41,7 +43,7 @@ export function AddStudentToGroupDialog({
         if (res?.ok) added++;
         else if (res?.error) errors.push(res.error);
       }
-      if (added > 0) toast.success(`تم إضافة ${added} طالب للجروب`);
+      if (added > 0) toast.success(en ? `Added ${added} student${added === 1 ? "" : "s"} to the group` : `تم إضافة ${added} طالب للجروب`);
       if (errors.length > 0) toast.error(errors[0]);
       setSelected([]);
       setOpen(false);
@@ -55,17 +57,17 @@ export function AddStudentToGroupDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" disabled={availableStudents.length === 0}>
-          <UserPlus className="h-4 w-4" /> إضافة طالب
+          <UserPlus className="me-2 h-4 w-4" /> {en ? "Add student" : "إضافة طالب"}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>إضافة طلاب إلى المجموعة</DialogTitle>
-          <DialogDescription>اختر الطلاب المطلوب تسجيلهم.</DialogDescription>
+          <DialogTitle>{en ? "Add students to group" : "إضافة طلاب إلى المجموعة"}</DialogTitle>
+          <DialogDescription>{en ? "Choose the students to enroll." : "اختر الطلاب المطلوب تسجيلهم."}</DialogDescription>
         </DialogHeader>
         {availableStudents.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">
-            All students are already enrolled.
+            {en ? "All students are already enrolled." : "كل الطلاب مسجلون بالفعل."}
           </p>
         ) : (
           <div className="max-h-80 space-y-1 overflow-y-auto">
@@ -86,7 +88,7 @@ export function AddStudentToGroupDialog({
                   />
                   <Label className="cursor-pointer">
                     {s.first_name} {s.last_name}
-                    <span className="ml-2 text-xs text-muted-foreground">
+                    <span className="ms-2 text-xs text-muted-foreground">
                       {s.grade}
                     </span>
                   </Label>
@@ -96,9 +98,9 @@ export function AddStudentToGroupDialog({
           </div>
         )}
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => setOpen(false)}>إلغاء</Button>
+          <Button variant="outline" onClick={() => setOpen(false)}>{en ? "Cancel" : "إلغاء"}</Button>
           <Button onClick={submit} disabled={saving || !selected.length}>
-            {saving && <Loader2 className="h-4 w-4 animate-spin" />} Add
+            {saving && <Loader2 className="me-2 h-4 w-4 animate-spin" />} {en ? "Add" : "إضافة"}
           </Button>
         </div>
       </DialogContent>

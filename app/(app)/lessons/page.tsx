@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { LessonsService, GroupsService, requireScopedRole } from "@/services";
 import { formatDate, formatTime } from "@/lib/utils";
+import { cookies } from "next/headers";
+import { getLangFromCookie, isRTL } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,8 @@ export default async function LessonsPage(
 ) {
   const searchParams = await props.searchParams;
   await requireScopedRole("TEACHER");
+  const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
+  const en = lang === "en";
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
 
@@ -36,12 +40,12 @@ export default async function LessonsPage(
   const groups = await GroupsService.listGroups();
 
   return (
-    <div className="space-y-6">
+    <div dir={isRTL(lang) ? "rtl" : "ltr"} className="space-y-6">
       <PageHeader
-        title="الحصص"
-        description="جدوِل وتابع الحصص عبر كل مجموعاتك."
+        title={en ? "Lessons" : "الحصص"}
+        description={en ? "Schedule and track lessons across all your groups." : "جدوِل وتابع الحصص عبر كل مجموعاتك."}
       >
-        <Button asChild disabled={groups.length === 0}><Link href={groups.length === 0 ? "/groups" : "/lessons/new"}><Plus className="h-4 w-4" /> {groups.length === 0 ? "أنشئ مجموعة أولًا" : "إضافة حصة"}</Link></Button>
+        <Button asChild disabled={groups.length === 0}><Link href={groups.length === 0 ? "/groups" : "/lessons/new"}><Plus className="h-4 w-4" /> {groups.length === 0 ? (en ? "Create a group first" : "أنشئ مجموعة أولًا") : (en ? "Add lesson" : "إضافة حصة")}</Link></Button>
       </PageHeader>
 
       {groups.length === 0 && (
@@ -50,22 +54,22 @@ export default async function LessonsPage(
             <div className="flex items-start gap-3">
               <UsersRound className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-400" />
               <div>
-                <p className="font-medium">لا يمكن جدولة حصة بدون مجموعة</p>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">أنشئ مجموعة أولًا وحدد مدرسها وموعدها، ثم ستتمكن من إضافة الحصص وتسجيل الحضور والواجبات.</p>
+                <p className="font-medium">{en ? "A lesson cannot be scheduled without a group" : "لا يمكن جدولة حصة بدون مجموعة"}</p>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">{en ? "Create a group, assign its teacher and schedule, then you can add lessons, record attendance, and assign homework." : "أنشئ مجموعة أولًا وحدد مدرسها وموعدها، ثم ستتمكن من إضافة الحصص وتسجيل الحضور والواجبات."}</p>
               </div>
             </div>
-            <Button asChild variant="outline" className="shrink-0"><Link href="/groups">الانتقال إلى المجموعات</Link></Button>
+            <Button asChild variant="outline" className="shrink-0"><Link href="/groups">{en ? "Go to groups" : "الانتقال إلى المجموعات"}</Link></Button>
           </CardContent>
         </Card>
       )}
 
       <div className="card-surface p-4">
         <ToolbarRoot>
-          <ToolbarSearch placeholder="ابحث في موضوعات الحصص…" />
-          <ToolbarSelect paramKey="tab" label="تصفية حسب الوقت" options={[
-            { value: "ALL", label: "كل الحصص" },
-            { value: "upcoming", label: "القادمة" },
-            { value: "past", label: "السابقة" },
+          <ToolbarSearch placeholder={en ? "Search lesson topics…" : "ابحث في موضوعات الحصص…"} />
+          <ToolbarSelect paramKey="tab" label={en ? "Filter by time" : "تصفية حسب الوقت"} options={[
+            { value: "ALL", label: en ? "All lessons" : "كل الحصص" },
+            { value: "upcoming", label: en ? "Upcoming" : "القادمة" },
+            { value: "past", label: en ? "Past" : "السابقة" },
           ]} />
         </ToolbarRoot>
       </div>
@@ -73,9 +77,9 @@ export default async function LessonsPage(
       {result.items.length === 0 ? (
         <EmptyState
           icon={BookOpen}
-          title="لا توجد حصص بعد"
-          description="أضف أول حصة لتسجيل الحضور وتكليف الواجبات."
-          action={groups.length === 0 ? <Button asChild><Link href="/groups"><UsersRound className="h-4 w-4" /> إنشاء مجموعة أولًا</Link></Button> : <Button asChild><Link href="/lessons/new"><Plus className="h-4 w-4" /> إضافة حصة</Link></Button>}
+          title={en ? "No lessons yet" : "لا توجد حصص بعد"}
+          description={en ? "Add your first lesson to record attendance and assign homework." : "أضف أول حصة لتسجيل الحضور وتكليف الواجبات."}
+          action={groups.length === 0 ? <Button asChild><Link href="/groups"><UsersRound className="h-4 w-4" /> {en ? "Create a group first" : "إنشاء مجموعة أولًا"}</Link></Button> : <Button asChild><Link href="/lessons/new"><Plus className="h-4 w-4" /> {en ? "Add lesson" : "إضافة حصة"}</Link></Button>}
         />
       ) : (
         <>
@@ -83,11 +87,11 @@ export default async function LessonsPage(
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>الموضوع</TableHead>
-                  <TableHead>المجموعة</TableHead>
-                  <TableHead>التاريخ</TableHead>
-                  <TableHead>الوقت</TableHead>
-                  <TableHead>الحضور</TableHead>
+                  <TableHead>{en ? "Topic" : "الموضوع"}</TableHead>
+                  <TableHead>{en ? "Group" : "المجموعة"}</TableHead>
+                  <TableHead>{en ? "Date" : "التاريخ"}</TableHead>
+                  <TableHead>{en ? "Time" : "الوقت"}</TableHead>
+                  <TableHead>{en ? "Attendance" : "الحضور"}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -101,7 +105,7 @@ export default async function LessonsPage(
                     <TableCell className="text-sm">{formatTime(`${l.date.slice(0, 10)}T${l.start_time}:00`)}</TableCell>
                     <TableCell>
                       <Badge variant={l.attendance_taken ? "success" : "outline"}>
-                        {l.attendance_taken ? "تم تسجيله" : "معلّق"}
+                        {l.attendance_taken ? (en ? "Recorded" : "تم تسجيله") : (en ? "Pending" : "معلّق")}
                       </Badge>
                     </TableCell>
                   </TableRow>
@@ -116,7 +120,7 @@ export default async function LessonsPage(
                 <div className="flex items-center justify-between">
                   <p className="font-medium">{l.topic}</p>
                   <Badge variant={l.attendance_taken ? "success" : "outline"}>
-                    {l.attendance_taken ? "تم تسجيله" : "معلّق"}
+                    {l.attendance_taken ? (en ? "Recorded" : "تم تسجيله") : (en ? "Pending" : "معلّق")}
                   </Badge>
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{l.group?.name}</p>

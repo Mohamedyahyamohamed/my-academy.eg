@@ -1,11 +1,17 @@
+"use client";
+
 import * as React from "react";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useClientLang } from "@/lib/i18n-client";
 
 const Breadcrumb = React.forwardRef<
   HTMLElement,
   React.ComponentPropsWithoutRef<"nav">
->(({ ...props }, ref) => <nav ref={ref} aria-label="مسار التنقل" {...props} />);
+>(({ ...props }, ref) => {
+  const en = useClientLang() === "en";
+  return <nav ref={ref} aria-label={en ? "Breadcrumb" : "مسار التنقل"} {...props} />;
+});
 Breadcrumb.displayName = "Breadcrumb";
 
 const BreadcrumbList = React.forwardRef<

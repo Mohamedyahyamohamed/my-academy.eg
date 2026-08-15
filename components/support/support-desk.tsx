@@ -76,7 +76,7 @@ export function SupportDesk({
       setCategory("ONBOARDING");
       toast.success(en ? "Support request sent. You can track its status here." : "تم إرسال طلب الدعم. ستجد حالته هنا.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "تعذر إرسال طلب الدعم.");
+      toast.error(error instanceof Error ? error.message : (en ? "Unable to send the support request." : "تعذر إرسال طلب الدعم."));
     } finally {
       setPending(false);
     }

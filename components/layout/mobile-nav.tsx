@@ -14,28 +14,25 @@ import {
 } from "@/components/ui/sheet";
 import { Logo } from "@/components/shared/logo";
 import { cn } from "@/lib/utils";
+import { useClientLang } from "@/lib/i18n-client";
 import type { NavSection } from "@/lib/nav";
 
 export function MobileNav({ sections }: { sections: NavSection[] }) {
   const pathname = usePathname();
   const [open, setOpen] = React.useState(false);
-  const [lang, setLang] = React.useState<"ar" | "en">("ar");
-
-  React.useEffect(() => {
-    const stored = localStorage.getItem("ma_lang") || "ar";
-    setLang(stored as "ar" | "en");
-  }, []);
+  const lang = useClientLang();
+  const en = lang === "en";
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="lg:hidden" aria-label={lang === "ar" ? "فتح القائمة" : "Open menu"}>
+        <Button variant="ghost" size="icon" className="lg:hidden" aria-label={en ? "Open menu" : "فتح القائمة"}>
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent side={lang === "ar" ? "right" : "left"} className="w-72 p-0">
+      <SheetContent side={en ? "left" : "right"} dir={en ? "ltr" : "rtl"} className="w-72 p-0">
         <SheetHeader className="h-16 justify-center border-b border-sidebar-border">
-          <SheetTitle className={lang === "ar" ? "text-right" : "text-left"}>
+          <SheetTitle className={en ? "text-left" : "text-right"}>
             <Logo />
           </SheetTitle>
         </SheetHeader>
@@ -44,7 +41,7 @@ export function MobileNav({ sections }: { sections: NavSection[] }) {
             <div key={si} className="space-y-1">
               {(section.titleAr || section.titleEn) && (
                 <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-                  {lang === "ar" ? section.titleAr : section.titleEn}
+                  {en ? section.titleEn : section.titleAr}
                 </p>
               )}
               {section.items.map((item) => {
@@ -65,7 +62,7 @@ export function MobileNav({ sections }: { sections: NavSection[] }) {
                     )}
                   >
                     <Icon className="h-[18px] w-[18px]" />
-                    {lang === "ar" ? item.titleAr : item.titleEn}
+                    {en ? item.titleEn : item.titleAr}
                   </Link>
                 );
               })}

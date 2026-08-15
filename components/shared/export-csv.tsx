@@ -2,6 +2,7 @@
 
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useClientLang } from "@/lib/i18n-client";
 
 interface ExportCSVProps {
   filename: string;
@@ -15,7 +16,10 @@ interface ExportCSVProps {
  * - يضيف BOM (UTF-8) لكي تظهر العربية بشكل صحيح في Excel.
  * - استخدم الفاصلة كفاصل (مع اقتباس الحقول التي تحتوي فواصل).
  */
-export function ExportCSV({ filename, rows, columns, label = "تصدير Excel" }: ExportCSVProps) {
+export function ExportCSV({ filename, rows, columns, label }: ExportCSVProps) {
+  const en = useClientLang() === "en";
+  const resolvedLabel = label ?? (en ? "Export Excel" : "تصدير Excel");
+
   function handleExport() {
     const escape = (v: unknown) => {
       const s = v == null ? "" : String(v);
@@ -42,7 +46,7 @@ export function ExportCSV({ filename, rows, columns, label = "تصدير Excel" 
 
   return (
     <Button variant="outline" onClick={handleExport}>
-      <Download className="h-4 w-4" /> {label}
+      <Download className="me-2 h-4 w-4" /> {resolvedLabel}
     </Button>
   );
 }

@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import type { ReactNode } from "react";
+import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 import { notFound, redirect } from "next/navigation";
 import {
   CalendarCheck,
@@ -58,6 +60,7 @@ export default async function StudentProfilePage(
   }
 ) {
   const params = await props.params;
+  const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
   const user = await loadCurrentUser();
   if (!user) redirect("/login");
   setRequestContext(user);
@@ -89,15 +92,15 @@ export default async function StudentProfilePage(
   return (
     <div className="space-y-6">
       <PageHeader
-        title="ملف الطالب"
+        title={en ? "Student profile" : "ملف الطالب"}
         breadcrumbs={[
-          { label: "الطلاب", href: "/students" },
+          { label: en ? "Students" : "الطلاب", href: "/students" },
           { label: `${detail.first_name} ${detail.last_name}` },
         ]}
       >
         <Button asChild variant="outline">
           <Link href="/students">
-            <ArrowLeft className="h-4 w-4" /> رجوع
+            <ArrowLeft className="me-2 h-4 w-4" /> {en ? "Back" : "رجوع"}
           </Link>
         </Button>
         <StudentQrCard
@@ -105,12 +108,12 @@ export default async function StudentProfilePage(
           name={`${detail.first_name} ${detail.last_name}`}
           grade={detail.grade}
           academyName={MiscService.getAcademy().name}
-          trigger={<Button variant="outline">بطاقة QR</Button>}
+          trigger={<Button variant="outline">{en ? "QR card" : "بطاقة QR"}</Button>}
         />
         <EditStudentDialog student={detail} parents={parents} groups={groups} />
         <Button asChild variant="outline">
           <Link href={`/students/${params.id}/report`} target="_blank">
-            <FileText className="h-4 w-4" /> كشف درجات
+            <FileText className="me-2 h-4 w-4" /> {en ? "Grade report" : "كشف درجات"}
           </Link>
         </Button>
       </PageHeader>
@@ -144,21 +147,21 @@ export default async function StudentProfilePage(
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <InfoItem icon={User} label="ولي الأمر" value={detail.parent ? <Link href={`/parents/${detail.parent.id}`} className="text-primary hover:underline">{detail.parent.first_name} {detail.parent.last_name}</Link> : "غير مرتبط"} />
-            <InfoItem icon={School} label="المدرسة" value={detail.school || "—"} />
-            <InfoItem icon={Phone} label="الموبايل" value={detail.phone || "—"} />
-            <InfoItem icon={Mail} label="البريد الإلكتروني" value={detail.email || "—"} />
+            <InfoItem icon={User} label={en ? "Parent" : "ولي الأمر"} value={detail.parent ? <Link href={`/parents/${detail.parent.id}`} className="text-primary hover:underline">{detail.parent.first_name} {detail.parent.last_name}</Link> : (en ? "Not linked" : "غير مرتبط")} />
+            <InfoItem icon={School} label={en ? "School" : "المدرسة"} value={detail.school || "—"} />
+            <InfoItem icon={Phone} label={en ? "Phone" : "الموبايل"} value={detail.phone || "—"} />
+            <InfoItem icon={Mail} label={en ? "Email" : "البريد الإلكتروني"} value={detail.email || "—"} />
           </div>
         </CardContent>
       </Card>
 
       {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <MiniStat label="الحضور" value={`${stats.attendanceRate}%`} icon={CalendarCheck} />
-        <MiniStat label="متوسط الدرجات" value={`${stats.averageGrade}%`} icon={GraduationCap} />
-        <MiniStat label='الرسوم الشهرية' value={formatCurrency(stats.monthlyFee)} icon={Wallet} />
-        <MiniStat label="مدفوع" value={formatCurrency(stats.totalPaid)} icon={Wallet} accent="success" />
-        <MiniStat label='المتبقي' value={formatCurrency(stats.outstanding)} icon={TrendingDown} accent="warning" />
+        <MiniStat label={en ? "Attendance" : "الحضور"} value={`${stats.attendanceRate}%`} icon={CalendarCheck} />
+        <MiniStat label={en ? "Average grade" : "متوسط الدرجات"} value={`${stats.averageGrade}%`} icon={GraduationCap} />
+        <MiniStat label={en ? "Monthly fee" : "الرسوم الشهرية"} value={formatCurrency(stats.monthlyFee)} icon={Wallet} />
+        <MiniStat label={en ? "Paid" : "مدفوع"} value={formatCurrency(stats.totalPaid)} icon={Wallet} accent="success" />
+        <MiniStat label={en ? "Remaining" : "المتبقي"} value={formatCurrency(stats.outstanding)} icon={TrendingDown} accent="warning" />
       </div>
 
       <StudentProfileTabs
@@ -166,27 +169,27 @@ export default async function StudentProfilePage(
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">تطور الحضور</CardTitle>
-                <CardDescription>وفقًا لأحدث الحصص</CardDescription>
+                <CardTitle className="text-base">{en ? "Attendance trend" : "تطور الحضور"}</CardTitle>
+                <CardDescription>{en ? "Based on recent lessons" : "وفقًا لأحدث الحصص"}</CardDescription>
               </CardHeader>
               <CardContent>
                 {stats.attendanceTrend.length ? (
                   <LineTrend data={stats.attendanceTrend} dataKey="rate" xKey="label" color="#10b981" height={200} />
                 ) : (
-                  <p className="py-8 text-center text-sm text-muted-foreground">لا توجد سجلات حضور بعد.</p>
+                  <p className="py-8 text-center text-sm text-muted-foreground">{en ? "No attendance records yet." : "لا توجد سجلات حضور بعد."}</p>
                 )}
               </CardContent>
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">تطور الدرجات</CardTitle>
-                <CardDescription>نسبة الدرجة في كل اختبار</CardDescription>
+                <CardTitle className="text-base">{en ? "Grade trend" : "تطور الدرجات"}</CardTitle>
+                <CardDescription>{en ? "Score percentage for each exam" : "نسبة الدرجة في كل اختبار"}</CardDescription>
               </CardHeader>
               <CardContent>
                 {stats.gradeTrend.length ? (
                   <TrendArea data={stats.gradeTrend} dataKey="score" xKey="label" color="#7c5cfc" height={200} />
                 ) : (
-                  <p className="py-8 text-center text-sm text-muted-foreground">لا توجد درجات مسجّلة بعد.</p>
+                  <p className="py-8 text-center text-sm text-muted-foreground">{en ? "No grades recorded yet." : "لا توجد درجات مسجّلة بعد."}</p>
                 )}
               </CardContent>
             </Card>
@@ -196,16 +199,16 @@ export default async function StudentProfilePage(
           <Card>
             <CardContent className="p-0">
               <div className="grid grid-cols-3 gap-4 border-b p-4 text-center">
-                <CountStat label="حاضر" value={attendance.present} className="text-emerald-600" />
-                <CountStat label="متأخر" value={attendance.late} className="text-amber-600" />
-                <CountStat label="غائب" value={attendance.absent} className="text-rose-600" />
+                <CountStat label={en ? "Present" : "حاضر"} value={attendance.present} className="text-emerald-600" />
+                <CountStat label={en ? "Late" : "متأخر"} value={attendance.late} className="text-amber-600" />
+                <CountStat label={en ? "Absent" : "غائب"} value={attendance.absent} className="text-rose-600" />
               </div>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>تاريخ الحصة</TableHead>
-                    <TableHead>المجموعة</TableHead>
-                    <TableHead>الحالة</TableHead>
+                    <TableHead>{en ? "Lesson date" : "تاريخ الحصة"}</TableHead>
+                    <TableHead>{en ? "Group" : "المجموعة"}</TableHead>
+                    <TableHead>{en ? "Status" : "الحالة"}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -227,7 +230,7 @@ export default async function StudentProfilePage(
                   {attendance.byLesson.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={3} className="py-8 text-center text-sm text-muted-foreground">
-                        لا توجد سجلات حضور.
+                        {en ? "No attendance records." : "لا توجد سجلات حضور."}
                       </TableCell>
                     </TableRow>
                   )}
@@ -242,11 +245,11 @@ export default async function StudentProfilePage(
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>الشهر</TableHead>
-                    <TableHead>المستحق</TableHead>
-                    <TableHead>المدفوع</TableHead>
-                    <TableHead>المتبقي</TableHead>
-                    <TableHead>الحالة</TableHead>
+                    <TableHead>{en ? "Month" : "الشهر"}</TableHead>
+                    <TableHead>{en ? "Due" : "المستحق"}</TableHead>
+                    <TableHead>{en ? "Paid" : "المدفوع"}</TableHead>
+                    <TableHead>{en ? "Remaining" : "المتبقي"}</TableHead>
+                    <TableHead>{en ? "Status" : "الحالة"}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -264,7 +267,7 @@ export default async function StudentProfilePage(
                   {payments.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
-                        لا توجد مدفوعات مسجّلة.
+                        {en ? "No payments recorded." : "لا توجد مدفوعات مسجّلة."}
                       </TableCell>
                     </TableRow>
                   )}
@@ -279,11 +282,11 @@ export default async function StudentProfilePage(
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>الاختبار</TableHead>
-                    <TableHead>التاريخ</TableHead>
-                    <TableHead>الدرجة</TableHead>
+                    <TableHead>{en ? "Exam" : "الاختبار"}</TableHead>
+                    <TableHead>{en ? "Date" : "التاريخ"}</TableHead>
+                    <TableHead>{en ? "Score" : "الدرجة"}</TableHead>
                     <TableHead>%</TableHead>
-                    <TableHead>التقدير</TableHead>
+                    <TableHead>{en ? "Grade" : "التقدير"}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -306,7 +309,7 @@ export default async function StudentProfilePage(
                   {grades.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
-                        لا توجد درجات مسجّلة.
+                        {en ? "No grades recorded." : "لا توجد درجات مسجّلة."}
                       </TableCell>
                     </TableRow>
                   )}
@@ -318,7 +321,7 @@ export default async function StudentProfilePage(
         homework={
           <div className="space-y-3">
             {homework.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">لا توجد واجبات مسندة بعد.</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">{en ? "No assigned homework yet." : "لا توجد واجبات مسندة بعد."}</p>
             ) : (
               homework.map((s) => (
                 <Card key={s.id}>
@@ -329,14 +332,14 @@ export default async function StudentProfilePage(
                         <p className="text-sm text-muted-foreground">{s.homework?.description}</p>
                         {s.feedback && (
                           <p className="mt-2 rounded-md bg-muted p-2 text-xs">
-                            <span className="font-medium">ملاحظات المعلّم:</span> {s.feedback}
+                            <span className="font-medium">{en ? "Teacher feedback:" : "ملاحظات المعلّم:"}</span> {s.feedback}
                           </p>
                         )}
                       </div>
                       <div className="text-right">
                         <HomeworkBadge status={s.status} />
                         <p className="mt-1 text-xs text-muted-foreground">
-                          موعد التسليم: {formatDate(s.homework?.deadline)}
+                          {en ? "Due date:" : "موعد التسليم:"} {formatDate(s.homework?.deadline)}
                         </p>
                       </div>
                     </div>
@@ -352,10 +355,10 @@ export default async function StudentProfilePage(
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>التاريخ</TableHead>
-                    <TableHead>الموضوع</TableHead>
-                    <TableHead>المجموعة</TableHead>
-                    <TableHead>الوقت</TableHead>
+                    <TableHead>{en ? "Date" : "التاريخ"}</TableHead>
+                    <TableHead>{en ? "Topic" : "الموضوع"}</TableHead>
+                    <TableHead>{en ? "Group" : "المجموعة"}</TableHead>
+                    <TableHead>{en ? "Time" : "الوقت"}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -372,7 +375,7 @@ export default async function StudentProfilePage(
                   {lessons.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
-                        لا توجد حصص مجدولة.
+                        {en ? "No scheduled lessons." : "لا توجد حصص مجدولة."}
                       </TableCell>
                     </TableRow>
                   )}

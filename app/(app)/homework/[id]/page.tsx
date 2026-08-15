@@ -1,4 +1,6 @@
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
@@ -13,6 +15,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HomeworkDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
+  const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
   await requireScopedRole("TEACHER");
   const hw = await HomeworkService.getHomework(params.id);
   if (!hw) notFound();
@@ -24,10 +27,10 @@ export default async function HomeworkDetailPage(props: { params: Promise<{ id: 
     <div className="space-y-6">
       <PageHeader
         title={hw.title}
-        breadcrumbs={[{ label: "الواجبات", href: "/homework" }, { label: hw.title }]}
+        breadcrumbs={[{ label: en ? "Homework" : "الواجبات", href: "/homework" }, { label: hw.title }]}
       >
         <Button asChild variant="outline">
-          <Link href="/homework"><ArrowLeft className="h-4 w-4" /> رجوع</Link>
+          <Link href="/homework"><ArrowLeft className="me-2 h-4 w-4" /> {en ? "Back" : "رجوع"}</Link>
         </Button>
       </PageHeader>
 
@@ -36,15 +39,15 @@ export default async function HomeworkDetailPage(props: { params: Promise<{ id: 
           <p className="text-sm text-muted-foreground">{hw.description}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Badge variant="secondary">{hw.group?.name}</Badge>
-            <Badge variant="outline">موعد التسليم: {formatDate(hw.deadline)}</Badge>
-            <Badge variant="info">{submitted}/{submissions.length} submitted</Badge>
-            <Badge variant="success">{reviewed} reviewed</Badge>
+            <Badge variant="outline">{en ? "Due date:" : "موعد التسليم:"} {formatDate(hw.deadline)}</Badge>
+            <Badge variant="info">{submitted}/{submissions.length} {en ? "submitted" : "تم التسليم"}</Badge>
+            <Badge variant="success">{reviewed} {en ? "reviewed" : "تمت المراجعة"}</Badge>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">التسليمات</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">{en ? "Submissions" : "التسليمات"}</CardTitle></CardHeader>
         <CardContent>
           <SubmissionReview submissions={submissions} />
         </CardContent>

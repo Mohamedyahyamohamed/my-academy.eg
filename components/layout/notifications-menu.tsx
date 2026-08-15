@@ -17,6 +17,7 @@ import {
   markNotificationReadAction,
 } from "@/app/actions/notifications";
 import type { AppNotification } from "@/types";
+import { useClientLang } from "@/lib/i18n-client";
 
 const dotColor: Record<AppNotification["type"], string> = {
   payment_overdue: "bg-rose-500",
@@ -31,6 +32,8 @@ const dotColor: Record<AppNotification["type"], string> = {
 };
 
 export function NotificationsMenu() {
+  const lang = useClientLang();
+  const en = lang === "en";
   const [items, setItems] = React.useState<AppNotification[]>([]);
   const [open, setOpen] = React.useState(false);
 
@@ -53,7 +56,7 @@ export function NotificationsMenu() {
           variant="ghost"
           size="icon"
           className="relative"
-          aria-label="الإشعارات"
+          aria-label={en ? "Notifications" : "الإشعارات"}
         >
           <Bell className="h-[18px] w-[18px]" />
           {unread > 0 && (
@@ -65,7 +68,7 @@ export function NotificationsMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80 p-0">
         <div className="flex items-center justify-between px-3 py-2.5">
-          <span className="text-sm font-semibold">الإشعارات</span>
+            <span className="text-sm font-semibold">{en ? "Notifications" : "الإشعارات"}</span>
           {unread > 0 && (
             <button
               onClick={async () => {
@@ -74,14 +77,14 @@ export function NotificationsMenu() {
               }}
               className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
             >
-              <CheckCheck className="h-3.5 w-3.5" /> تعليم الكل كمقروء
+              <CheckCheck className="h-3.5 w-3.5" /> {en ? "Mark all as read" : "تعليم الكل كمقروء"}
             </button>
           )}
         </div>
         <DropdownMenuSeparator className="m-0" />
         {items.length === 0 ? (
           <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-            You&apos;re all caught up.
+            {en ? "You&apos;re all caught up." : "لا توجد إشعارات جديدة."}
           </div>
         ) : (
           <div className="max-h-96 overflow-y-auto">

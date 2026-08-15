@@ -17,9 +17,12 @@ import { initials } from "@/lib/utils";
 import { logoutAction } from "@/app/actions/auth";
 import { toast } from "sonner";
 import type { SessionUser } from "@/types";
+import { useClientLang } from "@/lib/i18n-client";
 
 export function UserMenu({ user }: { user: SessionUser }) {
   const router = useRouter();
+  const lang = useClientLang();
+  const en = lang === "en";
   const canManageAcademy = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
   return (
     <DropdownMenu>
@@ -49,7 +52,7 @@ export function UserMenu({ user }: { user: SessionUser }) {
         {canManageAcademy && (
           <>
             <DropdownMenuItem onClick={() => router.push("/settings")}>
-              <Settings className="h-4 w-4" /> الإعدادات
+              <Settings className="h-4 w-4" /> {en ? "Settings" : "الإعدادات"}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
           </>
@@ -58,12 +61,12 @@ export function UserMenu({ user }: { user: SessionUser }) {
           className="text-destructive focus:text-destructive"
           onClick={async () => {
             await logoutAction();
-            toast.success("تم تسجيل الخروج.");
+            toast.success(en ? "Signed out successfully." : "تم تسجيل الخروج.");
             router.push("/login");
             router.refresh();
           }}
         >
-          <LogOut className="h-4 w-4" /> تسجيل الخروج
+          <LogOut className="h-4 w-4" /> {en ? "Sign out" : "تسجيل الخروج"}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useClientLang } from "@/lib/i18n-client";
 
 interface ConfirmDialogProps {
   trigger: React.ReactNode;
@@ -28,12 +29,15 @@ export function ConfirmDialog({
   trigger,
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "إلغاء",
+  confirmLabel,
+  cancelLabel,
   destructive,
   onConfirm,
 }: ConfirmDialogProps) {
   const [open, setOpen] = React.useState(false);
+  const en = useClientLang() === "en";
+  const resolvedConfirmLabel = confirmLabel ?? (en ? "Confirm" : "تأكيد");
+  const resolvedCancelLabel = cancelLabel ?? (en ? "Cancel" : "إلغاء");
   const [loading, setLoading] = React.useState(false);
 
   const handleConfirm = async () => {
@@ -56,7 +60,7 @@ export function ConfirmDialog({
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
-            {cancelLabel}
+            {resolvedCancelLabel}
           </Button>
           <Button
             variant={destructive ? "destructive" : "default"}
@@ -64,7 +68,7 @@ export function ConfirmDialog({
             disabled={loading}
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            {confirmLabel}
+            {resolvedConfirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

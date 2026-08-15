@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import type { AcademyMembership } from "@/types";
+import { useClientLang } from "@/lib/i18n-client";
 
 interface AcademySwitcherProps {
   currentAcademyId: string;
@@ -10,6 +11,8 @@ interface AcademySwitcherProps {
 
 export function AcademySwitcher({ currentAcademyId, memberships = [] }: AcademySwitcherProps) {
   const [pending, setPending] = React.useState(false);
+  const lang = useClientLang();
+  const en = lang === "en";
   if (memberships.length < 2) return null;
 
   async function switchAcademy(academyId: string) {
@@ -22,19 +25,19 @@ export function AcademySwitcher({ currentAcademyId, memberships = [] }: AcademyS
         body: JSON.stringify({ academyId }),
       });
       const result = await response.json().catch(() => null);
-      if (!response.ok || !result?.ok) throw new Error(result?.error || "تعذّر تبديل الأكاديمية.");
+      if (!response.ok || !result?.ok) throw new Error(result?.error || (en ? "Unable to switch academy." : "تعذّر تبديل الأكاديمية."));
       window.location.reload();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "تعذّر تبديل الأكاديمية.");
+      window.alert(error instanceof Error ? error.message : (en ? "Unable to switch academy." : "تعذّر تبديل الأكاديمية."));
       setPending(false);
     }
   }
 
   return (
     <label className="flex min-w-[150px] items-center gap-2 rounded-lg border border-border bg-background/80 px-2 py-1.5 text-xs">
-      <span className="whitespace-nowrap text-muted-foreground">الأكاديمية</span>
+      <span className="whitespace-nowrap text-muted-foreground">{en ? "Academy" : "الأكاديمية"}</span>
       <select
-        aria-label="اختيار الأكاديمية النشطة"
+        aria-label={en ? "Select active academy" : "اختيار الأكاديمية النشطة"}
         value={currentAcademyId}
         disabled={pending}
         onChange={(event) => void switchAcademy(event.target.value)}
@@ -42,7 +45,7 @@ export function AcademySwitcher({ currentAcademyId, memberships = [] }: AcademyS
       >
         {memberships.map((membership) => (
           <option key={membership.academy_id} value={membership.academy_id}>
-            {membership.academy_name || "أكاديمية بدون اسم"}
+            {membership.academy_name || (en ? "Unnamed academy" : "أكاديمية بدون اسم")}
           </option>
         ))}
       </select>

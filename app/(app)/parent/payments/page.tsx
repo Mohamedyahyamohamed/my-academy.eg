@@ -1,4 +1,6 @@
 import { Wallet } from "lucide-react";
+import { cookies } from "next/headers";
+import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StatCard } from "@/components/shared/stat-card";
@@ -14,6 +16,7 @@ export const dynamic = "force-dynamic";
 export default async function ParentPaymentsPage() {
   const user = await requireScopedRole("PARENT");
   const { children } = await getParentDashboard(user);
+  const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
 
   // Pre-fetch each child's payments (can't await inside flatMap).
   const paymentsByChild = await Promise.all(
@@ -25,15 +28,15 @@ export default async function ParentPaymentsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="المصاريف" description="سجلات الرسوم والأرصدة لأبنائك." />
+      <PageHeader title={en ? "Payments" : "المصاريف"} description={en ? "Fee records and balances for your children." : "سجلات الرسوم والأرصدة لأبنائك."} />
       {children.length === 0 ? (
-        <EmptyState icon={Wallet} title="لا توجد بيانات" description="لا يوجد أبناء مرتبطون بالحساب." />
+        <EmptyState icon={Wallet} title={en ? "No data" : "لا توجد بيانات"} description={en ? "No children are linked to this account." : "لا يوجد أبناء مرتبطون بالحساب."} />
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-3">
-            <StatCard label="إجمالي المدفوع" value={formatCurrency(collected)} icon={Wallet} accent="success" />
-            <StatCard label='المتبقي' value={formatCurrency(outstanding)} icon={Wallet} accent="warning" />
-            <StatCard label="السجلات" value={allPayments.length} icon={Wallet} accent="primary" />
+            <StatCard label={en ? "Total paid" : "إجمالي المدفوع"} value={formatCurrency(collected)} icon={Wallet} accent="success" />
+            <StatCard label={en ? "Outstanding" : "المتبقي"} value={formatCurrency(outstanding)} icon={Wallet} accent="warning" />
+            <StatCard label={en ? "Records" : "السجلات"} value={allPayments.length} icon={Wallet} accent="primary" />
           </div>
           <div className="space-y-6">
             {children.map((c, idx) => {
@@ -46,7 +49,7 @@ export default async function ParentPaymentsPage() {
                       <p className="font-semibold">{fullName(c)}</p>
                     </div>
                     <Table>
-                      <TableHeader><TableRow><TableHead>الشهر</TableHead><TableHead>المستحق</TableHead><TableHead>المدفوع</TableHead><TableHead>المتبقي</TableHead><TableHead>الحالة</TableHead></TableRow></TableHeader>
+                      <TableHeader><TableRow><TableHead>{en ? "Month" : "الشهر"}</TableHead><TableHead>{en ? "Due" : "المستحق"}</TableHead><TableHead>{en ? "Paid" : "المدفوع"}</TableHead><TableHead>{en ? "Remaining" : "المتبقي"}</TableHead><TableHead>{en ? "Status" : "الحالة"}</TableHead></TableRow></TableHeader>
                       <TableBody>
                         {pays.map((p) => (
                           <TableRow key={p.id}>
@@ -57,7 +60,7 @@ export default async function ParentPaymentsPage() {
                             <TableCell><PaymentStatusBadge status={p.status} /></TableCell>
                           </TableRow>
                         ))}
-                        {pays.length === 0 && <TableRow><TableCell colSpan={5} className="py-6 text-center text-sm text-muted-foreground">لا توجد مصروفات.</TableCell></TableRow>}
+                        {pays.length === 0 && <TableRow><TableCell colSpan={5} className="py-6 text-center text-sm text-muted-foreground">{en ? "No payment records." : "لا توجد مصروفات."}</TableCell></TableRow>}
                       </TableBody>
                     </Table>
                   </CardContent>

@@ -1,69 +1,35 @@
-export const metadata = { title: "شروط الاستخدام" };
+import { cookies } from "next/headers";
+import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 
-export default function TermsPage() {
-  return (
-    <div dir="rtl" className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">شروط الاستخدام</h1>
-        <p className="mt-1 text-sm text-muted-foreground">آخر تحديث: ١٤ أغسطس ٢٠٢٦</p>
-      </div>
+export const metadata = { title: "Terms / الشروط" };
 
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-        هذه الشروط نموذج تشغيل للمنصة، ويجب على مالك الخدمة مراجعته مع مستشار قانوني قبل اعتماد النسخة النهائية أو تغيير مدد الاحتفاظ والرسوم.
-      </div>
+export default async function TermsPage() {
+  const ar = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "ar";
+  const t = ar ? {
+    title: "شروط الاستخدام", updated: "آخر تحديث: ١٤ أغسطس ٢٠٢٦", notice: "هذه الشروط نموذج تشغيل للمنصة، ويجب مراجعتها مع مستشار قانوني قبل اعتماد النسخة النهائية أو تغيير مدد الاحتفاظ والرسوم.", sections: [
+      ["١. نطاق الخدمة والموافقة", <p key="1">توفر MY Academy أدوات لإدارة الأكاديميات التعليمية، بما في ذلك الطلاب والمجموعات والحضور والدرجات والواجبات والمدفوعات والتقارير. باستخدام المنصة أو إنشاء حساب أكاديمية، يقر مالك الأكاديمية بأنه قرأ هذه الشروط ووافق عليها نيابة عن الجهة التي يمثلها.</p>],
+      ["٢. مسؤوليات مالك الأكاديمية", <ul key="2"><li>الحصول على الموافقات اللازمة من الطلاب وأولياء أمور القاصرين قبل إدخال البيانات.</li><li>التأكد من دقة البيانات وتحديثها، وإدارة الصلاحيات وحسابات المستخدمين.</li><li>حماية بيانات الدخول وإبلاغ الدعم عند الاشتباه في دخول غير مصرح به.</li><li>استخدام المنصة وفق القوانين والقواعد التنظيمية المنطبقة على الأكاديمية.</li></ul>],
+      ["٣. الخطط والاشتراكات والمدفوعات", <><p key="3a">تظهر الخطة والسعر وحدود الاستخدام في صفحة الاشتراك. تطبق الحدود من جهة الخادم وتشمل عدد الطلاب والمدرسين والمجموعات والتخزين بحسب الخطة.</p><ul key="3b"><li>تعالج المدفوعات عبر مزود الدفع الظاهر في صفحة الدفع، ولا تخزن MY Academy أرقام البطاقات.</li><li>يبدأ التجديد أو تنتهي الفترة وفق التاريخ الذي يؤكده مزود الدفع.</li><li>عند فشل الدفع قد تتحول الحالة إلى دفعة مستحقة حتى تصحيح المشكلة أو إلغاء الاشتراك.</li><li>يخضع أي استرداد أو تعديل مالي لسياسة مزود الدفع والاتفاق التجاري.</li></ul></>],
+      ["٤. البيانات والملفات والتصدير", <><p key="4a">تظل بيانات الأكاديمية وملفاتها ملكًا للجهة التي أدخلتها، مع منح المنصة الصلاحيات الفنية اللازمة لتقديم الخدمة وحمايتها. يمكن لمدير الأكاديمية تصدير البيانات المتاحة له، ويجب حفظ ملف التصدير في مكان آمن.</p><p key="4b">تخضع البيانات الشخصية وبيانات القاصرين لسياسة الخصوصية، ولا يجوز رفع ملفات لا تملك الأكاديمية حق تخزينها أو مشاركتها.</p></>],
+      ["٥. الإلغاء والاحتفاظ", <p key="5">يمكن لمالك الأكاديمية طلب إلغاء الاشتراك أو إيقاف التجديد. تستمر الخدمة حتى نهاية الفترة المدفوعة ما لم ينص الاتفاق التجاري على خلاف ذلك. تحفظ البيانات لفترة تشغيلية محدودة بعد الإلغاء لإتاحة الاستعادة أو التصدير، ثم تحذف وفق سياسة الاحتفاظ، مع مراعاة الالتزامات القانونية والسجلات المالية.</p>],
+      ["٦. الاستخدام المقبول والأمان", <ul key="6"><li>لا يجوز الوصول إلى بيانات أكاديمية أخرى أو تجاوز الصلاحيات أو التلاعب بالحضور والدرجات.</li><li>لا يجوز رفع برمجيات خبيثة أو ملفات مخالفة للقانون أو استخدام المنصة لإرسال رسائل غير مرغوبة.</li><li>تستخدم المنصة التشفير وعزل الأكاديميات وRLS وتحديد معدل الطلبات وتسجيل العمليات الحساسة.</li></ul>],
+      ["٧. التوافر والدعم والتعديلات", <p key="7">نبذل جهودًا معقولة للحفاظ على التوافر، وقد تحدث صيانة أو انقطاعات خارجة عن السيطرة. نبلغ المستخدمين بالتغييرات الجوهرية أو تحديثات الشروط عبر الدعم أو داخل التطبيق. لاستفسارات الحساب أو الفوترة أو الخصوصية، استخدم مركز الدعم.</p>],
+    ] as const,
+  } : {
+    title: "Terms of Use", updated: "Last updated: August 14, 2026", notice: "These terms are an operational template and should be reviewed by legal counsel before final adoption or changes to retention periods and fees.", sections: [
+      ["1. Service scope and consent", <p key="1">MY Academy provides tools for managing educational academies, including students, groups, attendance, grades, homework, payments, and reports. By using the platform or creating an academy account, the academy owner confirms that they have read and accepted these terms on behalf of the represented organization.</p>],
+      ["2. Academy owner responsibilities", <ul key="2"><li>Obtain required consent from students and parents of minors before entering data.</li><li>Keep data accurate and current, and manage user permissions and accounts.</li><li>Protect credentials and notify support if unauthorized access is suspected.</li><li>Use the platform in accordance with applicable laws and regulations.</li></ul>],
+      ["3. Plans, subscriptions, and payments", <><p key="3a">The subscription page displays the plan, price, and usage limits. Server-side limits may cover students, teachers, groups, and storage according to the active plan.</p><ul key="3b"><li>Payments are processed by the provider shown at checkout; MY Academy does not store card numbers.</li><li>Renewal and expiry follow the dates confirmed by the payment provider.</li><li>Failed payments may place the account in a payment-due state until corrected or cancelled.</li><li>Refunds and financial adjustments follow the payment provider’s policy and the commercial agreement.</li></ul></>],
+      ["4. Data, files, and export", <><p key="4a">Academy data and files remain the property of the organization that submitted them. The platform receives the technical permissions needed to provide and protect the service. Academy admins may export the data available to them and must store exports securely.</p><p key="4b">Personal and children’s data is governed by the privacy policy. Academies may not upload files they do not have the right to store or share.</p></>],
+      ["5. Cancellation and retention", <p key="5">The academy owner may cancel the subscription or disable renewal. Service continues through the paid period unless the commercial agreement states otherwise. Data is retained for a limited operational period after cancellation to support recovery or export, then deleted according to the retention policy and applicable legal and financial requirements.</p>],
+      ["6. Acceptable use and security", <ul key="6"><li>Do not access another academy’s data, bypass permissions, or manipulate attendance or grades.</li><li>Do not upload malware or unlawful files or use the platform for unsolicited messages.</li><li>The platform uses encryption, tenant isolation, RLS, rate limiting, and sensitive-operation auditing.</li></ul>],
+      ["7. Availability, support, and changes", <p key="7">We make reasonable efforts to maintain availability, but maintenance and events outside our control may occur. Material changes or terms updates may be communicated through support or in-app notices. For account, billing, or privacy questions, use the in-app support center.</p>],
+    ] as const,
+  };
 
-      <Section title="١. نطاق الخدمة والموافقة">
-        <p>توفر MY Academy أدوات لإدارة الأكاديميات التعليمية، بما في ذلك الطلاب والمجموعات والحضور والدرجات والواجبات والمدفوعات والتقارير. باستخدام المنصة أو إنشاء حساب أكاديمية، يقر مالك الأكاديمية بأنه قرأ هذه الشروط ووافق عليها نيابة عن الجهة التي يمثلها.</p>
-      </Section>
-
-      <Section title="٢. مسؤوليات مالك الأكاديمية">
-        <ul className="list-disc space-y-1 pr-5 text-sm text-muted-foreground">
-          <li>الحصول على الموافقات اللازمة من الطلاب وأولياء أمور القاصرين قبل إدخال البيانات.</li>
-          <li>التأكد من دقة البيانات وتحديثها، وإدارة الصلاحيات وحسابات المدرسين وأولياء الأمور والطلاب.</li>
-          <li>حماية بيانات الدخول وعدم مشاركتها، وإبلاغ الدعم فور الاشتباه في دخول غير مصرح به.</li>
-          <li>استخدام المنصة وفق القوانين المصرية والقواعد التنظيمية التي تنطبق على الأكاديمية.</li>
-        </ul>
-      </Section>
-
-      <Section title="٣. الخطط والاشتراكات والمدفوعات">
-        <p>تظهر الخطة والسعر وحدود الاستخدام في صفحة الاشتراك. تطبق الحدود من جهة الخادم وتشمل عدد الطلاب والمدرسين والمجموعات والتخزين بحسب الخطة المفعلة.</p>
-        <ul className="list-disc space-y-1 pr-5 text-sm text-muted-foreground">
-          <li>تُعالج المدفوعات عبر مزود الدفع الظاهر في صفحة الدفع، ولا تخزن MY Academy أرقام البطاقات.</li>
-          <li>يبدأ التجديد أو تنتهي الفترة وفق التاريخ الذي يؤكده مزود الدفع، وتظهر حالة الاشتراك وتاريخ التجديد داخل صفحة billing.</li>
-          <li>عند فشل الدفع قد تتحول الحالة إلى «دفعة مستحقة» إلى أن يتم تصحيح المشكلة أو إلغاء الاشتراك.</li>
-          <li>أي استرداد أو تعديل مالي يخضع لسياسة مزود الدفع والاتفاق التجاري المعتمد مع مالك المنصة.</li>
-        </ul>
-      </Section>
-
-      <Section title="٤. البيانات والملفات والتصدير">
-        <p>تظل بيانات الأكاديمية وملفاتها ملكًا للجهة التي أدخلتها، مع منح المنصة الصلاحيات الفنية اللازمة لتقديم الخدمة وحمايتها. يمكن لمدير الأكاديمية تصدير البيانات المتاحة له من داخل صفحة الخصوصية، ويجب حفظ ملف التصدير في مكان آمن.</p>
-        <p>تخضع البيانات الشخصية وبيانات القاصرين لسياسة الخصوصية المنشورة في المنصة، ولا يجوز رفع ملفات لا تملك الأكاديمية حق تخزينها أو مشاركتها.</p>
-      </Section>
-
-      <Section title="٥. الإلغاء والاحتفاظ">
-        <p>يمكن لمالك الأكاديمية طلب إلغاء الاشتراك أو إيقاف التجديد. تستمر الخدمة حتى نهاية الفترة المدفوعة ما لم ينص الاتفاق التجاري على خلاف ذلك. تُحفظ البيانات لفترة تشغيلية محدودة بعد الإلغاء لإتاحة الاستعادة أو التصدير، ثم تُحذف وفق سياسة الاحتفاظ المعتمدة، مع مراعاة الالتزامات القانونية والسجلات المالية.</p>
-      </Section>
-
-      <Section title="٦. الاستخدام المقبول والأمان">
-        <ul className="list-disc space-y-1 pr-5 text-sm text-muted-foreground">
-          <li>لا يجوز محاولة الوصول إلى بيانات أكاديمية أخرى أو تجاوز الصلاحيات أو التلاعب بالحضور والدرجات.</li>
-          <li>لا يجوز رفع برمجيات خبيثة أو ملفات مخالفة للقانون أو استخدام المنصة لإرسال رسائل غير مرغوبة.</li>
-          <li>تستخدم المنصة التشفير أثناء النقل، وعزل الأكاديميات، وسياسات RLS، وتحديد معدل الطلبات، وتسجيل العمليات الحساسة؛ ولا يلغي ذلك مسؤولية المستخدم عن حساباته.</li>
-        </ul>
-      </Section>
-
-      <Section title="٧. التوافر والدعم والتعديلات">
-        <p>نبذل جهودًا معقولة للحفاظ على التوافر، وقد تحدث صيانة أو انقطاعات خارجة عن السيطرة. نبلغ مالك المنصة بالتغييرات الجوهرية أو تحديثات الشروط عبر قنوات الدعم أو داخل التطبيق. لاستفسارات الحساب أو الفوترة أو الخصوصية، استخدم مركز الدعم داخل المنصة أو تواصل مع مالك الأكاديمية.</p>
-      </Section>
-    </div>
-  );
+  return <div dir={ar ? "rtl" : "ltr"} className="mx-auto max-w-3xl space-y-6"><div><h1 className="text-2xl font-semibold">{t.title}</h1><p className="mt-1 text-sm text-muted-foreground">{t.updated}</p></div><div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">{t.notice}</div>{t.sections.map(([title, body]) => <Section key={title} title={title}>{body}</Section>)}</div>;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-2">
-      <h2 className="text-lg font-semibold">{title}</h2>
-      <div className="space-y-2 text-sm leading-6 text-foreground">{children}</div>
-    </div>
-  );
+  return <div className="space-y-2"><h2 className="text-lg font-semibold">{title}</h2><div className="space-y-2 text-sm leading-6 text-foreground [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:ps-5 [&_ul]:text-muted-foreground">{children}</div></div>;
 }

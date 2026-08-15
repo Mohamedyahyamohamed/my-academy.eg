@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Bell, BellOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useClientLang } from "@/lib/i18n-client";
 
 const PUBLIC_VAPID_KEY =
   "BFD5Yemjsjd3BMejcru_eiNpsuIHQ87tdisS1AYuYqDJlqytE8EGlIMy9rHB3O27-U1nQ2ncEXoXOP3SVhdTbgI";
@@ -19,6 +20,7 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 export function PushNotifications() {
+  const en = useClientLang() === "en";
   const [status, setStatus] = React.useState<"unsupported" | "default" | "granted" | "denied">("default");
   const [loading, setLoading] = React.useState(false);
 
@@ -75,14 +77,14 @@ export function PushNotifications() {
 
   if (status === "granted") {
     return (
-      <Button variant="ghost" size="sm" onClick={unsubscribe} disabled={loading} title="إيقاف الإشعارات">
+      <Button variant="ghost" size="sm" onClick={unsubscribe} disabled={loading} title={en ? "Disable notifications" : "إيقاف الإشعارات"}>
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4 text-emerald-500" />}
       </Button>
     );
   }
 
   return (
-    <Button variant="ghost" size="sm" onClick={subscribe} disabled={loading} title="فعّل الإشعارات">
+    <Button variant="ghost" size="sm" onClick={subscribe} disabled={loading} title={en ? "Enable notifications" : "فعّل الإشعارات"}>
       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <BellOff className="h-4 w-4" />}
     </Button>
   );

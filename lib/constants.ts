@@ -34,6 +34,18 @@ export const ROLE_LABELS: Record<Role, string> = {
   STUDENT: "طالب",
 };
 
+export const ROLE_LABELS_EN: Record<Role, string> = {
+  SUPER_ADMIN: "Platform owner",
+  ADMIN: "Administrator",
+  TEACHER: "Teacher",
+  PARENT: "Parent",
+  STUDENT: "Student",
+};
+
+export function roleLabel(role: Role, en = false): string {
+  return (en ? ROLE_LABELS_EN : ROLE_LABELS)[role];
+}
+
 /** Sidebar sections grouped by role. */
 export type NavItem = {
   title: string;
@@ -113,8 +125,15 @@ export const PERFORMANCE_LEVEL_LABELS: Record<string, string> = {
 };
 
 /** Format persisted or calculated performance levels for the Arabic interface. */
-export function performanceLabel(level: string | null | undefined): string {
-  return level ? PERFORMANCE_LEVEL_LABELS[level] ?? level : "—";
+export const PERFORMANCE_LEVEL_LABELS_EN: Record<string, string> = {
+  Excellent: "Excellent",
+  "Very Good": "Very Good",
+  Good: "Good",
+  "Needs Improvement": "Needs Improvement",
+};
+
+export function performanceLabel(level: string | null | undefined, en = false): string {
+  return level ? (en ? PERFORMANCE_LEVEL_LABELS_EN[level] ?? level : PERFORMANCE_LEVEL_LABELS[level] ?? level) : "—";
 }
 
 /** Arabic display labels for persisted payment-method values. */
@@ -127,6 +146,14 @@ export const PAYMENT_METHOD_LABELS: Record<(typeof PAYMENT_METHODS)[number], str
 };
 
 /** Format persisted payment methods for the Arabic interface. */
-export function paymentMethodLabel(method: string | null | undefined): string {
-  return method ? PAYMENT_METHOD_LABELS[method as keyof typeof PAYMENT_METHOD_LABELS] ?? method : "—";
+export const PAYMENT_METHOD_LABELS_EN: Record<(typeof PAYMENT_METHODS)[number], string> = {
+  Cash: "Cash",
+  Card: "Card",
+  "Bank Transfer": "Bank transfer",
+  Wallet: "Wallet",
+  Other: "Other",
+};
+
+export function paymentMethodLabel(method: string | null | undefined, en = false): string {
+  return method ? (en ? PAYMENT_METHOD_LABELS_EN[method as keyof typeof PAYMENT_METHOD_LABELS_EN] ?? method : PAYMENT_METHOD_LABELS[method as keyof typeof PAYMENT_METHOD_LABELS] ?? method) : "—";
 }

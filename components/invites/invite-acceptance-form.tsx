@@ -8,16 +8,18 @@ import { acceptAcademyInviteAction, type InvitePreview } from "@/app/actions/inv
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useClientLang } from "@/lib/i18n-client";
 
-const ROLE_COPY: Record<InvitePreview["role"], string> = {
-  ADMIN: "مدير أكاديمية",
-  TEACHER: "مدرّس",
-  PARENT: "ولي أمر",
-  STUDENT: "طالب",
+const ROLE_COPY: Record<InvitePreview["role"], { ar: string; en: string }> = {
+  ADMIN: { ar: "مدير أكاديمية", en: "Academy administrator" },
+  TEACHER: { ar: "مدرّس", en: "Teacher" },
+  PARENT: { ar: "ولي أمر", en: "Parent" },
+  STUDENT: { ar: "طالب", en: "Student" },
 };
 
 export function InviteAcceptanceForm({ token, invite }: { token: string; invite: InvitePreview }) {
   const router = useRouter();
+  const en = useClientLang() === "en";
   const [loading, setLoading] = React.useState(false);
   const [form, setForm] = React.useState({
     fullName: invite.fullName ?? "",
@@ -30,15 +32,15 @@ export function InviteAcceptanceForm({ token, invite }: { token: string; invite:
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!hasPresetName && !form.fullName.trim()) {
-      toast.error("أدخل الاسم الكامل.");
+      toast.error(en ? "Enter your full name." : "أدخل الاسم الكامل.");
       return;
     }
     if (form.password.length < 8) {
-      toast.error("اختر كلمة مرور من 8 أحرف على الأقل.");
+      toast.error(en ? "Choose a password with at least 8 characters." : "اختر كلمة مرور من 8 أحرف على الأقل.");
       return;
     }
     if (form.password !== form.confirmPassword) {
-      toast.error("كلمتا المرور غير متطابقتين.");
+      toast.error(en ? "The passwords do not match." : "كلمتا المرور غير متطابقتين.");
       return;
     }
 
@@ -50,10 +52,10 @@ export function InviteAcceptanceForm({ token, invite }: { token: string; invite:
         password: form.password,
       });
       if (!result.ok || !result.destination) {
-        toast.error(result.error ?? "تعذّر قبول الدعوة.");
+        toast.error(result.error ?? (en ? "Unable to accept the invitation." : "تعذّر قبول الدعوة."));
         return;
       }
-      toast.success("تم قبول الدعوة بنجاح.");
+      toast.success(en ? "Invitation accepted successfully." : "تم قبول الدعوة بنجاح.");
       router.push(result.destination);
       router.refresh();
     } finally {
@@ -67,9 +69,9 @@ export function InviteAcceptanceForm({ token, invite }: { token: string; invite:
         <div className="flex items-start gap-3">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
           <div className="space-y-1">
-            <p className="font-semibold">دعوة آمنة ومخصصة لك</p>
+            <p className="font-semibold">{en ? "A secure invitation for you" : "دعوة آمنة ومخصصة لك"}</p>
             <p className="text-muted-foreground">
-              ستنضم إلى <strong className="text-foreground">{invite.academyName}</strong> بصفتك {ROLE_COPY[invite.role]} باستخدام البريد {invite.email}.
+              {en ? <>You will join <strong className="text-foreground">{invite.academyName}</strong> as a {ROLE_COPY[invite.role].en} using {invite.email}.</> : <>ستنضم إلى <strong className="text-foreground">{invite.academyName}</strong> بصفتك {ROLE_COPY[invite.role].ar} باستخدام البريد {invite.email}.</>}
             </p>
           </div>
         </div>
@@ -77,51 +79,51 @@ export function InviteAcceptanceForm({ token, invite }: { token: string; invite:
 
       {!hasPresetName && (
         <div className="space-y-1.5">
-          <Label htmlFor="full-name">الاسم بالكامل</Label>
+          <Label htmlFor="full-name">{en ? "Full name" : "الاسم بالكامل"}</Label>
           <Input
             id="full-name"
             autoComplete="name"
             value={form.fullName}
             onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))}
-            placeholder="مثال: أحمد محمد علي"
+            placeholder={en ? "Example: Ahmed Mohamed Ali" : "مثال: أحمد محمد علي"}
             disabled={loading}
           />
         </div>
       )}
 
       <div className="space-y-1.5">
-        <Label htmlFor="password">كلمة المرور</Label>
+        <Label htmlFor="password">{en ? "Password" : "كلمة المرور"}</Label>
         <Input
           id="password"
           type="password"
           autoComplete="new-password"
           value={form.password}
           onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
-          placeholder="8 أحرف على الأقل"
+          placeholder={en ? "At least 8 characters" : "8 أحرف على الأقل"}
           disabled={loading}
         />
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="confirm-password">تأكيد كلمة المرور</Label>
+        <Label htmlFor="confirm-password">{en ? "Confirm password" : "تأكيد كلمة المرور"}</Label>
         <Input
           id="confirm-password"
           type="password"
           autoComplete="new-password"
           value={form.confirmPassword}
           onChange={(event) => setForm((current) => ({ ...current, confirmPassword: event.target.value }))}
-          placeholder="أعد كتابة كلمة المرور"
+          placeholder={en ? "Re-enter your password" : "أعد كتابة كلمة المرور"}
           disabled={loading}
         />
       </div>
 
       <p className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
         <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-        يقتصر استخدام الرابط على مرة واحدة فقط، ولا يمكن لأي شخص آخر الوصول إلى بيانات الأكاديمية عبره.
+        {en ? "This link can only be used once, and no one else can access the academy data through it." : "يقتصر استخدام الرابط على مرة واحدة فقط، ولا يمكن لأي شخص آخر الوصول إلى بيانات الأكاديمية عبره."}
       </p>
 
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "قبول الدعوة وإنشاء الحساب"}
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (en ? "Accept invitation and create account" : "قبول الدعوة وإنشاء الحساب")}
       </Button>
     </form>
   );

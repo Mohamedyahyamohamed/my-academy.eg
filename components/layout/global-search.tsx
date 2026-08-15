@@ -6,6 +6,7 @@ import { Search, Users, UsersRound, BookOpen, Wallet, CornerDownLeft } from "luc
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { SearchResult } from "@/services/misc";
+import { useClientLang } from "@/lib/i18n-client";
 
 const iconFor = (type: SearchResult["type"]) =>
   type === "student"
@@ -18,6 +19,8 @@ const iconFor = (type: SearchResult["type"]) =>
 
 export function GlobalSearch() {
   const router = useRouter();
+  const lang = useClientLang();
+  const en = lang === "en";
   const [query, setQuery] = React.useState("");
   const [results, setResults] = React.useState<SearchResult[]>([]);
   const [open, setOpen] = React.useState(false);
@@ -67,7 +70,7 @@ export function GlobalSearch() {
 
   return (
     <div ref={ref} className="relative w-full max-w-md">
-      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -87,19 +90,19 @@ export function GlobalSearch() {
           }
           if (e.key === "Escape") setOpen(false);
         }}
-        placeholder="ابحث عن طلاب، مجموعات، حصص…"
-        className="pl-9 pr-4"
-        aria-label="بحث عام"
+        placeholder={en ? "Search students, groups, lessons…" : "ابحث عن طلاب، مجموعات، حصص…"}
+        className="ps-9 pe-4"
+        aria-label={en ? "Global search" : "بحث عام"}
       />
       {open && (query.trim().length > 0) && (
         <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-lg border border-border bg-popover shadow-elevated">
           {loading ? (
             <div className="px-3 py-4 text-sm text-muted-foreground">
-              جارٍ البحث…
+              {en ? "Searching…" : "جارٍ البحث…"}
             </div>
           ) : results.length === 0 ? (
             <div className="px-3 py-4 text-sm text-muted-foreground">
-              لا توجد نتائج لـ «{query}».
+              {en ? `No results for “${query}”.` : `لا توجد نتائج لـ «${query}».`}
             </div>
           ) : (
             <ul className="max-h-80 overflow-y-auto p-1">
@@ -112,14 +115,14 @@ export function GlobalSearch() {
                       onClick={() => go(r)}
                       onMouseEnter={() => setActive(i)}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors",
+                        "flex w-full items-center gap-3 rounded-md px-3 py-2 text-start text-sm transition-colors",
                         active === i ? "bg-accent" : "hover:bg-accent/60",
                       )}
                     >
                       <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
                       <span className="flex-1 truncate">
                         <span className="font-medium text-foreground">{r.label}</span>
-                        <span className="ml-2 text-xs text-muted-foreground">
+                        <span className="ms-2 text-xs text-muted-foreground">
                           {r.subtitle}
                         </span>
                       </span>

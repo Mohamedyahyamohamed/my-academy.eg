@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 import { ArrowLeft, Phone, Mail } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +20,7 @@ export default async function ParentDetailPage(
 ) {
   const params = await props.params;
   const user = await requireScopedRole("ADMIN", "TEACHER");
+  const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
   const { createServerSupabaseClient } = await import("@/lib/supabase/server");
   const client = await createServerSupabaseClient();
 
@@ -40,32 +43,32 @@ export default async function ParentDetailPage(
 
   return (
     <div className="space-y-6">
-      <PageHeader title={`${parent.first_name} ${parent.last_name}`} description="ملف ولي الأمر" />
+      <PageHeader title={`${parent.first_name} ${parent.last_name}`} description={en ? "Parent profile" : "ملف ولي الأمر"} />
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">بيانات ولي الأمر</CardTitle>
+          <CardTitle className="text-base">{en ? "Parent information" : "بيانات ولي الأمر"}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <p className="flex items-center gap-2">
             <Mail className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">الإيميل:</span>
+            <span className="text-muted-foreground">{en ? "Email:" : "الإيميل:"}</span>
             <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{parent.email}</code>
           </p>
           <p className="flex items-center gap-2">
             <Phone className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">الموبايل:</span>
+            <span className="text-muted-foreground">{en ? "Phone:" : "الموبايل:"}</span>
             {parent.phone || "—"}
           </p>
           {parent.occupation && (
-            <p className="text-muted-foreground">الوظيفة: {parent.occupation}</p>
+            <p className="text-muted-foreground">{en ? "Occupation:" : "الوظيفة:"} {parent.occupation}</p>
           )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">الأبناء ({children?.length ?? 0})</CardTitle>
+          <CardTitle className="text-base">{en ? "Children" : "الأبناء"} ({children?.length ?? 0})</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y">
@@ -84,14 +87,14 @@ export default async function ParentDetailPage(
               </Link>
             ))}
             {(!children || children.length === 0) && (
-              <p className="p-6 text-center text-sm text-muted-foreground">مفيش أبناء مربوطين بولي الأمر ده.</p>
+              <p className="p-6 text-center text-sm text-muted-foreground">{en ? "No children are linked to this parent." : "مفيش أبناء مربوطين بولي الأمر ده."}</p>
             )}
           </div>
         </CardContent>
       </Card>
 
       <Button asChild variant="outline">
-        <Link href="/students"><ArrowLeft className="mr-2 h-4 w-4" /> رجوع للطلاب</Link>
+        <Link href="/students"><ArrowLeft className="me-2 h-4 w-4" /> {en ? "Back to students" : "رجوع للطلاب"}</Link>
       </Button>
     </div>
   );

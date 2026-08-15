@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createRecoverySupabaseClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/services/supabase/config";
+import { useClientLang } from "@/lib/i18n-client";
 
 function cleanRecoveryUrl() {
   if (typeof window === "undefined") return;
@@ -24,6 +25,7 @@ function cleanRecoveryUrl() {
 }
 
 export default function ResetPasswordPage() {
+  const en = useClientLang() === "en";
   const supabase = React.useMemo(
     () => (isSupabaseConfigured() ? createRecoverySupabaseClient() : null),
     [],
@@ -98,12 +100,12 @@ export default function ResetPasswordPage() {
           setSessionState(
             false,
             authError
-              ? "تعذر التحقق من رابط الاستعادة. اطلب رابطًا جديدًا وحاول فتحه مرة واحدة فقط."
+              ? (en ? "Unable to verify the recovery link. Request a new link and open it only once." : "تعذر التحقق من رابط الاستعادة. اطلب رابطًا جديدًا وحاول فتحه مرة واحدة فقط.")
               : undefined,
           );
         }
       } catch {
-        setSessionState(false, "تعذر التحقق من رابط الاستعادة. اطلب رابطًا جديدًا وحاول فتحه مرة واحدة فقط.");
+        setSessionState(false, en ? "Unable to verify the recovery link. Request a new link and open it only once." : "تعذر التحقق من رابط الاستعادة. اطلب رابطًا جديدًا وحاول فتحه مرة واحدة فقط.");
       }
     };
 
@@ -126,17 +128,17 @@ export default function ResetPasswordPage() {
     setError(null);
 
     if (password.length < 6) {
-      setError("كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل.");
+      setError(en ? "The new password must be at least 6 characters." : "كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل.");
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("كلمتا المرور غير متطابقتين.");
+      setError(en ? "The passwords do not match." : "كلمتا المرور غير متطابقتين.");
       return;
     }
 
     if (!supabase) {
-      setError("خدمة استعادة كلمة المرور غير مهيأة حاليًا. تواصل مع مسؤول المنصة.");
+      setError(en ? "Password recovery is not configured. Contact the platform administrator." : "خدمة استعادة كلمة المرور غير مهيأة حاليًا. تواصل مع مسؤول المنصة.");
       return;
     }
 
@@ -154,7 +156,7 @@ export default function ResetPasswordPage() {
       }
 
       if (sessionError || !sessionData.session) {
-        setError("انتهت جلسة الاستعادة. اطلب رابطًا جديدًا وافتحه مرة واحدة فقط.");
+        setError(en ? "The recovery session expired. Request a new link and open it only once." : "انتهت جلسة الاستعادة. اطلب رابطًا جديدًا وافتحه مرة واحدة فقط.");
         return;
       }
 
@@ -162,11 +164,11 @@ export default function ResetPasswordPage() {
       if (updateError) {
         const message = updateError.message.toLowerCase();
         if (message.includes("password") && (message.includes("weak") || message.includes("least") || message.includes("characters"))) {
-          setError("كلمة المرور لا تستوفي شروط الأمان. استخدم كلمة مرور أطول وأكثر تعقيدًا.");
+          setError(en ? "The password does not meet the security requirements. Use a longer, more complex password." : "كلمة المرور لا تستوفي شروط الأمان. استخدم كلمة مرور أطول وأكثر تعقيدًا.");
         } else if (message.includes("session") || message.includes("reauthor") || message.includes("expired")) {
-          setError("انتهت جلسة الاستعادة. اطلب رابطًا جديدًا وافتحه مرة واحدة فقط.");
+          setError(en ? "The recovery session expired. Request a new link and open it only once." : "انتهت جلسة الاستعادة. اطلب رابطًا جديدًا وافتحه مرة واحدة فقط.");
         } else {
-          setError("تعذر تحديث كلمة المرور حاليًا. حاول باستخدام رابط استعادة جديد.");
+          setError(en ? "Unable to update the password. Try again with a new recovery link." : "تعذر تحديث كلمة المرور حاليًا. حاول باستخدام رابط استعادة جديد.");
         }
         return;
       }
@@ -174,14 +176,14 @@ export default function ResetPasswordPage() {
       setUpdated(true);
       await supabase.auth.signOut();
     } catch {
-      setError("حدث خطأ غير متوقع أثناء حفظ كلمة المرور. اطلب رابط استعادة جديدًا وحاول مرة أخرى.");
+      setError(en ? "An unexpected error occurred while saving the password. Request a new recovery link and try again." : "حدث خطأ غير متوقع أثناء حفظ كلمة المرور. اطلب رابط استعادة جديدًا وحاول مرة أخرى.");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div dir="rtl" className="flex min-h-screen items-center justify-center px-6 py-12">
+    <div dir={en ? "ltr" : "rtl"} className="flex min-h-screen items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex justify-center">
           <Logo />
@@ -193,28 +195,28 @@ export default function ResetPasswordPage() {
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
                 <CheckCircle2 className="h-6 w-6" />
               </div>
-              <h1 className="text-xl font-semibold tracking-tight">تم تحديث كلمة المرور</h1>
-              <p className="mt-2 text-sm text-muted-foreground">يمكنك الآن تسجيل الدخول باستخدام كلمة المرور الجديدة.</p>
+              <h1 className="text-xl font-semibold tracking-tight">{en ? "Password updated" : "تم تحديث كلمة المرور"}</h1>
+              <p className="mt-2 text-sm text-muted-foreground">{en ? "You can now sign in with your new password." : "يمكنك الآن تسجيل الدخول باستخدام كلمة المرور الجديدة."}</p>
               <Button asChild className="mt-6 w-full">
-                <Link href="/login">الانتقال إلى تسجيل الدخول</Link>
+                <Link href="/login">{en ? "Go to sign in" : "الانتقال إلى تسجيل الدخول"}</Link>
               </Button>
             </div>
           ) : checking ? (
             <div className="py-8 text-center text-sm text-muted-foreground">
               <Loader2 className="mx-auto mb-3 h-6 w-6 animate-spin text-primary" />
-              جارٍ التحقق من رابط الاستعادة…
+              {en ? "Verifying recovery link…" : "جارٍ التحقق من رابط الاستعادة…"}
             </div>
           ) : !hasRecoverySession ? (
             <div className="text-center">
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-600">
                 <KeyRound className="h-6 w-6" />
               </div>
-              <h1 className="text-xl font-semibold tracking-tight">رابط الاستعادة غير صالح</h1>
+              <h1 className="text-xl font-semibold tracking-tight">{en ? "Invalid recovery link" : "رابط الاستعادة غير صالح"}</h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                انتهت صلاحية الرابط أو تم استخدامه من قبل. اطلب رابط استعادة جديدًا للمتابعة.
+                {en ? "The link has expired or was already used. Request a new recovery link to continue." : "انتهت صلاحية الرابط أو تم استخدامه من قبل. اطلب رابط استعادة جديدًا للمتابعة."}
               </p>
               <Button asChild className="mt-6 w-full">
-                <Link href="/forgot-password">طلب رابط جديد</Link>
+                <Link href="/forgot-password">{en ? "Request a new link" : "طلب رابط جديد"}</Link>
               </Button>
             </div>
           ) : (
@@ -222,12 +224,12 @@ export default function ResetPasswordPage() {
               <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <KeyRound className="h-6 w-6" />
               </div>
-              <h1 className="text-xl font-semibold tracking-tight">إنشاء كلمة مرور جديدة</h1>
-              <p className="mt-1.5 text-sm text-muted-foreground">اختر كلمة مرور قوية لحماية حسابك.</p>
+              <h1 className="text-xl font-semibold tracking-tight">{en ? "Create a new password" : "إنشاء كلمة مرور جديدة"}</h1>
+              <p className="mt-1.5 text-sm text-muted-foreground">{en ? "Choose a strong password to protect your account." : "اختر كلمة مرور قوية لحماية حسابك."}</p>
 
               <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
                 <div className="space-y-1.5">
-                  <Label htmlFor="password">كلمة المرور الجديدة</Label>
+                  <Label htmlFor="password">{en ? "New password" : "كلمة المرور الجديدة"}</Label>
                   <Input
                     id="password"
                     type="password"
@@ -241,12 +243,12 @@ export default function ResetPasswordPage() {
                         setPassword(pastedValue);
                       }
                     }}
-                    placeholder="6 أحرف على الأقل"
+                    placeholder={en ? "At least 6 characters" : "6 أحرف على الأقل"}
                     required
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="confirm-password">تأكيد كلمة المرور</Label>
+                  <Label htmlFor="confirm-password">{en ? "Confirm password" : "تأكيد كلمة المرور"}</Label>
                   <Input
                     id="confirm-password"
                     type="password"
@@ -260,7 +262,7 @@ export default function ResetPasswordPage() {
                         setConfirmPassword(pastedValue);
                       }
                     }}
-                    placeholder="أعد كتابة كلمة المرور"
+                    placeholder={en ? "Re-enter your password" : "أعد كتابة كلمة المرور"}
                     required
                   />
                 </div>
@@ -268,10 +270,10 @@ export default function ResetPasswordPage() {
                 <Button type="submit" className="w-full" disabled={submitting}>
                   {submitting ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" /> جارٍ الحفظ…
+                      <Loader2 className="h-4 w-4 animate-spin" /> {en ? "Saving…" : "جارٍ الحفظ…"}
                     </>
                   ) : (
-                    "حفظ كلمة المرور"
+                    en ? "Save password" : "حفظ كلمة المرور"
                   )}
                 </Button>
               </form>
@@ -281,7 +283,7 @@ export default function ResetPasswordPage() {
 
         <div className="mt-6 text-center">
           <Link href="/login" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" /> العودة لتسجيل الدخول
+            <ArrowLeft className="h-4 w-4" /> {en ? "Back to sign in" : "العودة لتسجيل الدخول"}
           </Link>
         </div>
       </div>

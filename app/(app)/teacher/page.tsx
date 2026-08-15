@@ -3,6 +3,8 @@ import {
   Users, UsersRound, CalendarClock, ClipboardList, CheckCircle2,
   ArrowRight, AlertCircle,
 } from "lucide-react";
+import { cookies } from "next/headers";
+import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,34 +18,34 @@ import { formatDate, formatTime } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function TeacherDashboard() {
+  const lang = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value);
+  const isRTL = lang === "ar";
+  const t = lang === "ar" ? {
+    dashboard: "لوحة التحكم", noTeacher: "لا يوجد ملف معلّم مرتبط", noTeacherDesc: "حسابك غير مرتبط بسجل معلّم. اطلب من المدير إسناد المجموعات إليك.", welcome: "أهلاً", overview: "نظرة سريعة على مجموعاتك وطلابك وحصصك فقط.", groups: "مجموعاتي", students: "طلابي", upcoming: "الحصص القادمة", attendanceRate: "متوسط الحضور", pending: "تسليم واجبات بانتظار مراجعتك.", review: "راجع الآن", noUpcoming: "لا توجد حصص قادمة.", all: "عرض الكل", attendanceMissing: "حضور لم يُسجَّل", recordAttendance: "سجّل الحضور", allRecorded: "تم تسجيل كل الحضور", groupsAssigned: "لا توجد مجموعات مسندة إليك.", submissions: "أحدث التسليمات", noSubmissions: "لا توجد تسليمات بعد."
+  } : {
+    dashboard: "Dashboard", noTeacher: "No teacher profile linked", noTeacherDesc: "Your account is not linked to a teacher record. Ask an administrator to assign groups to you.", welcome: "Welcome", overview: "A quick view of your groups, students, and lessons only.", groups: "My groups", students: "My students", upcoming: "Upcoming lessons", attendanceRate: "Average attendance", pending: "homework submissions are waiting for your review.", review: "Review now", noUpcoming: "No upcoming lessons.", all: "View all", attendanceMissing: "Attendance not recorded", recordAttendance: "Record attendance", allRecorded: "All attendance is recorded", groupsAssigned: "No groups are assigned to you.", submissions: "Recent submissions", noSubmissions: "No submissions yet."
+  };
   const user = await requireScopedRole("TEACHER");
   const displayName = user.full_name?.trim() || user.email || "المعلّم";
   const d = await getTeacherDashboard(user);
   if (!d) {
     return (
-      <div className="space-y-6">
-        <PageHeader title="لوحة التحكم" description={`أهلاً، ${displayName}.`} />
-        <EmptyState
-          icon={UsersRound}
-          title="لا يوجد ملف معلّم مرتبط"
-          description="حسابك غير مرتبط بسجل معلّم. اطلب من المدير إسناد المجموعات إليك."
-        />
+      <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>
+        <PageHeader title={t.dashboard} description={`${t.welcome}، ${displayName}.`} />
+        <EmptyState icon={UsersRound} title={t.noTeacher} description={t.noTeacherDesc} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={`أهلاً، ${(d.teacherName || displayName).split(/\s+/)[0]} 👋`}
-        description="نظرة سريعة على مجموعاتك وطلابك وحصصك فقط."
-      />
+    <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>
+      <PageHeader title={`${t.welcome}، ${(d.teacherName || displayName).split(/\s+/)[0]} 👋`} description={t.overview} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="مجموعاتي" value={d.groupCount} icon={UsersRound} accent="primary" />
-        <StatCard label="طلابي" value={d.studentCount} icon={Users} accent="info" />
-        <StatCard label="الحصص القادمة" value={d.upcomingCount} icon={CalendarClock} accent="success" />
-        <StatCard label="متوسط الحضور" value={`${d.attendanceRate}%`} icon={CheckCircle2} accent="warning" />
+        <StatCard label={t.groups} value={d.groupCount} icon={UsersRound} accent="primary" />
+        <StatCard label={t.students} value={d.studentCount} icon={Users} accent="info" />
+        <StatCard label={t.upcoming} value={d.upcomingCount} icon={CalendarClock} accent="success" />
+        <StatCard label={t.attendanceRate} value={`${d.attendanceRate}%`} icon={CheckCircle2} accent="warning" />
       </div>
 
       {d.pendingReview > 0 && (
@@ -51,10 +53,10 @@ export default async function TeacherDashboard() {
           <CardContent className="flex items-center gap-3 p-4">
             <AlertCircle className="h-5 w-5 text-amber-600" />
             <p className="text-sm text-amber-800">
-              <span className="font-semibold">{d.pendingReview}</span> تسليم واجبات بانتظار مراجعتك.
+              <span className="font-semibold">{d.pendingReview}</span> {t.pending}
             </p>
-            <Button asChild size="sm" variant="soft" className="ml-auto">
-              <Link href="/homework">راجع الآن</Link>
+            <Button asChild size="sm" variant="soft" className="ms-auto">
+              <Link href="/homework">{t.review}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -63,12 +65,12 @@ export default async function TeacherDashboard() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">الحصص القادمة</CardTitle>
-            <Button asChild variant="ghost" size="sm"><Link href="/lessons">عرض الكل</Link></Button>
+            <CardTitle className="text-base">{t.upcoming}</CardTitle>
+            <Button asChild variant="ghost" size="sm"><Link href="/lessons">{t.all}</Link></Button>
           </CardHeader>
           <CardContent className="space-y-1">
             {d.upcomingLessons.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">لا توجد حصص قادمة.</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">{t.noUpcoming}</p>
             ) : (
               d.upcomingLessons.map((l: any) => (
                 <Link key={l.id} href={`/lessons/${l.id}`} className="flex items-center gap-3 rounded-lg p-2.5 hover:bg-accent">
@@ -92,12 +94,12 @@ export default async function TeacherDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">حضور لم يُسجَّل</CardTitle>
-            <Button asChild variant="ghost" size="sm"><Link href="/attendance">سجّل الحضور</Link></Button>
+            <CardTitle className="text-base">{t.attendanceMissing}</CardTitle>
+            <Button asChild variant="ghost" size="sm"><Link href="/attendance">{t.recordAttendance}</Link></Button>
           </CardHeader>
           <CardContent className="space-y-1">
             {d.needsAttendance.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">تم تسجيل كل الحضور 🎉</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">{t.allRecorded}</p>
             ) : (
               d.needsAttendance.map((l) => (
                 <Link key={l.id} href={`/attendance?lesson=${l.id}`} className="flex items-center justify-between rounded-lg p-2.5 hover:bg-accent">
@@ -115,10 +117,10 @@ export default async function TeacherDashboard() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle className="text-base">مجموعاتي</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{t.groups}</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             {d.groups.length === 0 ? (
-              <p className="py-4 text-center text-sm text-muted-foreground">لا توجد مجموعات مسندة إليك.</p>
+              <p className="py-4 text-center text-sm text-muted-foreground">{t.groupsAssigned}</p>
             ) : (
               d.groups.map((g: any) => (
                 <Link key={g.id} href={`/groups/${g.id}`} className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-accent/50">
@@ -137,10 +139,10 @@ export default async function TeacherDashboard() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">أحدث التسليمات</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{t.submissions}</CardTitle></CardHeader>
           <CardContent className="space-y-1">
             {d.recentSubmissions.length === 0 ? (
-              <p className="py-4 text-center text-sm text-muted-foreground">لا توجد تسليمات بعد.</p>
+              <p className="py-4 text-center text-sm text-muted-foreground">{t.noSubmissions}</p>
             ) : (
               d.recentSubmissions.map((s) => (
                 <Link key={s.id} href={`/homework`} className="flex items-center justify-between rounded-lg p-2.5 hover:bg-accent">

@@ -1,4 +1,6 @@
 import { CalendarCheck } from "lucide-react";
+import { cookies } from "next/headers";
+import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,12 +18,13 @@ export const dynamic = "force-dynamic";
 export default async function ParentAttendancePage() {
   const user = await requireScopedRole("PARENT");
   const { children } = await getParentDashboard(user);
+  const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
 
   return (
     <div className="space-y-6">
-      <PageHeader title="الحضور" description="سجلات الحضور لكل أبنائك." />
+      <PageHeader title={en ? "Attendance" : "الحضور"} description={en ? "Attendance records for all your children." : "سجلات الحضور لكل أبنائك."} />
       {children.length === 0 ? (
-        <EmptyState icon={CalendarCheck} title="لا توجد بيانات" description="لا يوجد أبناء مرتبطون بالحساب." />
+        <EmptyState icon={CalendarCheck} title={en ? "No data" : "لا توجد بيانات"} description={en ? "No children are linked to this account." : "لا يوجد أبناء مرتبطون بالحساب."} />
       ) : (
         <div className="space-y-6">
           {children.map((c) => {
@@ -35,10 +38,10 @@ export default async function ParentAttendancePage() {
                       <p className="font-semibold">{fullName(c)}</p>
                     </div>
                     <AttendanceBadge status={att.present > att.absent ? "PRESENT" : "ABSENT"} />
-                    <span className="text-sm text-muted-foreground">{percentage(att.present + att.late, att.total)}% حضور</span>
+                    <span className="text-sm text-muted-foreground">{percentage(att.present + att.late, att.total)}% {en ? "attendance" : "حضور"}</span>
                   </div>
                   <Table>
-                    <TableHeader><TableRow><TableHead>التاريخ</TableHead><TableHead>المجموعة</TableHead><TableHead>الحالة</TableHead></TableRow></TableHeader>
+                    <TableHeader><TableRow><TableHead>{en ? "Date" : "التاريخ"}</TableHead><TableHead>{en ? "Group" : "المجموعة"}</TableHead><TableHead>{en ? "Status" : "الحالة"}</TableHead></TableRow></TableHeader>
                     <TableBody>
                       {att.byLesson.slice().reverse().slice(0, 8).map((a) => {
                         const lesson = collections().lessons.find((l) => l.id === a.lesson_id);
@@ -51,7 +54,7 @@ export default async function ParentAttendancePage() {
                           </TableRow>
                         );
                       })}
-                      {att.byLesson.length === 0 && <TableRow><TableCell colSpan={3} className="py-6 text-center text-sm text-muted-foreground">لا توجد سجلات.</TableCell></TableRow>}
+                      {att.byLesson.length === 0 && <TableRow><TableCell colSpan={3} className="py-6 text-center text-sm text-muted-foreground">{en ? "No records." : "لا توجد سجلات."}</TableCell></TableRow>}
                     </TableBody>
                   </Table>
                 </CardContent>

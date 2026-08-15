@@ -1,18 +1,22 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { changeClientLang, useClientLang } from "@/lib/i18n-client";
 
 export function LanguageToggle() {
+  const router = useRouter();
   const lang = useClientLang();
   const en = lang === "en";
 
   const toggle = () => {
     const next = en ? "ar" : "en";
     changeClientLang(next);
-    window.location.reload();
+    // Re-render Server Components without a full document reload. Client
+    // components update immediately through LANGUAGE_EVENT.
+    router.refresh();
   };
 
   return (

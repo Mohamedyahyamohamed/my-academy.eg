@@ -150,6 +150,7 @@ export async function notifyStudentQrWhatsApp(
     phone?: string | null;
     failureReason?: string;
     externalMessageId?: string;
+    templateName?: string | null;
   }) => logWhatsAppAttempt({
     academyId: student.academy_id,
     parentId,
@@ -159,6 +160,7 @@ export async function notifyStudentQrWhatsApp(
     status: input.status,
     failureReason: input.failureReason,
     externalMessageId: input.externalMessageId,
+    templateName: input.templateName,
   });
 
   if (process.env.WHATSAPP_QR_AUTO_SEND?.toLowerCase() !== "true") {
@@ -205,6 +207,7 @@ export async function notifyStudentQrWhatsApp(
       status: result.ok ? "ACCEPTED" : "FAILED",
       externalMessageId: result.messageId,
       failureReason: result.error,
+      templateName: qrTemplate,
     });
   } catch (error) {
     await log({ status: "FAILED", failureReason: (error as Error)?.message || "QR delivery failed" });

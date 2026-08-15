@@ -67,7 +67,6 @@ export async function POST(req: NextRequest) {
         password,
       });
       if (authError) {
-        console.warn("[auth/login] Supabase sign-in failed", { code: authError.code, status: authError.status });
         return NextResponse.json(
           { ok: false, error: "Invalid email or password." },
           { status: 401 },
@@ -84,7 +83,6 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (profileErr || !profile) {
-        console.warn("[auth/login] profile resolution failed", { code: profileErr?.code, message: profileErr?.message });
         return NextResponse.json(
           { ok: false, error: "Invalid email or password." },
           { status: 401 },
@@ -102,7 +100,6 @@ export async function POST(req: NextRequest) {
         .order("joined_at", { ascending: true })
         .limit(20);
       if (membershipErr || !memberships?.length) {
-        console.warn("[auth/login] active membership resolution failed", { code: membershipErr?.code, message: membershipErr?.message, count: memberships?.length ?? 0 });
         return NextResponse.json(
           { ok: false, error: "This account has no active academy membership." },
           { status: 403 },
@@ -155,8 +152,7 @@ export async function POST(req: NextRequest) {
       });
 
       return NextResponse.json({ ok: true, user });
-    } catch (error) {
-      console.error("[auth/login] unexpected Supabase login error", { message: (error as Error)?.message });
+    } catch {
       return NextResponse.json(
         { ok: false, error: "Invalid email or password." },
         { status: 401 },

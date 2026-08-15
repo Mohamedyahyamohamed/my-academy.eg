@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
-import { getSupabaseAnonKey, getSupabaseUrl } from "@/services/supabase/config";
 import { notifyStudentQrWhatsApp } from "@/services/whatsapp";
 
 export const runtime = "nodejs";
@@ -13,24 +11,18 @@ export const runtime = "nodejs";
  */
 export async function POST(request: NextRequest) {
   const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim();
-  const url = getSupabaseUrl();
-  const anonKey = getSupabaseAnonKey();
-
-  if (!token || !url || !anonKey) {
+  if (!token) {
     return NextResponse.json({ ok: false, error: "Authentication is required." }, { status: 401 });
-  }
-
-  const authClient = createClient(url, anonKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-  const { data: authData, error: authError } = await authClient.auth.getUser(token);
-  if (authError || !authData.user) {
-    return NextResponse.json({ ok: false, error: "Invalid authentication." }, { status: 401 });
   }
 
   const adminClient = nodeSupabaseClient();
   if (!adminClient) {
     return NextResponse.json({ ok: false, error: "WhatsApp service is unavailable." }, { status: 503 });
+  }
+
+  const { data: authData, error: authError } = await adminClient.auth.getUser(token);
+  if (authError || !authData.user) {
+    return NextResponse.json({ ok: false, error: "Invalid authentication." }, { status: 401 });
   }
 
   const { data: student, error: studentError } = await adminClient

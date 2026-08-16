@@ -7,7 +7,12 @@ import type { HomeworkInput } from "@/services/homework";
 
 export async function createHomeworkAction(input: HomeworkInput) {
   const user = await requireScopedRole("TEACHER");
-  const h = await HomeworkService.createHomework(input);
+  const h = await HomeworkService.createHomework({
+    ...input,
+    academy_id: user.academy_id,
+    teacher_profile_id: user.id,
+    teacher_email: user.email,
+  });
   // Push notification + email to parents about new homework.
   if (h) {
     const { collections } = await import("@/services/data/store");

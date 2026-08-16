@@ -29,7 +29,7 @@ export default async function HomeworkPage(
     page: sp("page") ? Number(sp("page")) : 1,
     pageSize: 12,
   }, user.academy_id, user.id);
-  const groups = await GroupsService.listGroups("", user.academy_id);
+  const groups = await GroupsService.listGroups("", user.academy_id, user.id, user.email);
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
 
   const subStats = (hwId: string) => {

@@ -39,6 +39,10 @@ export function CreateHomeworkDialog({ groups }: { groups: Group[] }) {
       toast.success(en ? "Homework added." : "تمت إضافة الواجب.");
       setOpen(false);
       router.refresh();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      console.error("createHomeworkAction failed", error);
+      toast.error(en ? `Could not assign homework: ${message}` : `تعذر إسناد الواجب: ${message}`);
     } finally {
       setSaving(false);
     }

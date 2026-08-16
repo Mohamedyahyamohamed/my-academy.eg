@@ -13,6 +13,7 @@ import { getGroup, getLesson, studentsInGroup, byAcademy, teacherGroupScope, fet
 import { fullName } from "./_shared";
 import { currentAcademyId, getCurrentUser } from "./session";
 import { can, hasAcademyWideScope } from "@/lib/permissions";
+import { resolveTeacherForGroups } from "./groups";
 
 function attachHw(h: Homework): Homework {
   return { ...h, group: getGroup(h.group_id), lesson: getLesson(h.lesson_id) };
@@ -35,9 +36,7 @@ export async function listHomework(
   const { search = "", groupId = "ALL", page = 1, pageSize = 12 } = filters;
   let items = await fetchTableRLS<Homework>("homework", academyId);
   const teacher = teacherProfileId
-    ? collections().teachers.find(
-        (t) => t.academy_id === academyId && (t.profile_id === teacherProfileId || t.email.toLowerCase() === getCurrentUser()?.email?.toLowerCase()),
-      )
+    ? await resolveTeacherForGroups(academyId, teacherProfileId, getCurrentUser()?.email)
     : null;
   const tScope = teacher
     ? new Set([
@@ -86,6 +85,10 @@ export interface HomeworkInput {
   lesson_id?: string | null;
   deadline: string;
   attachment_url?: string | null;
+  /** Authoritative tenant and actor context supplied by the server action. */
+  academy_id?: string;
+  teacher_profile_id?: string;
+  teacher_email?: string;
 }
 
 function hid() {
@@ -126,11 +129,20 @@ function assertStudentSubmissionScope(homework: Homework, studentId: string) {
 export async function createHomework(input: HomeworkInput): Promise<Homework> {
   const user = getCurrentUser();
   if (!user || !can(user, "homework.manage")) throw new Error("You are not allowed to create homework.");
-  const academyId = currentAcademyId();
+  const academyId = input.academy_id ?? currentAcademyId();
   const group = collections().groups.find((item) => item.id === input.group_id && item.academy_id === academyId);
   if (!group) throw new Error("Homework group is outside the authenticated academy.");
-  if (!hasAcademyWideScope(user.role) && !teacherGroupScope()?.has(group.id)) {
-    throw new Error("You can only create homework for an assigned group.");
+  if (!hasAcademyWideScope(user.role)) {
+    const teacher = await resolveTeacherForGroups(
+      academyId,
+      input.teacher_profile_id ?? user.id,
+      input.teacher_email ?? user.email,
+    );
+    const assigned = teacher && (
+      group.teacher_id === teacher.id ||
+      collections().groupAssistants.some((assistant) => assistant.teacher_id === teacher.id && assistant.group_id === group.id)
+    );
+    if (!assigned) throw new Error("You can only create homework for an assigned group.");
   }
   if (input.lesson_id) {
     const lesson = collections().lessons.find((item) => item.id === input.lesson_id);
@@ -169,7 +181,7 @@ export async function createHomework(input: HomeworkInput): Promise<Homework> {
       grade: null,
     };
     collections().submissions.push(sub);
-    void persistInsert("homework_submissions", sub);
+    await persistInsert("homework_submissions", sub);
   }
   return attachHw(h);
 }

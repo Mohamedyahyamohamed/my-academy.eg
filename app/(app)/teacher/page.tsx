@@ -41,6 +41,30 @@ export default async function TeacherDashboard() {
     <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>
       <PageHeader title={`${t.welcome}، ${(d.teacherName || displayName).split(/\s+/)[0]} 👋`} description={t.overview} />
 
+      <Card className="border-primary/15 bg-gradient-to-r from-primary/[0.05] via-background to-background">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">{isRTL ? "إجراءات سريعة" : "Quick actions"}</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {[
+            { href: "/attendance", label: isRTL ? "تسجيل الحضور" : "Record attendance", icon: CheckCircle2 },
+            { href: "/lessons", label: isRTL ? "حصصي اليوم" : "Today's lessons", icon: CalendarClock },
+            { href: "/groups", label: isRTL ? "مجموعاتي" : "My groups", icon: UsersRound },
+            { href: "/students", label: isRTL ? "طلابي" : "My students", icon: Users },
+          ].map((action) => {
+            const Icon = action.icon;
+            return (
+              <Button key={action.href} asChild variant="outline" className="h-auto justify-start gap-2 px-3 py-3 text-start">
+                <Link href={action.href}>
+                  <Icon className="h-4 w-4 shrink-0 text-primary" />
+                  <span className="truncate">{action.label}</span>
+                </Link>
+              </Button>
+            );
+          })}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label={t.groups} value={d.groupCount} icon={UsersRound} accent="primary" href="/groups" />
         <StatCard label={t.students} value={d.studentCount} icon={Users} accent="info" href="/students" />

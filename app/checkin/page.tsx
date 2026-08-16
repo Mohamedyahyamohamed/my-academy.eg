@@ -50,6 +50,11 @@ function CheckInInner() {
             : result.error === "TEACHER_LOGIN_REQUIRED"
               ? (en ? "Log in once on this phone as a teacher or assistant, then scan again." : "سجّل الدخول مرة واحدة على هذا الهاتف كمدرس أو مساعد ثم امسح الكود مرة أخرى.")
               : (result.error || (en ? "Unable to record attendance." : "تعذّر تسجيل الحضور."));
+        if (result.error === "NO_ACTIVE_LESSON" && groups.length > 0) {
+          setState("choose_group");
+          setMsg(en ? "No lesson is active for this group. Choose the group for the current lesson." : "لا يوجد درس نشط لهذه المجموعة. اختر مجموعة الدرس الحالي.");
+          return;
+        }
         setState("err");
         setMsg(errorText);
         return;
@@ -155,7 +160,7 @@ function CheckInInner() {
           <>
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary"><Users className="h-8 w-8" /></div>
             <h1 className="text-lg font-semibold">{en ? "Choose the attendance group" : "اختر مجموعة الحضور"}</h1>
-            <p className="text-sm text-muted-foreground">{en ? "Your choice is remembered on this phone for 30 minutes." : "سيتم حفظ اختيارك على هذا الهاتف لمدة 30 دقيقة."}</p>
+            <p className="text-sm text-muted-foreground">{msg || (en ? "Your choice is remembered on this phone for 30 minutes." : "سيتم حفظ اختيارك على هذا الهاتف لمدة 30 دقيقة.")}</p>
             <select className="w-full rounded-md border bg-background px-3 py-3 text-sm" value={selectedGroupId} onChange={(event) => setSelectedGroupId(event.target.value)}>
               {groups.map((group) => <option key={group.id} value={group.id}>{group.name}{group.lesson ? ` — ${group.lesson.topic}` : ""}</option>)}
             </select>

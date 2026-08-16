@@ -202,23 +202,48 @@ export async function createRecurringLessonsForGroup(
 }
 
 export async function createLesson(input: LessonInput): Promise<Lesson> {
+  const academyId = currentAcademyId();
+  const group = getGroup(input.group_id);
+  if (!group || group.academy_id !== academyId) {
+    throw new Error("The selected group is not available in this academy.");
+  }
+
+  const scope = teacherGroupScope();
+  if (scope && !scope.has(group.id)) {
+    throw new Error("You do not have permission to create a lesson for this group.");
+  }
+
+  const start = input.start_time.trim();
+  const end = input.end_time.trim();
+  if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end) || end <= start) {
+    throw new Error("End time must be after start time.");
+  }
+
+  const topic = input.topic.trim();
+  if (!topic) throw new Error("Topic is required.");
+
+  // The group is the source of truth. Never trust teacher_id from the browser,
+  // otherwise a client could create a lesson under another teacher's identity.
   const now = new Date().toISOString();
   const l: Lesson = {
     id: lid(),
-    academy_id: currentAcademyId(),
-    group_id: input.group_id,
-    teacher_id: input.teacher_id,
+    academy_id: academyId,
+    group_id: group.id,
+    teacher_id: group.teacher_id,
     date: input.date,
-    start_time: input.start_time,
-    end_time: input.end_time,
-    topic: input.topic,
-    description: input.description ?? null,
-    notes: input.notes ?? null,
+    start_time: start,
+    end_time: end,
+    topic,
+    description: input.description?.trim() || null,
+    notes: input.notes?.trim() || null,
     created_at: now,
     updated_at: now,
   };
-  collections().lessons.push(l);
+
+  // Persist first. The in-memory snapshot must never report a successful
+  // creation when the durable write failed.
   await persistInsert("lessons", l);
+  collections().lessons.push(l);
   return attach(l);
 }
 

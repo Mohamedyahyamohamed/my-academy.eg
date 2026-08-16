@@ -12,16 +12,30 @@ export async function createStudentAction(input: StudentInput) {
     console.log("[createStudentAction] user OK:", user.email, "academy:", user.academy_id);
     const student = await StudentsService.createStudent(input, user.academy_id);
     console.log("[createStudentAction] CREATED OK:", student.id);
-    // إرسال QR تلقائيًا كأثر جانبي best-effort؛ لا نفشل إنشاء الطالب إذا تعذر مزود واتساب.
+    // قناة QR الافتراضية هي البريد حتى تسمح Meta بالرسائل التي تبدأها الأكاديمية.
+    // لإعادة WhatsApp لاحقًا: WHATSAPP_QR_CHANNEL=whatsapp.
     try {
-      await Promise.race([
-        import("@/services/whatsapp").then(({ notifyStudentQrWhatsApp }) =>
-          notifyStudentQrWhatsApp(student.id, input.consent_given === true),
-        ),
-        new Promise<void>((resolve) => setTimeout(resolve, 8_000)),
-      ]);
+      const channel = process.env.WHATSAPP_QR_CHANNEL?.toLowerCase() || "email";
+      if (channel === "whatsapp") {
+        await Promise.race([
+          import("@/services/whatsapp").then(({ notifyStudentQrWhatsApp }) =>
+            notifyStudentQrWhatsApp(student.id, input.consent_given === true),
+          ),
+          new Promise<void>((resolve) => setTimeout(resolve, 8_000)),
+        ]);
+      } else if (student.email) {
+        const { sendStudentQrEmail } = await import("@/lib/email");
+        const result = await sendStudentQrEmail({
+          email: student.email,
+          studentName: `${student.first_name} ${student.last_name}`,
+          studentId: student.id,
+        });
+        if (!result.sent) console.error("student QR email:", result.errorCode);
+      } else {
+        console.warn("student QR email skipped: student has no email");
+      }
     } catch (error) {
-      console.error("student QR WhatsApp:", (error as Error)?.message);
+      console.error("student QR notification:", (error as Error)?.message);
     }
     await import("@/services/audit").then((m) => m.audit(
       { action: "student.create", entity_type: "student", entity_id: student.id, new_data: { name: `${student.first_name} ${student.last_name}` } },

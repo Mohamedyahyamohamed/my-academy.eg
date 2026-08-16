@@ -3,6 +3,7 @@
  * Uses onboarding@resend.dev as sender (change to your domain after verifying).
  */
 import { Resend } from "resend";
+import QRCode from "qrcode";
 import { APP_CONFIG } from "@/lib/constants";
 
 const resend = process.env.RESEND_API_KEY
@@ -35,13 +36,24 @@ type InviteEmailResult = {
   errorCode?: "not_configured" | "sender_domain_unverified" | "provider_error";
 };
 
-async function sendDetailed(to: string, subject: string, html: string): Promise<InviteEmailResult> {
+async function sendDetailed(
+  to: string,
+  subject: string,
+  html: string,
+  attachments?: Array<{ filename: string; content: Buffer }>,
+): Promise<InviteEmailResult> {
   if (!resend) {
     console.log(`[email] (no Resend key) would send to ${to}: ${subject}`);
     return { sent: false, errorCode: "not_configured" };
   }
   try {
-    const { error } = await resend.emails.send({ from: FROM, to, subject, html });
+    const { error } = await resend.emails.send({
+      from: FROM,
+      to,
+      subject,
+      html,
+      ...(attachments?.length ? { attachments } : {}),
+    });
     if (error) {
       const message = `${error.name ?? ""} ${error.message ?? ""}`.toLowerCase();
       const errorCode = message.includes("resend.dev") || message.includes("domain") || message.includes("from address")
@@ -59,6 +71,28 @@ async function sendDetailed(to: string, subject: string, html: string): Promise<
 
 async function send(to: string, subject: string, html: string): Promise<boolean> {
   return (await sendDetailed(to, subject, html)).sent;
+}
+
+export async function sendStudentQrEmail(input: {
+  email: string;
+  studentName: string;
+  studentId: string;
+}): Promise<InviteEmailResult> {
+  const qrValue = `MA:${input.studentId}`;
+  const qrPng = await QRCode.toBuffer(qrValue, { type: "png", width: 600, margin: 2 });
+  const safeName = escapeHtml(input.studentName);
+
+  return sendDetailed(
+    input.email,
+    `كود QR الخاص بالطالب ${input.studentName} — ${APP_CONFIG.name}`,
+    `<div dir="rtl" style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:24px;line-height:1.7;color:#0f172a">
+      <h2>مرحبًا ${safeName}</h2>
+      <p>مرفق في هذه الرسالة كود QR الخاص بحسابك في <strong>${escapeHtml(APP_CONFIG.name)}</strong>.</p>
+      <p>احتفظ بالصورة لاستخدامها عند تسجيل الحضور.</p>
+      <p style="color:#64748b;font-size:13px;margin-top:24px">إذا لم تتوقع هذه الرسالة، تواصل مع إدارة الأكاديمية.</p>
+    </div>`,
+    [{ filename: "my-academy-student-qr.png", content: qrPng }],
+  );
 }
 
 export async function sendWelcomeEmail(email: string, name: string, role: string): Promise<void> {

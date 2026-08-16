@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 240 20% 99%;
+    --background: 240 16% 98%;
     --foreground: 240 10% 10%;
 
     --card: 0 0% 100%;
@@ -100,6 +100,9 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     text-rendering: optimizeLegibility;
   }
+  ::selection {
+    @apply bg-primary/15 text-foreground;
+  }
   /* Thin, unobtrusive scrollbars */
   ::-webkit-scrollbar {
     width: 10px;
@@ -122,6 +125,9 @@
 @layer components {
   .card-surface {
     @apply rounded-lg border border-border bg-card shadow-sm;
+  }
+  .quiet-divider {
+    @apply border-border/80;
   }
 
   .form-surface {

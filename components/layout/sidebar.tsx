@@ -61,9 +61,9 @@ export function Sidebar({ sections, academyName, role }: SidebarProps) {
                   href={item.href}
                   className={cn(
                     "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-primary/10 text-primary"
-                      : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      active
+                        ? "border-s-2 border-primary bg-primary/10 ps-2.5 text-primary"
+                        : "border-s-2 border-transparent text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   )}
                 >
                   <Icon
@@ -84,7 +84,7 @@ export function Sidebar({ sections, academyName, role }: SidebarProps) {
 
       <div className="border-t border-sidebar-border px-4 py-3">
         <p className="text-[11px] text-muted-foreground">{lang === "ar" ? "مساحة العمل الحالية" : "Current workspace"}</p>
-        <p className="truncate text-xs font-medium text-sidebar-foreground">{academyName}</p>
+        <p className="truncate text-xs font-medium text-sidebar-foreground" title={academyName}>{academyName}</p>
       </div>
     </aside>
   );

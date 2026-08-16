@@ -14,7 +14,7 @@ import { fullName, groupsForStudent, byAcademy, fetchTableRLS } from "./_shared"
 import { currentAcademyId } from "./session";
 import { APP_CONFIG } from "@/lib/constants";
 import { isSupabaseConfigured } from "./supabase/config";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
 /* ---------------- Courses ---------------- */
 
@@ -172,7 +172,8 @@ export async function getAcademyAsync(academyId?: string): Promise<Academy> {
   if (cached) return cached;
 
   if (isSupabaseConfigured()) {
-    const client = await createServerSupabaseClient();
+    const client = nodeSupabaseClient();
+    if (!client) throw new Error("Supabase server client is unavailable.");
     const { data, error } = await client
       .from("academies")
       .select("*")

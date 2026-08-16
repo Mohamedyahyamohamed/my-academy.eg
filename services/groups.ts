@@ -196,12 +196,37 @@ export async function getGroupDetail(id: string, academyIdOverride?: string): Pr
   // Do not turn that valid record into a 404 solely because the local scope
   // set was empty during mobile hydration.
   if (scope && scope.size > 0 && !scope.has(id)) return null;
-  const students = studentsInGroup(id);
-  const lessons = lessonsForGroup(id);
+  let students = studentsInGroup(id);
+  let lessons = lessonsForGroup(id);
+  let attendanceRows = collections().attendance;
+
+  // The mobile/server-component path can have an empty local snapshot even
+  // after the group row itself was resolved. Hydrate only this tenant-scoped
+  // group through the server client so the detail page never renders a false
+  // empty state or 404-like result.
+  if (isSupabaseConfigured() && (!students.length || !lessons.length)) {
+    const academyId = academyIdOverride ?? currentAcademyId();
+    const admin = nodeSupabaseClient();
+    if (admin && academyId) {
+      const [{ data: memberships }, { data: lessonRows }] = await Promise.all([
+        admin.from("group_students").select("student_id").eq("group_id", id),
+        admin.from("lessons").select("*").eq("group_id", id).eq("academy_id", academyId),
+      ]);
+      const studentIds = (memberships ?? []).map((row: any) => row.student_id).filter(Boolean);
+      if (studentIds.length) {
+        const { data: studentRows } = await admin.from("students").select("*").in("id", studentIds).eq("academy_id", academyId);
+        students = (studentRows ?? []) as any;
+      }
+      if (lessonRows?.length) lessons = lessonRows as any;
+      if (lessons.length) {
+        const { data: attendanceRowsFromDb } = await admin.from("attendance").select("*").in("lesson_id", lessons.map((l: any) => l.id)).eq("academy_id", academyId);
+        attendanceRows = (attendanceRowsFromDb ?? []) as any;
+      }
+    }
+  }
+
   // attendance rate across the group
-  const att = collections().attendance.filter((a) =>
-    lessons.some((l) => l.id === a.lesson_id),
-  );
+  const att = attendanceRows.filter((a) => lessons.some((l) => l.id === a.lesson_id));
   const present = att.filter((a) => a.status !== "ABSENT").length;
   const rate = att.length ? percentage(present, att.length) : 0;
   return { ...g, students, lessons, attendanceRate: rate };

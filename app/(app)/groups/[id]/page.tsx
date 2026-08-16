@@ -35,11 +35,9 @@ import {
   GroupsService,
   MiscService,
   StudentsService,
-  loadCurrentUser,
-  roleHome,
+  requireScopedRole,
   currentTeacherId,
 } from "@/services";
-import { setRequestContext } from "@/services/request-context";
 import { removeStudentFromGroupAction } from "@/app/actions/groups";
 import { collections } from "@/services/data/store";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -52,10 +50,7 @@ export default async function GroupDetailPage(
   }
 ) {
   const params = await props.params;
-  const user = await loadCurrentUser();
-  if (!user) redirect("/login");
-  setRequestContext(user);
-  if (user.role !== "ADMIN" && user.role !== "TEACHER") redirect(roleHome(user.role));
+  const user = await requireScopedRole("ADMIN", "TEACHER");
   const isTeacher = user.role === "TEACHER";
   const tid = isTeacher ? currentTeacherId() : null;
   const detail = await GroupsService.getGroupDetail(params.id, user.academy_id);
@@ -63,7 +58,7 @@ export default async function GroupDetailPage(
 
   const courses = await MiscService.listCourses();
   const teachers = await MiscService.listTeachers();
-  const allStudents = (await StudentsService.listStudents({ pageSize: 500 })).items;
+  const allStudents = (await StudentsService.listStudents({ pageSize: 500 }, user.academy_id)).items;
   const enrolledIds = detail.students.map((s) => s.id);
   const availableStudents = allStudents.filter(
     (s) => !enrolledIds.includes(s.id) && s.status !== "ARCHIVED",

@@ -18,8 +18,10 @@ export default async function GroupsPage() {
   const en = lang === "en";
   const user = await requireScopedRole("ADMIN", "TEACHER");
   const isTeacher = user.role === "TEACHER";
-  const tid = isTeacher ? currentTeacherId() : null;
-  const groups = await GroupsService.listGroups("", user.academy_id, isTeacher ? user.id : undefined);
+  const cachedTid = isTeacher ? currentTeacherId() : null;
+  const resolvedTeacher = isTeacher ? await GroupsService.resolveTeacherForGroups(user.academy_id, user.id, user.email) : null;
+  const tid = cachedTid ?? resolvedTeacher?.id ?? null;
+  const groups = await GroupsService.listGroups("", user.academy_id, isTeacher ? user.id : undefined, isTeacher ? user.email : undefined);
   const courses = await MiscService.listCourses(user.academy_id);
   const teachers = await MiscService.listTeachers(user.academy_id);
   const groupCreationBlocked = isTeacher ? !tid : teachers.length === 0;

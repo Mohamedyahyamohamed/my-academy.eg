@@ -199,9 +199,11 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
   let allCourses = snapshot.courses ?? [];
   let allGroupStudents = snapshot.groupStudents ?? snapshot.group_students ?? [];
 
-  // Last-resort server fallback for a stale/empty request snapshot. This is
-  // still tenant-scoped by academy_id and never runs in the browser.
-  if (!allGroups.length && isSupabaseConfigured()) {
+  // Use the server-side tenant-scoped client as the authoritative source for
+  // teacher dashboards. A browser Supabase session can be valid for auth but
+  // still return an empty RLS result after a mobile QR redirect; using that
+  // empty snapshot here makes a real teacher appear to have zero data.
+  if (isSupabaseConfigured()) {
     const admin = nodeSupabaseClient();
     if (admin) {
       const [groupsRes, lessonsRes, attendanceRes, homeworkRes, submissionsRes, studentsRes, coursesRes] = await Promise.all([
@@ -213,17 +215,17 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
         admin.from("students").select("*").eq("academy_id", user.academy_id),
         admin.from("courses").select("*").eq("academy_id", user.academy_id),
       ]);
-      allGroups = groupsRes.data ?? [];
-      allLessons = lessonsRes.data ?? [];
-      allAttendance = attendanceRes.data ?? [];
-      allHomework = homeworkRes.data ?? [];
-      allSubmissions = submissionsRes.data ?? [];
-      allStudents = studentsRes.data ?? [];
-      allCourses = coursesRes.data ?? [];
+      if (!groupsRes.error) allGroups = groupsRes.data ?? [];
+      if (!lessonsRes.error) allLessons = lessonsRes.data ?? [];
+      if (!attendanceRes.error) allAttendance = attendanceRes.data ?? [];
+      if (!homeworkRes.error) allHomework = homeworkRes.data ?? [];
+      if (!submissionsRes.error) allSubmissions = submissionsRes.data ?? [];
+      if (!studentsRes.error) allStudents = studentsRes.data ?? [];
+      if (!coursesRes.error) allCourses = coursesRes.data ?? [];
       const groupIds = allGroups.map((g: any) => g.id);
       if (groupIds.length) {
         const groupStudentsRes = await admin.from("group_students").select("*").in("group_id", groupIds);
-        allGroupStudents = groupStudentsRes.data ?? [];
+        if (!groupStudentsRes.error) allGroupStudents = groupStudentsRes.data ?? [];
       }
     }
   }

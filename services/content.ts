@@ -166,8 +166,9 @@ export async function createCourse(input: CreateCourseInput, user: SessionUser):
     created_at: now(),
     updated_at: now(),
   };
-  (collections() as any).contentCourses?.push(course);
+  // Persist first; update the in-memory snapshot only after Supabase confirms.
   await persistInsert("content_courses", course);
+  (collections() as any).contentCourses?.push(course);
   return attachCourse(course);
 }
 

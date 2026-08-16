@@ -284,10 +284,15 @@ export async function persistInsert(table: string, row: any) {
     console.warn(`persistInsert ${table} skipped: non-production academy id.`);
     return;
   }
-  const academyId = scopedAcademyId(table);
+  // Server actions already validate the tenant and include academy_id on the row.
+  // Prefer the request-scoped academy when available, but do not silently skip a
+  // valid write just because the legacy active-academy cookie is absent.
+  const rowAcademyId = row && !Array.isArray(row) && typeof row.academy_id === "string"
+    ? row.academy_id
+    : null;
+  const academyId = scopedAcademyId(table) ?? rowAcademyId;
   if (DIRECT_ACADEMY_TABLES.has(table) && !academyId) {
-    console.warn(`persistInsert ${table} skipped: no authenticated academy scope.`);
-    return;
+    throw new Error(`Database write is missing an authenticated academy scope for ${table}.`);
   }
   if (academyId && row && !Array.isArray(row) && row.academy_id !== academyId) {
     console.warn(`persistInsert ${table} skipped: academy scope mismatch.`);

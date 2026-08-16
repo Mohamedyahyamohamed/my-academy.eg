@@ -72,6 +72,29 @@ export async function listGroups(search = "", academyId?: string, teacherProfile
         getCourse(g.course_id)?.name.toLowerCase().includes(q),
     );
   }
+  const admin = academyId && isSupabaseConfigured() ? nodeSupabaseClient() : null;
+  if (admin && items.length) {
+    try {
+      const ids = items.map((g) => g.id);
+      const [{ data: courses }, { data: teachers }, { data: memberships }] = await Promise.all([
+        admin.from("courses").select("id, name, color").eq("academy_id", academyId),
+        admin.from("teachers").select("id, first_name, last_name, email").eq("academy_id", academyId),
+        admin.from("group_students").select("group_id").in("group_id", ids),
+      ]);
+      const courseById = new Map<string, any>((courses ?? []).map((c: any) => [c.id, c] as [string, any]));
+      const teacherById = new Map<string, any>((teachers ?? []).map((t: any) => [t.id, t] as [string, any]));
+      const studentCounts = new Map<string, number>();
+      for (const row of memberships ?? []) studentCounts.set(row.group_id, (studentCounts.get(row.group_id) ?? 0) + 1);
+      return items.map((g) => ({
+        ...attach(g),
+        course: getCourse(g.course_id) ?? courseById.get(g.course_id),
+        teacher: getTeacher(g.teacher_id) ?? teacherById.get(g.teacher_id),
+        student_count: studentCounts.get(g.id) ?? studentCount(g.id),
+      }));
+    } catch (error) {
+      console.error("listGroups relationship enrichment failed:", (error as Error)?.message);
+    }
+  }
   return items.map(attach);
 }
 

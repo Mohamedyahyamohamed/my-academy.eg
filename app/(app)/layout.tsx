@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { SESSION_COOKIE } from "@/lib/auth";
 import { AppShell } from "@/components/layout/app-shell";
 import { OnboardingGate } from "@/components/layout/onboarding-gate";
 import { DemoBanner } from "@/components/layout/demo-banner";
@@ -29,9 +28,7 @@ export default async function AuthenticatedLayout({
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (message.includes("Academy data is unavailable") || message.includes("Missing authenticated academy context")) {
-      const cookieStore = await cookies();
-      cookieStore.delete(SESSION_COOKIE);
-      redirect("/login?reason=tenant-session");
+      redirect("/api/auth/clear-session?next=/login%3Freason%3Dtenant-session");
     }
     throw error;
   }

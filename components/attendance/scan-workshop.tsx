@@ -5,7 +5,6 @@ import { Camera, CameraOff, CheckCircle2, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { StudentAvatar } from "@/components/shared/student-avatar";
 import { scanCheckinAction } from "@/app/actions/attendance";
 import { fullName } from "@/lib/utils";
 import type { Group, Lesson, Student } from "@/types";
@@ -20,8 +19,10 @@ export function ScanWorkshop({
   students: Student[];
 }) {
   const en = useClientLang() === "en";
+  const [mode, setMode] = React.useState<"quick" | "manual">("quick");
   const [groupId, setGroupId] = React.useState("");
   const [lessonId, setLessonId] = React.useState("");
+  const [activeLesson, setActiveLesson] = React.useState<{ id: string; topic: string } | null>(null);
   const [scanning, setScanning] = React.useState(false);
   const [log, setLog] = React.useState<{ name: string; status: string; at: string }[]>([]);
   const [error, setError] = React.useState("");
@@ -35,9 +36,8 @@ export function ScanWorkshop({
   const startCamera = async () => {
     setError("");
     setScanning(true);
-    // dynamically import to keep it client-only
     const { Html5Qrcode } = await import("html5-qrcode");
-    await new Promise((r) => setTimeout(r, 100)); // let DOM mount
+    await new Promise((r) => setTimeout(r, 100));
     const html5 = new Html5Qrcode("qr-reader");
     scannerRef.current = html5;
     html5
@@ -47,7 +47,7 @@ export function ScanWorkshop({
         (text) => handleScan(text),
         () => {},
       )
-      .catch((e) => {
+      .catch(() => {
         setError(en ? "Could not start the camera. Check camera permission and make sure you are using HTTPS." : "تعذّر تشغيل الكاميرا. تأكّد من الإذن ومن أنك على HTTPS.");
         setScanning(false);
       });
@@ -61,12 +61,12 @@ export function ScanWorkshop({
     scannerRef.current = null;
     setScanning(false);
   };
-  React.useEffect(() => () => { stopCamera(); }, []);
+
+  React.useEffect(() => () => { void stopCamera(); }, []);
 
   const handleScan = async (text: string) => {
     setError("");
     const studentId = studentIdFromQrValue(text);
-    // debounce duplicates within 4s
     const now = Date.now();
     if (lastScan.current.id === studentId && now - lastScan.current.t < 4000) return;
     lastScan.current = { id: studentId, t: now };
@@ -76,40 +76,61 @@ export function ScanWorkshop({
       setLog((l) => [{ name: en ? "Unknown code" : "كود غير معروف", status: en ? "Unknown" : "غير معروف", at: new Date().toLocaleTimeString(en ? "en-GB" : "ar-EG") }, ...l]);
       return;
     }
-    const res = await scanCheckinAction(lessonId, studentId);
-    setLog((l) => [
-      { name: fullName(student), status: res?.ok ? (en ? "Attendance recorded ✓" : "تم تسجيل الحضور ✓") : (en ? "Failed" : "فشل"), at: new Date().toLocaleTimeString(en ? "en-GB" : "ar-EG") },
-      ...l,
-    ]);
+
+    const res = await scanCheckinAction(mode === "manual" ? lessonId : null, studentId);
+    if (res.lesson) setActiveLesson({ id: res.lesson.id, topic: res.lesson.topic });
+    const status = res.ok
+      ? (en ? `Attendance recorded ✓${res.lesson?.topic ? ` · ${res.lesson.topic}` : ""}` : `تم تسجيل الحضور ✓${res.lesson?.topic ? ` · ${res.lesson.topic}` : ""}`)
+      : (en
+        ? (res.errorCode === "NO_ACTIVE_LESSON" ? "No active lesson" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "Student is not in this lesson" : "Failed")
+        : (res.errorCode === "NO_ACTIVE_LESSON" ? "لا يوجد درس جارٍ الآن" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "الطالب غير مسجل في المجموعة" : "فشل تسجيل الحضور"));
+    setLog((l) => [{ name: fullName(student), status, at: new Date().toLocaleTimeString(en ? "en-GB" : "ar-EG") }, ...l]);
   };
+
+  const canScan = mode === "quick" || Boolean(groupId && lessonId);
 
   return (
     <div className="space-y-5" dir={en ? "ltr" : "rtl"}>
-      {/* Setup */}
       <Card>
-        <CardContent className="grid gap-4 p-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">{en ? "1. Choose group" : "1. اختر الجروب"}</label>
-            <select value={groupId} onChange={(e) => { setGroupId(e.target.value); setLessonId(""); }} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-              <option value="">{en ? "Choose…" : "اختر…"}</option>
-              {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
+        <CardContent className="space-y-4 p-4">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button type="button" variant={mode === "quick" ? "default" : "outline"} onClick={() => { setMode("quick"); setGroupId(""); setLessonId(""); }}>
+              {en ? "Quick Scan (active lesson)" : "مسح سريع (الدرس الجاري)"}
+            </Button>
+            <Button type="button" variant={mode === "manual" ? "default" : "outline"} onClick={() => setMode("manual")}>
+              {en ? "Choose lesson manually" : "اختيار الدرس يدوياً"}
+            </Button>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">{en ? "2. Choose lesson" : "2. اختر الدرس"}</label>
-            <select value={lessonId} onChange={(e) => setLessonId(e.target.value)} disabled={!groupId} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50">
-              <option value="">{en ? "Choose…" : "اختر…"}</option>
-              {groupLessons.map((l) => <option key={l.id} value={l.id}>{l.topic} — {new Date(l.date).toLocaleDateString(en ? "en-EG" : "ar-EG")}</option>)}
-            </select>
-          </div>
+
+          {mode === "quick" ? (
+            <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+              {activeLesson ? (en ? `Active lesson: ${activeLesson.topic}` : `الدرس الجاري: ${activeLesson.topic}`) : (en ? "The system will detect the teacher's active lesson after each scan." : "النظام سيحدد درس المدرس الجاري تلقائياً بعد كل مسح.")}
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">{en ? "1. Choose group" : "1. اختر الجروب"}</label>
+                <select value={groupId} onChange={(e) => { setGroupId(e.target.value); setLessonId(""); }} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                  <option value="">{en ? "Choose…" : "اختر…"}</option>
+                  {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">{en ? "2. Choose lesson" : "2. اختر الدرس"}</label>
+                <select value={lessonId} onChange={(e) => setLessonId(e.target.value)} disabled={!groupId} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50">
+                  <option value="">{en ? "Choose…" : "اختر…"}</option>
+                  {groupLessons.map((l) => <option key={l.id} value={l.id}>{l.topic} — {new Date(l.date).toLocaleDateString(en ? "en-EG" : "ar-EG")}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {!groupId || !lessonId ? (
+      {!canScan ? (
         <p className="text-center text-sm text-muted-foreground">{en ? "Choose a group and lesson to start scanning." : "اختر جروب ودرس الأول عشان تبدأ المسح."}</p>
       ) : (
         <>
-          {/* Scanner */}
           <Card>
             <CardContent className="p-4">
               {!scanning ? (
@@ -131,7 +152,6 @@ export function ScanWorkshop({
             </CardContent>
           </Card>
 
-          {/* Log */}
           <Card>
             <CardContent className="p-0">
               <div className="border-b px-4 py-2.5 text-sm font-semibold">{en ? "Attendance log" : "سجل الحضور"} ({log.length})</div>
@@ -141,13 +161,8 @@ export function ScanWorkshop({
                 <div className="divide-y">
                   {log.map((entry, i) => (
                     <div key={i} className="flex items-center justify-between p-3">
-                      <span className="flex items-center gap-2 text-sm font-medium">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500" /> {entry.name}
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <Badge variant={entry.status.includes("✓") ? "success" : "destructive"}>{entry.status}</Badge>
-                        <span className="text-xs text-muted-foreground">{entry.at}</span>
-                      </span>
+                      <span className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="h-4 w-4 text-emerald-500" /> {entry.name}</span>
+                      <span className="flex items-center gap-2"><Badge variant={entry.status.includes("✓") ? "success" : "destructive"}>{entry.status}</Badge><span className="text-xs text-muted-foreground">{entry.at}</span></span>
                     </div>
                   ))}
                 </div>

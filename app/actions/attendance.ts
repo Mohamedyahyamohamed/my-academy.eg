@@ -24,18 +24,39 @@ export async function checkinAction(lessonId: string) {
   return { ok: true };
 }
 
-/** Teacher scans a student's personal QR → records them present for a lesson. */
-export async function scanCheckinAction(lessonId: string, studentId: string) {
+/** Teacher scans a student's personal QR → records them present for an explicit or active lesson. */
+export async function scanCheckinAction(lessonId: string | null | undefined, studentId: string) {
   const user = await requireScopedRole("TEACHER");
 
   // Rate limit QR scans.
   const { rateLimit, LIMITS } = await import("@/lib/rate-limit-redis");
   const rl = await rateLimit(`scan:${user.id}`, LIMITS.checkin.max, LIMITS.checkin.window);
-  if (!rl.allowed) return { ok: false, error: "Too many scans. Please slow down." };
-  await AttendanceService.recordCheckin(lessonId, studentId, "PRESENT");
-    void audit({ action: "attendance.scan" }, user);
-  revalidatePath(`/lessons/${lessonId}`);
-  return { ok: true };
+  if (!rl.allowed) return { ok: false, errorCode: "RATE_LIMITED" as const, error: "Too many scans. Please slow down." };
+
+  const { LessonsService } = await import("@/services");
+  const lesson = lessonId ? await LessonsService.getLesson(lessonId) : LessonsService.getActiveLessonForTeacher();
+  if (!lesson) {
+    return {
+      ok: false,
+      errorCode: lessonId ? "LESSON_NOT_FOUND" as const : "NO_ACTIVE_LESSON" as const,
+      error: lessonId ? "Lesson not found." : "No active lesson was found for this teacher.",
+    };
+  }
+
+  try {
+    await AttendanceService.recordCheckin(lesson.id, studentId, "PRESENT");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to record attendance.";
+    const errorCode = message.includes("not enrolled") ? "STUDENT_NOT_ENROLLED" as const : "CHECKIN_FAILED" as const;
+    return { ok: false, errorCode, error: message, lesson: { id: lesson.id, topic: lesson.topic, groupId: lesson.group_id } };
+  }
+
+  void audit({ action: "attendance.scan" }, user);
+  revalidatePath(`/lessons/${lesson.id}`);
+  return {
+    ok: true,
+    lesson: { id: lesson.id, topic: lesson.topic, groupId: lesson.group_id },
+  };
 }
 
 export async function saveAttendanceAction(

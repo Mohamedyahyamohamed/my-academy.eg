@@ -3,7 +3,7 @@
  */
 import type { Lesson, PaginatedResult } from "@/types";
 import { collections } from "./data/store";
-import { currentAcademyId, getCurrentUser } from "./session";
+import { currentAcademyId, currentTeacherId, getCurrentUser } from "./session";
 import { persistInsert, persistUpdate, persistDelete } from "./data/store";
 import { getGroup, getTeacher, byAcademy, teacherGroupScope, fetchTableRLS } from "./_shared";
 
@@ -86,6 +86,43 @@ export async function getLesson(id: string): Promise<Lesson | null> {
   const items = await fetchTableRLS<Lesson>("lessons");
   const l = items.find((x) => x.id === id);
   return l ? attach(l) : null;
+}
+
+function wallClockMinute(date: Date, timeZone = process.env.ACADEMY_TIMEZONE || "Africa/Cairo") {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const value = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? 0);
+  return (((value("year") * 12 + value("month")) * 31 + value("day")) * 24 + value("hour")) * 60 + value("minute");
+}
+
+function lessonWallClockMinute(date: string, time: string) {
+  const [year, month, day] = date.slice(0, 10).split("-").map(Number);
+  const [hour, minute] = time.slice(0, 5).split(":").map(Number);
+  return (((year * 12 + month) * 31 + day) * 24 + hour) * 60 + minute;
+}
+
+/** Return the single lesson currently in progress for the authenticated teacher. */
+export function getActiveLessonForTeacher(now = new Date()): Lesson | null {
+  const academyId = currentAcademyId();
+  const teacherId = currentTeacherId();
+  if (!teacherId) return null;
+  const current = wallClockMinute(now);
+  const active = collections().lessons
+    .filter((lesson) => lesson.academy_id === academyId && lesson.teacher_id === teacherId)
+    .filter((lesson) => {
+      const start = lessonWallClockMinute(lesson.date, lesson.start_time);
+      const end = lessonWallClockMinute(lesson.date, lesson.end_time);
+      return start <= current && current <= end;
+    })
+    .sort((a, b) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time));
+  return active[0] ? attach(active[0]) : null;
 }
 
 export async function getUpcomingLessons(limit = 5): Promise<Lesson[]> {

@@ -106,7 +106,7 @@ export default async function DashboardPage(
         </Button>
       </PageHeader>
 
-      <Card className="border-primary/15 bg-gradient-to-r from-primary/[0.05] via-background to-background">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">{en ? "Quick actions" : "إجراءات سريعة"}</CardTitle>
           <CardDescription>{en ? "Start the most common tasks without searching through the menu." : "ابدأ المهام الأكثر استخدامًا مباشرةً دون البحث في القائمة."}</CardDescription>

@@ -41,7 +41,7 @@ export default async function TeacherDashboard() {
     <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>
       <PageHeader title={`${t.welcome}، ${(d.teacherName || displayName).split(/\s+/)[0]} 👋`} description={t.overview} />
 
-      <Card className="border-primary/15 bg-gradient-to-r from-primary/[0.05] via-background to-background">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">{isRTL ? "إجراءات سريعة" : "Quick actions"}</CardTitle>
         </CardHeader>

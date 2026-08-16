@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AttendanceService, LessonsService, loadCurrentUser } from "@/services";
+import { AttendanceService, loadCurrentUser } from "@/services";
 import type { Group } from "@/types";
 import { collections, ensureStoreLoaded } from "@/services/data/store";
 import { setRequestContext } from "@/services/request-context";
@@ -20,9 +20,36 @@ function jsonError(error: string, status = 400) {
   return NextResponse.json({ ok: false, error }, { status });
 }
 
-function activeLessonForGroup(groupId: string) {
-  const active = LessonsService.getActiveLessonForTeacher();
-  return active?.group_id === groupId ? active : null;
+function wallClockMinute(date: Date, timeZone = process.env.ACADEMY_TIMEZONE || "Africa/Cairo") {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const value = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? 0);
+  return (((value("year") * 12 + value("month")) * 31 + value("day")) * 24 + value("hour")) * 60 + value("minute");
+}
+
+function lessonWallClockMinute(date: string, time: string) {
+  const [year, month, day] = date.slice(0, 10).split("-").map(Number);
+  const [hour, minute] = time.slice(0, 5).split(":").map(Number);
+  return (((year * 12 + month) * 31 + day) * 24 + hour) * 60 + minute;
+}
+
+function activeLessonForGroup(groupId: string, academyId: string) {
+  const current = wallClockMinute(new Date());
+  return collections().lessons
+    .filter((lesson) => lesson.academy_id === academyId && lesson.group_id === groupId)
+    .filter((lesson) => {
+      const start = lessonWallClockMinute(lesson.date, lesson.start_time);
+      const end = lessonWallClockMinute(lesson.date, lesson.end_time);
+      return start <= current && current <= end;
+    })
+    .sort((a, b) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time))[0] ?? null;
 }
 
 async function scopedOptions(): Promise<GroupOption[]> {
@@ -49,7 +76,7 @@ async function scopedOptions(): Promise<GroupOption[]> {
   return groups
     .filter((group) => group.status !== "INACTIVE")
     .map((group) => {
-      const lesson = activeLessonForGroup(group.id);
+      const lesson = activeLessonForGroup(group.id, user.academy_id);
       return {
         id: group.id,
         name: group.name,
@@ -103,7 +130,7 @@ export async function POST(req: NextRequest) {
     ?? (activeGroup?.lesson ? activeGroup : undefined);
   if (!group) return jsonError("NO_ASSIGNED_GROUP", 403);
 
-  const lesson = activeLessonForGroup(group.id);
+  const lesson = activeLessonForGroup(group.id, user.academy_id);
   if (!lesson) return jsonError("NO_ACTIVE_LESSON", 409);
 
   try {

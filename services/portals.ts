@@ -186,17 +186,18 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
   const teacher = await resolveTeacherForDashboard(user);
   if (!teacher) return null;
 
-  // RLS-backed fetch.
-  const [allGroups, allLessons, allAttendance, allHomework, allSubmissions, allStudents, allCourses, allGroupStudents] = await Promise.all([
-    fetchTableRLS<any>("groups", user.academy_id),
-    fetchTableRLS<any>("lessons", user.academy_id),
-    fetchTableRLS<any>("attendance", user.academy_id),
-    fetchTableRLS<any>("homework", user.academy_id),
-    fetchTableRLS<any>("homework_submissions", user.academy_id),
-    fetchTableRLS<any>("students", user.academy_id),
-    fetchTableRLS<any>("courses", user.academy_id),
-    fetchTableRLS<any>("group_students", user.academy_id),
-  ]);
+  // requireScopedRole() hydrates the signed-in academy snapshot before this
+  // service runs. Read that scoped snapshot directly so a mobile browser's
+  // Supabase RLS session cannot turn a populated teacher portal into zeros.
+  const snapshot = collections() as any;
+  const allGroups = snapshot.groups ?? [];
+  const allLessons = snapshot.lessons ?? [];
+  const allAttendance = snapshot.attendance ?? [];
+  const allHomework = snapshot.homework ?? [];
+  const allSubmissions = snapshot.homeworkSubmissions ?? snapshot.homework_submissions ?? [];
+  const allStudents = snapshot.students ?? [];
+  const allCourses = snapshot.courses ?? [];
+  const allGroupStudents = snapshot.groupStudents ?? snapshot.group_students ?? [];
 
   const ownGroupIds = allGroups.filter((g: any) => g.teacher_id === teacher.id).map((g: any) => g.id);
   const assistantGroupIds = collections().groupAssistants
@@ -206,7 +207,7 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
   const myGroups = allGroups.filter((g: any) => groupIds.has(g.id))
     .map((g: any) => ({ ...g, course: allCourses.find((c: any) => c.id === g.course_id) }));
 
-  const groupStudentRows = allGroupStudents.length ? allGroupStudents : collections().groupStudents;
+  const groupStudentRows = allGroupStudents.length ? allGroupStudents : (collections() as any).groupStudents ?? [];
   const enrolledIds = new Set(
     groupStudentRows.filter((gs: any) => groupIds.has(gs.group_id)).map((gs: any) => gs.student_id)
   );

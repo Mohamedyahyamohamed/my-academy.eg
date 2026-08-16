@@ -4,6 +4,7 @@
  */
 import type { SessionUser, Student, Parent } from "@/types";
 import { isSupabaseConfigured } from "./supabase/config";
+import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { collections } from "./data/store";
 import {
   groupsForStudent,
@@ -124,6 +125,28 @@ async function resolveTeacherForDashboard(user: SessionUser) {
   const cached = resolveTeacher(user);
   if (cached || !isSupabaseConfigured()) return cached;
   try {
+    // The tenant session can be valid while the request-local snapshot is still
+    // warming up. Resolve the teacher from the server-side tenant-scoped query
+    // first so a standalone teacher workspace never renders a false empty state.
+    const adminClient = nodeSupabaseClient();
+    if (adminClient) {
+      const { data: byProfile, error: adminError } = await adminClient
+        .from("teachers")
+        .select("*")
+        .eq("academy_id", user.academy_id)
+        .eq("profile_id", user.id)
+        .maybeSingle();
+      if (adminError) console.error("resolveTeacherForDashboard admin lookup failed:", adminError.message);
+      if (byProfile) return byProfile as any;
+      const { data: byEmail } = await adminClient
+        .from("teachers")
+        .select("*")
+        .eq("academy_id", user.academy_id)
+        .ilike("email", user.email)
+        .maybeSingle();
+      if (byEmail) return byEmail as any;
+    }
+
     const { createServerSupabaseClient } = await import("@/lib/supabase/server");
     const client = await createServerSupabaseClient();
     const byProfile = await client

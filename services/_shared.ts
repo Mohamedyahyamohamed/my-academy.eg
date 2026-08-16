@@ -41,9 +41,11 @@ export async function fetchTableRLS<T = any>(table: string, academyId?: string):
     const { createServerSupabaseClient } = await import("@/lib/supabase/server");
     const client = await createServerSupabaseClient();
     const { data, error } = await client.from(table).select("*");
-    if (error || !data) {
-      // Fallback on error.
-      const cacheData = (collections() as any)[table] ?? [];
+    const cacheData = (collections() as any)[table] ?? [];
+    // The browser session may return an empty RLS result while the server-side
+    // academy snapshot is already hydrated with the tenant's rows. Prefer the
+    // scoped snapshot in that case instead of rendering a false empty state.
+    if (error || !data || (data.length === 0 && cacheData.length > 0)) {
       return byAcademy(cacheData, academyId) as T[];
     }
     return data as T[];

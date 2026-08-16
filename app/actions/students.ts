@@ -12,10 +12,10 @@ export async function createStudentAction(input: StudentInput) {
     console.log("[createStudentAction] user OK:", user.email, "academy:", user.academy_id);
     const student = await StudentsService.createStudent(input, user.academy_id);
     console.log("[createStudentAction] CREATED OK:", student.id);
-    // قناة QR الافتراضية هي البريد حتى تسمح Meta بالرسائل التي تبدأها الأكاديمية.
-    // لإعادة WhatsApp لاحقًا: WHATSAPP_QR_CHANNEL=whatsapp.
+    // WhatsApp هو القناة الافتراضية بعد تفعيل الدفع في Meta.
+    // يمكن استخدام البريد مؤقتًا عبر WHATSAPP_QR_CHANNEL=email.
     try {
-      const channel = process.env.WHATSAPP_QR_CHANNEL?.toLowerCase() || "email";
+      const channel = process.env.WHATSAPP_QR_CHANNEL?.toLowerCase() || "whatsapp";
       if (channel === "whatsapp") {
         await Promise.race([
           import("@/services/whatsapp").then(({ notifyStudentQrWhatsApp }) =>

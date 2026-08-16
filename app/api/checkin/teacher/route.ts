@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AttendanceService, LessonsService, GroupsService, loadCurrentUser } from "@/services";
+import { AttendanceService, LessonsService, loadCurrentUser } from "@/services";
 import type { Group } from "@/types";
-import { collections } from "@/services/data/store";
+import { collections, ensureStoreLoaded } from "@/services/data/store";
+import { setRequestContext } from "@/services/request-context";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { requestIpKey } from "@/lib/request-identity";
 
@@ -27,7 +28,24 @@ function activeLessonForGroup(groupId: string) {
 async function scopedOptions(): Promise<GroupOption[]> {
   const user = await loadCurrentUser();
   if (!user || user.role !== "TEACHER") return [];
-  const groups: Group[] = await GroupsService.listGroups("", user.academy_id, user.id);
+  // The QR flow authenticates with the app session cookie. Do not rely on
+  // Supabase SSR cookies being present on Safari/Chrome after a QR redirect.
+  // Hydrate the tenant snapshot with the server-side client, then scope by the
+  // authenticated teacher record and academy.
+  await ensureStoreLoaded(user.academy_id);
+  setRequestContext(user);
+  const teacher = collections().teachers.find(
+    (item) => item.academy_id === user.academy_id &&
+      (item.profile_id === user.id || item.email.toLowerCase() === user.email.toLowerCase()),
+  );
+  const groups: Group[] = teacher
+    ? collections().groups.filter(
+        (group) => group.academy_id === user.academy_id &&
+          (group.teacher_id === teacher.id || collections().groupAssistants.some(
+            (assistant) => assistant.teacher_id === teacher.id && assistant.group_id === group.id,
+          )),
+      )
+    : [];
   return groups
     .filter((group) => group.status !== "INACTIVE")
     .map((group) => {

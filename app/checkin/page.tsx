@@ -13,11 +13,18 @@ function CheckInInner() {
   const params = useSearchParams();
   const token = params.get("token") ?? "";
   const lessonIdParam = params.get("lesson") ?? "";
-  const [state, setState] = React.useState<"loading" | "ok" | "err">("loading");
+  const studentQrParam = params.get("student") ?? "";
+  const [state, setState] = React.useState<"loading" | "ok" | "student_qr" | "err">("loading");
   const [msg, setMsg] = React.useState("");
 
   React.useEffect(() => {
     const doCheckin = async () => {
+      // A personal student QR is intentionally a profile/identity QR, not a
+      // self-check-in session token. It is consumed by the teacher scanner.
+      if (!token && !lessonIdParam && studentQrParam) {
+        setState("student_qr");
+        return;
+      }
       if (!token && !lessonIdParam) {
         setState("err"); setMsg(en ? "Invalid check-in link." : "رابط تسجيل الحضور غير صالح."); return;
       }
@@ -34,7 +41,7 @@ function CheckInInner() {
       }
     };
     doCheckin();
-  }, [token, lessonIdParam, en]);
+  }, [token, lessonIdParam, studentQrParam, en]);
 
   return (
     <Card>
@@ -52,6 +59,15 @@ function CheckInInner() {
             </div>
             <h1 className="text-lg font-semibold">{en ? "Attendance recorded successfully" : "تم تسجيل حضورك بنجاح"}</h1>
             <p className="text-sm text-muted-foreground">{en ? "You have been marked present." : "تم تسجيل حضورك كحاضر."}</p>
+          </>
+        )}
+        {state === "student_qr" && (
+          <>
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <CheckCircle2 className="h-8 w-8" />
+            </div>
+            <h1 className="text-lg font-semibold">{en ? "Student QR is valid" : "رمز الطالب صالح"}</h1>
+            <p className="text-sm text-muted-foreground">{en ? "Show this QR code to your teacher to record attendance." : "اعرض رمز QR للمدرس لتسجيل الحضور."}</p>
           </>
         )}
         {state === "err" && (

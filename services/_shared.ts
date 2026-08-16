@@ -44,7 +44,12 @@ const DIRECT_TENANT_TABLES = new Set([
 
 export async function fetchTableRLS<T = any>(table: string, academyId?: string): Promise<T[]> {
   const aid = academyId ?? getRequestAcademyId();
-  const cacheData = (collections() as any)[table] ?? [];
+  // Hydrated SeedData stores underscored SQL tables as camelCase keys
+  // (e.g. contentCourses). Resolve both forms before using the cold-start
+  // Supabase fallback so tenant reads remain consistent after SSR hydration.
+  const snapshot = collections() as any;
+  const snapshotKey = table.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+  const cacheData = snapshot[table] ?? snapshot[snapshotKey] ?? [];
 
   if (cacheData.length > 0) {
     if (!DIRECT_TENANT_TABLES.has(table)) return cacheData as T[];

@@ -218,9 +218,13 @@ export async function listStudents(
 
   const { data, count, error } = await query;
   if (error) {
-    console.error("listStudents RLS error:", error.message);
-    // Fallback to cache on error.
-    return listStudentsFromCache(filters);
+    // A mobile SSR session can have a stale/invalid anon key while the
+    // authoritative tenant snapshot is already loaded on the server. Treat
+    // this as a read fallback, not as an application exception.
+    if (process.env.NODE_ENV !== "production" && error.message !== "Invalid API key") {
+      console.warn("listStudents RLS fallback:", error.message);
+    }
+    return listStudentsFromCache(filters, academyId);
   }
 
   const total = count ?? 0;

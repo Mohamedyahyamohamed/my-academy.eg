@@ -90,9 +90,12 @@ async function scopedOptions(): Promise<GroupOption[]> {
 
 export async function GET(req: NextRequest) {
   const user = await loadCurrentUser();
-  if (!user || user.role !== "TEACHER") {
+  if (!user || user.role !== "TEACHER" || !user.academy_id) {
     return jsonError("TEACHER_LOGIN_REQUIRED", 401);
   }
+  // Re-bind the authenticated tenant after every async boundary. QR redirects
+  // can cross a request context boundary on mobile browsers.
+  setRequestContext(user);
   const groups = await scopedOptions();
   const requestedStudentId = req.nextUrl.searchParams.get("studentId") || req.nextUrl.searchParams.get("student") || "";
   const preferredGroupId = req.cookies.get(GROUP_CONTEXT_COOKIE)?.value ?? null;
@@ -111,7 +114,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const user = await loadCurrentUser();
-  if (!user || user.role !== "TEACHER") return jsonError("TEACHER_LOGIN_REQUIRED", 401);
+  if (!user || user.role !== "TEACHER" || !user.academy_id) return jsonError("TEACHER_LOGIN_REQUIRED", 401);
+  // Keep the signed session and academy available to AttendanceService after
+  // scopedOptions() has awaited store hydration.
+  setRequestContext(user);
 
   const rl = await rateLimit(`quick-checkin:${user.id}`, LIMITS.checkin.max, LIMITS.checkin.window);
   const ipRl = await rateLimit(requestIpKey(req, "quick-checkin:ip"), LIMITS.checkin.max, LIMITS.checkin.window);
@@ -123,6 +129,7 @@ export async function POST(req: NextRequest) {
   if (!studentId) return jsonError("STUDENT_REQUIRED");
 
   const groups = await scopedOptions();
+  setRequestContext(user);
   const cookieGroupId = req.cookies.get(GROUP_CONTEXT_COOKIE)?.value ?? "";
   const activeGroup = groups.find((group) => group.lesson);
   const group = groups.find((item) => item.id === requestedGroupId)

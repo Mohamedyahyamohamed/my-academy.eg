@@ -274,7 +274,12 @@ function scopedAcademyId(table: string): string | null {
 
 export async function persistInsert(table: string, row: any) {
   const client = getAdminClient();
-  if (!client) return;
+  if (!client) {
+    if (isSupabaseConfigured()) {
+      throw new Error(`Database write is not configured for ${table}.`);
+    }
+    return;
+  }
   if (!hasValidAcademyId(row)) {
     console.warn(`persistInsert ${table} skipped: non-production academy id.`);
     return;
@@ -295,9 +300,11 @@ export async function persistInsert(table: string, row: any) {
         `persistInsert ${table} FAILED [${error.code}]: ${error.message}`,
         row?.id ?? "",
       );
+      throw new Error(`Could not save ${table}: ${error.message}`);
     }
   } catch (error) {
     console.error(`persistInsert ${table} EXCEPTION:`, (error as Error)?.message);
+    throw error;
   }
 }
 

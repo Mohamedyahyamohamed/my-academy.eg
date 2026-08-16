@@ -6,8 +6,8 @@ import type { GroupInput } from "@/services/groups";
 import { audit } from "@/services/audit";
 
 export async function createGroupAction(input: GroupInput) {
-  await requireScopedRole("ADMIN", "TEACHER");
-  const g = await GroupsService.createGroup(input);
+  const user = await requireScopedRole("ADMIN", "TEACHER");
+  const g = await GroupsService.createGroup({ ...input, academy_id: user.academy_id });
     void audit({ action: "group.create" });
   revalidatePath("/groups");
   revalidatePath("/dashboard");

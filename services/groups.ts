@@ -123,6 +123,8 @@ export async function getGroup(id: string, academyIdOverride?: string): Promise<
 }
 
 export interface GroupInput {
+  /** Authoritative tenant id supplied by the scoped server action when available. */
+  academy_id?: string;
   name: string;
   course_id: string;
   teacher_id: string;
@@ -144,7 +146,7 @@ export async function createGroup(input: GroupInput): Promise<Group> {
   const now = new Date().toISOString();
   const g: Group = {
     id: gid(),
-    academy_id: currentAcademyId(),
+    academy_id: input.academy_id ?? currentAcademyId(),
     name: input.name,
     course_id: input.course_id,
     teacher_id: input.teacher_id,

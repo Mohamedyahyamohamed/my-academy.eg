@@ -190,14 +190,43 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
   // service runs. Read that scoped snapshot directly so a mobile browser's
   // Supabase RLS session cannot turn a populated teacher portal into zeros.
   const snapshot = collections() as any;
-  const allGroups = snapshot.groups ?? [];
-  const allLessons = snapshot.lessons ?? [];
-  const allAttendance = snapshot.attendance ?? [];
-  const allHomework = snapshot.homework ?? [];
-  const allSubmissions = snapshot.homeworkSubmissions ?? snapshot.homework_submissions ?? [];
-  const allStudents = snapshot.students ?? [];
-  const allCourses = snapshot.courses ?? [];
-  const allGroupStudents = snapshot.groupStudents ?? snapshot.group_students ?? [];
+  let allGroups = snapshot.groups ?? [];
+  let allLessons = snapshot.lessons ?? [];
+  let allAttendance = snapshot.attendance ?? [];
+  let allHomework = snapshot.homework ?? [];
+  let allSubmissions = snapshot.homeworkSubmissions ?? snapshot.homework_submissions ?? [];
+  let allStudents = snapshot.students ?? [];
+  let allCourses = snapshot.courses ?? [];
+  let allGroupStudents = snapshot.groupStudents ?? snapshot.group_students ?? [];
+
+  // Last-resort server fallback for a stale/empty request snapshot. This is
+  // still tenant-scoped by academy_id and never runs in the browser.
+  if (!allGroups.length && isSupabaseConfigured()) {
+    const admin = nodeSupabaseClient();
+    if (admin) {
+      const [groupsRes, lessonsRes, attendanceRes, homeworkRes, submissionsRes, studentsRes, coursesRes] = await Promise.all([
+        admin.from("groups").select("*").eq("academy_id", user.academy_id),
+        admin.from("lessons").select("*").eq("academy_id", user.academy_id),
+        admin.from("attendance").select("*").eq("academy_id", user.academy_id),
+        admin.from("homework").select("*").eq("academy_id", user.academy_id),
+        admin.from("homework_submissions").select("*").eq("academy_id", user.academy_id),
+        admin.from("students").select("*").eq("academy_id", user.academy_id),
+        admin.from("courses").select("*").eq("academy_id", user.academy_id),
+      ]);
+      allGroups = groupsRes.data ?? [];
+      allLessons = lessonsRes.data ?? [];
+      allAttendance = attendanceRes.data ?? [];
+      allHomework = homeworkRes.data ?? [];
+      allSubmissions = submissionsRes.data ?? [];
+      allStudents = studentsRes.data ?? [];
+      allCourses = coursesRes.data ?? [];
+      const groupIds = allGroups.map((g: any) => g.id);
+      if (groupIds.length) {
+        const groupStudentsRes = await admin.from("group_students").select("*").in("group_id", groupIds);
+        allGroupStudents = groupStudentsRes.data ?? [];
+      }
+    }
+  }
 
   const ownGroupIds = allGroups.filter((g: any) => g.teacher_id === teacher.id).map((g: any) => g.id);
   const assistantGroupIds = collections().groupAssistants

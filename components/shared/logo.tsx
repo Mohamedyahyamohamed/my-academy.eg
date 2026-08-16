@@ -19,7 +19,7 @@ export function Logo({
     <div className={cn("flex items-center gap-2.5", className)}>
       <div
         className={cn(
-          "relative flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm",
+          "relative flex shrink-0 items-center justify-center rounded-xl bg-brand-700 text-white shadow-sm",
           dim,
         )}
       >

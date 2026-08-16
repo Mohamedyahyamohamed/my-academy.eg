@@ -5,6 +5,7 @@
 import { Resend } from "resend";
 import QRCode from "qrcode";
 import { APP_CONFIG } from "@/lib/constants";
+import { studentQrValue } from "@/lib/student-qr";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -78,7 +79,7 @@ export async function sendStudentQrEmail(input: {
   studentName: string;
   studentId: string;
 }): Promise<InviteEmailResult> {
-  const qrValue = `MA:${input.studentId}`;
+  const qrValue = studentQrValue(input.studentId);
   const qrPng = await QRCode.toBuffer(qrValue, { type: "png", width: 600, margin: 2 });
   const safeName = escapeHtml(input.studentName);
 

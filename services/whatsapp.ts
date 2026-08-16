@@ -1,5 +1,6 @@
 import QRCode from "qrcode";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
+import { studentQrValue } from "@/lib/student-qr";
 import {
   isWhatsAppLiveEnabled,
   normalizePhoneE164,
@@ -186,7 +187,7 @@ export async function notifyStudentQrWhatsApp(
   }
 
   try {
-    const qrPng = await QRCode.toBuffer(`MA:${studentId}`, {
+    const qrPng = await QRCode.toBuffer(studentQrValue(studentId), {
       type: "png",
       width: 600,
       margin: 2,

@@ -10,6 +10,7 @@ import { scanCheckinAction } from "@/app/actions/attendance";
 import { fullName } from "@/lib/utils";
 import type { Group, Lesson, Student } from "@/types";
 import { useClientLang } from "@/lib/i18n-client";
+import { studentIdFromQrValue } from "@/lib/student-qr";
 
 export function ScanWorkshop({
   groups, lessons, students,
@@ -64,7 +65,7 @@ export function ScanWorkshop({
 
   const handleScan = async (text: string) => {
     setError("");
-    const studentId = text.startsWith("MA:") ? text.slice(3) : text;
+    const studentId = studentIdFromQrValue(text);
     // debounce duplicates within 4s
     const now = Date.now();
     if (lastScan.current.id === studentId && now - lastScan.current.t < 4000) return;

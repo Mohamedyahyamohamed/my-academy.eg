@@ -5,13 +5,14 @@ import { QRCodeSVG } from "qrcode.react";
 import { Download, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useClientLang } from "@/lib/i18n-client";
+import { studentQrValue } from "@/lib/student-qr";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 
 /**
- * A student's personal QR "ID card". The QR encodes MA:<studentId>.
- * The teacher scans it to mark the student present.
+ * A student's personal QR "ID card". The QR encodes a usable HTTPS link
+ * containing the student id; the teacher scanner accepts this link.
  */
 export function StudentQrCard({
   studentId,
@@ -28,7 +29,7 @@ export function StudentQrCard({
 }) {
   const [open, setOpen] = React.useState(false);
   const en = useClientLang() === "en";
-  const value = `MA:${studentId}`;
+  const value = studentQrValue(studentId, typeof window !== "undefined" ? window.location.origin : undefined);
   const cardRef = React.useRef<HTMLDivElement>(null);
 
   const download = async () => {

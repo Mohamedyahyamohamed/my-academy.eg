@@ -160,6 +160,7 @@ export default async function DashboardPage(
           hint={en ? "Currently teaching" : "قيد التدريس حاليًا"}
           icon={UsersRound}
           accent="info"
+          href="/groups"
         />
         <StatCard
           label={`${en ? "Collected" : "المحصّل"} ${PERIOD_LABELS[period][en ? "en" : "ar"]}`}

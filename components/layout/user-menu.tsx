@@ -24,6 +24,17 @@ export function UserMenu({ user }: { user: SessionUser }) {
   const lang = useClientLang();
   const en = lang === "en";
   const canManageAcademy = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+  const dashboardPath = user.role === "TEACHER"
+    ? "/teacher"
+    : user.role === "PARENT"
+      ? "/parent"
+      : user.role === "STUDENT"
+        ? "/student"
+        : "/dashboard";
+  const goToDashboard = () => {
+    router.push(dashboardPath);
+    router.refresh();
+  };
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -31,7 +42,23 @@ export function UserMenu({ user }: { user: SessionUser }) {
           <Avatar>
             <AvatarFallback>{initials(user.full_name)}</AvatarFallback>
           </Avatar>
-          <span className="hidden text-sm font-medium sm:inline">
+          <span
+            className="hidden cursor-pointer text-sm font-medium underline-offset-4 hover:underline sm:inline"
+            role="link"
+            tabIndex={0}
+            onClick={(event) => {
+              event.stopPropagation();
+              goToDashboard();
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                event.stopPropagation();
+                goToDashboard();
+              }
+            }}
+            aria-label={en ? "Go to dashboard" : "العودة إلى لوحة التحكم"}
+          >
             {user.full_name}
           </span>
         </Button>

@@ -42,7 +42,7 @@ export default async function TeacherDashboard() {
       <PageHeader title={`${t.welcome}، ${(d.teacherName || displayName).split(/\s+/)[0]} 👋`} description={t.overview} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label={t.groups} value={d.groupCount} icon={UsersRound} accent="primary" />
+        <StatCard label={t.groups} value={d.groupCount} icon={UsersRound} accent="primary" href="/groups" />
         <StatCard label={t.students} value={d.studentCount} icon={Users} accent="info" />
         <StatCard label={t.upcoming} value={d.upcomingCount} icon={CalendarClock} accent="success" />
         <StatCard label={t.attendanceRate} value={`${d.attendanceRate}%`} icon={CheckCircle2} accent="warning" />

@@ -10,7 +10,7 @@ import { getPlan } from "@/services/saas";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { can } from "@/lib/permissions";
 
-const MAX_CONTENT_FILE_SIZE = 100 * 1024 * 1024;
+const MAX_CONTENT_FILE_SIZE = 500 * 1024 * 1024;
 
 type SafeContentUpload = { contentType: string; extension: string };
 
@@ -78,7 +78,7 @@ export async function uploadContentFile(formData: FormData) {
   const lessonIdRaw = String(formData.get("lessonId") ?? "");
   const lessonId = lessonIdRaw || null;
   if (!(file instanceof File) || !courseId) return { ok: false, error: "A file and course are required." };
-  if (file.size <= 0 || file.size > MAX_CONTENT_FILE_SIZE) return { ok: false, error: "File is empty or larger than 100MB." };
+  if (file.size <= 0 || file.size > MAX_CONTENT_FILE_SIZE) return { ok: false, error: "File is empty or larger than 500MB." };
 
   const course = await ContentService.getCourse(courseId, user);
   if (!course) return { ok: false, error: "Course not found or outside your scope." };
@@ -125,6 +125,27 @@ export async function uploadContentFile(formData: FormData) {
   for (const pathToRevalidate of contentPaths(courseId)) revalidatePath(pathToRevalidate);
   await audit({ action: "content.file.uploaded", metadata: { courseId, lessonId, size: file.size, mimeType: safeUpload.contentType } }, user);
   return { ok: true, url: signed.data.signedUrl, name: file.name, fileId: inserted.data.id };
+}
+
+export async function addContentLink(formData: FormData) {
+  const user = await requireScopedRole("TEACHER", "ADMIN");
+  if (!can(user, "content.upload")) return { ok: false, error: "You are not allowed to add content links." };
+  const courseId = String(formData.get("courseId") ?? "");
+  const lessonIdRaw = String(formData.get("lessonId") ?? "");
+  const lessonId = lessonIdRaw || null;
+  const title = String(formData.get("title") ?? "").trim();
+  const url = String(formData.get("url") ?? "").trim();
+  if (!title || !url || !/^https?:\/\//i.test(url)) return { ok: false, error: "A title and a valid HTTP/HTTPS link are required." };
+  const course = await ContentService.getCourse(courseId, user);
+  if (!course) return { ok: false, error: "Course not found or outside your scope." };
+  if (lessonId && !course.lessons?.some((lesson) => lesson.id === lessonId)) return { ok: false, error: "Lesson not found or outside your course." };
+  const client = nodeSupabaseClient();
+  if (!client) return { ok: false, error: "Database is not configured." };
+  const inserted = await client.from("content_links").insert({ academy_id: user.academy_id, course_id: courseId, lesson_id: lessonId, owner_id: user.id, title, url }).select("id").single();
+  if (inserted.error) return { ok: false, error: "Could not save the content link." };
+  for (const pathToRevalidate of contentPaths(courseId)) revalidatePath(pathToRevalidate);
+  await audit({ action: "content.link.created", metadata: { courseId, lessonId, linkId: inserted.data.id } }, user);
+  return { ok: true, linkId: inserted.data.id };
 }
 
 export async function markLessonCompleteAction(formData: FormData) {

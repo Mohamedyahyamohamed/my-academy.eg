@@ -98,6 +98,7 @@ export interface ContentCourse {
   group?: Group;
   lessons?: ContentLesson[];
   files?: ContentFile[];
+  links?: ContentLink[];
 }
 
 export interface ContentLesson {
@@ -112,7 +113,19 @@ export interface ContentLesson {
   created_at: ISODate;
   updated_at: ISODate;
   files?: ContentFile[];
+  links?: ContentLink[];
   completed?: boolean;
+}
+
+export interface ContentLink {
+  id: UUID;
+  academy_id: UUID;
+  course_id: UUID;
+  lesson_id: UUID | null;
+  owner_id: UUID | null;
+  title: string;
+  url: string;
+  created_at: ISODate;
 }
 
 export interface ContentFile {

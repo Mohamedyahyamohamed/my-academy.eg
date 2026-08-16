@@ -1,4 +1,5 @@
 import type { ContentCourse, ContentFile, ContentLesson, ContentProgress, SessionUser } from "@/types";
+import type { ContentLink } from "@/types";
 import { collections, persistInsert, persistUpdate } from "./data/store";
 import { currentAcademyId, currentTeacherId, getCurrentUser } from "./session";
 import { can, hasAcademyWideScope } from "@/lib/permissions";
@@ -73,10 +74,10 @@ function assertGroupAccess(user: SessionUser, groupId: string, write = false) {
   return group;
 }
 
-function attachCourse(course: ContentCourse, lessons: ContentLesson[] = [], files: ContentFile[] = []): ContentCourse {
+function attachCourse(course: ContentCourse, lessons: ContentLesson[] = [], files: ContentFile[] = [], links: ContentLink[] = []): ContentCourse {
   const group = collections().groups.find((item) => item.id === course.group_id && item.academy_id === course.academy_id);
   const teacher = collections().teachers.find((item) => item.id === course.teacher_id && item.academy_id === course.academy_id);
-  return { ...course, group, teacher, lessons, files };
+  return { ...course, group, teacher, lessons, files, links };
 }
 
 async function contentRows<T>(table: string, academyId: string): Promise<T[]> {
@@ -101,7 +102,8 @@ export async function getCourse(id: string, user: SessionUser): Promise<ContentC
   if (!course) return null;
   const lessons = await listLessons(id, user);
   const files = await listContentFiles(id, user);
-  return attachCourse(course, lessons, files.filter((file) => !file.lesson_id));
+  const links = await listContentLinks(id, user);
+  return attachCourse(course, lessons, files.filter((file) => !file.lesson_id), links.filter((link) => !link.lesson_id));
 }
 
 export interface CreateCourseInput {
@@ -205,6 +207,16 @@ export async function listContentFiles(courseId: string, user: SessionUser, less
     withUrls.push({ ...file, download_url: signed.data?.signedUrl ?? undefined });
   }
   return withUrls;
+}
+
+export async function listContentLinks(courseId: string, user: SessionUser, lessonId?: string): Promise<ContentLink[]> {
+  assertContentPermission(user, "read");
+  const course = (await contentRows<ContentCourse>("content_courses", user.academy_id)).find((item) => item.id === courseId);
+  if (!course || !accessibleGroupIds(user)?.has(course.group_id)) return [];
+  const links = await contentRows<ContentLink>("content_links", user.academy_id);
+  return links
+    .filter((link) => link.course_id === courseId && (lessonId === undefined ? true : link.lesson_id === lessonId))
+    .sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at));
 }
 
 export async function markLessonComplete(lessonId: string, user: SessionUser): Promise<ContentProgress> {

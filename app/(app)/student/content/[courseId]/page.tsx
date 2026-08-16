@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Download, FileText, PlayCircle } from "lucide-react";
+import { ArrowRight, CheckCircle2, Download, ExternalLink, FileText, PlayCircle } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,7 @@ export default async function StudentCoursePage({ params }: PageProps) {
 
 async function StudentLessonFiles({ courseId, lessonId, user, en }: { courseId: string; lessonId: string; user: any; en: boolean }) {
   const files = await ContentService.listContentFiles(courseId, user, lessonId);
-  if (files.length === 0) return null;
-  return <div className="mt-3 space-y-2 border-t pt-3">{files.map((file) => <a key={file.id} href={file.download_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline"><FileText className="h-4 w-4" />{file.name}<Download className="ms-auto h-3.5 w-3.5" /></a>)}</div>;
+  const links = await ContentService.listContentLinks(courseId, user, lessonId);
+  if (files.length === 0 && links.length === 0) return null;
+  return <div className="mt-3 space-y-2 border-t pt-3">{files.map((file) => <a key={file.id} href={file.download_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline"><FileText className="h-4 w-4" />{file.name}<Download className="ms-auto h-3.5 w-3.5" /></a>)}{links.map((link) => <a key={link.id} href={link.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline"><ExternalLink className="h-4 w-4" />{link.title}<ExternalLink className="ms-auto h-3.5 w-3.5" /></a>)}</div>;
 }

@@ -13,7 +13,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 10%;
 
-    --primary: 262 83% 58%;
+    --primary: 252 58% 46%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 250 30% 96%;
@@ -36,13 +36,13 @@
 
     --border: 240 12% 91%;
     --input: 240 12% 90%;
-    --ring: 262 83% 58%;
+    --ring: 252 58% 46%;
 
     /* Sidebar tokens */
     --sidebar: 0 0% 100%;
     --sidebar-foreground: 240 10% 20%;
-    --sidebar-accent: 262 83% 96%;
-    --sidebar-accent-foreground: 262 83% 40%;
+    --sidebar-accent: 252 24% 95%;
+    --sidebar-accent-foreground: 252 48% 34%;
     --sidebar-border: 240 12% 92%;
 
     --radius: 0.65rem;
@@ -58,7 +58,7 @@
     --popover: 240 12% 9%;
     --popover-foreground: 240 10% 92%;
 
-    --primary: 262 83% 66%;
+    --primary: 252 58% 62%;
     --primary-foreground: 240 14% 7%;
 
     --secondary: 240 8% 14%;
@@ -81,12 +81,12 @@
 
     --border: 240 8% 18%;
     --input: 240 8% 20%;
-    --ring: 262 83% 66%;
+    --ring: 252 58% 62%;
 
     --sidebar: 240 14% 5%;
     --sidebar-foreground: 240 10% 85%;
     --sidebar-accent: 240 8% 14%;
-    --sidebar-accent-foreground: 262 90% 80%;
+    --sidebar-accent-foreground: 252 70% 78%;
     --sidebar-border: 240 8% 14%;
   }
 }
@@ -121,7 +121,11 @@
 
 @layer components {
   .card-surface {
-    @apply rounded-xl border border-border bg-card shadow-soft;
+    @apply rounded-lg border border-border bg-card shadow-sm;
+  }
+
+  .form-surface {
+    @apply rounded-lg border border-border bg-card;
   }
   /* Recharts cursor + tooltip theming */
   .recharts-default-tooltip {

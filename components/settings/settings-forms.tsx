@@ -49,8 +49,8 @@ export function AcademySettingsForm({ academy }: { academy: Academy }) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-      <div className="grid gap-4 sm:grid-cols-2">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
+      <div className="grid gap-5 sm:grid-cols-2">
         <Field label={en ? "Academy name" : "اسم الأكاديمية"} error={errors.name?.message}>
           <Input {...register("name")} />
         </Field>
@@ -101,7 +101,7 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-start rtl:justify-end">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4" /> {en ? "Add course" : "إضافة مادة"}</Button></DialogTrigger>
           <DialogContent>
@@ -126,7 +126,7 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {courses.map((c) => (
-          <div key={c.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
+          <div key={c.id} className="flex items-center gap-3 rounded-md border border-border bg-background p-3 transition-colors hover:bg-muted/40">
             <span className="h-8 w-8 shrink-0 rounded-lg" style={{ background: c.color ?? "#7c5cfc" }} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{c.name}</p>
@@ -153,8 +153,8 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
 
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <Label>{label}</Label>
+    <div className="space-y-2">
+      <Label className="text-sm font-medium">{label}</Label>
       {children}
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>

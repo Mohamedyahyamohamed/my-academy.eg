@@ -3,15 +3,18 @@ import { audit } from "@/services/audit";
 
 import { revalidatePath } from "next/cache";
 import { collections, persistInsert, persistDelete } from "@/services/data/store";
-import { requireScopedRole, currentTeacherId, currentAcademyId } from "@/services";
-import { teacherGroupScope } from "@/services/_shared";
+import { requireScopedRole, currentAcademyId } from "@/services";
+import { resolveTeacherForGroups } from "@/services/groups";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
 /** Assign an existing assistant (co-teacher) to a group. Owner teacher or admin only. */
 export async function assignAssistantAction(groupId: string, teacherId: string) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
   if (user.role === "TEACHER") {
-    const owns = collections().groups.find((g) => g.id === groupId && g.teacher_id === currentTeacherId());
+    const teacher = await resolveTeacherForGroups(user.academy_id, user.id, user.email);
+    const owns = teacher && collections().groups.find(
+      (g) => g.id === groupId && g.academy_id === user.academy_id && g.teacher_id === teacher.id,
+    );
     if (!owns) return { ok: false, error: "You can only manage your own groups." };
   }
   const exists = collections().groupAssistants.some(
@@ -29,7 +32,10 @@ export async function assignAssistantAction(groupId: string, teacherId: string) 
 export async function removeAssistantAction(groupId: string, teacherId: string) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
   if (user.role === "TEACHER") {
-    const owns = collections().groups.find((g) => g.id === groupId && g.teacher_id === currentTeacherId());
+    const teacher = await resolveTeacherForGroups(user.academy_id, user.id, user.email);
+    const owns = teacher && collections().groups.find(
+      (g) => g.id === groupId && g.academy_id === user.academy_id && g.teacher_id === teacher.id,
+    );
     if (!owns) return { ok: false, error: "You can only manage your own groups." };
   }
   collections().groupAssistants = collections().groupAssistants.filter(
@@ -60,20 +66,33 @@ export async function createAssistantAction(input: {
   if (!input.groupIds.length)
     return { ok: false, error: "Select at least one group to share." };
 
-  // Teachers may only share groups they have access to (own or assist).
+  const academyId = user.academy_id ?? currentAcademyId();
+  const selectedGroups = collections().groups.filter(
+    (group) => input.groupIds.includes(group.id) && group.academy_id === academyId,
+  );
+  if (selectedGroups.length !== input.groupIds.length) {
+    return { ok: false, error: "Some selected groups are outside your academy." };
+  }
+
+  // Teachers may only share groups they own or already assist with.
   if (user.role === "TEACHER") {
-    const scope = teacherGroupScope();
-    if (!scope) {
+    const teacher = await resolveTeacherForGroups(academyId, user.id, user.email);
+    if (!teacher) {
       return { ok: false, error: "حساب المدرّس مش متوصّل ببروفايل مدرّس. كلّم الأدمن يربطه." };
     }
+    const allowed = new Set([
+      ...selectedGroups.filter((group) => group.teacher_id === teacher.id).map((group) => group.id),
+      ...collections().groupAssistants
+        .filter((assistant) => assistant.teacher_id === teacher.id)
+        .map((assistant) => assistant.group_id),
+    ]);
     for (const gid of input.groupIds) {
-      if (!scope.has(gid)) return { ok: false, error: "ممكن تشارك الجروبات اللى معاك صلاحية عليها بس." };
+      if (!allowed.has(gid)) return { ok: false, error: "ممكن تشارك الجروبات اللى معاك صلاحية عليها بس." };
     }
   }
 
   const client = nodeSupabaseClient();
   if (!client) return { ok: false, error: "Supabase not configured." };
-  const academyId = currentAcademyId();
 
   // 1. Auth user (TEACHER role).
   const { data, error } = await client.auth.admin.createUser({

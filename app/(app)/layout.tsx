@@ -7,6 +7,7 @@ import { RealtimeNotifications } from "@/components/layout/realtime-notification
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getAccessRestriction, loadCurrentUser, MiscService } from "@/services";
 import { collections, ensureStoreLoaded } from "@/services/data/store";
+import { setRequestContext } from "@/services/request-context";
 
 export default async function AuthenticatedLayout({
   children,
@@ -15,6 +16,10 @@ export default async function AuthenticatedLayout({
 }) {
   const user = await loadCurrentUser();
   if (!user) redirect("/login");
+  // Re-bind the authenticated tenant at the layout boundary. Next.js RSC
+  // navigations can render child pages in a separate async context, so pages
+  // must not rely on a context established only by an earlier helper call.
+  setRequestContext(user);
   const restriction = await getAccessRestriction(user);
   if (restriction.blocked) redirect(`/suspended?reason=${restriction.reason}`);
 

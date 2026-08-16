@@ -1,15 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireScopedRole, GroupsService } from "@/services";
+import { requireScopedRole, GroupsService, LessonsService } from "@/services";
 import type { GroupInput } from "@/services/groups";
 import { audit } from "@/services/audit";
 
 export async function createGroupAction(input: GroupInput) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
   const g = await GroupsService.createGroup({ ...input, academy_id: user.academy_id });
-    void audit({ action: "group.create" });
+  if (g) {
+    await LessonsService.createRecurringLessonsForGroup(g, user.academy_id);
+  }
+  void audit({ action: "group.create" });
   revalidatePath("/groups");
+  revalidatePath("/lessons");
+  revalidatePath("/calendar");
   revalidatePath("/dashboard");
   return g;
 }

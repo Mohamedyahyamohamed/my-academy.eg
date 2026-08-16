@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GroupsService, MiscService, requireScopedRole, getCurrentUser, currentTeacherId } from "@/services";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatSchedule } from "@/lib/utils";
 import { cookies } from "next/headers";
 import { getLangFromCookie } from "@/lib/i18n";
 
@@ -95,7 +95,7 @@ export default async function GroupsPage() {
                       <UsersRound className="h-4 w-4" /> {g.student_count} {en ? "students" : "طالب"}
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <Calendar className="h-4 w-4" /> {g.schedule}
+                      <Calendar className="h-4 w-4" /> {formatSchedule(g.schedule, en ? "en-EG" : "ar-EG")}
                     </span>
                   </div>
                   <div className="mt-4 flex items-center justify-between border-t pt-3">

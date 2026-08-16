@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { resolveStudent, requireScopedRole } from "@/services";
 import { groupsForStudent } from "@/services/_shared";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatSchedule } from "@/lib/utils";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +42,7 @@ export default async function StudentClassesPage() {
                   <Badge variant="secondary">{formatCurrency(g.monthly_fee, "EGP", en ? "en-EG" : "ar-EG")}/{en ? "month" : "شهريًا"}</Badge>
                 </div>
                 <div className="mt-4 space-y-1 text-sm text-muted-foreground">
-                  <p>{en ? "Schedule:" : "الموعد:"} {g.schedule}</p>
+                  <p>{en ? "Schedule:" : "الموعد:"} {formatSchedule(g.schedule, en ? "en-EG" : "ar-EG")}</p>
                   {g.room && <p>{en ? "Room:" : "القاعة:"} {g.room}</p>}
                 </div>
                 <Button asChild variant="outline" size="sm" className="mt-4 w-full">

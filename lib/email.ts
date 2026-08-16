@@ -126,6 +126,7 @@ export async function sendAcademyInviteEmail(input: {
   const expiry = new Intl.DateTimeFormat("ar-EG", {
     dateStyle: "medium",
     timeStyle: "short",
+    hour12: true,
     timeZone: "Africa/Cairo",
   }).format(new Date(input.expiresAt));
   const safeUrl = escapeHtml(input.inviteUrl);

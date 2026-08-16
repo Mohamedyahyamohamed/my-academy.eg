@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useClientLang } from "@/lib/i18n-client";
+import { formatClockTime, formatTimeRange } from "@/lib/utils";
 
 export function CalendarView({ lessons }: { lessons: any[] }) {
   const en = useClientLang() === "en";
@@ -31,7 +32,7 @@ export function CalendarView({ lessons }: { lessons: any[] }) {
         {/* الصفوف (ساعات) */}
         {hours.map((h, hi) => (
           <div key={h} className="grid grid-cols-8 gap-1 border-b border-border/50 py-1">
-            <div className="w-16 text-xs text-muted-foreground">{h}</div>
+            <div className="w-16 text-xs text-muted-foreground">{formatClockTime(h, en ? "en-EG" : "ar-EG")}</div>
             {days.map((_, di) => {
               const cellLessons = lessons.filter((l) => {
                 if (!l.date) return false;
@@ -48,7 +49,7 @@ export function CalendarView({ lessons }: { lessons: any[] }) {
                     return (
                       <div key={l.id} className={`mb-0.5 rounded border px-1.5 py-1 text-xs ${courseColors[courseName]}`}>
                         <p className="truncate font-medium">{courseName}</p>
-                        <p className="truncate text-[10px] opacity-70">{l.start_time} - {l.end_time}</p>
+                        <p className="truncate text-[10px] opacity-70">{formatTimeRange(l.start_time, l.end_time, en ? "en-EG" : "ar-EG")}</p>
                       </div>
                     );
                   })}

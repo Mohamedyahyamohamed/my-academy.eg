@@ -20,7 +20,7 @@ import {
 } from "@/services";
 import { collections } from "@/services/data/store";
 import { studentsInGroup } from "@/services/_shared";
-import { formatDate, formatTime } from "@/lib/utils";
+import { formatDate, formatTimeRange } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +62,7 @@ export default async function LessonDetailPage(
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <InfoCard icon={Users} label={en ? "Group" : "المجموعة"} value={lesson.group?.name ?? "—"} />
         <InfoCard icon={Calendar} label={en ? "Date" : "التاريخ"} value={formatDate(lesson.date, undefined, en ? "en-EG" : "ar-EG")} />
-        <InfoCard icon={Clock} label={en ? "Time" : "الوقت"} value={`${lesson.start_time} – ${lesson.end_time}`} />
+        <InfoCard icon={Clock} label={en ? "Time" : "الوقت"} value={formatTimeRange(lesson.start_time, lesson.end_time, en ? "en-EG" : "ar-EG")} />
         <InfoCard icon={Users} label={en ? "Students" : "الطلاب"} value={String(roster.length)} />
       </div>
 

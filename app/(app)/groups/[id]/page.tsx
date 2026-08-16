@@ -40,7 +40,7 @@ import {
 import { removeStudentFromGroupAction } from "@/app/actions/groups";
 import { setRequestContext } from "@/services/request-context";
 import { collections } from "@/services/data/store";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, formatSchedule, formatTimeRange } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +82,7 @@ export default async function GroupDetailPage(
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
         title={detail.name}
-        description={`${detail.course?.name} · ${detail.schedule}`}
+        description={`${detail.course?.name} · ${formatSchedule(detail.schedule, en ? "en-EG" : "ar-EG")}`}
         breadcrumbs={[
           { label: en ? "Groups" : "المجموعات", href: "/groups" },
           { label: detail.name },
@@ -181,7 +181,7 @@ export default async function GroupDetailPage(
           <CardContent className="space-y-3 text-sm">
             <Row label={en ? "Course" : "المادة"} value={detail.course?.name ?? "—"} />
             <Row label={en ? "Teacher" : "المدرّس"} value={detail.teacher ? `${detail.teacher.first_name} ${detail.teacher.last_name}` : "—"} />
-            <Row label={en ? "Schedule" : "الجدول"} value={detail.schedule} />
+            <Row label={en ? "Schedule" : "الجدول"} value={formatSchedule(detail.schedule, en ? "en-EG" : "ar-EG")} />
             <Row label={en ? "Room" : "القاعة"} value={detail.room ?? "—"} />
             <Row label={en ? "Monthly fee" : "الرسوم الشهرية"} value={formatCurrency(detail.monthly_fee)} />
             <div className="flex flex-wrap gap-2 pt-1">
@@ -251,7 +251,7 @@ export default async function GroupDetailPage(
                     <TableCell className="font-medium">
                       <Link href={`/lessons/${l.id}`} className="hover:text-primary">{l.topic}</Link>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{l.start_time} – {l.end_time}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{formatTimeRange(l.start_time, l.end_time, en ? "en-EG" : "ar-EG")}</TableCell>
                     <TableCell>
                       <Badge variant={l.attendance_taken ? "success" : "outline"}>
                         {l.attendance_taken ? (en ? "Attendance recorded" : "تم تسجيل الحضور") : (en ? "Pending" : "معلّق")}

@@ -23,7 +23,7 @@ function invitationStatus(invite: AcademyInviteView, en: boolean) {
 }
 
 function formatDate(value: string, en: boolean) {
-  return new Intl.DateTimeFormat(en ? "en-US" : "ar-EG", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Cairo" }).format(new Date(value));
+  return new Intl.DateTimeFormat(en ? "en-US" : "ar-EG", { dateStyle: "medium", timeStyle: "short", hour12: true, timeZone: "Africa/Cairo" }).format(new Date(value));
 }
 
 async function copyToClipboard(value: string) { try { await navigator.clipboard.writeText(value); return true; } catch { return false; } }

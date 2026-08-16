@@ -37,6 +37,7 @@ export default async function InviteAcceptancePage(props: { params: Promise<{ to
   const expiresAt = new Intl.DateTimeFormat(en ? "en-US" : "ar-EG", {
     dateStyle: "full",
     timeStyle: "short",
+    hour12: true,
     timeZone: "Africa/Cairo",
   }).format(new Date(invite.expiresAt));
 

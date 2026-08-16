@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { HomeworkBadge } from "@/components/shared/badges";
 import { getTeacherDashboard, requireScopedRole } from "@/services";
-import { formatDate, formatTime } from "@/lib/utils";
+import { formatDate, formatTime, formatSchedule } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -129,7 +129,7 @@ export default async function TeacherDashboard() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{g.name}</p>
-                    <p className="text-xs text-muted-foreground">{g.schedule}</p>
+                    <p className="text-xs text-muted-foreground">{formatSchedule(g.schedule, lang === "en" ? "en-EG" : "ar-EG")}</p>
                   </div>
                   <ArrowRight className="h-4 w-4 text-muted-foreground" />
                 </Link>

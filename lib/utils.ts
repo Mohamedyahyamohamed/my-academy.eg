@@ -45,7 +45,7 @@ export function formatDate(
   }).format(d);
 }
 
-/** Format an ISO date string to time only. */
+/** Format an ISO date string to time only using a 12-hour clock. */
 export function formatTime(date: string | Date | null | undefined, locale: string = "ar-EG") {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
@@ -55,6 +55,31 @@ export function formatTime(date: string | Date | null | undefined, locale: strin
     minute: "2-digit",
     hour12: true,
   }).format(d);
+}
+
+/** Format a database wall-clock value such as "16:00" without applying a timezone. */
+export function formatClockTime(value: string | null | undefined, locale: string = "ar-EG") {
+  if (!value) return "—";
+  const match = value.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+  if (!match) return value;
+  let hour = Number(match[1]);
+  const minute = Number(match[2] ?? "0");
+  const meridiem = match[3]?.toUpperCase();
+  if (meridiem) hour = (hour % 12) + (meridiem === "PM" ? 12 : 0);
+  if (hour > 23 || minute > 59) return value;
+  const d = new Date(2000, 0, 1, hour, minute, 0, 0);
+  return new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit", hour12: true }).format(d);
+}
+
+/** Format a start/end wall-clock range in the user's locale. */
+export function formatTimeRange(start: string | null | undefined, end: string | null | undefined, locale: string = "ar-EG") {
+  return `${formatClockTime(start, locale)} – ${formatClockTime(end, locale)}`;
+}
+
+/** Convert 24-hour clock tokens embedded in a human-readable schedule to 12-hour display. */
+export function formatSchedule(schedule: string | null | undefined, locale: string = "ar-EG") {
+  if (!schedule) return "—";
+  return schedule.replace(/\b(\d{1,2}:\d{2})(?!\s*(?:AM|PM|ص|م)\b)/gi, (token) => formatClockTime(token, locale));
 }
 
 /** Relative time, e.g. "2 days ago". */

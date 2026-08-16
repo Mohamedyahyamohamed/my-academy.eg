@@ -76,9 +76,34 @@ export function formatTimeRange(start: string | null | undefined, end: string | 
   return `${formatClockTime(start, locale)} – ${formatClockTime(end, locale)}`;
 }
 
-/** Convert 24-hour clock tokens embedded in a human-readable schedule to 12-hour display. */
+/** Standard schedule payload saved by the group form. */
+export type StructuredSchedule = { days: string[]; start: string; end: string };
+
+export function buildSchedule(days: string[], start: string, end: string) {
+  return `SCHEDULE_V1|days=${days.join(",")}\u007cstart=${start}\u007cend=${end}`;
+}
+
+export function parseSchedule(schedule: string | null | undefined): StructuredSchedule | null {
+  if (!schedule) return null;
+  const match = schedule.match(/^SCHEDULE_V1\|days=([^|]*)\|start=([^|]+)\|end=([^|]+)$/);
+  if (!match) return null;
+  return { days: match[1] ? match[1].split(",").filter(Boolean) : [], start: match[2], end: match[3] };
+}
+
+const DAY_LABELS: Record<string, { ar: string; en: string }> = {
+  sat: { ar: "السبت", en: "Saturday" }, sun: { ar: "الأحد", en: "Sunday" }, mon: { ar: "الإثنين", en: "Monday" },
+  tue: { ar: "الثلاثاء", en: "Tuesday" }, wed: { ar: "الأربعاء", en: "Wednesday" }, thu: { ar: "الخميس", en: "Thursday" }, fri: { ar: "الجمعة", en: "Friday" },
+};
+
+/** Format both new structured schedules and legacy free-text schedules. */
 export function formatSchedule(schedule: string | null | undefined, locale: string = "ar-EG") {
   if (!schedule) return "—";
+  const structured = parseSchedule(schedule);
+  if (structured) {
+    const language = locale.toLowerCase().startsWith("en") ? "en" : "ar";
+    const days = structured.days.map((day) => DAY_LABELS[day]?.[language] ?? day).join(language === "en" ? ", " : "، ");
+    return `${days || "—"} · ${formatTimeRange(structured.start, structured.end, locale)}`;
+  }
   return schedule.replace(/\b(\d{1,2}:\d{2})(?!\s*(?:AM|PM|ص|م)\b)/gi, (token) => formatClockTime(token, locale));
 }
 

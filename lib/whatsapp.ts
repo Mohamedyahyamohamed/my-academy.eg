@@ -229,9 +229,9 @@ export async function sendWhatsAppImage(
     type: "image",
     image: { id: uploaded.mediaId, ...(caption ? { caption } : {}) },
   });
-  if (result.ok) {
-    await deleteWhatsAppMedia(uploaded.mediaId);
-  }
+  // Keep the uploaded media available for Meta's asynchronous delivery pipeline.
+  // Meta expires uploaded media automatically; deleting immediately after ACCEPTED
+  // can leave a media-header message accepted but undeliverable.
   return { ...result, mediaId: uploaded.mediaId };
 }
 
@@ -267,8 +267,8 @@ export async function sendWhatsAppTemplateWithImage(
       components,
     },
   });
-  if (result.ok) {
-    await deleteWhatsAppMedia(uploaded.mediaId);
-  }
+  // Keep the uploaded media available for Meta's asynchronous delivery pipeline.
+  // Meta expires uploaded media automatically; deleting immediately after ACCEPTED
+  // can leave a media-header message accepted but undeliverable.
   return { ...result, mediaId: uploaded.mediaId };
 }

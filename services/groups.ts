@@ -18,6 +18,8 @@ import {
 import { percentage } from "@/lib/utils";
 import { attendanceForStudent } from "./_shared";
 import { canCreate } from "./saas";
+import { isSupabaseConfigured } from "@/services/supabase/config";
+import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
 function studentCount(groupId: string) {
   return studentsInGroup(groupId).length;
@@ -58,7 +60,25 @@ export async function listGroups(search = "", academyId?: string, teacherProfile
 export async function getGroup(id: string): Promise<Group | null> {
   const items = await fetchTableRLS<Group>("groups");
   const g = items.find((x) => x.id === id);
-  return g ? attach(g) : null;
+  if (g) return attach(g);
+
+  // A teacher can arrive here from a dashboard link while the request-local
+  // snapshot is empty on mobile. Resolve only this id through the server-side
+  // tenant-scoped client instead of returning a misleading 404.
+  if (isSupabaseConfigured()) {
+    const academyId = currentAcademyId();
+    const admin = nodeSupabaseClient();
+    if (academyId && admin) {
+      const { data } = await admin
+        .from("groups")
+        .select("*")
+        .eq("id", id)
+        .eq("academy_id", academyId)
+        .maybeSingle();
+      if (data) return attach(data as Group);
+    }
+  }
+  return null;
 }
 
 export interface GroupInput {
@@ -171,7 +191,11 @@ export async function getGroupDetail(id: string): Promise<GroupDetail | null> {
   if (!g) return null;
   // Teachers can only access their own groups.
   const scope = teacherGroupScope();
-  if (scope && !scope.has(id)) return null;
+  // If the request snapshot has no local groups, getGroup() may have safely
+  // resolved this tenant-scoped record through the server fallback above.
+  // Do not turn that valid record into a 404 solely because the local scope
+  // set was empty during mobile hydration.
+  if (scope && scope.size > 0 && !scope.has(id)) return null;
   const students = studentsInGroup(id);
   const lessons = lessonsForGroup(id);
   // attendance rate across the group

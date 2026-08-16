@@ -29,8 +29,8 @@ export default async function TeacherCoursePage({ params }: PageProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0"><CardTitle>{en ? "Lessons" : "الدروس"}</CardTitle><span className="text-sm text-muted-foreground">{course.lessons?.length ?? 0}</span></CardHeader>
           <CardContent className="space-y-4">
-            <UploadContentFileForm courseId={course.id} />
-            <AddContentLinkForm courseId={course.id} />
+            <UploadContentFileForm courseId={course.id} lessons={course.lessons ?? []} />
+            <AddContentLinkForm courseId={course.id} lessons={course.lessons ?? []} />
             {(course.files?.length ?? 0) > 0 && <div className="rounded-lg border p-3"><p className="mb-2 text-sm font-medium">{en ? "Course files" : "ملفات الدورة"}</p>{course.files?.map((file) => <a key={file.id} href={file.download_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline"><FileText className="h-4 w-4" />{file.name}</a>)}</div>}
             {(course.links?.length ?? 0) > 0 && <div className="rounded-lg border p-3"><p className="mb-2 text-sm font-medium">{en ? "Course links" : "روابط الدورة"}</p>{course.links?.map((link) => <a key={link.id} href={link.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline"><ExternalLink className="h-4 w-4" />{link.title}</a>)}</div>}
             {course.lessons?.length === 0 ? <p className="py-8 text-center text-sm text-muted-foreground">{en ? "No lessons yet." : "لا توجد دروس بعد."}</p> : course.lessons?.map((lesson) => (

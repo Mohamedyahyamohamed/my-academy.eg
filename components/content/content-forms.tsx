@@ -38,26 +38,28 @@ export function CreateLessonForm({ courseId }: { courseId: string }) {
   );
 }
 
-export function UploadContentFileForm({ courseId, lessonId }: { courseId: string; lessonId?: string }) {
+type LessonOption = { id: string; title: string };
+
+export function UploadContentFileForm({ courseId, lessonId, lessons = [] }: { courseId: string; lessonId?: string; lessons?: LessonOption[] }) {
   const lang = useClientLang();
   const en = lang === "en";
   return (
     <form action={async (formData) => { await uploadContentFile(formData); }} className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4">
       <input type="hidden" name="courseId" value={courseId} />
-      {lessonId ? <input type="hidden" name="lessonId" value={lessonId} /> : null}
+      {lessons.length > 0 ? <div className="min-w-[220px] flex-1 space-y-1"><Label htmlFor={`content-file-lesson-${courseId}`}>{en ? "Attach to" : "إرفاق إلى"}</Label><select id={`content-file-lesson-${courseId}`} name="lessonId" defaultValue={lessonId ?? ""} className="h-10 w-full rounded-md border bg-background px-3 text-sm"><option value="">{en ? "Course overview" : "الكورس بالكامل"}</option>{lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}</select></div> : lessonId ? <input type="hidden" name="lessonId" value={lessonId} /> : null}
       <div className="min-w-[220px] flex-1 space-y-1"><Label htmlFor={`content-file-${lessonId ?? "course"}`}>{en ? "File" : "الملف"}</Label><Input id={`content-file-${lessonId ?? "course"}`} name="file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.docx,.mp4" required /></div>
       <p className="w-full text-xs text-muted-foreground">{en ? "PDF, DOCX, images, or MP4 up to 500 MB." : "PDF أو DOCX أو صور أو MP4 حتى 500 ميجابايت."}</p><Button type="submit" variant="soft">{en ? "Upload file" : "رفع الملف"}</Button>
     </form>
   );
 }
 
-export function AddContentLinkForm({ courseId, lessonId }: { courseId: string; lessonId?: string }) {
+export function AddContentLinkForm({ courseId, lessonId, lessons = [] }: { courseId: string; lessonId?: string; lessons?: LessonOption[] }) {
   const lang = useClientLang();
   const en = lang === "en";
   return (
     <form action={async (formData) => { await addContentLink(formData); }} className="grid gap-3 rounded-xl border bg-card p-4 sm:grid-cols-[1fr_1.5fr_auto] sm:items-end">
       <input type="hidden" name="courseId" value={courseId} />
-      {lessonId ? <input type="hidden" name="lessonId" value={lessonId} /> : null}
+      {lessons.length > 0 ? <div className="space-y-1"><Label htmlFor={`content-link-lesson-${courseId}`}>{en ? "Attach to" : "إرفاق إلى"}</Label><select id={`content-link-lesson-${courseId}`} name="lessonId" defaultValue={lessonId ?? ""} className="h-10 w-full rounded-md border bg-background px-3 text-sm"><option value="">{en ? "Course overview" : "الكورس بالكامل"}</option>{lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}</select></div> : lessonId ? <input type="hidden" name="lessonId" value={lessonId} /> : null}
       <div className="space-y-1"><Label htmlFor={`content-link-title-${lessonId ?? "course"}`}>{en ? "Resource title" : "اسم الرابط"}</Label><Input id={`content-link-title-${lessonId ?? "course"}`} name="title" required placeholder={en ? "Lecture link" : "رابط المحاضرة"} /></div>
       <div className="space-y-1"><Label htmlFor={`content-link-url-${lessonId ?? "course"}`}>{en ? "URL" : "الرابط"}</Label><Input id={`content-link-url-${lessonId ?? "course"}`} name="url" type="url" required placeholder="https://..." /></div>
       <Button type="submit" variant="soft">{en ? "Add link" : "إضافة الرابط"}</Button>

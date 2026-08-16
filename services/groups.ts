@@ -57,7 +57,7 @@ export async function listGroups(search = "", academyId?: string, teacherProfile
   return items.map(attach);
 }
 
-export async function getGroup(id: string): Promise<Group | null> {
+export async function getGroup(id: string, academyIdOverride?: string): Promise<Group | null> {
   const items = await fetchTableRLS<Group>("groups");
   const g = items.find((x) => x.id === id);
   if (g) return attach(g);
@@ -66,7 +66,7 @@ export async function getGroup(id: string): Promise<Group | null> {
   // snapshot is empty on mobile. Resolve only this id through the server-side
   // tenant-scoped client instead of returning a misleading 404.
   if (isSupabaseConfigured()) {
-    const academyId = currentAcademyId();
+    const academyId = academyIdOverride ?? currentAcademyId();
     const admin = nodeSupabaseClient();
     if (academyId && admin) {
       const { data } = await admin
@@ -186,8 +186,8 @@ export interface GroupDetail extends Group {
   attendanceRate: number;
 }
 
-export async function getGroupDetail(id: string): Promise<GroupDetail | null> {
-  const g = await getGroup(id);
+export async function getGroupDetail(id: string, academyIdOverride?: string): Promise<GroupDetail | null> {
+  const g = await getGroup(id, academyIdOverride);
   if (!g) return null;
   // Teachers can only access their own groups.
   const scope = teacherGroupScope();

@@ -58,7 +58,7 @@ export default async function GroupDetailPage(
   if (user.role !== "ADMIN" && user.role !== "TEACHER") redirect(roleHome(user.role));
   const isTeacher = user.role === "TEACHER";
   const tid = isTeacher ? currentTeacherId() : null;
-  const detail = await GroupsService.getGroupDetail(params.id);
+  const detail = await GroupsService.getGroupDetail(params.id, user.academy_id);
   if (!detail) notFound();
 
   const courses = await MiscService.listCourses();

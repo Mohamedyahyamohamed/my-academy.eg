@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AttendanceService, LessonsService, GroupsService, getCurrentUser } from "@/services";
+import { AttendanceService, LessonsService, GroupsService, loadCurrentUser } from "@/services";
 import type { Group } from "@/types";
 import { collections } from "@/services/data/store";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
@@ -25,7 +25,7 @@ function activeLessonForGroup(groupId: string) {
 }
 
 async function scopedOptions(): Promise<GroupOption[]> {
-  const user = getCurrentUser();
+  const user = await loadCurrentUser();
   if (!user || user.role !== "TEACHER") return [];
   const groups: Group[] = await GroupsService.listGroups("", user.academy_id, user.id);
   return groups
@@ -44,7 +44,7 @@ async function scopedOptions(): Promise<GroupOption[]> {
 }
 
 export async function GET(req: NextRequest) {
-  const user = getCurrentUser();
+  const user = await loadCurrentUser();
   if (!user || user.role !== "TEACHER") {
     return jsonError("TEACHER_LOGIN_REQUIRED", 401);
   }
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = getCurrentUser();
+  const user = await loadCurrentUser();
   if (!user || user.role !== "TEACHER") return jsonError("TEACHER_LOGIN_REQUIRED", 401);
 
   const rl = await rateLimit(`quick-checkin:${user.id}`, LIMITS.checkin.max, LIMITS.checkin.window);

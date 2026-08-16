@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
     return jsonError("TEACHER_LOGIN_REQUIRED", 401);
   }
   const groups = await scopedOptions();
-  const requestedStudentId = req.nextUrl.searchParams.get("student") ?? "";
+  const requestedStudentId = req.nextUrl.searchParams.get("studentId") || req.nextUrl.searchParams.get("student") || "";
   const preferredGroupId = req.cookies.get(GROUP_CONTEXT_COOKIE)?.value ?? null;
   const preferred = preferredGroupId ? groups.find((group) => group.id === preferredGroupId) : undefined;
   const active = groups.find((group) => group.lesson);

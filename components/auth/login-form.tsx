@@ -27,7 +27,13 @@ export function LoginForm() {
       const data = await res.json();
       if (!data.ok) { toast.error(data.error ?? (en ? "Sign-in failed." : "فشل تسجيل الدخول")); return; }
       toast.success(en ? `Welcome, ${data.user.full_name.split(" ")[0]}!` : `أهلاً ${data.user.full_name.split(" ")[0]}!`);
-      router.push(roleHome(data.user.role));
+      const checkinReturn = typeof window !== "undefined" ? window.sessionStorage.getItem("myacademy_checkin_return") : null;
+      if (checkinReturn?.startsWith("/checkin")) {
+        window.sessionStorage.removeItem("myacademy_checkin_return");
+        router.push(checkinReturn);
+      } else {
+        router.push(roleHome(data.user.role));
+      }
       router.refresh();
     } catch { toast.error(en ? "Something went wrong. Please try again." : "حصل خطأ. حاول تاني."); }
     finally { setLoading(false); }

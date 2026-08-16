@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, XCircle, Loader2, Clock, LogIn, Users } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,10 +20,11 @@ type QuickState = "loading" | "student_qr" | "staff_loading" | "choose_group" | 
 function CheckInInner() {
   const lang = useClientLang();
   const en = lang === "en";
+  const router = useRouter();
   const params = useSearchParams();
   const token = params.get("token") ?? "";
   const lessonIdParam = params.get("lesson") ?? "";
-  const studentId = params.get("student") ?? "";
+  const studentId = params.get("studentId") || params.get("student") || "";
   const [state, setState] = React.useState<QuickState>("loading");
   const [msg, setMsg] = React.useState("");
   const [groups, setGroups] = React.useState<QuickGroup[]>([]);
@@ -67,7 +68,7 @@ function CheckInInner() {
       const loadStaffFlow = async () => {
         setState("staff_loading");
         try {
-          const response = await fetch(`/api/checkin/teacher?student=${encodeURIComponent(studentId)}`, { cache: "no-store" });
+          const response = await fetch(`/api/checkin/teacher?studentId=${encodeURIComponent(studentId)}`, { cache: "no-store" });
           const result = await response.json();
           if (cancelled) return;
           if (response.status === 401) {
@@ -147,7 +148,7 @@ function CheckInInner() {
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><CheckCircle2 className="h-8 w-8" /></div>
             <h1 className="text-lg font-semibold">{en ? "Student QR is valid" : "رمز الطالب صالح"}</h1>
             <p className="text-sm text-muted-foreground">{en ? "Log in as a teacher or assistant on this phone to record attendance directly." : "سجّل الدخول كمدرس أو مساعد على هذا الهاتف لتسجيل الحضور مباشرة."}</p>
-            <Button asChild><Link href="/login"><LogIn className="me-2 h-4 w-4" />{en ? "Log in" : "تسجيل الدخول"}</Link></Button>
+            <Button onClick={() => { sessionStorage.setItem("myacademy_checkin_return", `${window.location.pathname}${window.location.search}`); router.push("/login"); }}><LogIn className="me-2 h-4 w-4" />{en ? "Log in" : "تسجيل الدخول"}</Button>
           </>
         )}
         {state === "choose_group" && (

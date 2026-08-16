@@ -6,7 +6,7 @@ const DEFAULT_APP_ORIGIN = "https://my-academy-eg.vercel.app";
  */
 export function studentQrValue(studentId: string, origin?: string): string {
   const base = (origin || process.env.NEXT_PUBLIC_APP_URL || DEFAULT_APP_ORIGIN).replace(/\/$/, "");
-  return `${base}/checkin?student=${encodeURIComponent(studentId)}`;
+  return `${base}/checkin?studentId=${encodeURIComponent(studentId)}`;
 }
 
 export function studentIdFromQrValue(value: string): string {
@@ -15,7 +15,7 @@ export function studentIdFromQrValue(value: string): string {
 
   try {
     const url = new URL(trimmed);
-    const studentId = url.searchParams.get("student");
+    const studentId = url.searchParams.get("studentId") || url.searchParams.get("student");
     if (studentId) return studentId;
   } catch {
     // The scanner may receive a plain student id from older cards.

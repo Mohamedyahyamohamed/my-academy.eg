@@ -77,15 +77,15 @@ export function PushNotifications() {
 
   if (status === "granted") {
     return (
-      <Button variant="ghost" size="sm" onClick={unsubscribe} disabled={loading} title={en ? "Disable notifications" : "إيقاف الإشعارات"}>
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4 text-emerald-500" />}
+      <Button variant="ghost" size="sm" onClick={unsubscribe} disabled={loading} title={en ? "Disable notifications" : "إيقاف الإشعارات"} aria-label={en ? "Notifications are enabled; click to disable" : "الإشعارات مفعلة؛ اضغط لإيقافها"}>
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <BellOff className="h-4 w-4 text-emerald-500" />}
       </Button>
     );
   }
 
   return (
-    <Button variant="ghost" size="sm" onClick={subscribe} disabled={loading} title={en ? "Enable notifications" : "فعّل الإشعارات"}>
-      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <BellOff className="h-4 w-4" />}
+    <Button variant="ghost" size="sm" onClick={subscribe} disabled={loading} title={en ? "Enable notifications" : "فعّل الإشعارات"} aria-label={en ? "Notifications are disabled; click to enable" : "الإشعارات غير مفعلة؛ اضغط لتفعيلها"}>
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
     </Button>
   );
 }

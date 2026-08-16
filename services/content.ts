@@ -3,6 +3,7 @@ import type { ContentLink } from "@/types";
 import { collections, persistInsert, persistUpdate } from "./data/store";
 import { currentAcademyId, currentTeacherId, getCurrentUser } from "./session";
 import { can, hasAcademyWideScope } from "@/lib/permissions";
+import { resolveTeacherForGroups } from "./groups";
 import { fetchTableRLS, teacherGroupScope } from "./_shared";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { canCreate } from "./saas";
@@ -63,14 +64,38 @@ function assertContentPermission(user: SessionUser, permission: "read" | "write"
   if (!allowed) throw new Error("You are not allowed to access educational content.");
 }
 
-function assertGroupAccess(user: SessionUser, groupId: string, write = false) {
-  const group = collections().groups.find((item) => item.id === groupId && item.academy_id === user.academy_id);
-  if (!group) throw new Error("The selected group is outside the authenticated academy.");
-  const scope = accessibleGroupIds(user);
-  if (!scope?.has(groupId)) throw new Error("You do not have access to this group.");
-  if (write && user.role === "TEACHER" && group.teacher_id !== currentTeacherId()) {
-    throw new Error("You can only manage content for your assigned groups.");
+async function assertGroupAccess(user: SessionUser, groupId: string, write = false) {
+  let group = collections().groups.find((item) => item.id === groupId && item.academy_id === user.academy_id);
+
+  // Mobile/SSR requests can have an incomplete local snapshot. Resolve the
+  // selected group directly inside the authenticated tenant before rejecting it.
+  if (!group) {
+    const client = nodeSupabaseClient();
+    if (client) {
+      const { data, error } = await client
+        .from("groups")
+        .select("*")
+        .eq("id", groupId)
+        .eq("academy_id", user.academy_id)
+        .maybeSingle();
+      if (error) console.error("content group scope lookup failed:", error.message);
+      if (data) group = data as any;
+    }
   }
+
+  if (!group) throw new Error("The selected group is outside the authenticated academy.");
+
+  if (user.role === "TEACHER") {
+    const teacher = await resolveTeacherForGroups(user.academy_id, user.id, user.email);
+    const teacherId = teacher?.id ?? currentTeacherId();
+    if (!teacherId || group.teacher_id !== teacherId) {
+      throw new Error(write ? "You can only manage content for your assigned groups." : "You do not have access to this group.");
+    }
+  } else {
+    const scope = accessibleGroupIds(user);
+    if (!scope?.has(groupId) && !hasAcademyWideScope(user.role)) throw new Error("You do not have access to this group.");
+  }
+
   return group;
 }
 
@@ -117,10 +142,13 @@ export interface CreateCourseInput {
 export async function createCourse(input: CreateCourseInput, user: SessionUser): Promise<ContentCourse> {
   assertContentPermission(user, "write");
   if (user.role !== "TEACHER" && !hasAcademyWideScope(user.role)) throw new Error("Only teachers or academy administrators can create content.");
-  const group = assertGroupAccess(user, input.group_id, true);
+  const group = await assertGroupAccess(user, input.group_id, true);
   const courseLimit = canCreate("courses", user.academy_id);
   if (!courseLimit.allowed) throw new Error(`Course limit reached for the current plan (${courseLimit.limit}).`);
-  const teacherId = user.role === "TEACHER" ? currentTeacherId() : group.teacher_id;
+  const resolvedTeacher = user.role === "TEACHER"
+    ? await resolveTeacherForGroups(user.academy_id, user.id, user.email)
+    : null;
+  const teacherId = user.role === "TEACHER" ? (resolvedTeacher?.id ?? currentTeacherId()) : group.teacher_id;
   if (!teacherId) throw new Error("No teacher profile is linked to this account.");
   const duplicate = (await contentRows<ContentCourse>("content_courses", user.academy_id)).some(
     (item) => item.group_id === group.id && item.title.toLowerCase() === normalizeText(input.title).toLowerCase(),
@@ -156,7 +184,7 @@ export async function createLesson(input: CreateLessonInput, user: SessionUser):
   assertContentPermission(user, "write");
   const course = (await contentRows<ContentCourse>("content_courses", user.academy_id)).find((item) => item.id === input.course_id);
   if (!course) throw new Error("Course not found.");
-  assertGroupAccess(user, course.group_id, true);
+  await assertGroupAccess(user, course.group_id, true);
   const title = normalizeText(input.title);
   if (!title) throw new Error("A lesson title is required.");
   const lessonLimit = canCreate("lessons", user.academy_id);

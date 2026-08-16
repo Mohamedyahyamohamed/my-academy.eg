@@ -39,6 +39,7 @@ import {
   currentTeacherId,
 } from "@/services";
 import { removeStudentFromGroupAction } from "@/app/actions/groups";
+import { setRequestContext } from "@/services/request-context";
 import { collections } from "@/services/data/store";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -51,6 +52,9 @@ export default async function GroupDetailPage(
 ) {
   const params = await props.params;
   const user = await requireScopedRole("ADMIN", "TEACHER");
+  // Re-bind tenant context after authentication so async data fetches on
+  // mobile SSR requests cannot lose academy_id before getGroupDetail().
+  setRequestContext(user);
   const isTeacher = user.role === "TEACHER";
   const tid = isTeacher ? currentTeacherId() : null;
   const detail = await GroupsService.getGroupDetail(params.id, user.academy_id);

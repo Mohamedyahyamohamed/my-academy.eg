@@ -35,11 +35,28 @@ function attach(g: Group): Group {
 }
 
 export async function listGroups(search = "", academyId?: string, teacherProfileId?: string): Promise<Group[]> {
-  const teacher = teacherProfileId
+  let teacher = teacherProfileId
     ? collections().teachers.find(
         (t) => t.academy_id === academyId && (t.profile_id === teacherProfileId || t.email.toLowerCase() === collections().profiles.find((p: any) => p.id === teacherProfileId)?.email?.toLowerCase()),
       )
     : null;
+
+  // On mobile/RSC requests the local snapshot may not include teachers even
+  // though the authenticated profile and groups exist in Supabase. Resolve
+  // the teacher profile directly inside the tenant before applying the scope.
+  if (!teacher && teacherProfileId && academyId && isSupabaseConfigured()) {
+    const admin = nodeSupabaseClient();
+    if (admin) {
+      const { data } = await admin
+        .from("teachers")
+        .select("id, academy_id, profile_id, email, first_name, last_name")
+        .eq("academy_id", academyId)
+        .eq("profile_id", teacherProfileId)
+        .maybeSingle();
+      if (data) teacher = data as any;
+    }
+  }
+
   const scopedItems = await fetchTableRLS<Group>("groups", academyId);
   let items = teacher
     ? scopedItems.filter((g) => g.teacher_id === teacher.id || collections().groupAssistants.some((ga) => ga.teacher_id === teacher.id && ga.group_id === g.id))

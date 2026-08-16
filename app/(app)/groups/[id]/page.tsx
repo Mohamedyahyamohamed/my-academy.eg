@@ -36,7 +36,6 @@ import {
   MiscService,
   StudentsService,
   requireScopedRole,
-  currentTeacherId,
 } from "@/services";
 import { removeStudentFromGroupAction } from "@/app/actions/groups";
 import { setRequestContext } from "@/services/request-context";
@@ -56,12 +55,14 @@ export default async function GroupDetailPage(
   // mobile SSR requests cannot lose academy_id before getGroupDetail().
   setRequestContext(user);
   const isTeacher = user.role === "TEACHER";
-  const tid = isTeacher ? currentTeacherId() : null;
+  const tid = isTeacher
+    ? collections().teachers.find((teacher) => teacher.academy_id === user.academy_id && (teacher.profile_id === user.id || teacher.email.toLowerCase() === user.email.toLowerCase()))?.id ?? null
+    : null;
   const detail = await GroupsService.getGroupDetail(params.id, user.academy_id);
   if (!detail) notFound();
 
-  const courses = await MiscService.listCourses();
-  const teachers = await MiscService.listTeachers();
+  const courses = await MiscService.listCourses(user.academy_id);
+  const teachers = await MiscService.listTeachers(user.academy_id);
   const allStudents = (await StudentsService.listStudents({ pageSize: 500 }, user.academy_id)).items;
   const enrolledIds = detail.students.map((s) => s.id);
   const availableStudents = allStudents.filter(

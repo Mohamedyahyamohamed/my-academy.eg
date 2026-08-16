@@ -30,8 +30,8 @@ export default async function LessonDetailPage(
   }
 ) {
   const params = await props.params;
-  await requireScopedRole("TEACHER");
-  const lesson = await LessonsService.getLesson(params.id);
+  const user = await requireScopedRole("TEACHER");
+  const lesson = await LessonsService.getLesson(params.id, user.academy_id);
   if (!lesson) notFound();
 
   const sheet = AttendanceService.getAttendanceSheet(lesson.group_id, lesson.id);

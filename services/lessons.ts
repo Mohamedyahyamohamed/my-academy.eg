@@ -82,8 +82,8 @@ export async function listLessons(
   };
 }
 
-export async function getLesson(id: string): Promise<Lesson | null> {
-  const items = await fetchTableRLS<Lesson>("lessons");
+export async function getLesson(id: string, academyId?: string): Promise<Lesson | null> {
+  const items = await fetchTableRLS<Lesson>("lessons", academyId);
   const l = items.find((x) => x.id === id);
   return l ? attach(l) : null;
 }

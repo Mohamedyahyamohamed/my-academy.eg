@@ -112,7 +112,28 @@ async function contentRows<T>(table: string, academyId: string): Promise<T[]> {
 
 export async function listCourses(user: SessionUser): Promise<ContentCourse[]> {
   assertContentPermission(user, "read");
-  const scope = accessibleGroupIds(user);
+
+  // Resolve the teacher profile from the authenticated user before building the
+  // group scope. The request snapshot can contain groups while missing the
+  // teacher row, especially after a fresh mobile/SSR request. In that case the
+  // old synchronous teacherGroupScope() returned an empty set and hid valid
+  // courses even though listGroups() correctly resolved the teacher remotely.
+  let scope: Set<string> | null = accessibleGroupIds(user);
+  if (user.role === "TEACHER") {
+    const teacher = await resolveTeacherForGroups(user.academy_id, user.id, user.email);
+    if (!teacher) return [];
+    const groups = await fetchTableRLS<any>("groups", user.academy_id);
+    const assistantGroupIds = new Set(
+      collections().groupAssistants
+        .filter((row) => row.teacher_id === teacher.id)
+        .map((row) => row.group_id),
+    );
+    scope = new Set(
+      groups
+        .filter((group: any) => group.teacher_id === teacher.id || assistantGroupIds.has(group.id))
+        .map((group: any) => group.id),
+    );
+  }
   if (!scope) return [];
   const courses = await contentRows<ContentCourse>("content_courses", user.academy_id);
   return courses

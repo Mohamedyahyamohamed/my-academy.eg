@@ -30,10 +30,11 @@ export function LoginForm() {
       const checkinReturn = typeof window !== "undefined" ? window.sessionStorage.getItem("myacademy_checkin_return") : null;
       if (checkinReturn?.startsWith("/checkin")) {
         window.sessionStorage.removeItem("myacademy_checkin_return");
-        router.push(checkinReturn);
-      } else {
-        router.push(roleHome(data.user.role));
+        // Force a fresh request so the server reads the session cookies just set by the login route.
+        window.location.replace(checkinReturn);
+        return;
       }
+      router.push(roleHome(data.user.role));
       router.refresh();
     } catch { toast.error(en ? "Something went wrong. Please try again." : "حصل خطأ. حاول تاني."); }
     finally { setLoading(false); }

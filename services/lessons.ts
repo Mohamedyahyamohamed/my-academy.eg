@@ -112,10 +112,11 @@ function lessonWallClockMinute(date: string, time: string) {
 export function getActiveLessonForTeacher(now = new Date()): Lesson | null {
   const academyId = currentAcademyId();
   const teacherId = currentTeacherId();
-  if (!teacherId) return null;
+  const scope = teacherId ? teacherGroupScope() : null;
+  if (!teacherId || !scope?.size) return null;
   const current = wallClockMinute(now);
   const active = collections().lessons
-    .filter((lesson) => lesson.academy_id === academyId && lesson.teacher_id === teacherId)
+    .filter((lesson) => lesson.academy_id === academyId && scope.has(lesson.group_id))
     .filter((lesson) => {
       const start = lessonWallClockMinute(lesson.date, lesson.start_time);
       const end = lessonWallClockMinute(lesson.date, lesson.end_time);

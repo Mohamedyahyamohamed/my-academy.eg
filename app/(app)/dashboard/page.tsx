@@ -7,6 +7,7 @@ import {
   TrendingDown,
   CalendarCheck,
   GraduationCap,
+  BookOpen,
   ArrowRight,
   Clock,
   AlertTriangle,
@@ -71,6 +72,12 @@ export default async function DashboardPage(
   ]);
   const atRisk = atRiskResult.slice(0, 6);
   const collectionTrend = d.collectionTrend ?? 0;
+  const quickActions = [
+    { href: "/students", label: en ? "Add student" : "إضافة طالب", icon: Users },
+    { href: "/groups", label: en ? "Create group" : "إنشاء مجموعة", icon: UsersRound },
+    { href: "/lessons", label: en ? "View lessons" : "عرض الحصص", icon: BookOpen },
+    { href: "/attendance", label: en ? "Take attendance" : "تسجيل الحضور", icon: CalendarCheck },
+  ];
   const setupSteps = [
       teachers.length === 0
       ? { title: en ? "Invite your first teacher" : "دعوة أول مدرس", description: en ? "Send a teacher invitation from the platform." : "أرسل دعوة للمدرس من داخل المنصة.", href: "/settings?tab=users#invite" }
@@ -98,6 +105,26 @@ export default async function DashboardPage(
           </Link>
         </Button>
       </PageHeader>
+
+      <Card className="border-primary/15 bg-gradient-to-r from-primary/[0.05] via-background to-background">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">{en ? "Quick actions" : "إجراءات سريعة"}</CardTitle>
+          <CardDescription>{en ? "Start the most common tasks without searching through the menu." : "ابدأ المهام الأكثر استخدامًا مباشرةً دون البحث في القائمة."}</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {quickActions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Button key={action.href} asChild variant="outline" className="h-auto justify-start gap-2 px-3 py-3 text-start">
+                <Link href={action.href}>
+                  <Icon className="h-4 w-4 shrink-0 text-primary" />
+                  <span className="truncate">{action.label}</span>
+                </Link>
+              </Button>
+            );
+          })}
+        </CardContent>
+      </Card>
 
       {setupSteps.length > 0 && (
         <Card className="border-primary/20 bg-primary/[0.03]">

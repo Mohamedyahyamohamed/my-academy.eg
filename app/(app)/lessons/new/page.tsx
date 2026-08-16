@@ -14,9 +14,9 @@ export default async function NewLessonPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  await requireScopedRole("TEACHER");
-  const groups = await GroupsService.listGroups();
-  const teachers = await MiscService.listTeachers();
+  const user = await requireScopedRole("TEACHER");
+  const groups = await GroupsService.listGroups("", user.academy_id, user.id);
+  const teachers = await MiscService.listTeachers(user.academy_id);
   const defaultGroup =
     typeof searchParams.group === "string" ? searchParams.group : undefined;
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";

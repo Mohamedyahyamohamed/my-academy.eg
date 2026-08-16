@@ -8,12 +8,12 @@ import { getLangFromCookie, isRTL } from "@/lib/i18n";
 export const dynamic = "force-dynamic";
 
 export default async function ScanAttendancePage() {
-  await requireScopedRole("TEACHER");
+  const user = await requireScopedRole("TEACHER");
   const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
   const en = lang === "en";
-  const groups = await GroupsService.listGroups();
-  const lessons = (await await LessonsService.listLessons({ pageSize: 500 })).items;
-  const students = (await StudentsService.listStudents({ pageSize: 500 })).items;
+  const groups = await GroupsService.listGroups("", user.academy_id, user.id);
+  const lessons = (await LessonsService.listLessons({ pageSize: 500 }, user.academy_id, user.id)).items;
+  const students = (await StudentsService.listStudents({ pageSize: 500 }, user.academy_id)).items;
 
   return (
     <div dir={isRTL(lang) ? "rtl" : "ltr"} className="space-y-6">

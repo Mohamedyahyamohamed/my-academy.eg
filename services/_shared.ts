@@ -4,6 +4,8 @@
  */
 import { collections } from "./data/store";
 import { currentAcademyId, currentTeacherId } from "./session";
+import { getRequestAcademyId } from "./request-context";
+import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { isSupabaseConfigured } from "./supabase/config";
 import type {
   AttendanceRecord,
@@ -27,31 +29,42 @@ export function byAcademy<T extends { academy_id?: string | null }>(items: T[], 
 }
 
 /**
- * Fetch ALL rows from a table via the user's Supabase session.
- * RLS policies automatically filter by academy_id — NO app-layer filter needed.
- * Falls back to the in-memory cache when Supabase isn't configured.
+ * Read tenant data without depending on a browser-bound RLS client.
+ * The request snapshot is already hydrated by requireScopedRole; using it first
+ * avoids Invalid API key failures and keeps child tables tenant-scoped through
+ * the snapshot's group/lesson joins. A service-role read is only a cold-start
+ * fallback and is narrowed by academy_id for direct-tenant tables.
  */
+const DIRECT_TENANT_TABLES = new Set([
+  "academies", "profiles", "courses", "teachers", "parents", "students", "groups",
+  "lessons", "payments", "exams", "homework", "notifications", "notes", "files",
+  "messages", "subscriptions", "content_courses", "content_lessons", "content_files",
+  "content_progress", "audit_logs",
+]);
+
 export async function fetchTableRLS<T = any>(table: string, academyId?: string): Promise<T[]> {
-  if (!isSupabaseConfigured()) {
-    // Fallback: use cache (demo mode or Supabase not configured).
-    const cacheData = (collections() as any)[table] ?? [];
-    return byAcademy(cacheData, academyId) as T[];
+  const aid = academyId ?? getRequestAcademyId();
+  const cacheData = (collections() as any)[table] ?? [];
+
+  if (cacheData.length > 0) {
+    if (!DIRECT_TENANT_TABLES.has(table)) return cacheData as T[];
+    return aid ? (cacheData.filter((row: any) => row.academy_id === aid) as T[]) : [];
   }
+
+  if (!isSupabaseConfigured() || !aid || !DIRECT_TENANT_TABLES.has(table)) return [];
+
   try {
-    const { createServerSupabaseClient } = await import("@/lib/supabase/server");
-    const client = await createServerSupabaseClient();
-    const { data, error } = await client.from(table).select("*");
-    const cacheData = (collections() as any)[table] ?? [];
-    // The browser session may return an empty RLS result while the server-side
-    // academy snapshot is already hydrated with the tenant's rows. Prefer the
-    // scoped snapshot in that case instead of rendering a false empty state.
-    if (error || !data || (data.length === 0 && cacheData.length > 0)) {
-      return byAcademy(cacheData, academyId) as T[];
+    const client = nodeSupabaseClient();
+    if (!client) return [];
+    const { data, error } = await client.from(table).select("*").eq("academy_id", aid);
+    if (error) {
+      console.error(`[data] ${table} tenant read failed:`, error.message);
+      return [];
     }
-    return data as T[];
-  } catch {
-    const cacheData = (collections() as any)[table] ?? [];
-    return byAcademy(cacheData, academyId) as T[];
+    return (data ?? []) as T[];
+  } catch (error) {
+    console.error(`[data] ${table} tenant read failed:`, error instanceof Error ? error.message : String(error));
+    return [];
   }
 }
 

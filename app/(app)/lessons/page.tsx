@@ -23,7 +23,7 @@ export default async function LessonsPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  await requireScopedRole("TEACHER");
+  const user = await requireScopedRole("TEACHER");
   const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
   const en = lang === "en";
   const sp = (k: string) =>
@@ -36,8 +36,8 @@ export default async function LessonsPage(
     past: sp("tab") === "past",
     page: sp("page") ? Number(sp("page")) : 1,
     pageSize: 10,
-  });
-  const groups = await GroupsService.listGroups();
+  }, user.academy_id, user.id);
+  const groups = await GroupsService.listGroups("", user.academy_id, user.id);
 
   return (
     <div dir={isRTL(lang) ? "rtl" : "ltr"} className="space-y-6">

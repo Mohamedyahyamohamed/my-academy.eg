@@ -25,7 +25,7 @@ export async function recordPaymentAction(
   note?: string,
 ) {
   const user = await requireScopedRole("ADMIN");
-  const res = PaymentsService.recordPayment(paymentId, amount, method, note);
+  const res = await PaymentsService.recordPayment(paymentId, amount, method, note);
   if (res.ok) {
     await import("@/services/audit").then((m) => m.audit(
       { action: "payment.record", entity_type: "payment", entity_id: paymentId, new_data: { amount, method } },
@@ -55,7 +55,7 @@ export async function recordPaymentAction(
 
 export async function deletePaymentAction(id: string) {
   await requireScopedRole("ADMIN");
-  PaymentsService.deletePayment(id);
+  await PaymentsService.deletePayment(id);
   revalidatePath("/payments");
   revalidatePath("/dashboard");
 }

@@ -87,10 +87,15 @@ export function UserMenu({ user }: { user: SessionUser }) {
         <DropdownMenuItem
           className="text-destructive focus:text-destructive"
           onClick={async () => {
-            await logoutAction();
-            toast.success(en ? "Signed out successfully." : "تم تسجيل الخروج.");
-            router.push("/login");
-            router.refresh();
+            try {
+              await logoutAction();
+              toast.success(en ? "Signed out successfully." : "تم تسجيل الخروج.");
+              router.push("/login");
+              router.refresh();
+            } catch (error) {
+              console.error("logout failed:", error);
+              toast.error(en ? "Could not sign out. Please try again." : "تعذر تسجيل الخروج. حاول مرة أخرى.");
+            }
           }}
         >
           <LogOut className="h-4 w-4" /> {en ? "Sign out" : "تسجيل الخروج"}

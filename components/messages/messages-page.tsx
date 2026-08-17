@@ -37,6 +37,9 @@ export function MessagesPageContent({
       toast.success(en ? "Message sent." : "تم إرسال الرسالة.");
       setBody(""); setRecipient("");
       router.refresh();
+    } catch (error) {
+      console.error("async action failed:", error);
+      toast.error(en ? "Something went wrong. Please try again." : "حدث خطأ، حاول مرة أخرى.");
     } finally { setSending(false); }
   };
 

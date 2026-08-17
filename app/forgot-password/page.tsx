@@ -38,6 +38,9 @@ export default function ForgotPasswordPage() {
       }
       setSent(true);
       toast.success(en ? "Password reset request sent." : "تم إرسال طلب استعادة كلمة المرور");
+    } catch (error) {
+      console.error("async action failed:", error);
+      toast.error(en ? "Something went wrong. Please try again." : "حدث خطأ، حاول مرة أخرى.");
     } finally {
       setLoading(false);
     }

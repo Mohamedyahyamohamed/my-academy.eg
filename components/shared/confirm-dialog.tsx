@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useClientLang } from "@/lib/i18n-client";
+import { toast } from "sonner";
 
 interface ConfirmDialogProps {
   trigger: React.ReactNode;
@@ -45,6 +46,9 @@ export function ConfirmDialog({
     try {
       await onConfirm();
       setOpen(false);
+    } catch (error) {
+      console.error("confirmation action failed:", error);
+      toast.error(en ? "The action could not be completed. Please try again." : "تعذر تنفيذ العملية. حاول مرة أخرى.");
     } finally {
       setLoading(false);
     }

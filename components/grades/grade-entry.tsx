@@ -60,6 +60,9 @@ export function GradeEntry({ examId, maxScore, roster }: GradeEntryProps) {
       if (!res.ok) { toast.error(res.error ?? (en ? "Could not save grades." : "تعذّر حفظ الدرجات.")); return; }
       toast.success(en ? `Grades saved for ${entries.length} student(s).` : `تم حفظ درجات ${entries.length} طالب.`);
       router.refresh();
+    } catch (error) {
+      console.error("async action failed:", error);
+      toast.error(en ? "Something went wrong. Please try again." : "حدث خطأ، حاول مرة أخرى.");
     } finally {
       setSaving(false);
     }

@@ -314,11 +314,15 @@ export async function persistInsert(table: string, row: any) {
 /** Update a row in Supabase (write-through), always narrowed by academy_id when the table carries it. */
 export async function persistUpdate(table: string, id: string, patch: any) {
   const client = getAdminClient();
-  if (!client) return;
+  if (!client) {
+    if (isSupabaseConfigured()) {
+      throw new Error(`Database write is not configured for ${table}.`);
+    }
+    return;
+  }
   const academyId = scopedAcademyId(table);
   if (DIRECT_ACADEMY_TABLES.has(table) && !academyId) {
-    console.warn(`persistUpdate ${table} skipped: no authenticated academy scope.`);
-    return;
+    throw new Error(`Database update is missing an authenticated academy scope for ${table}.`);
   }
   try {
     let query = client.from(table).update(patch).eq("id", id);
@@ -328,9 +332,11 @@ export async function persistUpdate(table: string, id: string, patch: any) {
       console.error(
         `persistUpdate ${table} FAILED [${error.code}]: ${error.message} (id=${id})`,
       );
+      throw new Error(`Could not update ${table}: ${error.message}`);
     }
   } catch (error) {
     console.error(`persistUpdate ${table} EXCEPTION:`, (error as Error)?.message);
+    throw error;
   }
 }
 
@@ -340,11 +346,15 @@ export async function persistDelete(
   filters: Record<string, string>,
 ) {
   const client = getAdminClient();
-  if (!client) return;
+  if (!client) {
+    if (isSupabaseConfigured()) {
+      throw new Error(`Database write is not configured for ${table}.`);
+    }
+    return;
+  }
   const academyId = scopedAcademyId(table);
   if (DIRECT_ACADEMY_TABLES.has(table) && !academyId) {
-    console.warn(`persistDelete ${table} skipped: no authenticated academy scope.`);
-    return;
+    throw new Error(`Database delete is missing an authenticated academy scope for ${table}.`);
   }
   try {
     let query = client.from(table).delete();
@@ -356,8 +366,10 @@ export async function persistDelete(
         `persistDelete ${table} FAILED [${error.code}]: ${error.message}`,
         filters,
       );
+      throw new Error(`Could not delete from ${table}: ${error.message}`);
     }
   } catch (error) {
     console.error(`persistDelete ${table} EXCEPTION:`, (error as Error)?.message);
+    throw error;
   }
 }

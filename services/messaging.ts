@@ -112,7 +112,7 @@ export async function sendMessage(
   // أسماء العرض تخص واجهة التطبيق فقط؛ جدول الرسائل يحفظ المعرّفات ويُعاد
   // اشتقاق الأسماء من ملفات الأكاديمية عند التحميل.
   const { sender_name, recipient_name, ...record } = msg;
-  void persistInsert("messages", record);
+  await persistInsert("messages", record);
   return msg;
 }
 

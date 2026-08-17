@@ -151,12 +151,12 @@ export async function createPayment(input: CreatePaymentInput): Promise<{
 }
 
 /** Record an additional payment against an existing payment. */
-export function recordPayment(
+export async function recordPayment(
   paymentId: string,
   amount: number,
   method: string,
   note?: string,
-): { ok: boolean; error?: string; payment?: Payment } {
+): Promise<{ ok: boolean; error?: string; payment?: Payment }> {
   const p = collections().payments.find((x) => x.id === paymentId);
   if (!p) return { ok: false, error: "Payment not found." };
   if (amount <= 0) return { ok: false, error: "Amount must be positive." };
@@ -170,7 +170,7 @@ export function recordPayment(
   p.notes = note ?? p.notes;
   Object.assign(p, derivePayment(p).status);
   p.updated_at = now;
-  void persistUpdate("payments", paymentId, {
+  await persistUpdate("payments", paymentId, {
     amount_paid: p.amount_paid, payment_date: now, method, status: p.status,
     notes: note ?? p.notes, updated_at: now,
   });
@@ -183,7 +183,7 @@ export function recordPayment(
     note: note ?? null,
   };
   collections().transactions.push(tx);
-  void persistInsert("payment_transactions", tx);
+  await persistInsert("payment_transactions", tx);
   return { ok: true, payment: attach(p) };
 }
 
@@ -192,7 +192,7 @@ export async function deletePayment(id: string): Promise<boolean> {
   const p = collections().payments.find((x) => x.id === id);
   if (!p) return false;
   p.deleted_at = new Date().toISOString();
-  void persistUpdate("payments", id, { deleted_at: p.deleted_at });
+  await persistUpdate("payments", id, { deleted_at: p.deleted_at });
   // Remove from active list (still in DB with deleted_at).
   collections().payments = collections().payments.filter((x) => x.id !== id);
   return true;

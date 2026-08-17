@@ -13,7 +13,7 @@ export async function addNoteAction(studentId: string, content: string) {
 
 export async function deleteNoteAction(studentId: string, noteId: string) {
   await requireScopedRole("ADMIN", "TEACHER");
-  MiscService.deleteNote(noteId);
+  await MiscService.deleteNote(noteId);
     void audit({ action: "note.delete" });
   revalidatePath(`/students/${studentId}`);
 }

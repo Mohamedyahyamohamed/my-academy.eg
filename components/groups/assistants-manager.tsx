@@ -43,6 +43,9 @@ export function AssistantsManager({
       toast.success(en ? "Assistant added." : "تمت إضافة المساعد.");
       setSelected("");
       router.refresh();
+    } catch (error) {
+      console.error("async action failed:", error);
+      toast.error(en ? "Something went wrong. Please try again." : "حدث خطأ، حاول مرة أخرى.");
     } finally {
       setBusy(false);
     }

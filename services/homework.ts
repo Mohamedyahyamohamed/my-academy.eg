@@ -186,7 +186,7 @@ export async function createHomework(input: HomeworkInput): Promise<Homework> {
   return attachHw(h);
 }
 
-export function deleteHomework(id: string): boolean {
+export async function deleteHomework(id: string): Promise<boolean> {
   const homework = homeworkInCurrentAcademy(id);
   assertHomeworkManager(homework);
   const before = collections().homework.length;
@@ -222,12 +222,12 @@ export async function listSubmissions(
     .sort((a, b) => fullName(a.student!).localeCompare(fullName(b.student!)));
 }
 
-export function submitHomework(
+export async function submitHomework(
   homeworkId: string,
   studentId: string,
   content: string,
   fileUrl?: string,
-): HomeworkSubmission | null {
+): Promise<HomeworkSubmission | null> {
   const homework = homeworkInCurrentAcademy(homeworkId);
   assertStudentSubmissionScope(homework, studentId);
   if (new Date(homework.deadline).getTime() < Date.now()) throw new Error("Homework deadline has passed.");
@@ -240,7 +240,7 @@ export function submitHomework(
     s.file_url = fileUrl ?? s.file_url;
     s.status = "SUBMITTED";
     s.submitted_at = now;
-    void persistUpdate("homework_submissions", s.id, {
+    await persistUpdate("homework_submissions", s.id, {
       content, file_url: s.file_url, status: "SUBMITTED", submitted_at: now,
     });
   } else {
@@ -257,16 +257,16 @@ export function submitHomework(
       grade: null,
     };
     collections().submissions.push(s);
-    void persistInsert("homework_submissions", s);
+    await persistInsert("homework_submissions", s);
   }
   return s;
 }
 
-export function reviewSubmission(
+export async function reviewSubmission(
   submissionId: string,
   feedback: string,
   grade?: number,
-): HomeworkSubmission | null {
+): Promise<HomeworkSubmission | null> {
   const s = collections().submissions.find((x) => x.id === submissionId);
   if (!s) return null;
   const homework = homeworkInCurrentAcademy(s.homework_id);
@@ -277,7 +277,7 @@ export function reviewSubmission(
   s.grade = grade ?? s.grade;
   s.status = "REVIEWED";
   s.reviewed_at = new Date().toISOString();
-  void persistUpdate("homework_submissions", s.id, {
+  await persistUpdate("homework_submissions", s.id, {
     feedback, grade: s.grade, status: "REVIEWED", reviewed_at: s.reviewed_at,
   });
   return s;

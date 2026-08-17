@@ -36,6 +36,9 @@ export function CreateExamDialog({ courses, groups }: { courses: Course[]; group
       setOpen(false);
       router.push(`/grades/${e.id}`);
       router.refresh();
+    } catch (error) {
+      console.error("async action failed:", error);
+      toast.error(en ? "Something went wrong. Please try again." : "حدث خطأ، حاول مرة أخرى.");
     } finally {
       setSaving(false);
     }

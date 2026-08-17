@@ -18,6 +18,7 @@ import {
 } from "@/app/actions/notifications";
 import type { AppNotification } from "@/types";
 import { useClientLang } from "@/lib/i18n-client";
+import { toast } from "sonner";
 
 const dotColor: Record<AppNotification["type"], string> = {
   payment_overdue: "bg-rose-500",
@@ -38,7 +39,11 @@ export function NotificationsMenu() {
   const [open, setOpen] = React.useState(false);
 
   const load = React.useCallback(async () => {
-    setItems(await getNotificationsAction());
+    try {
+      setItems(await getNotificationsAction());
+    } catch (error) {
+      console.error("notifications load failed:", error);
+    }
   }, []);
 
   React.useEffect(() => {
@@ -72,8 +77,13 @@ export function NotificationsMenu() {
           {unread > 0 && (
             <button
               onClick={async () => {
-                await markAllNotificationsReadAction();
-                load();
+                try {
+                  await markAllNotificationsReadAction();
+                  await load();
+                } catch (error) {
+                  console.error("mark all notifications read failed:", error);
+                  toast.error(en ? "Could not update notifications." : "تعذر تحديث الإشعارات.");
+                }
               }}
               className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
             >
@@ -93,8 +103,13 @@ export function NotificationsMenu() {
                 key={n.id}
                 className="flex items-start gap-2.5 px-3 py-2.5"
                 onClick={async () => {
-                  await markNotificationReadAction(n.id);
-                  load();
+                  try {
+                    await markNotificationReadAction(n.id);
+                    await load();
+                  } catch (error) {
+                    console.error("mark notification read failed:", error);
+                    toast.error(en ? "Could not update the notification." : "تعذر تحديث الإشعار.");
+                  }
                 }}
               >
                 <span

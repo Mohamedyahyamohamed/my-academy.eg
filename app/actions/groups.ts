@@ -21,7 +21,7 @@ export async function createGroupAction(input: GroupInput) {
 
 export async function updateGroupAction(id: string, input: Partial<GroupInput>) {
   await requireScopedRole("ADMIN");
-  const g = GroupsService.updateGroup(id, input);
+  const g = await GroupsService.updateGroup(id, input);
     void audit({ action: "group.update" });
   revalidatePath("/groups");
   revalidatePath(`/groups/${id}`);
@@ -30,7 +30,7 @@ export async function updateGroupAction(id: string, input: Partial<GroupInput>) 
 
 export async function deleteGroupAction(id: string) {
   await requireScopedRole("ADMIN");
-  GroupsService.deleteGroup(id);
+  await GroupsService.deleteGroup(id);
     void audit({ action: "group.delete" });
   revalidatePath("/groups");
   revalidatePath("/dashboard");
@@ -46,7 +46,7 @@ export async function addStudentToGroupAction(groupId: string, studentId: string
 
 export async function removeStudentFromGroupAction(groupId: string, studentId: string) {
   await requireScopedRole("ADMIN", "TEACHER");
-  GroupsService.removeStudent(groupId, studentId);
+  await GroupsService.removeStudent(groupId, studentId);
     void audit({ action: "group.remove_student" });
   revalidatePath(`/groups/${groupId}`);
 }

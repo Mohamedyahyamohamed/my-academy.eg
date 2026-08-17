@@ -23,7 +23,7 @@ export async function assignAssistantAction(groupId: string, teacherId: string) 
   if (exists) return { ok: false, error: "Already an assistant." };
   const row = { group_id: groupId, teacher_id: teacherId, assigned_at: new Date().toISOString() };
   collections().groupAssistants.push(row);
-  void persistInsert("group_assistants", row);
+  await persistInsert("group_assistants", row);
   void audit({ action: "mutation" });
   revalidatePath(`/groups/${groupId}`);
   return { ok: true };
@@ -41,7 +41,7 @@ export async function removeAssistantAction(groupId: string, teacherId: string) 
   collections().groupAssistants = collections().groupAssistants.filter(
     (ga) => !(ga.group_id === groupId && ga.teacher_id === teacherId),
   );
-  void persistDelete("group_assistants", { group_id: groupId, teacher_id: teacherId });
+  await persistDelete("group_assistants", { group_id: groupId, teacher_id: teacherId });
   void audit({ action: "mutation" });
   revalidatePath(`/groups/${groupId}`);
   return { ok: true };
@@ -136,7 +136,7 @@ export async function createAssistantAction(input: {
   for (const gid of input.groupIds) {
     const row = { group_id: gid, teacher_id: teacherRec.id, assigned_at: now };
     collections().groupAssistants.push(row);
-    void persistInsert("group_assistants", row);
+    await persistInsert("group_assistants", row);
   }
 
   void audit({ action: "mutation" });

@@ -39,12 +39,12 @@ export async function createCourseAction(input: CourseValues) {
 
 export async function updateCourseAction(id: string, input: Partial<CourseValues>) {
   await requireScopedRole("ADMIN");
-  MiscService.updateCourse(id, input);
+  await MiscService.updateCourse(id, input);
   revalidatePath("/settings");
 }
 
 export async function deleteCourseAction(id: string) {
   await requireScopedRole("ADMIN");
-  MiscService.deleteCourse(id);
+  await MiscService.deleteCourse(id);
   revalidatePath("/settings");
 }

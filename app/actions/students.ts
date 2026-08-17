@@ -50,7 +50,7 @@ export async function createStudentAction(input: StudentInput) {
 export async function updateStudentAction(id: string, input: Partial<StudentInput>) {
   try {
     const user = await requireScopedRole("ADMIN", "TEACHER");
-    const student = StudentsService.updateStudent(id, input);
+    const student = await StudentsService.updateStudent(id, input);
     if (student) {
       await import("@/services/audit").then((m) => m.audit(
         { action: "student.update", entity_type: "student", entity_id: id, new_data: input },
@@ -69,7 +69,7 @@ export async function updateStudentAction(id: string, input: Partial<StudentInpu
 
 export async function archiveStudentAction(id: string) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
-  StudentsService.setStudentStatus(id, "ARCHIVED");
+  await StudentsService.setStudentStatus(id, "ARCHIVED");
   await import("@/services/audit").then((m) => m.audit(
     { action: "student.archive", entity_type: "student", entity_id: id },
     user,
@@ -80,7 +80,7 @@ export async function archiveStudentAction(id: string) {
 
 export async function restoreStudentAction(id: string) {
   await requireScopedRole("ADMIN", "TEACHER");
-  StudentsService.setStudentStatus(id, "ACTIVE");
+  await StudentsService.setStudentStatus(id, "ACTIVE");
   revalidatePath("/students");
   revalidatePath(`/students/${id}`);
 }

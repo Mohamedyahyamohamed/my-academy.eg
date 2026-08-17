@@ -43,6 +43,9 @@ export function AcademySettingsForm({ academy }: { academy: Academy }) {
       await updateAcademyAction(values);
       toast.success(en ? "Academy settings saved." : "تم حفظ إعدادات الأكاديمية.");
       router.refresh();
+    } catch (error) {
+      console.error("async action failed:", error);
+      toast.error(en ? "Something went wrong. Please try again." : "حدث خطأ، حاول مرة أخرى.");
     } finally {
       setSaving(false);
     }
@@ -94,6 +97,9 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
       toast.success(en ? "Course created." : "تم إنشاء المادة.");
       setName(""); setDesc(""); setColor(COLORS[0]); setOpen(false);
       router.refresh();
+    } catch (error) {
+      console.error("async action failed:", error);
+      toast.error(en ? "Something went wrong. Please try again." : "حدث خطأ، حاول مرة أخرى.");
     } finally {
       setSaving(false);
     }

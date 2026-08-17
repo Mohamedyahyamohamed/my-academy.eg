@@ -484,7 +484,7 @@ export async function createStudent(input: StudentInput, authenticatedAcademyId?
         }
         // خزّن الإيميل على سجل الطالب عشان الـ portal يربطه
         student.email = loginEmail;
-        void persistUpdate("students", student.id, { email: loginEmail });
+        await persistUpdate("students", student.id, { email: loginEmail });
       } else if (aErr) {
         console.error("student login account:", aErr.message);
       }
@@ -503,10 +503,10 @@ export async function createStudent(input: StudentInput, authenticatedAcademyId?
   return attachRelations(student);
 }
 
-export function updateStudent(
+export async function updateStudent(
   id: string,
   input: Partial<StudentInput>,
-): Student | null {
+): Promise<Student | null> {
   const s = assertStudentMutationScope(id);
   const academyId = currentAcademyId();
   if (input.parent_id) {
@@ -522,7 +522,7 @@ export function updateStudent(
   void _g;
   // حوّل التاريخ الفاضي ("") لـ null عشان الداتابيز يقبلّه
   if (patch.date_of_birth === "") patch.date_of_birth = null;
-  void persistUpdate("students", id, { ...patch, updated_at: new Date().toISOString() });
+  await persistUpdate("students", id, { ...patch, updated_at: new Date().toISOString() });
   if (input.groupIds) {
     collections().groupStudents = collections().groupStudents.filter(
       (gs) => gs.student_id !== id,
@@ -539,9 +539,9 @@ export function updateStudent(
   return attachRelations(s);
 }
 
-export function setStudentStatus(
+export async function setStudentStatus(
   id: string,
   status: Student["status"],
-): Student | null {
+): Promise<Student | null> {
   return updateStudent(id, { status });
 }

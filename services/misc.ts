@@ -38,17 +38,17 @@ export async function createCourse(input: { name: string; description?: string |
   return c;
 }
 
-export function updateCourse(id: string, input: Partial<Course>): Course | null {
+export async function updateCourse(id: string, input: Partial<Course>): Promise<Course | null> {
   const c = collections().courses.find((x) => x.id === id);
   if (!c) return null;
   Object.assign(c, { ...input, updated_at: new Date().toISOString() });
   return c;
 }
 
-export function deleteCourse(id: string): boolean {
+export async function deleteCourse(id: string): Promise<boolean> {
   const before = collections().courses.length;
   collections().courses = collections().courses.filter((c) => c.id !== id);
-  void persistDelete("courses", { id });
+  await persistDelete("courses", { id });
   return collections().courses.length < before;
 }
 
@@ -114,10 +114,10 @@ export async function addNote(
   return n;
 }
 
-export function deleteNote(id: string): boolean {
+export async function deleteNote(id: string): Promise<boolean> {
   const before = collections().notes.length;
   collections().notes = collections().notes.filter((n) => n.id !== id);
-  void persistDelete("notes", { id });
+  await persistDelete("notes", { id });
   return collections().notes.length < before;
 }
 

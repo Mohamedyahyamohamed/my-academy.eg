@@ -37,6 +37,9 @@ export function SubmissionReview({ submissions }: { submissions: HomeworkSubmiss
       toast.success(en ? "Submission reviewed." : "تمت مراجعة التسليم.");
       setOpenId(null);
       router.refresh();
+    } catch (error) {
+      console.error("async action failed:", error);
+      toast.error(en ? "Something went wrong. Please try again." : "حدث خطأ، حاول مرة أخرى.");
     } finally {
       setSaving(false);
     }

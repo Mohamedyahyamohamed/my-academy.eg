@@ -21,7 +21,7 @@ export interface InviteToken {
   created_at: string;
 }
 
-export function createInviteToken(email: string, role: string, createdBy?: string | null): InviteToken {
+export async function createInviteToken(email: string, role: string, createdBy?: string | null): Promise<InviteToken> {
   const now = new Date();
   const expires = new Date(now.getTime() + TOKEN_TTL_HOURS * 60 * 60 * 1000);
   const invite: InviteToken = {
@@ -37,7 +37,7 @@ export function createInviteToken(email: string, role: string, createdBy?: strin
   };
   if (!(collections() as any).inviteTokens) (collections() as any).inviteTokens = [];
   (collections() as any).inviteTokens.push(invite);
-  void persistInsert("invite_tokens", invite);
+  await persistInsert("invite_tokens", invite);
   return invite;
 }
 
@@ -49,11 +49,11 @@ export function verifyInviteToken(token: string): InviteToken | null {
   return invite;
 }
 
-export function consumeInviteToken(token: string): boolean {
+export async function consumeInviteToken(token: string): Promise<boolean> {
   const tokens = ((collections() as any).inviteTokens ?? []) as InviteToken[];
   const invite = tokens.find((t) => t.token === token && !t.used);
   if (!invite) return false;
   invite.used = true;
-  void persistInsert("invite_tokens", invite); // upsert
+  await persistInsert("invite_tokens", invite); // upsert
   return true;
 }

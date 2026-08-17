@@ -58,6 +58,9 @@ export function InviteAcceptanceForm({ token, invite }: { token: string; invite:
       toast.success(en ? "Invitation accepted successfully." : "تم قبول الدعوة بنجاح.");
       router.push(result.destination);
       router.refresh();
+    } catch (error) {
+      console.error("async action failed:", error);
+      toast.error(en ? "Something went wrong. Please try again." : "حدث خطأ، حاول مرة أخرى.");
     } finally {
       setLoading(false);
     }

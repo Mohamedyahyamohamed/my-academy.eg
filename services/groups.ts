@@ -162,7 +162,7 @@ export async function createGroup(input: GroupInput): Promise<Group> {
   return attach(g);
 }
 
-export function updateGroup(id: string, input: Partial<GroupInput>): Group | null {
+export async function updateGroup(id: string, input: Partial<GroupInput>): Promise<Group | null> {
   const g = collections().groups.find((x) => x.id === id);
   if (!g) return null;
   Object.assign(g, {
@@ -171,17 +171,17 @@ export function updateGroup(id: string, input: Partial<GroupInput>): Group | nul
       input.monthly_fee !== undefined ? Math.max(0, input.monthly_fee) : g.monthly_fee,
     updated_at: new Date().toISOString(),
   });
-  void persistUpdate("groups", id, { ...input, updated_at: new Date().toISOString() });
+  await persistUpdate("groups", id, { ...input, updated_at: new Date().toISOString() });
   return attach(g);
 }
 
-export function deleteGroup(id: string): boolean {
+export async function deleteGroup(id: string): Promise<boolean> {
   const before = collections().groups.length;
   collections().groups = collections().groups.filter((g) => g.id !== id);
   collections().groupStudents = collections().groupStudents.filter(
     (gs) => gs.group_id !== id,
   );
-  void persistDelete("groups", { id });
+  await persistDelete("groups", { id });
   return collections().groups.length < before;
 }
 
@@ -214,12 +214,12 @@ export async function addStudent(
   return { ok: true };
 }
 
-export function removeStudent(groupId: string, studentId: string): boolean {
+export async function removeStudent(groupId: string, studentId: string): Promise<boolean> {
   const before = collections().groupStudents.length;
   collections().groupStudents = collections().groupStudents.filter(
     (gs) => !(gs.group_id === groupId && gs.student_id === studentId),
   );
-  void persistDelete("group_students", { group_id: groupId, student_id: studentId });
+  await persistDelete("group_students", { group_id: groupId, student_id: studentId });
   return collections().groupStudents.length < before;
 }
 

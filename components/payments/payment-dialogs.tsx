@@ -55,6 +55,9 @@ export function RecordPaymentDialog({
       toast.success(en ? `Recorded ${formatCurrency(values.amount, "EGP", "en-EG")}` : `تم تسجيل ${formatCurrency(values.amount, "EGP", "ar-EG")}`);
       setOpen(false);
       router.refresh();
+    } catch (error) {
+      console.error("async action failed:", error);
+      toast.error(en ? "Something went wrong. Please try again." : "حدث خطأ، حاول مرة أخرى.");
     } finally {
       setSaving(false);
     }
@@ -142,6 +145,9 @@ export function CreatePaymentDialog({
       toast.success(en ? "Payment record created." : "تم إنشاء سجل الدفعة.");
       setOpen(false);
       router.refresh();
+    } catch (error) {
+      console.error("async action failed:", error);
+      toast.error(en ? "Something went wrong. Please try again." : "حدث خطأ، حاول مرة أخرى.");
     } finally {
       setSaving(false);
     }

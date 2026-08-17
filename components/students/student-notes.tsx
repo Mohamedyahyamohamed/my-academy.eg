@@ -32,6 +32,9 @@ export function StudentNotes({
       setContent("");
       toast.success(en ? "Note added." : "تمت إضافة الملاحظة.");
       router.refresh();
+    } catch (error) {
+      console.error("add note failed:", error);
+      toast.error(en ? "Could not add the note." : "تعذر إضافة الملاحظة.");
     } finally {
       setSaving(false);
     }
@@ -75,9 +78,14 @@ export function StudentNotes({
                   size="icon-sm"
                   aria-label={en ? "Delete note" : "حذف الملاحظة"}
                   onClick={async () => {
-                    await deleteNoteAction(studentId, n.id);
-                    toast.success(en ? "Note deleted." : "تم حذف الملاحظة.");
-                    router.refresh();
+                    try {
+                      await deleteNoteAction(studentId, n.id);
+                      toast.success(en ? "Note deleted." : "تم حذف الملاحظة.");
+                      router.refresh();
+                    } catch (error) {
+                      console.error("delete note failed:", error);
+                      toast.error(en ? "Could not delete the note." : "تعذر حذف الملاحظة.");
+                    }
                   }}
                 >
                   <Trash2 className="h-4 w-4 text-muted-foreground" />

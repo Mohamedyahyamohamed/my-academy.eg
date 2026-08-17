@@ -25,3 +25,11 @@ _Last updated by Manus AI._
 ## References
 
 No external sources used; findings are based on the project source and existing test files.
+
+## تحديث التنفيذ — 17 أغسطس 2026
+
+- QR: إصلاح `standardize QR scan time and network errors` منشور Production بحالة READY، commit `2cfa6a0`.
+- File upload: تحقق واجهة مسبق من الامتداد والحجم (المسموح: PDF/PNG/JPG/JPEG/WEBP/DOCX/MP4، الحد 500MB) منشور بحالة READY، commit `0a2cacd`.
+- Localization/time: helper المركزي يستخدم `hour12: true`، ولم تظهر صيغ وقت مباشرة أخرى في مسارات التطبيق الأساسية أثناء البحث.
+- Tenant isolation: route-level test لم يكن قابلًا للتشغيل لأن fixtures/حسابات الاختبار القديمة غير موجودة؛ النتيجة Blocked وليست Pass. لم تُستخدم كتابة مباشرة لتجاوز التطبيق.
+- Production evidence: latest upload deployment `dpl_2QzNVvPNNfEfKvuJYZjm8Hd6QRxM` READY; QR deployment `dpl_G7Sbx9MNtPk4iX5f2Fw1Axf5ptyY` READY.

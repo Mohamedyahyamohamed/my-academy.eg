@@ -13,10 +13,18 @@ import { describe, it, expect, beforeAll } from "vitest";
 
 const BASE = "http://localhost:3000";
 
-// Deterministic Academy B fixture data (exists in local E2E mode).
-const ACADEMY_B_STUDENT_ID = "7946a8cf-2497-4614-820e-6e2603d1f3fa"; // BStudent Real — EXISTS
-const ACADEMY_B_GROUP_ID = "fa7c6506-e822-480a-9d5b-eabe6effb097";   // B Group — EXISTS
-const FAKE_NONEXISTENT_ID = "00000000-0000-0000-0000-000000000999";  // Does NOT exist
+// Supply synthetic fixture credentials/IDs at runtime; never commit secrets.
+const ACADEMY_A_EMAIL = process.env.MYACADEMY_E2E_A_EMAIL ?? "";
+const ACADEMY_A_PASSWORD = process.env.MYACADEMY_E2E_A_PASSWORD ?? "";
+const ACADEMY_B_EMAIL = process.env.MYACADEMY_E2E_B_EMAIL ?? "";
+const ACADEMY_B_PASSWORD = process.env.MYACADEMY_E2E_B_PASSWORD ?? "";
+const ACADEMY_B_STUDENT_ID = process.env.MYACADEMY_E2E_B_STUDENT_ID ?? "";
+const ACADEMY_B_GROUP_ID = process.env.MYACADEMY_E2E_B_GROUP_ID ?? "";
+const FAKE_NONEXISTENT_ID = "00000000-0000-0000-0000-000000000999";
+const HAS_E2E_FIXTURES = Boolean(
+  ACADEMY_A_EMAIL && ACADEMY_A_PASSWORD && ACADEMY_B_EMAIL && ACADEMY_B_PASSWORD &&
+  ACADEMY_B_STUDENT_ID && ACADEMY_B_GROUP_ID,
+);
 
 async function login(email: string, password: string): Promise<string> {
   const res = await fetch(`${BASE}/api/auth/login`, {
@@ -34,11 +42,11 @@ function fetchWith(cookie: string, path: string): Promise<Response> {
   return fetch(`${BASE}${path}`, { headers: { Cookie: cookie }, redirect: "manual" });
 }
 
-describe("Route-Level Cross-Tenant — local fixture IDs", () => {
+describe.skipIf(!HAS_E2E_FIXTURES)("Route-Level Cross-Tenant — runtime fixtures", () => {
   let adminA: string;
 
   beforeAll(async () => {
-    adminA = await login("admin@myacademy.edu", "demo1234");
+    adminA = await login(ACADEMY_A_EMAIL, ACADEMY_A_PASSWORD);
     if (!adminA) throw new Error("Login failed — is the server running?");
   });
 
@@ -99,11 +107,11 @@ describe("Route-Level Cross-Tenant — local fixture IDs", () => {
 });
 
 // Verify Academy B admin CAN see its own fixture data (existence proof).
-describe("Route-Level — Academy B sees own data (existence proof)", () => {
+describe.skipIf(!HAS_E2E_FIXTURES)("Route-Level — Academy B sees own data (existence proof)", () => {
   let adminB: string;
 
   beforeAll(async () => {
-    adminB = await login("admin-b@test.com", "demo1234");
+    adminB = await login(ACADEMY_B_EMAIL, ACADEMY_B_PASSWORD);
     if (!adminB) throw new Error("Admin B login failed");
   });
 

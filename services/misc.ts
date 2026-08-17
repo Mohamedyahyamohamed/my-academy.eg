@@ -22,11 +22,11 @@ export async function listCourses(academyId?: string): Promise<Course[]> {
   return fetchTableRLS<Course>("courses", academyId);
 }
 
-export async function createCourse(input: { name: string; description?: string | null; color?: string | null }): Promise<Course> {
+export async function createCourse(input: { academy_id?: string; name: string; description?: string | null; color?: string | null }): Promise<Course> {
   const now = new Date().toISOString();
   const c: Course = {
     id: crypto.randomUUID(),
-    academy_id: currentAcademyId(),
+    academy_id: input.academy_id ?? currentAcademyId(),
     name: input.name,
     description: input.description ?? null,
     color: input.color ?? "#7c5cfc",

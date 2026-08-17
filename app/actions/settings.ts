@@ -29,8 +29,8 @@ export async function completeOnboardingAction(metadata: { hasAcademy: boolean; 
 }
 
 export async function createCourseAction(input: CourseValues) {
-  await requireScopedRole("ADMIN", "TEACHER");
-  const c = await MiscService.createCourse(input);
+  const user = await requireScopedRole("ADMIN", "TEACHER");
+  const c = await MiscService.createCourse({ ...input, academy_id: user.academy_id });
     void audit({ action: "course.create" });
   revalidatePath("/settings");
   revalidatePath("/dashboard");

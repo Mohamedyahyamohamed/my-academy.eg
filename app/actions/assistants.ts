@@ -4,7 +4,7 @@ import { audit } from "@/services/audit";
 import { revalidatePath } from "next/cache";
 import { collections, persistInsert, persistDelete } from "@/services/data/store";
 import { requireScopedRole, currentAcademyId } from "@/services";
-import { resolveTeacherForGroups } from "@/services/groups";
+import { listGroups, resolveTeacherForGroups } from "@/services/groups";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
 /** Assign an existing assistant (co-teacher) to a group. Owner teacher or admin only. */
@@ -67,9 +67,11 @@ export async function createAssistantAction(input: {
     return { ok: false, error: "Select at least one group to share." };
 
   const academyId = user.academy_id ?? currentAcademyId();
-  const selectedGroups = collections().groups.filter(
-    (group) => input.groupIds.includes(group.id) && group.academy_id === academyId,
-  );
+  // Use the authoritative, tenant-scoped server query here. The in-memory
+  // collections snapshot can lag immediately after a group is created, which
+  // must never turn into either a false denial or a cross-tenant allowance.
+  const academyGroups = await listGroups("", academyId);
+  const selectedGroups = academyGroups.filter((group) => input.groupIds.includes(group.id));
   if (selectedGroups.length !== input.groupIds.length) {
     return { ok: false, error: "Some selected groups are outside your academy." };
   }

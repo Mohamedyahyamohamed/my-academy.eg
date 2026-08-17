@@ -26,3 +26,12 @@
 - Fix validated: passing authenticated `academy_id` to `canCreate("groups", academyId)` and using the same scoped ID for the inserted group.
 - No email/WhatsApp message was sent.
 
+
+## Production Assistant scope regression — 2026-08-18
+- Production deployment `dpl_HNTjvncALF9by9VhT3kYyyacZQuf` for commit `b5b45be` (`fix: use scoped groups for assistant provisioning`) reached READY on Vercel.
+- The Assistant form now displays `MYAcademy QA Group 01` and no longer shows the prior outside-academy error after the fix.
+- After reload, the Assistant name was re-entered as `MYAcademy Test Assistant`; email and password require re-entry. Password must be entered privately by the user and is not logged or stored.
+- No Assistant account was created during the prior rejected attempt.
+
+## Final six-account verification — 2026-08-18
+تم فحص `auth.users` مع `profiles` و`academy_memberships` قراءةً فقط. الحسابات الستة كلها موجودة، مؤكدة، وعضويتها ACTIVE داخل الأكاديمية نفسها `d8ed9fbe-890f-43c3-ab60-b6ad3565686a`. الأدوار الفعلية هي: Owner = ADMIN، Student 1 وStudent 2 = STUDENT، Teacher = TEACHER، Parent = PARENT، Assistant = TEACHER مع ربطه بمجموعة QA فقط. لم تُقرأ كلمات المرور أو تُحفظ، ولم تُجر أي تغييرات على البيانات.

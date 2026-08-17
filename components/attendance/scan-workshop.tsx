@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { scanCheckinAction } from "@/app/actions/attendance";
-import { fullName } from "@/lib/utils";
+import { formatTime, fullName } from "@/lib/utils";
 import type { Group, Lesson, Student } from "@/types";
 import { useClientLang } from "@/lib/i18n-client";
 import { studentIdFromQrValue } from "@/lib/student-qr";
@@ -73,18 +73,24 @@ export function ScanWorkshop({
 
     const student = students.find((s) => s.id === studentId);
     if (!student) {
-      setLog((l) => [{ name: en ? "Unknown code" : "كود غير معروف", status: en ? "Unknown" : "غير معروف", at: new Date().toLocaleTimeString(en ? "en-GB" : "ar-EG") }, ...l]);
+      setLog((l) => [{ name: en ? "Unknown code" : "كود غير معروف", status: en ? "Unknown" : "غير معروف", at: formatTime(new Date(), en ? "en-US" : "ar-EG") }, ...l]);
       return;
     }
 
-    const res = await scanCheckinAction(mode === "manual" ? lessonId : null, studentId);
-    if (res.lesson) setActiveLesson({ id: res.lesson.id, topic: res.lesson.topic });
-    const status = res.ok
-      ? (en ? `Attendance recorded ✓${res.lesson?.topic ? ` · ${res.lesson.topic}` : ""}` : `تم تسجيل الحضور ✓${res.lesson?.topic ? ` · ${res.lesson.topic}` : ""}`)
-      : (en
-        ? (res.errorCode === "NO_ACTIVE_LESSON" ? "No active lesson" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "Student is not in this lesson" : "Failed")
-        : (res.errorCode === "NO_ACTIVE_LESSON" ? "لا يوجد درس جارٍ الآن" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "الطالب غير مسجل في المجموعة" : "فشل تسجيل الحضور"));
-    setLog((l) => [{ name: fullName(student), status, at: new Date().toLocaleTimeString(en ? "en-GB" : "ar-EG") }, ...l]);
+    try {
+      const res = await scanCheckinAction(mode === "manual" ? lessonId : null, studentId);
+      if (res.lesson) setActiveLesson({ id: res.lesson.id, topic: res.lesson.topic });
+      const status = res.ok
+        ? (en ? `Attendance recorded ✓${res.lesson?.topic ? ` · ${res.lesson.topic}` : ""}` : `تم تسجيل الحضور ✓${res.lesson?.topic ? ` · ${res.lesson.topic}` : ""}`)
+        : (en
+          ? (res.errorCode === "NO_ACTIVE_LESSON" ? "No active lesson" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "Student is not in this lesson" : "Failed")
+          : (res.errorCode === "NO_ACTIVE_LESSON" ? "لا يوجد درس جارٍ الآن" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "الطالب غير مسجل في المجموعة" : "فشل تسجيل الحضور"));
+      setLog((l) => [{ name: fullName(student), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") }, ...l]);
+    } catch {
+      const status = en ? "Network error — retry the scan" : "خطأ في الشبكة — أعد المسح";
+      setError(status);
+      setLog((l) => [{ name: fullName(student), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") }, ...l]);
+    }
   };
 
   const canScan = mode === "quick" || Boolean(groupId && lessonId);

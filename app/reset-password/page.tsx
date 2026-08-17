@@ -162,9 +162,16 @@ export default function ResetPasswordPage() {
 
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) {
+        // Supabase may return a generic HTTP 422 for leaked/common passwords;
+        // never expose the provider's raw message, but guide the user to a
+        // password that satisfies the project's security policy.
         const message = updateError.message.toLowerCase();
-        if (message.includes("password") && (message.includes("weak") || message.includes("least") || message.includes("characters"))) {
-          setError(en ? "The password does not meet the security requirements. Use a longer, more complex password." : "كلمة المرور لا تستوفي شروط الأمان. استخدم كلمة مرور أطول وأكثر تعقيدًا.");
+        const code = String((updateError as { code?: string }).code ?? "").toLowerCase();
+        const isCompromisedPassword = ["breach", "compromised", "leaked", "pwned", "common", "weak_password"].some(
+          (term) => message.includes(term) || code.includes(term),
+        );
+        if (isCompromisedPassword || (message.includes("password") && (message.includes("weak") || message.includes("least") || message.includes("characters")))) {
+          setError(en ? "This password is too common or has appeared in a data breach. Use a unique, longer password with mixed characters." : "كلمة المرور شائعة أو ظهرت في تسريب بيانات. استخدم كلمة مرور أطول وفريدة ومتنوعة الأحرف.");
         } else if (message.includes("session") || message.includes("reauthor") || message.includes("expired")) {
           setError(en ? "The recovery session expired. Request a new link and open it only once." : "انتهت جلسة الاستعادة. اطلب رابطًا جديدًا وافتحه مرة واحدة فقط.");
         } else {

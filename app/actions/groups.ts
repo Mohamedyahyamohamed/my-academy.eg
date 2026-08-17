@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireScopedRole, GroupsService, LessonsService } from "@/services";
+import { requireScopedRole, GroupsService, LessonsService, isLimitedAssistant } from "@/services";
 import type { GroupInput } from "@/services/groups";
 import { audit } from "@/services/audit";
 
 export async function createGroupAction(input: GroupInput) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
+  if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot create groups.");
   const g = await GroupsService.createGroup({ ...input, academy_id: user.academy_id });
   if (g) {
     try {
@@ -46,7 +47,8 @@ export async function deleteGroupAction(id: string) {
 }
 
 export async function addStudentToGroupAction(groupId: string, studentId: string) {
-  await requireScopedRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
+  if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage group membership.");
   const res = await GroupsService.addStudent(groupId, studentId);
   void audit({ action: "group.add_student" });
   revalidatePath(`/groups/${groupId}`);
@@ -54,7 +56,8 @@ export async function addStudentToGroupAction(groupId: string, studentId: string
 }
 
 export async function removeStudentFromGroupAction(groupId: string, studentId: string) {
-  await requireScopedRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
+  if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage group membership.");
   await GroupsService.removeStudent(groupId, studentId);
     void audit({ action: "group.remove_student" });
   revalidatePath(`/groups/${groupId}`);

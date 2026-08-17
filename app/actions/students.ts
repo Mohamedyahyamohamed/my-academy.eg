@@ -1,13 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireScopedRole, StudentsService, currentAcademyId } from "@/services";
+import { requireScopedRole, StudentsService, currentAcademyId, isLimitedAssistant } from "@/services";
 import type { StudentInput } from "@/services/students";
 import { STUDENT_DEFAULT_PASSWORD } from "@/lib/auth";
 
 export async function createStudentAction(input: StudentInput) {
   try {
     const user = await requireScopedRole("ADMIN", "TEACHER");
+    if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage students.");
     const student = await StudentsService.createStudent(input, user.academy_id);
     // WhatsApp هو القناة الافتراضية بعد تفعيل الدفع في Meta.
     // يمكن استخدام البريد مؤقتًا عبر WHATSAPP_QR_CHANNEL=email.
@@ -50,6 +51,7 @@ export async function createStudentAction(input: StudentInput) {
 export async function updateStudentAction(id: string, input: Partial<StudentInput>) {
   try {
     const user = await requireScopedRole("ADMIN", "TEACHER");
+    if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage students.");
     const student = await StudentsService.updateStudent(id, input);
     if (student) {
       await import("@/services/audit").then((m) => m.audit(
@@ -69,6 +71,7 @@ export async function updateStudentAction(id: string, input: Partial<StudentInpu
 
 export async function archiveStudentAction(id: string) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
+  if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage students.");
   await StudentsService.setStudentStatus(id, "ARCHIVED");
   await import("@/services/audit").then((m) => m.audit(
     { action: "student.archive", entity_type: "student", entity_id: id },
@@ -79,7 +82,8 @@ export async function archiveStudentAction(id: string) {
 }
 
 export async function restoreStudentAction(id: string) {
-  await requireScopedRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
+  if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage students.");
   await StudentsService.setStudentStatus(id, "ACTIVE");
   revalidatePath("/students");
   revalidatePath(`/students/${id}`);

@@ -65,8 +65,13 @@ export async function loadCurrentUser(): Promise<SessionUser | null> {
   if (user) {
     const normalizedUser = normalizePlatformOwner(user);
     const hydratedUser = await hydrateTenantContext(normalizedUser);
-    setRequestContext(hydratedUser);
-    return hydratedUser;
+    if (!hydratedUser) {
+      setRequestContext(null);
+      return null;
+    }
+    const sessionUser = await hydrateAssistantFlag(hydratedUser);
+    setRequestContext(sessionUser);
+    return sessionUser;
   }
 
   setRequestContext(null);
@@ -112,6 +117,38 @@ async function hydrateTenantContext(user: SessionUser): Promise<SessionUser | nu
 
 export function getCurrentUser(): SessionUser | null {
   return getRequestUser();
+}
+
+/** Resolve the limited-assistant marker from server-side relationships. */
+async function hydrateAssistantFlag(user: SessionUser): Promise<SessionUser> {
+  if (user.role !== "TEACHER") return { ...user, is_assistant: false };
+  try {
+    const client = nodeSupabaseClient();
+    if (client) {
+      const { data: teacher } = await client
+        .from("teachers")
+        .select("id")
+        .eq("academy_id", user.academy_id)
+        .or(`profile_id.eq.${user.id},email.eq.${user.email}`)
+        .maybeSingle();
+      if (!teacher?.id) return { ...user, is_assistant: false };
+      const [{ count: assigned }, { count: owned }] = await Promise.all([
+        client.from("group_assistants").select("group_id", { count: "exact", head: true }).eq("teacher_id", teacher.id),
+        client.from("groups").select("id", { count: "exact", head: true }).eq("academy_id", user.academy_id).eq("teacher_id", teacher.id),
+      ]);
+      return { ...user, is_assistant: (assigned ?? 0) > 0 && (owned ?? 0) === 0 };
+    }
+    const teacher = collections().teachers.find(
+      (t) => t.academy_id === user.academy_id && (t.profile_id === user.id || t.email.toLowerCase() === user.email.toLowerCase()),
+    );
+    if (!teacher) return { ...user, is_assistant: false };
+    const assigned = collections().groupAssistants.filter((row) => row.teacher_id === teacher.id).length;
+    const owned = collections().groups.filter((group: any) => group.academy_id === user.academy_id && group.teacher_id === teacher.id).length;
+    return { ...user, is_assistant: assigned > 0 && owned === 0 };
+  } catch (error) {
+    console.error("[session] unable to resolve assistant scope:", (error as Error).message);
+    return { ...user, is_assistant: false };
+  }
 }
 
 function normalizePlatformOwner(user: SessionUser): SessionUser {
@@ -204,8 +241,9 @@ export async function requireScopedRole(...roles: Role[]): Promise<SessionUser> 
   // Store hydration may cross an async boundary that does not preserve the
   // request context in every Next.js render path. Re-bind the authenticated
   // user after hydration before any tenant-scoped service reads occur.
-  setRequestContext(user);
-  return user;
+  const sessionUser = await hydrateAssistantFlag(user);
+  setRequestContext(sessionUser);
+  return sessionUser;
 }
 
 /** The teacher record id of the current user, or null if they're not a teacher. */
@@ -216,6 +254,45 @@ export function currentTeacherId(): string | null {
     (t) => t.academy_id === u.academy_id && (t.profile_id === u.id || t.email.toLowerCase() === u.email.toLowerCase()),
   );
   return t?.id ?? null;
+}
+
+/**
+ * Assistant accounts currently share the TEACHER role for compatibility. They
+ * are identified by an assignment in group_assistants and no teacher-owned
+ * groups. This is intentionally derived server-side from relationships, never
+ * from an email address or a client-provided flag.
+ */
+export async function isLimitedAssistant(user: SessionUser): Promise<boolean> {
+  if (user.role !== "TEACHER") return false;
+  if (user.is_assistant === true) return true;
+
+  const teacher = collections().teachers.find(
+    (t) => t.academy_id === user.academy_id && (t.profile_id === user.id || t.email.toLowerCase() === user.email.toLowerCase()),
+  );
+  if (!teacher) return false;
+
+  const local = collections();
+  if (!isSupabaseConfigured()) {
+    const assigned = local.groupAssistants.filter((row) => row.teacher_id === teacher.id).length;
+    const owned = local.groups.filter((group: any) => group.academy_id === user.academy_id && (group.teacher_id === teacher.id || group.teacher_id === user.id)).length;
+    return assigned > 0 && owned === 0;
+  }
+
+  const client = nodeSupabaseClient();
+  if (!client) return false;
+  const [{ count: assigned }, { count: owned }] = await Promise.all([
+    client.from("group_assistants").select("group_id", { count: "exact", head: true }).eq("teacher_id", teacher.id),
+    client.from("groups").select("id", { count: "exact", head: true }).eq("academy_id", user.academy_id).eq("teacher_id", teacher.id),
+  ]);
+  return (assigned ?? 0) > 0 && (owned ?? 0) === 0;
+}
+
+/** Reject mutations that are reserved for academy teachers/admins, not assistants. */
+export async function requireNonAssistantTeacher(user: SessionUser): Promise<SessionUser> {
+  if (user.role === "TEACHER" && await isLimitedAssistant(user)) {
+    throw new Error("Assistant accounts may only operate assigned groups and attendance.");
+  }
+  return user;
 }
 
 export interface LoginResult {

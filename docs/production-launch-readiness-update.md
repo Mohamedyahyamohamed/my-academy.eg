@@ -32,3 +32,44 @@ QR ورفع الملفات والتنسيق المركزي للوقت أصبحت
 القرار الحالي: **Not Ready للإطلاق العام**. السبب ليس فشلًا معروفًا في الإصلاحات المنشورة، بل بقاء اختبارات أمان وتشغيل تفاعلية حرجة دون دليل إنتاجي مكتمل، خصوصًا العزل بين المستأجرين، اختبار QR على هاتف، اختبار رفع/تنزيل فعلي، وتفعيل حماية كلمات المرور المسرّبة.
 
 _آخر تحديث بواسطة Manus AI._
+
+
+## Final production-audit checkpoint — 18 August 2026
+
+### Verified Pass
+
+- Production health: `GET /api/health` returned HTTP 200 with `app`, `qr`, and `db` all `ok`; latency reported by the endpoint was 217ms.
+- Unauthenticated search protection: `GET /api/search?q=test` returned HTTP 401.
+- Role routing: Owner/admin, Teacher, Assistant, Parent, and Student sessions were exercised with the available production QA accounts. Teacher was routed to `/teacher`; Parent to `/parent`; Student to `/student`. Teacher access to `/platform` and `/payments` was redirected, and Parent access to `/teacher` and `/payments` was redirected without exposing restricted data.
+- Attendance route repair: production deployment after the attendance/QR scoping fix showed the QA group and lesson selectors to the academy owner. The selected QA group currently has zero students, so no attendance mutation was performed.
+- RLS and helper permissions: sensitive tables have RLS enabled; production inspection found the attendance uniqueness index `(lesson_id, student_id)` and private `auth_*` helper functions without `PUBLIC`/`anon` direct execution grants.
+- Security headers: HSTS, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Permissions-Policy`, and strict referrer policy were present.
+- Localization shell: Arabic RTL and English LTR navigation switched on the Student page without a visible reload. The page-body card retained Arabic text after switching to English, so full translation coverage is not proven.
+- Code verification: `pnpm lint` and `pnpm build` both exited 0.
+- Content upload controls: lesson content is validated for 500MB, file signatures, names, declared MIME types, course/lesson scope, tenant storage quota, private storage, and signed download URLs. Next.js Server Actions are configured with a 500MB body limit. Homework attachments intentionally remain limited to 10MB.
+
+### Still Blocked / Not proven
+
+- Academy A versus Academy B behavioral isolation remains unproven because no second-tenant fixtures were available; the automated harness safely skipped all nine cases rather than producing a false Pass.
+- Leaked Password Protection remained a manual Supabase setting in the last advisor inspection and must be enabled and rechecked by the project owner.
+- The Vercel production Supabase client key must still be manually confirmed as the modern `sb_publishable_...` key without exposing its value.
+- QR camera behavior on a physical phone, first scan, duplicate response, wrong-group/time rejection, offline recovery, and refresh persistence were not certified because no student was attached to the QA group and no real phone test was recorded.
+- Real upload/download, invalid-file rejection, retry, and cross-tenant file isolation require an interactive production test with a QA file. No production file was created or modified during this audit.
+
+### Decision
+
+**Not Ready for public launch yet.** The code and deployment quality gates pass, and the critical routing/RLS protections are substantially verified. The remaining launch blockers are configuration confirmation, real two-tenant behavioral evidence, and physical-device/file E2E evidence. No WhatsApp or email was sent, no production data was mutated by the audit, and no secret values were exposed.
+
+## Follow-up — Assistant scope hardening
+
+تم تطبيق حارس مساعد محدود على الخادم والواجهة:
+
+- توصيل `is_assistant` بالجلسة عبر علاقة `group_assistants` ومقارنة المجموعات المملوكة، مع fallback محلي، دون الاعتماد على البريد أو تعديل سجلات الإنتاج.
+- منع المساعد خادميًا من استيراد الطلاب، إنشاء/تعديل/أرشفة الطلاب، إنشاء ولي الأمر، إدارة عضوية الطلاب، إنشاء المحتوى ورفع الملفات والروابط، الدرجات والاختبارات، الواجبات ومراجعتها، الحصص، والملاحظات.
+- إضافة خريطة تنقل محدودة للمساعد ومنع `/students` من عرض قائمة طلاب الأكاديمية له.
+
+التحقق المحلي بعد التعديل: `pnpm lint` نجح و`pnpm build` نجح. اختبار Vitest للعزل حمّل 9 حالات لكنه تخطاها كلها بأمان بسبب غياب fixtures لأكاديميتين؛ لا يُصنف ذلك كإثبات عزل.
+
+هذه الإصلاحات المحلية تحتاج commit/deployment ثم smoke test بحساب Assistant قبل اعتبارها إنتاجية. الحالة العامة تظل **Not Ready** حتى ذلك، إضافة إلى Academy B، Leaked Password Protection، تأكيد مفتاح Vercel، واختبارات QR والرفع الفعلية.
+
+ملاحظة: لا يوجد script باسم `test` في `package.json`؛ فشل `pnpm test -- --runInBand` كان بسبب أمر غير معرّف، وليس بسبب فشل build أو lint.

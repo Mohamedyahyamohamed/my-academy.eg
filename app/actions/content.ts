@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { audit } from "@/services/audit";
-import { requireScopedRole } from "@/services/session";
+import { requireScopedRole, isLimitedAssistant } from "@/services/session";
 import * as ContentService from "@/services/content";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { measureTenantStorageUsage } from "@/lib/storage-quota";
@@ -39,6 +39,7 @@ function contentPaths(courseId: string) {
 
 export async function createContentCourseAction(formData: FormData) {
   const user = await requireScopedRole("TEACHER", "ADMIN");
+  if (await isLimitedAssistant(user)) return { ok: false, error: "Assistant accounts cannot create content courses." };
   const result = await ContentService.createCourse({
     title: String(formData.get("title") ?? ""),
     description: String(formData.get("description") ?? ""),
@@ -53,6 +54,7 @@ export async function createContentCourseAction(formData: FormData) {
 
 export async function createContentLessonAction(formData: FormData) {
   const user = await requireScopedRole("TEACHER", "ADMIN");
+  if (await isLimitedAssistant(user)) return { ok: false, error: "Assistant accounts cannot create content lessons." };
   const result = await ContentService.createLesson({
     course_id: String(formData.get("courseId") ?? ""),
     title: String(formData.get("title") ?? ""),
@@ -69,6 +71,7 @@ export async function createContentLessonAction(formData: FormData) {
 
 export async function uploadContentFile(formData: FormData) {
   const user = await requireScopedRole("TEACHER", "ADMIN");
+  if (await isLimitedAssistant(user)) return { ok: false, error: "Assistant accounts cannot upload content." };
   if (!can(user, "content.upload")) return { ok: false, error: "You are not allowed to upload content." };
   const rl = await rateLimit(`content-upload:${user.id}`, LIMITS.upload.max, LIMITS.upload.window);
   if (!rl.allowed) return { ok: false, error: "Too many uploads. Please slow down." };
@@ -129,6 +132,7 @@ export async function uploadContentFile(formData: FormData) {
 
 export async function addContentLink(formData: FormData) {
   const user = await requireScopedRole("TEACHER", "ADMIN");
+  if (await isLimitedAssistant(user)) return { ok: false, error: "Assistant accounts cannot add content links." };
   if (!can(user, "content.upload")) return { ok: false, error: "You are not allowed to add content links." };
   const courseId = String(formData.get("courseId") ?? "");
   const lessonIdRaw = String(formData.get("lessonId") ?? "");

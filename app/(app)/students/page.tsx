@@ -23,6 +23,7 @@ import { StudentsService, GroupsService, MiscService, requireScopedRole } from "
 import { archiveStudentAction } from "@/app/actions/students";
 import type { StudentFilters } from "@/types";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { getLangFromCookie } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,7 @@ export default async function StudentsPage(
   const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
   const en = lang === "en";
   const user = await requireScopedRole("ADMIN", "TEACHER");
+  if (user.is_assistant) redirect("/teacher");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
 

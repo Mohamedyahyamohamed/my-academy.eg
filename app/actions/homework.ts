@@ -2,11 +2,12 @@
 import { audit } from "@/services/audit";
 
 import { revalidatePath } from "next/cache";
-import { requireScopedRole, HomeworkService } from "@/services";
+import { requireScopedRole, HomeworkService, isLimitedAssistant } from "@/services";
 import type { HomeworkInput } from "@/services/homework";
 
 export async function createHomeworkAction(input: HomeworkInput) {
   const user = await requireScopedRole("TEACHER");
+  if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage homework.");
   const h = await HomeworkService.createHomework({
     ...input,
     academy_id: user.academy_id,
@@ -39,7 +40,8 @@ export async function createHomeworkAction(input: HomeworkInput) {
 }
 
 export async function deleteHomeworkAction(id: string) {
-  await requireScopedRole("TEACHER");
+  const user = await requireScopedRole("TEACHER");
+  if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage homework.");
   HomeworkService.deleteHomework(id);
   void audit({ action: "mutation" });
   revalidatePath("/homework");
@@ -51,6 +53,7 @@ export async function reviewSubmissionAction(
   grade?: number,
 ) {
   const user = await requireScopedRole("TEACHER");
+  if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot review homework.");
   HomeworkService.reviewSubmission(submissionId, feedback, grade);
   // Notify student's parent about reviewed homework.
   const { collections } = await import("@/services/data/store");

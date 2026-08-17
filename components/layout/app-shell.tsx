@@ -13,7 +13,7 @@ interface AppShellProps {
 
 /** Unified application shell — computes role-based nav on the client. */
 export function AppShell({ user, academyName, children }: AppShellProps) {
-  const sections = navForRole(user.role);
+  const sections = navForRole(user.role, user.is_assistant === true);
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar sections={sections} academyName={academyName} role={user.role} />

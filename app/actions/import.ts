@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { requireScopedRole, currentAcademyId } from "@/services";
+import { requireScopedRole, currentAcademyId, isLimitedAssistant } from "@/services";
 import { collections, invalidateStore } from "@/services/data/store";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { audit } from "@/services/audit";
@@ -16,7 +16,9 @@ export interface ImportRow {
  */
 export async function importStudentsAction(rows: ImportRow[]) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
-  void user;
+  if (await isLimitedAssistant(user)) {
+    return { ok: false, error: "حساب المساعد لا يملك صلاحية استيراد الطلاب." };
+  }
   const aid = currentAcademyId();
   if (!aid) return { ok: false, error: "لا توجد أكاديمية." };
   if (!rows || rows.length === 0) return { ok: false, error: "مفيش بيانات للاستيراد." };

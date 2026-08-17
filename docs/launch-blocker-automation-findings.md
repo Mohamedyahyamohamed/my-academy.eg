@@ -75,3 +75,105 @@ No external sources used; findings are based on the project source and existing 
 - Localization/time: helper المركزي يستخدم `hour12: true`، ولم تظهر صيغ وقت مباشرة أخرى في مسارات التطبيق الأساسية أثناء البحث.
 - Tenant isolation: route-level test لم يكن قابلًا للتشغيل لأن fixtures/حسابات الاختبار القديمة غير موجودة؛ النتيجة Blocked وليست Pass. لم تُستخدم كتابة مباشرة لتجاوز التطبيق.
 - Production evidence: latest upload deployment `dpl_2QzNVvPNNfEfKvuJYZjm8Hd6QRxM` READY; QR deployment `dpl_G7Sbx9MNtPk4iX5f2Fw1Axf5ptyY` READY.
+
+
+## Production interactive follow-up — attendance after commit 20791af
+
+- Production URL: https://my-academy-eg.vercel.app/attendance?group=5315369f-314c-46ae-b9ba-9cf0396a1348
+- Authenticated session: MYAcademy Test Owner.
+- After deployment `dpl_8pEBd9pKL1gDpXidCbSMZyriwAAH` (commit `20791af`, READY, production), the group selector showed `MYAcademy QA Group 01` and the lesson selector showed 12 lessons. This confirms the owner/admin group and lesson loading regression is fixed.
+- Direct lesson URL tested: lesson `2a12796a-7553-46c1-8c5a-dea6bc573261`.
+- Result: page displayed `لا يوجد طلاب في هذه المجموعة` / `No students in this group`. No attendance save was attempted. QR/attendance end-to-end remains **Blocked** pending verification that the selected QA group has `group_students` memberships and that the attendance page hydrates them correctly when memberships exist.
+- No production records were changed during this test.
+
+Source: My Browser production page, captured 2026-08-18, URL above.
+
+
+## Teacher role smoke test — production, 18 August 2026
+
+- Login succeeded for `mohamedworkout687@gmail.com`; the session identified the user as `MYAcademy Test Teacher`.
+- `/dashboard` redirected to `/teacher` and rendered teacher-only navigation: dashboard, groups, lessons, attendance, homework, educational content, grades, students, messages, and support.
+- Teacher dashboard showed 1 group, 0 students, 6 upcoming lessons, and 0% attendance.
+- `/platform` redirected to `/teacher`; no platform-admin content was exposed.
+- `/payments` redirected to `/teacher`; no payment data was exposed.
+- `/groups/5315369f-314c-46ae-b9ba-9cf0396a1348` opened successfully for the teacher because the group is assigned to `MYAcademy Test Teacher`. It showed 12 lessons and 0 registered students.
+- This confirms the tested teacher role boundary for the sampled routes. Full role matrix remains incomplete until Parent, Student, and Assistant sessions are tested.
+- No production data was changed.
+
+
+## Role mapping discrepancy — production
+
+The account `mohamedyahyamohamed15@gmail.com`, selected from the previously supplied QA list for the Parent test, authenticated successfully but production identified it as `MYAcademy Test Assistant`. The dashboard was `/teacher` with zero assigned groups/students. Direct navigation to `/parent` redirected to `/teacher`. This is not an application security bypass; it is a test-fixture role mismatch. The Parent role test must use the correctly provisioned Parent account, currently expected to be the remaining QA address `megoyehei@gmail.com`, subject to confirmation by the displayed profile role after login.
+
+
+## Parent role smoke test — production, 18 August 2026
+
+- Login succeeded for `megoyehei@gmail.com`; production identified the account as `MYAcademy Test Parent` and routed `/dashboard` to `/parent`.
+- Parent navigation exposed: dashboard, children, content progress, attendance, homework, grades, payments, messages, notifications, and support.
+- The account correctly displayed that no children are currently linked; therefore no child records, attendance, grades, or payment data were exposed.
+- Direct navigation to `/teacher` redirected to `/parent`; no teacher groups or students were exposed.
+- Direct navigation to `/payments` also remained in `/parent` and displayed only the no-linked-children state; no unrelated payment data was exposed.
+- Parent role boundary passed for the sampled routes. Student and Assistant role sessions remain to be tested.
+- No production data was changed.
+
+
+## Student role smoke test — production, 18 August 2026
+
+- Login succeeded for `2202893@student.eelu.edu.eg`; production identified `MYAcademy Test Student 1` and routed `/dashboard` to `/student`.
+- Student navigation exposed only student-facing areas: classes, lessons, homework, educational content, grades, progress, notifications, and support.
+- The account displayed `الملف غير مرتبط` / `Account not linked to a student record`; no class, grade, attendance, or content records were exposed.
+- Direct navigation to `/teacher` redirected to `/student`; no teacher groups, students, or attendance-management content was exposed.
+- Student role boundary passed for the sampled routes. The unlinked fixture blocks deeper functional testing of classes, lessons, grades, and homework until a student record is linked.
+- No production data was changed.
+
+
+## Cross-tenant harness execution — 18 August 2026
+
+Command executed: `pnpm vitest run tests/cross-tenant-route.test.ts --reporter=verbose`.
+
+Result: 1 test file skipped and 9 test cases skipped. The skip is intentional because `MYACADEMY_E2E_A_EMAIL`, `MYACADEMY_E2E_A_PASSWORD`, `MYACADEMY_E2E_B_EMAIL`, `MYACADEMY_E2E_B_PASSWORD`, `MYACADEMY_E2E_B_STUDENT_ID`, and `MYACADEMY_E2E_B_GROUP_ID` were not supplied. No false Pass was reported. The harness contains control, student, group, search, export, authentication, and Academy B existence checks, but a real Academy A/B fixture is still required for a conclusive isolation result.
+
+
+## RLS schema inspection — production
+
+A read-only inspection of `pg_class` confirmed `relrowsecurity = true` for all sampled sensitive tables: `academies`, `academy_memberships`, `attendance`, `billing_events`, `files`, `grades`, `groups`, `homework`, `lessons`, `messages`, `notes`, `payments`, and `students`. `relforcerowsecurity` is false, which is normal for application-owner/service-role operations but means the runtime cross-tenant behavior must still be proven with authenticated Academy A and Academy B fixtures. The policy inspection found scoped read policies and role-specific write policies for the sampled tables. No DDL or data mutation was performed.
+
+
+## SECURITY DEFINER helper privileges — production
+
+The read-only privilege inspection found the sampled `auth_*` helper functions in the `private` schema. They have `EXECUTE` for `authenticated`, while no `PUBLIC` or `anon` grants were returned. This matches the current design in which authenticated requests may evaluate RLS helpers, but anonymous clients cannot call them directly. No permission changes were made.
+
+
+## Localization, time, and upload code inspection — production candidate
+
+The code inspection found the central date/time helpers using `Intl.DateTimeFormat` with `hour12: true`, and the client language switch setting `document.documentElement.dir` to `rtl` for Arabic and `ltr` for English. Upload/import components expose explicit accepted extensions, including CSV import; the previously implemented upload validation remains the code-level control for allowed types and the 500MB limit. This is a code-level Pass only. Full no-reload language switching, invalid-file rejection, retry behavior, large-file upload/download, and QR camera behavior still require interactive browser/phone evidence.
+
+
+## Interactive localization smoke test — Student production session
+
+On `/student`, the Arabic interface showed RTL navigation and an English language toggle. Clicking the toggle changed the navigation labels, search placeholder, and sidebar layout to English/LTR without a visible page reload. The account remained on the same route and session. The content card still displayed Arabic text after the toggle, so full localization coverage is not yet proven; this is a partial Pass for the shell/navigation and a follow-up item for page-body translations.
+
+
+## Production HTTP verification — 18 August 2026
+
+A direct HTTP check returned `GET /api/health` → `200` with `status: healthy` and `app`, `qr`, and `db` all `ok`; reported latency was 217ms. An unauthenticated `GET /api/search?q=test` returned `401`, confirming the search route does not disclose results without an authenticated session.
+
+
+## QR duplicate protection — database evidence
+
+The production index inspection confirmed `attendance_lesson_id_student_id_key` as a unique index on `(lesson_id, student_id)`, plus indexes on `lesson_id` and `student_id`. Therefore, duplicate attendance for the same student and lesson is protected at the database layer even under concurrent requests. A real phone scan remains required to verify the user-facing duplicate response and retry behavior.
+
+
+## Large content upload configuration
+
+The production candidate's `next.config.js` explicitly sets `experimental.serverActions.bodySizeLimit` to `500mb`, matching the lesson-content action's 500MB validation. The generic homework attachment action intentionally remains capped at 10MB. This distinction should be documented in the UI and launch checklist: 500MB applies to teacher lesson content, while homework submissions are limited to 10MB. No configuration change was made during the audit.
+
+
+## Production security headers
+
+`HEAD /` returned HTTP 200 with `strict-transport-security: max-age=63072000; includeSubDomains; preload`, `x-content-type-options: nosniff`, `x-frame-options: DENY`, `permissions-policy: camera=(self), microphone=(), geolocation=()`, and `referrer-policy: strict-origin-when-cross-origin`. No Content-Security-Policy header was observed in this response; this is a medium hardening recommendation rather than a confirmed launch blocker, provided no third-party script policy requirement exists.
+
+
+## Final local verification
+
+The current repository passed `pnpm lint` and `pnpm build` with exit status 0. The build completed the App Router route inventory, including protected group, attendance-related, teacher content, parent, student, payments, and platform routes. No TypeScript/build failure was observed.

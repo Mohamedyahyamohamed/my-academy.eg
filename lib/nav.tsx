@@ -201,7 +201,23 @@ export const ACADEMY_MANAGER_NAV: NavSection[] = [
   },
 ];
 
-export function navForRole(role: Role): NavSection[] {
+export const ASSISTANT_NAV: NavSection[] = [
+  {
+    items: [{ titleAr: "لوحة التحكم", titleEn: "Dashboard", href: "/teacher", icon: LayoutDashboard }],
+  },
+  {
+    titleAr: "التشغيل المسموح", titleEn: "Assigned Operations",
+    items: [
+      { titleAr: "مجموعاتي", titleEn: "Assigned Groups", href: "/groups", icon: UsersRound },
+      { titleAr: "الحضور", titleEn: "Attendance", href: "/attendance", icon: CalendarCheck },
+      { titleAr: "الرسائل", titleEn: "Messages", href: "/messages", icon: Bell },
+      { titleAr: "المساعدة والدعم", titleEn: "Help & Support", href: "/support", icon: CircleHelp },
+    ],
+  },
+];
+
+export function navForRole(role: Role, isAssistant = false): NavSection[] {
+  if (role === "TEACHER" && isAssistant) return ASSISTANT_NAV;
   switch (role) {
     case "SUPER_ADMIN":
       return SUPER_ADMIN_NAV;

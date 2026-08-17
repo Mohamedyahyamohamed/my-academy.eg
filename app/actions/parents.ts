@@ -2,7 +2,7 @@
 import { audit } from "@/services/audit";
 
 import { revalidatePath } from "next/cache";
-import { MiscService, requireScopedRole, currentAcademyId } from "@/services";
+import { MiscService, requireScopedRole, requireNonAssistantTeacher, currentAcademyId } from "@/services";
 import { PARENT_DEFAULT_PASSWORD } from "@/lib/auth";
 
 /** Quick-create a parent record (no login) so it can be linked to a student. */
@@ -13,7 +13,8 @@ export async function createParentAction(input: {
   email?: string;
   occupation?: string;
 }) {
-  await requireScopedRole("ADMIN", "TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
+  await requireNonAssistantTeacher(user);
   if (!input.first_name || !input.last_name) {
     return { ok: false, error: "First and last name are required." };
   }

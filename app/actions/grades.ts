@@ -1,18 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireScopedRole, GradesService } from "@/services";
+import { requireScopedRole, GradesService, isLimitedAssistant } from "@/services";
 import type { ExamInput } from "@/services/grades";
 
 export async function createExamAction(input: ExamInput) {
-  await requireScopedRole("TEACHER");
+  const user = await requireScopedRole("TEACHER");
+  if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage grades.");
   const e = await GradesService.createExam(input);
   revalidatePath("/grades");
   return e;
 }
 
 export async function deleteExamAction(id: string) {
-  await requireScopedRole("TEACHER");
+  const user = await requireScopedRole("TEACHER");
+  if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage grades.");
   await GradesService.deleteExam(id);
   revalidatePath("/grades");
 }
@@ -22,6 +24,7 @@ export async function saveGradesAction(
   entries: { studentId: string; score: number }[],
 ) {
   const user = await requireScopedRole("TEACHER");
+  if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage grades.");
   const res = await GradesService.saveGrades(examId, entries);
   if (res.ok) {
     await import("@/services/audit").then((m) => m.audit(

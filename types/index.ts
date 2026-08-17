@@ -49,6 +49,8 @@ export interface SessionUser {
   active_membership_id?: UUID;
   /** Active academy memberships available to the signed-in user. */
   memberships?: AcademyMembership[];
+  /** True only for a teacher account operating as a limited group assistant. */
+  is_assistant?: boolean;
 }
 
 export interface Academy {

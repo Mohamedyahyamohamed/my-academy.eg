@@ -13,8 +13,7 @@ import { AssistantManager } from "@/components/settings/assistant-manager";
 import { DirectAccountManager } from "@/components/settings/direct-account-manager";
 import { listAcademyInvites } from "@/app/actions/invites";
 import { ChangePasswordForm } from "@/components/settings/change-password";
-import { MiscService, requireScopedRole } from "@/services";
-import { collections } from "@/services/data/store";
+import { GroupsService, MiscService, requireScopedRole } from "@/services";
 import { initials } from "@/lib/utils";
 import { PAYMENT_METHODS, paymentMethodLabel } from "@/lib/constants";
 import { getLangFromCookie, isRTL, type Lang } from "@/lib/i18n";
@@ -69,7 +68,7 @@ export default async function SettingsPage({
   const courses = await MiscService.listCourses(user.academy_id);
   const users = MiscService.listProfiles(user.academy_id);
   const invites = await listAcademyInvites(user.academy_id);
-  const assistantGroups = collections().groups.filter(group => group.academy_id === user.academy_id).map(group => ({ id: group.id, name: group.name }));
+  const assistantGroups = (await GroupsService.listGroups("", user.academy_id)).map(group => ({ id: group.id, name: group.name }));
 
   return (
     <div dir={isRTL(lang) ? "rtl" : "ltr"} className="space-y-6">

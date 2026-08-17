@@ -145,6 +145,16 @@ export async function recordCheckin(
     assertAttendanceManager(lessonId);
   }
   const now = new Date().toISOString();
+  // Persist first. If the durable write fails, do not mutate the request snapshot
+  // or return a false-success response to the QR client.
+  await persistInsert("attendance", {
+    lesson_id: lessonId,
+    student_id: studentId,
+    status,
+    note: null,
+    recorded_at: now,
+  });
+
   const existing = collections().attendance.find(
     (a) => a.lesson_id === lessonId && a.student_id === studentId,
   );
@@ -160,19 +170,6 @@ export async function recordCheckin(
       note: null,
       recorded_at: now,
     });
-  }
-  // best-effort persist (upsert by lesson+student)
-  try {
-    const client = (await import("./data/store")).persistInsert;
-    await client("attendance", {
-      lesson_id: lessonId,
-      student_id: studentId,
-      status,
-      note: null,
-      recorded_at: now,
-    });
-  } catch {
-    /* ignore */
   }
 }
 

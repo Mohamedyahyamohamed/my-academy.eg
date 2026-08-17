@@ -140,6 +140,11 @@ export async function POST(req: NextRequest) {
   const lesson = activeLessonForGroup(group.id, user.academy_id);
   if (!lesson) return jsonError("NO_ACTIVE_LESSON", 409);
 
+  const duplicate = collections().attendance.some(
+    (entry) => entry.lesson_id === lesson.id && entry.student_id === studentId,
+  );
+  if (duplicate) return jsonError("ATTENDANCE_ALREADY_RECORDED", 409);
+
   try {
     await AttendanceService.recordCheckin(lesson.id, studentId, "PRESENT");
   } catch (error) {

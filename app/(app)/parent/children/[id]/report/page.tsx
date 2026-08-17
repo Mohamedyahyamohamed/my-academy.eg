@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { AttendanceService, GradesService, PaymentsService, currentAcademyId, requireScopedRole } from "@/services";
+import { AttendanceService, GradesService, PaymentsService, requireScopedRole } from "@/services";
 import { collections } from "@/services/data/store";
 import { formatCurrency, formatDate, fullName } from "@/lib/utils";
 import { performanceLevel, performanceLabel } from "@/lib/constants";
@@ -13,7 +13,7 @@ export default async function ParentStudentReportPage(props: { params: Promise<{
   const params = await props.params;
   const user = await requireScopedRole("PARENT");
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
-  const academyId = currentAcademyId();
+  const academyId = user.academy_id;
   const { createServerSupabaseClient } = await import("@/lib/supabase/server");
   const client = await createServerSupabaseClient();
 

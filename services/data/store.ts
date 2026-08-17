@@ -270,6 +270,22 @@ function scopedAcademyId(table: string): string | null {
   return activeAcademyId();
 }
 
+const WRITE_TIMEOUT_MS = 15_000;
+
+async function withWriteTimeout<T>(operation: Promise<T>, table: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Timed out while saving ${table}.`)), WRITE_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export async function persistInsert(table: string, row: any) {
   const client = getAdminClient();
   if (!client) {
@@ -297,7 +313,8 @@ export async function persistInsert(table: string, row: any) {
     return;
   }
   try {
-    const { error } = await client.from(table).upsert(row);
+    const result: any = await withWriteTimeout<any>(client.from(table).upsert(row), table);
+    const { error } = result;
     if (error) {
       console.error(
         `persistInsert ${table} FAILED [${error.code}]: ${error.message}`,

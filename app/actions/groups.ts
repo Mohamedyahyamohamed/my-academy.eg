@@ -9,7 +9,16 @@ export async function createGroupAction(input: GroupInput) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
   const g = await GroupsService.createGroup({ ...input, academy_id: user.academy_id });
   if (g) {
-    await LessonsService.createRecurringLessonsForGroup(g, user.academy_id);
+    try {
+      await LessonsService.createRecurringLessonsForGroup(g, user.academy_id);
+    } catch (lessonError) {
+      // The group is already persisted; do not roll it back or report a false
+      // group-save failure when only recurring lesson generation failed.
+      console.error("Recurring lesson generation failed after group creation", {
+        groupId: g.id,
+        error: lessonError instanceof Error ? lessonError.message : lessonError,
+      });
+    }
   }
   void audit({ action: "group.create" });
   revalidatePath("/groups");

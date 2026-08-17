@@ -61,8 +61,8 @@ export async function createAssistantAction(input: {
   const user = await requireScopedRole("ADMIN", "TEACHER");
   if (!input.email || !input.password || !input.full_name)
     return { ok: false, error: "Name, email and password are required." };
-  if (input.password.length < 6)
-    return { ok: false, error: "Password must be at least 6 characters." };
+  if (input.password.length < 8)
+    return { ok: false, error: "Password must be at least 8 characters." };
   if (!input.groupIds.length)
     return { ok: false, error: "Select at least one group to share." };
 
@@ -141,5 +141,6 @@ export async function createAssistantAction(input: {
 
   void audit({ action: "mutation" });
   revalidatePath("/teacher/assistants");
+  revalidatePath("/settings");
   return { ok: true };
 }

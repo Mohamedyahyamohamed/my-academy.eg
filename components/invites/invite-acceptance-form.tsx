@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useClientLang } from "@/lib/i18n-client";
+import { PasswordRequirements } from "@/components/auth/password-requirements";
 
 const ROLE_COPY: Record<InvitePreview["role"], { ar: string; en: string }> = {
   ADMIN: { ar: "مدير أكاديمية", en: "Academy administrator" },
@@ -105,6 +106,7 @@ export function InviteAcceptanceForm({ token, invite }: { token: string; invite:
           placeholder={en ? "At least 8 characters" : "8 أحرف على الأقل"}
           disabled={loading}
         />
+        <PasswordRequirements password={form.password} confirmPassword={form.confirmPassword} lang={en ? "en" : "ar"} minLength={8} />
       </div>
 
       <div className="space-y-1.5">

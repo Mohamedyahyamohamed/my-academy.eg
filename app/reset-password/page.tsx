@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { createRecoverySupabaseClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/services/supabase/config";
 import { useClientLang } from "@/lib/i18n-client";
+import { PasswordRequirements } from "@/components/auth/password-requirements";
 
 function cleanRecoveryUrl() {
   if (typeof window === "undefined") return;
@@ -127,8 +128,8 @@ export default function ResetPasswordPage() {
     event.preventDefault();
     setError(null);
 
-    if (password.length < 6) {
-      setError(en ? "The new password must be at least 6 characters." : "كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل.");
+    if (password.length < 8) {
+      setError(en ? "The new password must be at least 8 characters." : "كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل.");
       return;
     }
 
@@ -243,9 +244,10 @@ export default function ResetPasswordPage() {
                     autoComplete="new-password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    placeholder={en ? "At least 6 characters" : "6 أحرف على الأقل"}
+                    placeholder={en ? "At least 8 characters" : "8 أحرف على الأقل"}
                     required
                   />
+                  <PasswordRequirements password={password} confirmPassword={confirmPassword} lang={en ? "en" : "ar"} minLength={8} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="confirm-password">{en ? "Confirm password" : "تأكيد كلمة المرور"}</Label>

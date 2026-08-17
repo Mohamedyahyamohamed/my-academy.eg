@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signupAction } from "@/app/actions/signup";
+import { PasswordRequirements } from "@/components/auth/password-requirements";
 
 type Lang = "ar" | "en";
 
@@ -83,7 +84,7 @@ export function SignupForm({ initialLang = "ar" }: { initialLang?: Lang }) {
       {form.workspaceType === "ACADEMY" && <div className="space-y-1.5"><Label htmlFor="academy">{en ? "Academy name" : "اسم الأكاديمية"}</Label><Input id="academy" required placeholder={en ? "Example: Elite Academy" : "مثال: أكاديمية النخبة"} value={form.academyName} onChange={(event) => set("academyName", event.target.value)} disabled={loading} /></div>}
       <div className="space-y-1.5"><Label htmlFor="name">{en ? "Full name" : "اسمك بالكامل"}</Label><Input id="name" required autoComplete="name" placeholder={en ? "Full name" : "الاسم بالكامل"} value={form.fullName} onChange={(event) => set("fullName", event.target.value)} disabled={loading} /></div>
       <div className="space-y-1.5"><Label htmlFor="email">{en ? "Email address" : "البريد الإلكتروني"}</Label><Input id="email" required type="email" autoComplete="email" placeholder="you@email.com" value={form.email} onChange={(event) => set("email", event.target.value)} disabled={loading} /></div>
-      <div className="space-y-1.5"><Label htmlFor="password">{en ? "Password" : "كلمة المرور"}</Label><Input id="password" required type="password" autoComplete="new-password" placeholder={en ? "At least 8 characters" : "8 أحرف على الأقل"} value={form.password} onChange={(event) => set("password", event.target.value)} disabled={loading} /></div>
+      <div className="space-y-1.5"><Label htmlFor="password">{en ? "Password" : "كلمة المرور"}</Label><Input id="password" required type="password" autoComplete="new-password" placeholder={en ? "At least 8 characters" : "8 أحرف على الأقل"} value={form.password} onChange={(event) => set("password", event.target.value)} disabled={loading} /><PasswordRequirements password={form.password} lang={lang} minLength={8} /></div>
 
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? <><Loader2 className="h-4 w-4 animate-spin" />{en ? "Preparing your workspace…" : "جارٍ تجهيز مساحتك…"}</> : <>{form.workspaceType === "TEACHER" ? (en ? "Create teacher workspace" : "إنشاء مساحة المدرس") : (en ? "Create my academy" : "إنشاء أكاديميتي")} <ArrowRight className="h-4 w-4" /></>}

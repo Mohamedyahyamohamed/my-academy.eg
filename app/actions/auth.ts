@@ -32,8 +32,8 @@ export async function requestPasswordResetAction(email: string) {
  */
 export async function changePasswordAction(currentPassword: string, newPassword: string) {
   const user = requireUser();
-  if (!newPassword || newPassword.length < 6) {
-    return { ok: false, error: "الباسورد الجديد لازم 6 حروف على الأقل." };
+  if (!newPassword || newPassword.length < 8) {
+    return { ok: false, error: "الباسورد الجديد لازم 8 حروف على الأقل." };
   }
   try {
     const { createServerSupabaseClient } = await import("@/lib/supabase/server");

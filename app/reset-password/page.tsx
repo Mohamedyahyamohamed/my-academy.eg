@@ -121,7 +121,7 @@ export default function ResetPasswordPage() {
       mounted = false;
       data.subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [en, supabase]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

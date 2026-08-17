@@ -24,7 +24,6 @@ class LocalDB {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __MY_ACADEMY_DB__: LocalDB | undefined;
 }
 
@@ -36,7 +35,6 @@ const requestData = new AsyncLocalStorage<SeedData>();
 
 
 declare global {
-  // eslint-disable-next-line no-var
   var __MY_ACADEMY_TENANT_SNAPSHOTS__: Map<string, SeedData> | undefined;
 }
 

@@ -6,12 +6,9 @@ import type { StudentInput } from "@/services/students";
 import { STUDENT_DEFAULT_PASSWORD } from "@/lib/auth";
 
 export async function createStudentAction(input: StudentInput) {
-  console.log("[createStudentAction] START", { first: input.first_name, last: input.last_name, parent_id: input.parent_id });
   try {
     const user = await requireScopedRole("ADMIN", "TEACHER");
-    console.log("[createStudentAction] user OK:", user.email, "academy:", user.academy_id);
     const student = await StudentsService.createStudent(input, user.academy_id);
-    console.log("[createStudentAction] CREATED OK:", student.id);
     // WhatsApp هو القناة الافتراضية بعد تفعيل الدفع في Meta.
     // يمكن استخدام البريد مؤقتًا عبر WHATSAPP_QR_CHANNEL=email.
     try {
@@ -51,11 +48,9 @@ export async function createStudentAction(input: StudentInput) {
 }
 
 export async function updateStudentAction(id: string, input: Partial<StudentInput>) {
-  console.log("[updateStudentAction] START", { id, first: input.first_name });
   try {
     const user = await requireScopedRole("ADMIN", "TEACHER");
     const student = StudentsService.updateStudent(id, input);
-    console.log("[updateStudentAction] UPDATED:", student?.id ?? "NOT FOUND");
     if (student) {
       await import("@/services/audit").then((m) => m.audit(
         { action: "student.update", entity_type: "student", entity_id: id, new_data: input },

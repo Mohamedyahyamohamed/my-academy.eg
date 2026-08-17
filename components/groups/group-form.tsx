@@ -106,7 +106,13 @@ export function GroupForm({
       onDone?.();
       router.refresh();
     } catch (err) {
-      toast.error((err as Error).message || (en ? "An unexpected error occurred." : "حدث خطأ غير متوقع."));
+      const message = err instanceof Error ? err.message : "";
+      const duplicate = /already exists|duplicate|unique/i.test(message);
+      toast.error(
+        duplicate
+          ? (en ? "A group with these details already exists." : "توجد مجموعة بهذه البيانات بالفعل.")
+          : (en ? "Could not save the group. Check the information and try again." : "تعذّر حفظ المجموعة. راجع البيانات وحاول مرة أخرى."),
+      );
     } finally {
       setSaving(false);
     }

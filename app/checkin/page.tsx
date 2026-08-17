@@ -65,7 +65,7 @@ function CheckInInner() {
       setState("err");
       setMsg(en ? "Network error. Please try again." : "حدث خطأ في الاتصال. حاول مرة أخرى.");
     }
-  }, [en, studentId]);
+  }, [en, groups.length, studentId]);
 
   React.useEffect(() => {
     if (!token && !lessonIdParam && studentId) {

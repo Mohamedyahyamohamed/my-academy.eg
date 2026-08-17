@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -63,7 +64,7 @@ export function AcademyBranding({ academy }: { academy: any }) {
             placeholder="https://example.com/logo.png"
           />
           {logoUrl && (
-            <img src={logoUrl} alt="logo" className="mt-2 h-16 w-16 rounded-lg border border-border object-contain" />
+            <Image src={logoUrl} alt={en ? "Academy logo preview" : "معاينة شعار الأكاديمية"} width={64} height={64} unoptimized className="mt-2 h-16 w-16 rounded-lg border border-border object-contain" />
           )}
         </div>
         <Button onClick={save} disabled={saving}>

@@ -29,7 +29,6 @@ export function nodeSupabaseClient() {
   const serviceKey = getSupabaseServiceRoleKey();
   if (!serviceKey) return null;
   polyfillWs();
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { createClient } = require("@supabase/supabase-js");
   return createClient(getSupabaseUrl()!, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },

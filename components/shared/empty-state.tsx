@@ -42,7 +42,7 @@ export function EmptyState({
 /** Error state. */
 export function ErrorState({
   title = "Something went wrong",
-  description = "An unexpected error occurred. Please try again.",
+  description = "Could not load this section. Please try again.",
   action,
   className,
 }: {

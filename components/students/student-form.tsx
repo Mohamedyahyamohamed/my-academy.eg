@@ -124,8 +124,14 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
       }
       onDone?.();
       router.refresh();
-    } catch {
-      toast.error(en ? "An unexpected error occurred." : "حدث خطأ غير متوقع.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      const duplicate = /already exists|duplicate|unique/i.test(message);
+      toast.error(
+        duplicate
+          ? (en ? "A student with these details already exists." : "يوجد طالب مسجل بهذه البيانات بالفعل.")
+          : (en ? "Could not save the student. Check the information and try again." : "تعذّر حفظ بيانات الطالب. راجع البيانات وحاول مرة أخرى."),
+      );
     } finally {
       setSaving(false);
     }

@@ -64,10 +64,11 @@ describe("Route-Level Cross-Tenant — local fixture IDs", () => {
     expect(res.status).not.toBe(200);
   });
 
-  it("(search) Academy A search does NOT return Academy B student name", async () => {
+  it("(search) authenticated Academy A search succeeds and stays scoped", async () => {
     const res = await fetch(`${BASE}/api/search?q=BStudent`, {
       headers: { Cookie: adminA },
     });
+    expect(res.status).toBe(200);
     const data = await res.json();
     const ids = (data.results ?? []).map((r: any) => r.id);
     expect(ids).not.toContain(ACADEMY_B_STUDENT_ID);

@@ -6,10 +6,18 @@ import {
   resolveStudent,
   getMyChildren,
 } from "@/services";
+import { ensureStoreLoaded } from "@/services/data/store";
+import { setRequestContext } from "@/services/request-context";
 
 export async function GET(req: NextRequest) {
   const user = await loadCurrentUser();
   if (!user) return NextResponse.json({ results: [] }, { status: 401 });
+
+  // API routes can cross an async boundary before tenant-scoped service reads.
+  // Hydrate and re-bind the authenticated academy explicitly so globalSearch
+  // cannot fail closed with a missing context or read another tenant.
+  await ensureStoreLoaded(user.academy_id);
+  setRequestContext(user);
 
   // Rate limit search.
   const { rateLimit, LIMITS } = await import("@/lib/rate-limit-redis");

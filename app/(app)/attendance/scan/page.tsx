@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/shared/page-header";
 import { ScanWorkshop } from "@/components/attendance/scan-workshop";
-import { GroupsService, LessonsService, StudentsService, requireScopedRole } from "@/services";
+import { GroupsService, LessonsService, StudentsService, currentTeacherId, requireScopedRole } from "@/services";
 import { collections } from "@/services/data/store";
 import { cookies } from "next/headers";
 import { getLangFromCookie, isRTL } from "@/lib/i18n";
@@ -11,8 +11,9 @@ export default async function ScanAttendancePage() {
   const user = await requireScopedRole("TEACHER");
   const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
   const en = lang === "en";
-  const groups = await GroupsService.listGroups("", user.academy_id, user.id);
-  const lessons = (await LessonsService.listLessons({ pageSize: 500 }, user.academy_id, user.id)).items;
+  const teacherProfileId = currentTeacherId() ?? undefined;
+  const groups = await GroupsService.listGroups("", user.academy_id, teacherProfileId);
+  const lessons = (await LessonsService.listLessons({ pageSize: 500 }, user.academy_id, teacherProfileId)).items;
   const students = (await StudentsService.listStudents({ pageSize: 500 }, user.academy_id)).items;
 
   return (

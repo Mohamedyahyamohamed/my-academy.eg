@@ -109,6 +109,33 @@ function lessonWallClockMinute(date: string, time: string) {
   return (((year * 12 + month) * 31 + day) * 24 + hour) * 60 + minute;
 }
 
+function validateLessonWindow(date: string, start: string, end: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00`))) {
+    throw new Error("A valid lesson date is required.");
+  }
+  if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) {
+    throw new Error("Lesson times must use the HH:MM format.");
+  }
+  const startMinute = Number(start.slice(0, 2)) * 60 + Number(start.slice(3, 5));
+  const endMinute = Number(end.slice(0, 2)) * 60 + Number(end.slice(3, 5));
+  if (startMinute > 1439 || endMinute > 1439 || endMinute <= startMinute) {
+    throw new Error("End time must be after start time.");
+  }
+}
+
+function assertNoLessonConflict(candidate: Pick<Lesson, "id" | "group_id" | "teacher_id" | "date" | "start_time" | "end_time">) {
+  const start = lessonWallClockMinute(candidate.date, candidate.start_time);
+  const end = lessonWallClockMinute(candidate.date, candidate.end_time);
+  const conflict = collections().lessons.find((lesson) => {
+    if (lesson.id === candidate.id || lesson.date !== candidate.date) return false;
+    if (lesson.group_id !== candidate.group_id && lesson.teacher_id !== candidate.teacher_id) return false;
+    const otherStart = lessonWallClockMinute(lesson.date, lesson.start_time);
+    const otherEnd = lessonWallClockMinute(lesson.date, lesson.end_time);
+    return start < otherEnd && end > otherStart;
+  });
+  if (conflict) throw new Error("This lesson overlaps another lesson for the same group or teacher.");
+}
+
 /** Return the single lesson currently in progress for the authenticated teacher. */
 export function getActiveLessonForTeacher(now = new Date()): Lesson | null {
   const academyId = currentAcademyId();
@@ -215,9 +242,7 @@ export async function createLesson(input: LessonInput): Promise<Lesson> {
 
   const start = input.start_time.trim();
   const end = input.end_time.trim();
-  if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end) || end <= start) {
-    throw new Error("End time must be after start time.");
-  }
+  validateLessonWindow(input.date, start, end);
 
   const topic = input.topic.trim();
   if (!topic) throw new Error("Topic is required.");
@@ -240,6 +265,8 @@ export async function createLesson(input: LessonInput): Promise<Lesson> {
     updated_at: now,
   };
 
+  assertNoLessonConflict(l);
+
   // Persist first. The in-memory snapshot must never report a successful
   // creation when the durable write failed.
   await persistInsert("lessons", l);
@@ -247,24 +274,57 @@ export async function createLesson(input: LessonInput): Promise<Lesson> {
   return attach(l);
 }
 
-export function updateLesson(
+export async function updateLesson(
   id: string,
   input: Partial<LessonInput>,
-): Lesson | null {
+): Promise<Lesson | null> {
   const l = collections().lessons.find((x) => x.id === id);
   if (!l) return null;
-  Object.assign(l, { ...input, updated_at: new Date().toISOString() });
-  void persistUpdate("lessons", id, { ...input, updated_at: new Date().toISOString() });
+  const academyId = currentAcademyId();
+  if (l.academy_id !== academyId) throw new Error("Lesson is outside the authenticated academy.");
+  const scope = teacherGroupScope();
+  if (scope && !scope.has(l.group_id)) throw new Error("You do not have permission to edit this lesson.");
+
+  const nextGroup = input.group_id ? getGroup(input.group_id) : getGroup(l.group_id);
+  if (!nextGroup || nextGroup.academy_id !== academyId) throw new Error("The selected group is not available in this academy.");
+  if (scope && !scope.has(nextGroup.id)) throw new Error("You do not have permission to use this group.");
+
+  const nextDate = input.date ?? l.date;
+  const nextStart = (input.start_time ?? l.start_time).trim();
+  const nextEnd = (input.end_time ?? l.end_time).trim();
+  validateLessonWindow(nextDate, nextStart, nextEnd);
+  const next: Lesson = {
+    ...l,
+    ...input,
+    group_id: nextGroup.id,
+    teacher_id: nextGroup.teacher_id,
+    date: nextDate,
+    start_time: nextStart,
+    end_time: nextEnd,
+    topic: input.topic !== undefined ? input.topic.trim() : l.topic,
+    description: input.description !== undefined ? input.description?.trim() || null : l.description,
+    notes: input.notes !== undefined ? input.notes?.trim() || null : l.notes,
+    updated_at: new Date().toISOString(),
+  };
+  if (!next.topic) throw new Error("Topic is required.");
+  assertNoLessonConflict(next);
+  const { id: _id, ...patch } = next;
+  await persistUpdate("lessons", id, patch);
+  Object.assign(l, next);
   return attach(l);
 }
 
-export function deleteLesson(id: string): boolean {
-  const before = collections().lessons.length;
+export async function deleteLesson(id: string): Promise<boolean> {
+  const lesson = collections().lessons.find((l) => l.id === id);
+  if (!lesson) return false;
+  const academyId = currentAcademyId();
+  if (lesson.academy_id !== academyId) throw new Error("Lesson is outside the authenticated academy.");
+  const scope = teacherGroupScope();
+  if (scope && !scope.has(lesson.group_id)) throw new Error("You do not have permission to delete this lesson.");
+
+  await persistDelete("lessons", { id });
+  await persistDelete("attendance", { lesson_id: id });
   collections().lessons = collections().lessons.filter((l) => l.id !== id);
-  collections().attendance = collections().attendance.filter(
-    (a) => a.lesson_id !== id,
-  );
-  void persistDelete("lessons", { id });
-  void persistDelete("attendance", { lesson_id: id });
-  return collections().lessons.length < before;
+  collections().attendance = collections().attendance.filter((a) => a.lesson_id !== id);
+  return true;
 }

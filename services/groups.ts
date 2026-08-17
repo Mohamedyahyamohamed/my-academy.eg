@@ -139,14 +139,15 @@ function gid() {
 }
 
 export async function createGroup(input: GroupInput): Promise<Group> {
-  const check = canCreate("groups");
+  const academyId = input.academy_id ?? currentAcademyId();
+  const check = canCreate("groups", academyId);
   if (!check.allowed) {
     throw new Error(`Limit reached: ${check.current}/${check.limit} groups. Upgrade your plan.`);
   }
   const now = new Date().toISOString();
   const g: Group = {
     id: gid(),
-    academy_id: input.academy_id ?? currentAcademyId(),
+    academy_id: academyId,
     name: input.name,
     course_id: input.course_id,
     teacher_id: input.teacher_id,

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ACTIVE_ACADEMY_COOKIE, SESSION_COOKIE, DEMO_PASSWORD } from "@/lib/auth";
 import { ensureStoreLoaded } from "@/services/data/store";
-import { getSupabaseAnonKey, getSupabaseServiceRoleKey, isSupabaseConfigured } from "@/services/supabase/config";
+import { getSupabaseAnonKey, isSupabaseConfigured } from "@/services/supabase/config";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import type { SessionUser } from "@/types";
@@ -56,12 +56,17 @@ export async function POST(req: NextRequest) {
   await ensureStoreLoaded();
 
   if (useSupabase) {
-    // Use the SERVER client (cookie-bound) → signInWithPassword sets the
-    // Supabase auth cookies so RLS works on subsequent requests.
-    try {
-      // Use the server-only key for this auth bootstrap route when available.
-      // The key never leaves the server; subsequent requests still use the user session.
-      const client = await createServerSupabaseClient(getSupabaseServiceRoleKey() ?? getSupabaseAnonKey());
+      // Use the cookie-bound server client with the public anon key. User
+      // authentication must never depend on the service-role credential.
+      try {
+      const anonKey = getSupabaseAnonKey();
+      if (!anonKey) {
+        return NextResponse.json(
+          { ok: false, error: "إعدادات خدمة الحسابات غير مكتملة. تواصل مع إدارة المنصة." },
+          { status: 503 },
+        );
+      }
+      const client = await createServerSupabaseClient(anonKey);
       const { data: authData, error: authError } = await client.auth.signInWithPassword({
         email,
         password,

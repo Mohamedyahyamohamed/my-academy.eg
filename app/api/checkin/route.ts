@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser, resolveStudent } from "@/services";
+import { loadCurrentUser, resolveStudent } from "@/services";
 import { verifyQrSession } from "@/lib/qr-session";
 import { collections } from "@/services/data/store";
 import { AttendanceService } from "@/services";
@@ -8,7 +8,7 @@ import { requestIpKey } from "@/lib/request-identity";
 
 /** Student self check-in via a tenant-scoped, short-lived QR token. */
 export async function POST(req: NextRequest) {
-  const user = getCurrentUser();
+  const user = await loadCurrentUser();
   if (!user || user.role !== "STUDENT") {
     return NextResponse.json({ ok: false, error: "Must be logged in as a student." }, { status: 401 });
   }

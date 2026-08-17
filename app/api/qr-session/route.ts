@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collections } from "@/services/data/store";
-import { currentTeacherId, getCurrentUser } from "@/services";
+import { currentTeacherId, loadCurrentUser } from "@/services";
 import { createQrSession } from "@/lib/qr-session";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { requestIpKey } from "@/lib/request-identity";
 
 /** Generate a signed, short-lived QR session token for an owned lesson. */
 export async function POST(req: NextRequest) {
-  const user = getCurrentUser();
+  const user = await loadCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!["TEACHER", "ADMIN", "SUPER_ADMIN"].includes(user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

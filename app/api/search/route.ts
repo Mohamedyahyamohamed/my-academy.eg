@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  getCurrentUser,
+  loadCurrentUser,
   MiscService,
   resolveParent,
   resolveStudent,
@@ -8,7 +8,7 @@ import {
 } from "@/services";
 
 export async function GET(req: NextRequest) {
-  const user = getCurrentUser();
+  const user = await loadCurrentUser();
   if (!user) return NextResponse.json({ results: [] }, { status: 401 });
 
   // Rate limit search.

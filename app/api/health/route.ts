@@ -1,15 +1,29 @@
 import { NextResponse } from "next/server";
-import { isSupabaseConfigured } from "@/services/supabase/config";
+import { isSupabaseConfigured, getSupabaseAnonKey, getSupabaseUrl } from "@/services/supabase/config";
 
 /**
  * Health / readiness endpoint.
  * - 200 healthy: process alive + DB reachable.
- * - 503 degraded: process alive but DB unreachable.
- * - Does NOT require auth. Never leaks secrets.
- * Used by: uptime monitoring, load balancers, deploy verification.
+ * - 503 degraded: process alive but a required dependency is unavailable.
+ * - Never leaks credentials or provider internals.
  */
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+type DbStatus = "ok" | "not-configured" | "invalid-credentials" | "unavailable" | "query-failed";
+
+function classifyDatabaseError(error: unknown): Exclude<DbStatus, "ok" | "not-configured"> {
+  const candidate = error as { status?: number; code?: string; message?: string } | null;
+  const status = candidate?.status;
+  const message = (candidate?.message ?? "").toLowerCase();
+  if (status === 401 || status === 403 || message.includes("invalid api key") || message.includes("invalid jwt") || message.includes("jwt expired")) {
+    return "invalid-credentials";
+  }
+  if (message.includes("fetch failed") || message.includes("enotfound") || message.includes("timeout") || message.includes("aborted")) {
+    return "unavailable";
+  }
+  return "query-failed";
+}
 
 export async function GET() {
   const started = Date.now();
@@ -18,11 +32,9 @@ export async function GET() {
     qr: process.env.QR_SESSION_SECRET && process.env.QR_SESSION_SECRET.length >= 32 ? "ok" : "unavailable",
   };
 
-  // DB connectivity (readiness). RLS scopes results; we only care the query
-  // resolves without error → Supabase is reachable.
   try {
-    if (!isSupabaseConfigured()) {
-      checks.db = "not-configured (dev mode)";
+    if (!getSupabaseUrl() || !getSupabaseAnonKey() || !isSupabaseConfigured()) {
+      checks.db = "not-configured";
     } else {
       const { createServerSupabaseClient } = await import("@/lib/supabase/server");
       const client = await createServerSupabaseClient();
@@ -34,17 +46,16 @@ export async function GET() {
           .select("id")
           .limit(1)
           .abortSignal(controller.signal);
-        checks.db = error ? "unavailable" : "ok";
+        checks.db = error ? classifyDatabaseError(error) : "ok";
       } finally {
         clearTimeout(timeout);
       }
     }
-  } catch {
-    checks.db = "unavailable";
+  } catch (error) {
+    checks.db = classifyDatabaseError(error);
   }
 
-  const ok = Object.values(checks).every((v) => v === "ok" || v.startsWith("not-configured"));
-
+  const ok = checks.app === "ok" && checks.qr === "ok" && checks.db === "ok";
   return NextResponse.json(
     {
       status: ok ? "healthy" : "degraded",

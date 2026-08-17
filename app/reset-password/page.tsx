@@ -243,13 +243,6 @@ export default function ResetPasswordPage() {
                     autoComplete="new-password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    onPaste={(event) => {
-                      const pastedValue = event.clipboardData.getData("text");
-                      if (pastedValue) {
-                        event.preventDefault();
-                        setPassword(pastedValue);
-                      }
-                    }}
                     placeholder={en ? "At least 6 characters" : "6 أحرف على الأقل"}
                     required
                   />
@@ -262,13 +255,6 @@ export default function ResetPasswordPage() {
                     autoComplete="new-password"
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
-                    onPaste={(event) => {
-                      const pastedValue = event.clipboardData.getData("text");
-                      if (pastedValue) {
-                        event.preventDefault();
-                        setConfirmPassword(pastedValue);
-                      }
-                    }}
                     placeholder={en ? "Re-enter your password" : "أعد كتابة كلمة المرور"}
                     required
                   />

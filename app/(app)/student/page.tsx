@@ -34,7 +34,7 @@ export default async function StudentDashboard() {
 
   const rank = await getStudentRank(d.student.id, user.academy_id);
   const leaderboard = await getLeaderboard(5, user.academy_id);
-  const academyName = MiscService.getAcademy(user.academy_id).name;
+  const academyName = user.memberships?.find((membership) => membership.academy_id === user.academy_id)?.academy_name ?? "MY Academy";
 
   return (
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>

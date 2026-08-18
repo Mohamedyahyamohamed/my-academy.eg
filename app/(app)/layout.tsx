@@ -26,16 +26,23 @@ export default async function AuthenticatedLayout({
   // Production data is hydrated only after resolving the academy from the
   // signed server session, keeping each request isolated to its tenant.
   // A stale session must not turn into a 500 or reveal a different tenant.
-  let academy;
+  const activeMembership = user.memberships?.find((membership) => membership.academy_id === user.academy_id);
+  let academyName = activeMembership?.academy_name ?? "MY Academy";
   try {
     await ensureStoreLoaded(user.academy_id);
-    academy = await MiscService.getAcademyAsync(user.academy_id);
+    const academy = await MiscService.getAcademyAsync(user.academy_id);
+    academyName = academy.name;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (message.includes("Academy data is unavailable") || message.includes("Missing authenticated academy context")) {
+    // The signed session already contains the explicitly selected active
+    // membership. Keep the shell available during a cold-start snapshot miss;
+    // page data still comes from tenant-scoped RLS queries.
+    if (!message.includes("Academy data is unavailable") && !message.includes("Missing authenticated academy context")) {
+      throw error;
+    }
+    if (!activeMembership) {
       redirect("/api/auth/clear-session?next=/login%3Freason%3Dtenant-session");
     }
-    throw error;
   }
   const onboardingCookie = (await cookies()).get("myacademy_onboarding_done");
   const shouldCheckOnboarding = user.role === "ADMIN" && !onboardingCookie;
@@ -64,7 +71,7 @@ export default async function AuthenticatedLayout({
       <RealtimeNotifications />
       <OnboardingGate required={needsOnboarding}>
         <DemoBanner user={user} />
-        <AppShell user={user} academyName={academy.name}>
+        <AppShell user={user} academyName={academyName}>
           {children}
         </AppShell>
       </OnboardingGate>

@@ -32,6 +32,7 @@ export default async function StudentDashboard() {
     );
   }
 
+  const gradeLabel = d.student.grade ?? (en ? "Student" : "طالب");
   const rank = await getStudentRank(d.student.id, user.academy_id);
   const leaderboard = await getLeaderboard(5, user.academy_id);
   const academyName = user.memberships?.find((membership) => membership.academy_id === user.academy_id)?.academy_name ?? "MY Academy";
@@ -40,7 +41,7 @@ export default async function StudentDashboard() {
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
         title={`${en ? "Hello" : "أهلاً"}, ${d.student.first_name} 👋`}
-        description={`${d.student.grade} · ${d.groups.map((g) => g.name.split(" — ")[0]).join(", ") || (en ? "No groups" : "لا توجد مجموعات")}`}
+        description={`${gradeLabel} · ${d.groups.map((g) => g.name.split(" — ")[0]).join(", ") || (en ? "No groups" : "لا توجد مجموعات")}`}
       >
         <StudentQrCard
           studentId={d.student.id}

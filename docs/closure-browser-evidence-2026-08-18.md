@@ -56,3 +56,25 @@ Evidence source: My Browser page `/platform`, captured 2026-08-18. No passwords 
 - Verified `profiles`, `auth.users`, and `academy_memberships` all use the same UUID `c459da0f-8a8d-4181-931c-127ddb4a71fb`, Academy B UUID `155a078b-df83-43f7-8646-0c3a0156f5b8`, and role `STUDENT/ACTIVE`.
 - Verified `private.auth_has_academy_role` checks `academy_memberships.profile_id = auth.uid()`, ACTIVE membership, and requested role; the fixture satisfies those conditions.
 - Browser runtime after fresh login and cache-busting URL `/student?tenant-fixture-refresh=20260818-1305` still shows `الملف غير مرتبط` / `حسابك غير مرتبط بسجل طالب`. Tenant isolation remains blocked; next diagnosis target is production hydration/RLS runtime rather than missing database fixture.
+
+## 2026-08-18 — Academy B Student Portal after deployment 78d627a
+
+- Deployment: `dpl_EhsUaLtCE7gR9oZN3TvmrwCPnvCa`, production, `READY`, commit `78d627acff2cdea201e2f03dece4f367738a182e`.
+- URL tested: `/student?tenant-fixture-refresh=20260818-1413`.
+- Runtime result: page load succeeded; previous server errors `3172812196` and `3222503845` were not reproduced.
+- Session identity shown in the UI: `mohamedyahya13579+academy-b-isolation-20260818`.
+- Academy context shown in the UI: `Academy B`.
+- Rendered values: attendance `0%`, average grade `0%`, active groups `0`, pending homework `0`, no upcoming lessons, no grades, and no homework.
+- No Academy A data was visible in the Academy B session. Full cross-tenant proof remains pending because no Academy B group/lesson/attendance fixture was created.
+- Minor UI defect observed: subtitle renders `null · لا توجد مجموعات`, indicating a null grade in the synthetic fixture or a missing null-safe display fallback. This does not prove a tenant leak but should be corrected before launch.
+- Status: Academy B student-page access = runtime pass; Academy A vs B isolation across all required tables/files = still blocked pending controlled fixtures and negative checks.
+
+## 2026-08-18 — Academy B role-boundary checks
+
+- From the authenticated Academy B Student session, direct navigation to `/groups?tenant-fixture-refresh=20260818-1414` ended at `/student`; no group list or Academy A data was exposed.
+- Direct navigation to `/students?tenant-fixture-refresh=20260818-1415` also ended at `/student`; no student-management list or Academy A data was exposed.
+- These checks support the Student role boundary and absence of cross-tenant exposure from those admin routes. They are not a substitute for an Academy A-vs-B test using comparable fixtures on both sides.
+
+## 2026-08-18 — Academy B search isolation sentinel
+
+Within the authenticated Academy B session, `GET /api/search?q=MYAcademy%20Production%20Audit` returned HTTP success with `{"results":[]}`. `MYAcademy Production Audit` is the known Academy A name. This is direct runtime evidence that the scoped search endpoint did not return Academy A records to Academy B. It is a sentinel check, not a complete proof for every table or file store.

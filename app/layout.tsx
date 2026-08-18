@@ -10,14 +10,33 @@ import "./globals.css";
 export async function generateMetadata(): Promise<Metadata> {
   const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
   const en = lang === "en";
+  const title = `${APP_CONFIG.name} — ${en ? "Run your academy with clarity and ease" : APP_CONFIG.tagline}`;
+  const description = en
+    ? "A complete platform for managing students, groups, attendance, payments, grades, and role-based academy portals."
+    : APP_CONFIG.description;
+
   return {
+    metadataBase: new URL("https://my-academy-eg.vercel.app"),
     title: {
-      default: `${APP_CONFIG.name} — ${en ? "Run your academy with clarity and ease" : APP_CONFIG.tagline}`,
+      default: title,
       template: `%s · ${APP_CONFIG.name}`,
     },
-    description: en
-      ? "A complete platform for managing students, groups, attendance, payments, grades, and role-based academy portals."
-      : APP_CONFIG.description,
+    description,
+    alternates: { canonical: "/" },
+    openGraph: {
+      type: "website",
+      siteName: APP_CONFIG.name,
+      title,
+      description,
+      url: "/",
+      locale: en ? "en_US" : "ar_EG",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+    robots: { index: true, follow: true },
   };
 }
 

@@ -7,7 +7,8 @@
  * يوقف المالك المتغير الثاني بعد اكتمال الاختبار.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/services";
+import { loadCurrentUser } from "@/services/session";
+import { setRequestContext } from "@/services/request-context";
 import {
   isWhatsAppLiveEnabled,
   normalizePhoneE164,
@@ -15,10 +16,11 @@ import {
 } from "@/lib/whatsapp";
 
 export async function POST(req: NextRequest) {
-  try {
-    requireRole("ADMIN");
-  } catch {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  const user = await loadCurrentUser();
+  if (!user) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  setRequestContext(user);
+  if (user.role !== "ADMIN") {
+    return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
   }
 
   if (!isWhatsAppLiveEnabled() || process.env.WHATSAPP_ALLOW_TEST_SEND !== "true") {

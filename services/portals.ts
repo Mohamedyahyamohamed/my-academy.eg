@@ -33,6 +33,74 @@ export function resolveStudent(user: SessionUser): Student | null {
   );
 }
 
+/**
+ * Resolve the student from the hydrated tenant snapshot first, then use a
+ * server-side tenant-scoped read when a stale/empty snapshot is encountered.
+ * The fallback is intentionally constrained by both the signed session's
+ * academy_id and email; it never searches globally or selects another tenant.
+ */
+async function resolveStudentForDashboard(user: SessionUser): Promise<Student | null> {
+  const cached = resolveStudent(user);
+  if (cached) return cached;
+  if (!isSupabaseConfigured()) return null;
+
+  const admin = nodeSupabaseClient();
+  if (!admin) return null;
+  try {
+    const { data, error } = await admin
+      .from("students")
+      .select("*")
+      .eq("academy_id", user.academy_id)
+      .ilike("email", user.email)
+      .maybeSingle();
+    if (error) {
+      console.error("resolveStudentForDashboard error:", error.message);
+      return null;
+    }
+    return (data as Student | null) ?? null;
+  } catch (error) {
+    console.error("resolveStudentForDashboard error:", error instanceof Error ? error.message : String(error));
+    return null;
+  }
+}
+
+async function groupsForStudentDashboard(
+  studentId: string,
+  academyId: string,
+): Promise<ReturnType<typeof groupsForStudent>> {
+  const cached = groupsForStudent(studentId);
+  if (cached.length || !isSupabaseConfigured()) return cached;
+
+  const admin = nodeSupabaseClient();
+  if (!admin) return cached;
+  try {
+    const { data: memberships, error: membershipError } = await admin
+      .from("group_students")
+      .select("group_id")
+      .eq("student_id", studentId)
+      .limit(1000);
+    if (membershipError) throw membershipError;
+
+    const groupIds = (memberships ?? []).map((row: any) => row.group_id).filter(Boolean);
+    if (!groupIds.length) return [];
+
+    const [{ data: groups, error: groupsError }, { data: courses, error: coursesError }] = await Promise.all([
+      admin.from("groups").select("*").eq("academy_id", academyId).in("id", groupIds).limit(1000),
+      admin.from("courses").select("*").eq("academy_id", academyId).limit(1000),
+    ]);
+    if (groupsError) throw groupsError;
+    if (coursesError) throw coursesError;
+
+    return (groups ?? []).map((group: any) => ({
+      ...group,
+      course: (courses ?? []).find((course: any) => course.id === group.course_id),
+    })) as ReturnType<typeof groupsForStudent>;
+  } catch (error) {
+    console.error("groupsForStudentDashboard error:", error instanceof Error ? error.message : String(error));
+    return cached;
+  }
+}
+
 /** Children of a parent, with groups attached. */
 export function getMyChildren(
   user: SessionUser,
@@ -92,12 +160,32 @@ export async function childSummary(studentId: string, academyId?: string): Promi
 }
 
 /** Lessons a student will attend (across their groups). */
-export async function studentLessons(studentId: string, academyId?: string) {
-  const [lessons, groups] = await Promise.all([
+export async function studentLessons(
+  studentId: string,
+  academyId?: string,
+  knownGroups?: ReturnType<typeof groupsForStudent>,
+) {
+  let [lessons, groups] = await Promise.all([
     fetchTableRLS<any>("lessons", academyId),
     fetchTableRLS<any>("groups", academyId),
   ]);
-  const groupIds = groupsForStudent(studentId).map((g: any) => g.id);
+  const scopedGroups = knownGroups ?? groupsForStudent(studentId);
+  const groupIds = scopedGroups.map((g: any) => g.id);
+
+  // If the request snapshot is empty/stale, use the same server-side tenant
+  // boundary as the student resolver rather than returning a false empty view.
+  if (!lessons.length && isSupabaseConfigured() && academyId) {
+    const admin = nodeSupabaseClient();
+    if (admin) {
+      const [{ data: directLessons }, { data: directGroups }] = await Promise.all([
+        admin.from("lessons").select("*").eq("academy_id", academyId).limit(1000),
+        admin.from("groups").select("*").eq("academy_id", academyId).in("id", groupIds).limit(1000),
+      ]);
+      lessons = directLessons ?? [];
+      groups = directGroups ?? [];
+    }
+  }
+
   return lessons
     .filter((l: any) => groupIds.includes(l.group_id))
     .sort((a: any, b: any) => +new Date(a.date) - +new Date(b.date))
@@ -333,7 +421,7 @@ export interface StudentDashboardData {
 }
 
 export async function getStudentDashboard(user: SessionUser): Promise<StudentDashboardData | null> {
-  const student = resolveStudent(user);
+  const student = await resolveStudentForDashboard(user);
   if (!student) return null;
 
   const [attendance, allGrades, exams, lessons, homework, payments] = await Promise.all([
@@ -345,12 +433,12 @@ export async function getStudentDashboard(user: SessionUser): Promise<StudentDas
     fetchTableRLS<any>("payments", user.academy_id),
   ]);
 
-  const groups = groupsForStudent(student.id);
+  const groups = await groupsForStudentDashboard(student.id, user.academy_id);
   const summary = await childSummary(student.id, user.academy_id);
   const examMap = new Map(exams.map((e: any) => [e.id, e]));
 
   const groupIds = groups.map((g: any) => g.id);
-  const myLessons = await studentLessons(student.id, user.academy_id);
+  const myLessons = await studentLessons(student.id, user.academy_id, groups);
 
   const grades = allGrades.filter((g: any) => g.student_id === student.id).map((g: any) => {
     const ex = examMap.get(g.exam_id);

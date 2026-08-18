@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/services/session";
+import { loadCurrentUser } from "@/services/session";
+import { setRequestContext } from "@/services/request-context";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
 export async function POST(req: NextRequest) {
-  const user = getCurrentUser();
+  const user = await loadCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  setRequestContext(user);
 
   const subscription = await req.json();
   if (!subscription?.endpoint) {
@@ -27,8 +29,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const user = getCurrentUser();
+  const user = await loadCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  setRequestContext(user);
 
   const client = nodeSupabaseClient();
   if (!client) return NextResponse.json({ error: "DB error" }, { status: 500 });

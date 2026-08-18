@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/services/session";
+import { loadCurrentUser } from "@/services/session";
+import { setRequestContext } from "@/services/request-context";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { sendPushNotification } from "@/lib/web-push";
 
@@ -8,8 +9,12 @@ import { sendPushNotification } from "@/lib/web-push";
  * البيانات: { title, body, target_user_id? }
  */
 export async function POST(req: NextRequest) {
-  const user = getCurrentUser();
+  const user = await loadCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  setRequestContext(user);
+  if (user.role !== "ADMIN" && user.role !== "TEACHER" && user.role !== "SUPER_ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const { title, body, target_user_id } = await req.json();
   if (!title || !body) {

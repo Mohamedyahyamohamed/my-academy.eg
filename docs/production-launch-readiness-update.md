@@ -73,3 +73,38 @@ _آخر تحديث بواسطة Manus AI._
 هذه الإصلاحات المحلية تحتاج commit/deployment ثم smoke test بحساب Assistant قبل اعتبارها إنتاجية. الحالة العامة تظل **Not Ready** حتى ذلك، إضافة إلى Academy B، Leaked Password Protection، تأكيد مفتاح Vercel، واختبارات QR والرفع الفعلية.
 
 ملاحظة: لا يوجد script باسم `test` في `package.json`؛ فشل `pnpm test -- --runInBand` كان بسبب أمر غير معرّف، وليس بسبب فشل build أو lint.
+
+## Deployment verification — Assistant hardening
+
+- Commit: `10dbe32` — `security: enforce limited assistant scope`.
+- Vercel production deployment: `dpl_D5KUM2fmWSwG4VSmmjdCqPX332vs`.
+- Deployment state: `READY`, production alias `my-academy-eg.vercel.app`.
+- `/api/health`: HTTP `200` after deployment.
+- Local verification after the same commit: `pnpm lint` passed and `pnpm build` passed; Next.js generated all application routes successfully.
+
+الاختبار التفاعلي بحساب Assistant ما زال مطلوبًا لإثبات أن الحارس الجديد يطابق علاقة `group_assistants` في بيانات الإنتاج، كما أن اختبار Academy A/B لم يُنفذ لغياب Academy B.
+
+
+## مراجعة التقرير الإضافي — Legal, Performance, SEO, UX
+
+### حواجز فعلية قبل الإطلاق العام
+
+| الأولوية | الملاحظة | القرار |
+|---|---|---|
+| حرجة | الحسابات التجريبية تستخدم كلمات مرور ضعيفة/مكررة وفق سياق الاختبار | يجب تدوير كلمات مرور كل الحسابات يدويًا وتفعيل Leaked Password Protection. لا يمكنني تنفيذ ذلك أو رؤية كلمات المرور. |
+| حرجة | Privacy وTerms تصفان نفسيهما كمسودة، والمنصة تتعامل مع بيانات قاصرين ومدفوعات | مراجعة واعتماد قانوني حقيقي قبل الإطلاق العام، خصوصًا موافقة ولي الأمر والاحتفاظ بالبيانات وحقوق أصحابها. |
+| عالية | الدفع End-to-End غير مثبت | يلزم اختبار sandbox ثم اختبار إنتاج مضبوط للنجاح والفشل والـwebhooks والاسترداد قبل تفعيل الاشتراكات. |
+| عالية | 2FA للإدارة وrate limiting على login غير مثبتين بالكامل | يلزم تفعيل/التحقق من الإعدادات وسجلات الحماية دون حظر حسابات الإنتاج. |
+| عالية | موافقة ولي الأمر على بيانات القاصر مذكورة في السياسة لكن لم يثبت وجود سجل تقني قابل للتدقيق | يلزم اعتماد المتطلبات القانونية ثم إضافة consent record مرتبط بالطالب وولي الأمر وإصدار السياسة والوقت. |
+
+### تحسينات مهمة لكنها ليست حواجز تشغيلية منفردة
+
+Open Graph وTwitter metadata، JSON-LD، robots.txt، sitemap.xml، صفحة 404 عربية، وصفحات about/contact/cookies، وقياس حجم JavaScript هي تحسينات SEO/UX/performance. يمكن تنفيذها في دورة hardening منفصلة، لكنها لا تعوض الحواجز الأمنية والقانونية أعلاه.
+
+### تقييم الملاحظات التقنية الأخرى
+
+الأداء المبلغ عنه قوي ولا يظهر حاليًا كحاجز. ترويسات الأمان الأساسية موجودة، لكن CSP تحتاج تطبيقًا تدريجيًا على staging أولًا لتجنب كسر Supabase أو QR أو التحليلات. `/api/health` لا يعرض أسرارًا؛ يعرض حالات عامة فقط، ويمكن لاحقًا تقليل تفاصيله العامة إذا تطلبت سياسة التشغيل ذلك.
+
+### قرار الجاهزية بعد التقرير
+
+يبقى القرار **Not Ready للإطلاق العام**. الأولوية الآن ليست SEO، بل تدوير كلمات المرور، تفعيل حماية كلمات المرور المسرّبة، اعتماد السياسات قانونيًا، إثبات consent للقاصرين، اختبار الدفع، 2FA/rate limiting، ثم إغلاق عزل Academy A/B وQR/upload E2E.

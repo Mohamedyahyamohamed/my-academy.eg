@@ -6,6 +6,7 @@ import { collections } from "./data/store";
 import { currentAcademyId, currentTeacherId } from "./session";
 import { getRequestAcademyId } from "./request-context";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "./supabase/config";
 import type {
   AttendanceRecord,
@@ -59,14 +60,23 @@ export async function fetchTableRLS<T = any>(table: string, academyId?: string):
   if (!isSupabaseConfigured() || !aid || !DIRECT_TENANT_TABLES.has(table)) return [];
 
   try {
-    const client = nodeSupabaseClient();
-    if (!client) return [];
-    const { data, error } = await client.from(table).select("*").eq("academy_id", aid);
-    if (error) {
-      console.error(`[data] ${table} tenant read failed:`, error.message);
+    // Prefer the request-bound user client so RLS remains the primary boundary.
+    // A service-role read is only a narrowly filtered cold-start fallback.
+    const requestClient = await createServerSupabaseClient();
+    const requestResult = await requestClient.from(table).select("*").eq("academy_id", aid);
+    if (!requestResult.error) return (requestResult.data ?? []) as T[];
+
+    const admin = nodeSupabaseClient();
+    if (!admin) {
+      console.error(`[data] ${table} tenant read failed:`, requestResult.error.message);
       return [];
     }
-    return (data ?? []) as T[];
+    const adminResult = await admin.from(table).select("*").eq("academy_id", aid);
+    if (adminResult.error) {
+      console.error(`[data] ${table} tenant read failed:`, adminResult.error.message);
+      return [];
+    }
+    return (adminResult.data ?? []) as T[];
   } catch (error) {
     console.error(`[data] ${table} tenant read failed:`, error instanceof Error ? error.message : String(error));
     return [];

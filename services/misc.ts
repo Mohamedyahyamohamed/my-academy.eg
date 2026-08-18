@@ -15,6 +15,7 @@ import { currentAcademyId } from "./session";
 import { APP_CONFIG } from "@/lib/constants";
 import { isSupabaseConfigured } from "./supabase/config";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 /* ---------------- Courses ---------------- */
 
@@ -172,14 +173,27 @@ export async function getAcademyAsync(academyId?: string): Promise<Academy> {
   if (cached) return cached;
 
   if (isSupabaseConfigured()) {
-    const client = nodeSupabaseClient();
-    if (!client) throw new Error("Supabase server client is unavailable.");
-    const { data, error } = await client
+    // Use the request-bound client first so the active user's Supabase session
+    // and RLS policies remain the primary authorization boundary.
+    const requestClient = await createServerSupabaseClient();
+    const requestResult = await requestClient
       .from("academies")
       .select("*")
       .eq("id", activeAcademyId)
       .maybeSingle();
-    if (!error && data) return data as Academy;
+    if (!requestResult.error && requestResult.data) return requestResult.data as Academy;
+
+    // A service-role read is only a narrowly keyed server fallback for cold
+    // starts where the SSR auth cookie is unavailable to the query client.
+    const admin = nodeSupabaseClient();
+    if (admin) {
+      const adminResult = await admin
+        .from("academies")
+        .select("*")
+        .eq("id", activeAcademyId)
+        .maybeSingle();
+      if (!adminResult.error && adminResult.data) return adminResult.data as Academy;
+    }
   }
 
   throw new Error("Academy data is unavailable for the active session.");

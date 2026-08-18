@@ -44,9 +44,21 @@ async function resolveStudentForDashboard(user: SessionUser): Promise<Student | 
   if (cached) return cached;
   if (!isSupabaseConfigured()) return null;
 
-  const admin = nodeSupabaseClient();
-  if (!admin) return null;
   try {
+    const requestClient = await (await import("@/lib/supabase/server")).createServerSupabaseClient();
+    const requestResult = await requestClient
+      .from("students")
+      .select("*")
+      .eq("academy_id", user.academy_id)
+      .ilike("email", user.email)
+      .maybeSingle();
+    if (!requestResult.error && requestResult.data) return requestResult.data as Student;
+
+    const admin = nodeSupabaseClient();
+    if (!admin) {
+      if (requestResult.error) console.error("resolveStudentForDashboard error:", requestResult.error.message);
+      return null;
+    }
     const { data, error } = await admin
       .from("students")
       .select("*")
@@ -71,22 +83,33 @@ async function groupsForStudentDashboard(
   const cached = groupsForStudent(studentId);
   if (cached.length || !isSupabaseConfigured()) return cached;
 
-  const admin = nodeSupabaseClient();
-  if (!admin) return cached;
   try {
-    const { data: memberships, error: membershipError } = await admin
+    const requestClient = await (await import("@/lib/supabase/server")).createServerSupabaseClient();
+    let client: any = requestClient;
+    let membershipsResult = await client
       .from("group_students")
       .select("group_id")
       .eq("student_id", studentId)
       .limit(1000);
+    if (membershipsResult.error) {
+      const admin = nodeSupabaseClient();
+      if (!admin) throw membershipsResult.error;
+      client = admin;
+      membershipsResult = await client
+        .from("group_students")
+        .select("group_id")
+        .eq("student_id", studentId)
+        .limit(1000);
+    }
+    const { data: memberships, error: membershipError } = membershipsResult;
     if (membershipError) throw membershipError;
 
     const groupIds = (memberships ?? []).map((row: any) => row.group_id).filter(Boolean);
     if (!groupIds.length) return [];
 
     const [{ data: groups, error: groupsError }, { data: courses, error: coursesError }] = await Promise.all([
-      admin.from("groups").select("*").eq("academy_id", academyId).in("id", groupIds).limit(1000),
-      admin.from("courses").select("*").eq("academy_id", academyId).limit(1000),
+      client.from("groups").select("*").eq("academy_id", academyId).in("id", groupIds).limit(1000),
+      client.from("courses").select("*").eq("academy_id", academyId).limit(1000),
     ]);
     if (groupsError) throw groupsError;
     if (coursesError) throw coursesError;

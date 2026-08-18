@@ -128,7 +128,7 @@ The launch decision therefore remains **Still Blocked**, with the following revi
 
 1. **Upload size mismatch — High.** `next.config.js` allows a 500MB Server Action body, but `app/actions/upload.ts` rejects any file over 10MB before storage/quota evaluation. This means “large file” readiness is not proven and the application does not currently honor the advertised 500MB transport limit. A product decision is required for the intended per-file limit; no production behavior was changed during this review.
 
-2. **Parental consent audit trail — Critical/Compliance.** `services/students.ts` persists `consent_given` and hardcodes `consent_version: "v1"`, but the create path does not persist `consent_at`, `consent_by`, or an immutable policy-acceptance event containing actor, subject, version, timestamp, and source. This remains blocked pending policy/legal definition and schema/API implementation.
+2. **Parental consent audit trail — Critical/Compliance.** The `public.students` schema does contain `consent_at`, `consent_by`, and `consent_version`, but `services/students.ts` currently persists only `consent_given` and a hardcoded `consent_version: "v1"` in the normal create path. It does not yet persist a complete immutable acceptance event containing actor, subject, version, timestamp, and source. This remains blocked pending policy/legal definition and schema/API implementation.
 
 3. **Runtime tenant isolation — Critical, evidence unavailable.** Static tests pass, but the cross-tenant runtime suite remains skipped because no separate Academy A/B fixtures or non-production branch is available. No production rows were created.
 
@@ -141,3 +141,20 @@ The application remains **Still Blocked for unrestricted public launch**. The co
 ### Safety boundaries observed
 
 No production records were created, modified, or deleted. No real email or WhatsApp message was sent. No paid Supabase branch or plan was created.
+
+
+## Closure addendum — Academy B runtime evidence after 2746458
+
+The missing Academy B student fixture was safely completed with one synthetic `students` row in Academy B only. Its UUID, membership, profile, and Auth user were verified as consistent, and no Academy A row was changed. The fixture has no groups, lessons, attendance, grades, homework, payments, messages, or files, so it is suitable for negative-scope checks but not for a full positive cross-tenant matrix.
+
+The following production deployments completed successfully during the closure work: `0fa384e` added the tenant-scoped Student Portal fallback, `b7eb655` prioritized the request-bound RLS client, `78d627a` removed the remaining Academy data hydration 500 path, and `2746458` made the nullable student grade display safe. The latest deployment `dpl_Crk89vAqHukjDZwnhe9Uy57yuRw5` is `READY` on the correct project `prj_OAJ78KzRhDjdNah4p3TMbLvPQsKH` and team `team_3uWRmEgCHKoT6EFH5K1bUfD1`.
+
+| Runtime check | Result | Evidence | Interpretation |
+|---|---|---|---|
+| Academy B `/student` | **PASS** | Production page rendered under Academy B with the synthetic Student account; dashboard values were zero because the fixture has no related domain records. | The account is linked and the Student Portal now survives tenant hydration without a 500. |
+| Academy B direct `/groups` | **PASS — denied by role boundary** | Navigation ended at `/student`; no group-management data appeared. | Student cannot access the management route. |
+| Academy B direct `/students` | **PASS — denied by role boundary** | Navigation ended at `/student`; no student-management data appeared. | Student cannot access the management route. |
+| Academy B search for Academy A sentinel | **PASS — scoped empty result** | `GET /api/search?q=MYAcademy%20Production%20Audit` returned `{"results":[]}` inside the Academy B session. | The known Academy A name was not returned by scoped search. |
+| Academy B dashboard cross-tenant visibility | **PASS for observed fixture** | No Academy A groups, lessons, grades, homework, or other records appeared. | Negative evidence is good but not sufficient for every table/storage path. |
+
+The release decision remains **NOT READY for unrestricted public launch**. Tenant isolation is improved and has partial runtime evidence, but the complete A-versus-B matrix remains open because the Academy B fixture intentionally has no comparable positive records. Physical QR behavior, upload/storage isolation, payment sandbox proof, WhatsApp sandbox delivery, and manual Vercel/Supabase configuration confirmation also remain unresolved. The consent columns are present in the schema, but a complete acceptance event with actor, subject, policy version, timestamp, and source is still not proven.

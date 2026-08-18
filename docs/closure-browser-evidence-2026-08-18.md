@@ -78,3 +78,12 @@ Evidence source: My Browser page `/platform`, captured 2026-08-18. No passwords 
 ## 2026-08-18 — Academy B search isolation sentinel
 
 Within the authenticated Academy B session, `GET /api/search?q=MYAcademy%20Production%20Audit` returned HTTP success with `{"results":[]}`. `MYAcademy Production Audit` is the known Academy A name. This is direct runtime evidence that the scoped search endpoint did not return Academy A records to Academy B. It is a sentinel check, not a complete proof for every table or file store.
+
+## 2026-08-18 — Final Student Portal runtime after commit 2746458
+
+- Vercel deployment `dpl_Crk89vAqHukjDZwnhe9Uy57yuRw5` is `READY` on production for commit `274645809a07d7b2daed45f9ae6bd2cfb98916b7`.
+- URL tested: `/student?tenant-fixture-refresh=20260818-1419` in the existing Academy B session.
+- The page rendered successfully with Academy B context and the synthetic student account visible.
+- The previous null display defect is fixed: the subtitle now reads `طالب · لا توجد مجموعات`, not `null · لا توجد مجموعات`.
+- The dashboard shows zero groups, zero attendance, zero grades, zero homework, and no upcoming lessons; no Academy A data is visible.
+- The Academy B Student session is therefore a runtime pass for its own student portal and for role-boundary absence of admin data. Complete tenant isolation remains open until controlled positive/negative fixtures cover the required tables and file storage.

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ChevronDown, GraduationCap, Users, UserRound, UserRoundCog, Building2 } from "lucide-react";
 
 export type PlatformHierarchyStudent = {
@@ -113,10 +114,10 @@ function TeacherTree({ teacher, en }: { teacher: PlatformHierarchyTeacher; en: b
                 {group.students.length === 0 ? <p className="text-sm text-muted-foreground">{en ? "No students." : "لا يوجد طلاب."}</p> : (
                   <div className="space-y-2">
                     {group.students.map((student) => (
-                      <div key={student.id} className="flex items-center gap-2 rounded-md border bg-background p-2">
+                      <Link href={`/students/${student.id}`} key={student.id} className="flex items-center gap-2 rounded-md border bg-background p-2 transition-colors hover:border-primary/40 hover:bg-accent">
                         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-[10px] font-semibold text-sky-700">{initials(student.name)}</span>
                         <span className="min-w-0"><span className="block truncate text-sm font-medium">{student.name}</span><span className="block truncate text-xs text-muted-foreground">{student.email || "بدون بريد"} · {student.status}</span></span>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 )}

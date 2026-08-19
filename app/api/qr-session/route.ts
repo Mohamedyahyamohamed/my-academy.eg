@@ -3,6 +3,7 @@ import { collections } from "@/services/data/store";
 import { currentTeacherId, loadCurrentUser } from "@/services";
 import { createQrSession } from "@/lib/qr-session";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
+import { isLessonActive } from "@/services/lessons";
 import { requestIpKey } from "@/lib/request-identity";
 
 /** Generate a signed, short-lived QR session token for an owned lesson. */
@@ -31,6 +32,19 @@ export async function POST(req: NextRequest) {
 
   if (user.role === "TEACHER" && lesson.teacher_id !== currentTeacherId()) {
     return NextResponse.json({ error: "You do not own this lesson" }, { status: 403 });
+  }
+
+  if (!isLessonActive(lesson)) {
+    return NextResponse.json(
+      {
+        error: "QR_NOT_ACTIVE",
+        message: "QR attendance is available only while this lesson is in progress.",
+        lessonDate: lesson.date,
+        startTime: lesson.start_time,
+        endTime: lesson.end_time,
+      },
+      { status: 409 },
+    );
   }
 
   try {

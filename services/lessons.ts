@@ -91,7 +91,7 @@ export async function getLesson(id: string, academyId?: string): Promise<Lesson 
   return l ? attach(l) : null;
 }
 
-function wallClockMinute(date: Date, timeZone = process.env.ACADEMY_TIMEZONE || "Africa/Cairo") {
+export function wallClockMinute(date: Date, timeZone = process.env.ACADEMY_TIMEZONE || "Africa/Cairo") {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone,
     year: "numeric",
@@ -113,6 +113,16 @@ export function lessonWallClockMinute(date: string, time: string) {
 
 export function isLessonUpcoming(lesson: Pick<Lesson, "date" | "start_time">, now = new Date()) {
   return lessonWallClockMinute(lesson.date, lesson.start_time) >= wallClockMinute(now);
+}
+
+export function isLessonActive(
+  lesson: Pick<Lesson, "date" | "start_time" | "end_time">,
+  now = new Date(),
+) {
+  const current = wallClockMinute(now);
+  const startsAt = lessonWallClockMinute(lesson.date, lesson.start_time);
+  const endsAt = lessonWallClockMinute(lesson.date, lesson.end_time);
+  return startsAt <= current && current <= endsAt;
 }
 
 function validateLessonWindow(date: string, start: string, end: string) {
@@ -148,14 +158,9 @@ export function getActiveLessonForTeacher(now = new Date()): Lesson | null {
   const teacherId = currentTeacherId();
   const scope = teacherId ? teacherGroupScope() : null;
   if (!teacherId || !scope?.size) return null;
-  const current = wallClockMinute(now);
   const active = collections().lessons
     .filter((lesson) => lesson.academy_id === academyId && scope.has(lesson.group_id))
-    .filter((lesson) => {
-      const start = lessonWallClockMinute(lesson.date, lesson.start_time);
-      const end = lessonWallClockMinute(lesson.date, lesson.end_time);
-      return start <= current && current <= end;
-    })
+    .filter((lesson) => isLessonActive(lesson, now))
     .sort((a, b) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time));
   return active[0] ? attach(active[0]) : null;
 }

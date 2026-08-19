@@ -4,6 +4,7 @@ import { verifyQrSession } from "@/lib/qr-session";
 import { collections } from "@/services/data/store";
 import { AttendanceService } from "@/services";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
+import { isLessonActive } from "@/services/lessons";
 import { requestIpKey } from "@/lib/request-identity";
 
 /** Student self check-in via a tenant-scoped, short-lived QR token. */
@@ -43,11 +44,8 @@ export async function POST(req: NextRequest) {
   );
   if (!lesson) return NextResponse.json({ ok: false, error: "Lesson not found." }, { status: 404 });
 
-  // Lesson must be active (today or within a time window).
-  const lessonDate = new Date(lesson.date);
-  const now = new Date();
-  const diffHours = Math.abs(now.getTime() - lessonDate.getTime()) / (1000 * 60 * 60);
-  if (diffHours > 24) {
+  // QR self-check-in is valid only while the lesson is in progress.
+  if (!isLessonActive(lesson)) {
     return NextResponse.json({ ok: false, error: "This lesson is not active right now." }, { status: 403 });
   }
 

@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { percentage, round, clamp } from "@/lib/utils";
-import { isLessonUpcoming } from "@/services/lessons";
+import { isLessonActive, isLessonUpcoming } from "@/services/lessons";
 import {
   MAX_UPLOAD_BYTES,
   CONTENT_UPLOAD_EXTENSIONS,
@@ -41,6 +41,27 @@ describe("Lesson time classification", () => {
     expect(isLessonUpcoming(
       { date: "2026-08-19", start_time: "10:30" },
       new Date("2026-08-19T12:00:00+03:00"),
+    )).toBe(false);
+  });
+
+  it("keeps QR inactive before a lesson starts", () => {
+    expect(isLessonActive(
+      { date: "2026-08-22", start_time: "16:00", end_time: "17:30" },
+      new Date("2026-08-22T15:59:00+03:00"),
+    )).toBe(false);
+  });
+
+  it("allows QR during the lesson window", () => {
+    expect(isLessonActive(
+      { date: "2026-08-22", start_time: "16:00", end_time: "17:30" },
+      new Date("2026-08-22T16:15:00+03:00"),
+    )).toBe(true);
+  });
+
+  it("closes QR after a lesson ends", () => {
+    expect(isLessonActive(
+      { date: "2026-08-22", start_time: "16:00", end_time: "17:30" },
+      new Date("2026-08-22T17:31:00+03:00"),
     )).toBe(false);
   });
 });

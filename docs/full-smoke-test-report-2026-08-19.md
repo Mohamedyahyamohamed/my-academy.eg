@@ -170,3 +170,18 @@ Commit `b1ceed136a2608d63b804f2b32325857daa1439b` (`fix: align lesson timing upl
 | `/sitemap.xml` | HTTP 200 |
 
 The deployment includes the shared 10MB upload policy, same-day lesson time classification fixes, two regression tests, operator-facing consent status display, and corrected CSV-only import messaging. No environment variables, production records, payments, email messages, or WhatsApp messages were changed or sent.
+
+
+## Closure-plan execution update — 19 August 2026
+
+The attached closure plan was executed to the extent possible without production data changes, real messages, or payment activity.
+
+| Item | Evidence / status |
+|---|---|
+| Shared upload-policy regression coverage | Added two unit tests for the 10 MiB product limit and the narrower homework extension set. |
+| Quality checks | `pnpm lint` passed; `pnpm build` passed; Vitest reported **48 passed / 9 skipped** across 57 tests. |
+| Skipped tests | The nine route-level cross-tenant tests remain skipped because the required synthetic Academy A/B credentials and fixture IDs are not supplied as safe test environment variables. |
+| Production deployment | Commit `d6ba1cdea11e3ac5917c991b418c049ae403b9b3` (`test: cover shared upload policy`) deployed as `dpl_CtGM65MHduLxztSxP2yprifV31yx`, state `READY`, target `production`. |
+| Public HTTP smoke after deployment | `/api/health` 200; `/robots.txt` 200; `/sitemap.xml` 200; intentional unknown route 404. |
+
+The plan items requiring a user-controlled Vercel key inspection, physical phone, external Sandbox credentials, legal/product consent decision, or production-safe synthetic fixtures remain open rather than being marked complete by inference.

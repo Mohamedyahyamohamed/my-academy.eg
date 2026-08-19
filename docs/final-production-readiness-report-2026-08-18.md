@@ -212,3 +212,12 @@ Commit `b1ceed136a2608d63b804f2b32325857daa1439b` (`fix: align lesson timing upl
 After deployment, `/api/health` returned HTTP 200, an intentional unknown route returned HTTP 404, and `/robots.txt` and `/sitemap.xml` returned HTTP 200. The deployment includes the shared 10MB upload policy, same-day lesson time classification fixes, regression coverage, operator-facing consent status display, and corrected CSV-only import messaging. No environment variables, secrets, production records, payments, email messages, or WhatsApp messages were changed or sent.
 
 The release decision remains **Still Blocked** because runtime tenant isolation, physical QR, upload isolation, eligible-workspace payment/webhook proof, sandbox delivery proof, manual key confirmation, and legally complete consent workflow evidence remain outstanding.
+
+
+## Closure-plan execution update — 19 August 2026
+
+The closure plan was executed as far as possible without changing production data, sending real Email/WhatsApp messages, or initiating payment. Two upload-policy unit tests were added; `pnpm lint` and `pnpm build` passed; Vitest now reports **48 passed / 9 skipped**. The nine route-level tenant-isolation tests remain skipped because safe synthetic Academy A/B credentials and fixture IDs are not present in the test environment.
+
+Commit `d6ba1cdea11e3ac5917c991b418c049ae403b9b3` was deployed to Production as `dpl_CtGM65MHduLxztSxP2yprifV31yx` with state `READY`. Post-deployment HTTP checks returned 200 for `/api/health`, `/robots.txt`, and `/sitemap.xml`, and 404 for an intentional unknown route.
+
+The release decision remains **Still Blocked**. The Vercel key-type confirmation, complete Academy A/B runtime matrix, physical QR test, sandbox checkout and notification proofs, runtime upload isolation, and legally approved consent flow still require their specified evidence.

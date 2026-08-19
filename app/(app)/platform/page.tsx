@@ -18,7 +18,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { requireScopedRole } from "@/services";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { PLANS } from "@/services/saas";
-import { PlatformAcademyControls, PlatformUserControls } from "@/components/platform/platform-admin-controls";
+import { PlatformAcademyControls, PlatformUserControls, PlatformSubscriptionControls } from "@/components/platform/platform-admin-controls";
 import { PlatformUserHierarchy, type PlatformHierarchyAcademy } from "@/components/platform/platform-user-hierarchy";
 import { cookies } from "next/headers";
 import { getLangFromCookie } from "@/lib/i18n";
@@ -353,6 +353,17 @@ function SubscriptionsTab({
             );
           })}
           {academies.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">{en ? "No managed academies yet." : "لا توجد أكاديميات مُدارة بعد."}</p>}
+        </div>
+        <div className="border-t p-5">
+          <h3 className="font-semibold">{en ? "Subscription controls" : "التحكم في الاشتراكات"}</h3>
+          <p className="mt-1 mb-4 text-sm text-muted-foreground">{en ? "Suspend or reactivate academy service. Stripe subscriptions can also be cancelled at the end of the paid period." : "أوقف أو فعّل خدمة الأكاديمية. ويمكن جدولة إلغاء اشتراكات Stripe في نهاية الفترة المدفوعة."}</p>
+          <PlatformSubscriptionControls
+            en={en}
+            subscriptions={academies.map((academy) => ({
+              name: academy.name || (en ? "Unnamed academy" : "أكاديمية بلا اسم"),
+              ...(subscriptionFor(academy.id) || { academy_id: academy.id, status: null, provider: null, provider_subscription_id: null, cancel_at_period_end: false, canceled_at: null }),
+            }))}
+          />
         </div>
       </CardContent>
     </Card>

@@ -1,0 +1,12 @@
+href="/_next/static/immutable/chunks/2dup7lqc5d5u5.css" data-precedence="next">
+href="/_next/static/immutable/chunks/3w6p91w986p-n.js">
+href="/manifest.webmanifest">
+href="https://my-academy-eg.vercel.app">
+href="/favicon.ico?favicon.3fpu2ql9ns1a0.ico" sizes="256x256" type="image/x-icon">
+href="/icon.svg?icon.3donp5g-u_-c2.svg" sizes="any" type="image/svg+xml">
+href="/platform" data-manus_clickable="true" data-manus_click_id="1">
+href="/platform" data-manus_clickable="true" data-manus_click_id="2">
+href="/billing" data-manus_clickable="true" data-manus_click_id="3">
+href="/audit" data-manus_clickable="true" data-manus_click_id="4">
+href="/support" data-manus_clickable="true" data-manus_click_id="5">
+href="/privacy" data-manus_clickable="true" data-manus_click_id="6">

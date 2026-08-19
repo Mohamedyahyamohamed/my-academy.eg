@@ -196,6 +196,8 @@ export interface Student {
   notes: string | null;
   status: StudentStatus;
   consent_given?: boolean;
+  consent_at?: ISODate | null;
+  consent_by?: UUID | null;
   consent_version?: string | null;
   enrolled_at: ISODate;
   created_at: ISODate;

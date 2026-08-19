@@ -1,0 +1,6 @@
+timestamp	method	path	status	body
+2026-08-19T09:25:18Z	POST	/api/push/subscribe	401	{"error":"Unauthorized"}
+2026-08-19T09:25:18Z	POST	/api/push/send	401	{"error":"Unauthorized"}
+2026-08-19T09:25:20Z	POST	/api/whatsapp/test	401	{"ok":false,"error":"Unauthorized"}
+2026-08-19T09:25:21Z	POST	/api/billing/stripe/webhook	400	{"error":"Invalid webhook signature"}
+2026-08-19T09:25:21Z	POST	/api/billing/paymob/webhook	400	{"error":"Invalid webhook signature"}

@@ -1,0 +1,81 @@
+--- HEALTH HEADERS ---
+HTTP/2 200 
+age: 0
+cache-control: public, max-age=0, must-revalidate
+content-type: application/json
+date: Wed, 19 Aug 2026 09:04:33 GMT
+permissions-policy: camera=(self), microphone=(), geolocation=()
+referrer-policy: strict-origin-when-cross-origin
+server: Vercel
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-matched-path: /api/health
+x-vercel-cache: MISS
+x-vercel-id: sin1::iad1::dfwnt-1787130273468-16660624fd37
+
+--- HEALTH BODY ---
+{"status":"healthy","checks":{"app":"ok","qr":"ok","db":"ok"},"timestamp":"2026-08-19T09:04:33.966Z","latency_ms":356}
+--- ROBOTS ---
+User-Agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /platform
+Disallow: /teacher
+Disallow: /parent
+Disallow: /student
+Disallow: /api/
+Disallow: /_next/
+
+Host: https://my-academy-eg.vercel.app
+Sitemap: https://my-academy-eg.vercel.app/sitemap.xml
+
+--- SITEMAP ---
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url>
+<loc>https://my-academy-eg.vercel.app/</loc>
+<lastmod>2026-08-18T00:00:00.000Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>1</priority>
+</url>
+<url>
+<loc>https://my-academy-eg.vercel.app/pricing</loc>
+<lastmod>2026-08-18T00:00:00.000Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.8</priority>
+</url>
+<url>
+<loc>https://my-academy-eg.vercel.app/login</loc>
+<lastmod>2026-08-18T00:00:00.000Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.5</priority>
+</url>
+<url>
+<loc>https://my-academy-eg.vercel.app/signup</loc>
+<lastmod>2026-08-18T00:00:00.000Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.8</priority>
+</url>
+<url>
+<loc>https://my-academy-eg.vercel.app/forgot-password</loc>
+<lastmod>2026-08-18T00:00:00.000Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.5</priority>
+</url>
+<url>
+<loc>https://my-academy-eg.vercel.app/help</loc>
+<lastmod>2026-08-18T00:00:00.000Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.5</priority>
+</url>
+<url>
+<loc>https://my-academy-eg.vercel.app/status</loc>
+
+--- SECURITY HEADERS ---
+permissions-policy: camera=(self), microphone=(), geolocation=()
+referrer-policy: strict-origin-when-cross-origin
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-content-type-options: nosniff
+x-frame-options: DENY

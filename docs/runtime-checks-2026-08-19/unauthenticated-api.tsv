@@ -1,0 +1,16 @@
+
+https://my-academy-eg.vercel.app/api/search?q=test
+GET status=401 time=0.327710
+{"results":[]}
+
+https://my-academy-eg.vercel.app/api/push/send
+GET status=405 time=0.311050
+
+
+https://my-academy-eg.vercel.app/api/push/subscribe
+GET status=405 time=0.346022
+
+
+https://my-academy-eg.vercel.app/api/whatsapp/test
+GET status=405 time=0.280687
+

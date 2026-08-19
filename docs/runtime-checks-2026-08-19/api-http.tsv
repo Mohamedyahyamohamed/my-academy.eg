@@ -1,0 +1,10 @@
+timestamp	method	path	status	time_s	content_type
+2026-08-19T09:22:01Z	GET	/api/health	200	0.538053	application/json
+2026-08-19T09:22:02Z	GET	/api/search?q=runtime-smoke-nonexistent-20260819	401	0.294600	application/json
+2026-08-19T09:22:02Z	GET	/api/push/subscribe	405	0.298116	
+2026-08-19T09:22:02Z	GET	/api/push/send	405	0.308829	
+2026-08-19T09:22:02Z	GET	/api/whatsapp/test	405	0.316188	
+2026-08-19T09:22:03Z	GET	/api/billing/stripe/webhook	405	0.319009	
+2026-08-19T09:22:03Z	GET	/api/billing/paymob/webhook	405	0.299112	
+2026-08-19T09:22:03Z	GET	/api/auth/session	404	0.322995	text/html; charset=utf-8
+2026-08-19T09:22:04Z	GET	/api/auth/me	404	0.281533	text/html; charset=utf-8

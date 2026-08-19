@@ -77,7 +77,8 @@ export async function createDirectAccountAction(input: {
     const result = await client.from("students").insert({
       id: crypto.randomUUID(), academy_id: academyId, first_name: firstName, last_name: lastName,
       email, phone: null, date_of_birth: null, gender: null, parent_id: null, school: null,
-      grade: null, notes: null, status: "ACTIVE", enrolled_at: now, created_at: now, updated_at: now,
+      grade: null, notes: null, status: "ACTIVE", consent_given: false, consent_at: null,
+      consent_by: null, consent_version: null, enrolled_at: now, created_at: now, updated_at: now,
     });
     roleError = result.error;
   }

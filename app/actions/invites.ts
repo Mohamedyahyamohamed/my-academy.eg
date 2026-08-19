@@ -385,7 +385,8 @@ export async function acceptAcademyInviteAction(input: {
         id: crypto.randomUUID(), academy_id: invite.academy_id,
         first_name: firstName, last_name: lastName, email: invite.email, phone,
         date_of_birth: null, gender: null, parent_id: null, school: null, grade: null,
-        notes: null, status: "ACTIVE", enrolled_at: now, created_at: now, updated_at: now,
+        notes: null, status: "ACTIVE", consent_given: false, consent_at: null,
+        consent_by: null, consent_version: null, enrolled_at: now, created_at: now, updated_at: now,
       });
       if (error) return { ok: false, error: "تم إنشاء الحساب، لكن تعذّر إكمال ملف الطالب." };
     }

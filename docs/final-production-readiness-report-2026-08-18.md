@@ -158,3 +158,41 @@ The following production deployments completed successfully during the closure w
 | Academy B dashboard cross-tenant visibility | **PASS for observed fixture** | No Academy A groups, lessons, grades, homework, or other records appeared. | Negative evidence is good but not sufficient for every table/storage path. |
 
 The release decision remains **NOT READY for unrestricted public launch**. Tenant isolation is improved and has partial runtime evidence, but the complete A-versus-B matrix remains open because the Academy B fixture intentionally has no comparable positive records. Physical QR behavior, upload/storage isolation, payment sandbox proof, WhatsApp sandbox delivery, and manual Vercel/Supabase configuration confirmation also remain unresolved. The consent columns are present in the schema, but a complete acceptance event with actor, subject, policy version, timestamp, and source is still not proven.
+
+
+## Full smoke-test update — 19 August 2026
+
+The production full smoke test was extended with read-only Owner checks, Teacher route walkthroughs, safe negative API checks, Academy B synthetic Student isolation checks, public HTTP checks, and a local quality run. The consolidated evidence is in `docs/full-smoke-test-report-2026-08-19.md`.
+
+| # | Minimal blocker | Current status | Updated evidence |
+|---:|---|---|---|
+| 1 | Authenticated role matrix | **PASS for tested route boundaries; still partial for full workflows** | Owner and Teacher production walkthroughs passed. Teacher→Parent redirected correctly. Academy B Student loaded its scoped portal and was redirected away from unauthorized routes. Parent/Student/Assistant deeper workflows still need linked synthetic fixtures. |
+| 2 | Academy A/B tenant isolation | **PARTIAL — still a critical blocker** | Academy B synthetic Student loaded `/student`, `/groups` and `/students` were correctly guarded, and scoped search returned no Academy A-only result. Full A/B matrix across attendance, notes, grades, homework, payments, messages, and files was not completed; runtime route tests remain skipped without safe fixture variables. |
+| 3 | QR attendance on physical phone | **STILL BLOCKED — critical** | `/attendance` and `/attendance/scan` UI loaded and code review found authorization and duplicate protections. No physical-camera first scan, duplicate, wrong-group/time, offline, retry, or refresh test was performed. |
+| 4 | File upload and lesson association | **CODE PASS / runtime still blocked** | Content upload code supports a 500 MB cap, file signatures, course/lesson association, quota, academy-prefixed private storage, cleanup, and signed URLs. No production runtime upload, interrupted retry, or cross-tenant signed-download denial was recorded. Homework uploads remain intentionally capped at 10 MB. |
+| 5 | Arabic/English and 12-hour time | **PARTIAL — still open for exhaustive coverage** | Teacher dashboard language switching passed without a new login and returned to Arabic; Owner pages and 404 rendered Arabic/RTL. Full every-route/form/toast/error/time matrix remains unverified. |
+| 6 | Email/WhatsApp invitations and webhooks | **STILL BLOCKED for positive delivery evidence** | Unauthenticated test endpoints and unsigned webhooks rejected safely; no real messages were sent. Sandbox/stub message ID, delivery event, retry, and idempotency evidence is absent. |
+| 7 | Leaked-password protection and Vercel public key | **Manual gate / accepted limitation remains** | No key was exposed or changed. The exact Vercel Production key type still requires owner confirmation. Supabase Pro was declined, so leaked-password protection cannot be claimed enabled under the current plan. |
+| 8 | Parental-consent audit trail | **Improved in code; still not closed** | Main authenticated student creation now derives `consent_at`, `consent_by`, and `consent_version: "1.0"` only when the validated consent checkbox is true, using the authenticated actor ID. Import, invite, and direct-account paths explicitly write false/null rather than fabricate consent. Policy approval, consent capture for those paths, audit retrieval, deployment, and runtime evidence remain required. |
+
+### Consent implementation note
+
+The consent metadata change is intentionally server-derived. `consent_by` cannot be supplied by the browser, and a false/missing consent value does not receive a timestamp or actor. Existing records were not modified. The current direct-account and import interfaces do not capture guardian consent; they therefore remain pending from a compliance perspective until the product owner chooses an explicit acceptance workflow or prohibits those paths for minors.
+
+### Updated release decision
+
+The deployment remains **NOT READY for an unrestricted public launch**. Health 200, successful builds, role guards, and partial Academy B evidence are not sufficient to close the critical physical-device, tenant-wide runtime, provider, configuration, upload, and legal-evidence gates.
+
+### New code-quality evidence
+
+After the consent metadata changes, local checks completed successfully: `pnpm lint` passed, `pnpm build` passed, and Vitest reported **44 passed / 9 skipped**. The skipped tests remain the runtime cross-tenant route suite because safe Academy A/B fixture variables were not supplied. No production record, payment, email, or WhatsApp message was changed or sent by this code change.
+
+### References
+
+- `docs/full-smoke-test-report-2026-08-19.md`
+- `docs/runtime-checks-2026-08-19/browser-evidence.md`
+- `docs/runtime-checks-2026-08-19/teacher-evidence.md`
+- `services/students.ts`
+- `app/actions/content.ts`
+- `app/actions/upload.ts`
+- `services/attendance.ts`

@@ -1,0 +1,133 @@
+--- pnpm lint ---
+LINT_EXIT=0
+--- pnpm build ---
+▲ Next.js 16.3.1 (Turbopack)
+✓ Running next.config.js took 310ms
+- Experiments (use with caution):
+  · serverActions
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 4.5s
+  Running TypeScript ...
+  Finished TypeScript in 3.8s ...
+  Collecting page data using 5 workers ...
+  Generating static pages using 5 workers (0/36) ...
+  Generating static pages using 5 workers (9/36) 
+  Generating static pages using 5 workers (18/36) 
+  Generating static pages using 5 workers (27/36) 
+✓ Generating static pages using 5 workers (36/36) in 311ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /analytics
+├ ƒ /api/account/switch-academy
+├ ƒ /api/attendance
+├ ƒ /api/auth/clear-session
+├ ƒ /api/auth/login
+├ ƒ /api/billing/paymob/webhook
+├ ƒ /api/billing/stripe/webhook
+├ ƒ /api/checkin
+├ ƒ /api/checkin/teacher
+├ ƒ /api/cron/billing-notifications
+├ ƒ /api/export
+├ ƒ /api/health
+├ ƒ /api/push/send
+├ ƒ /api/push/subscribe
+├ ƒ /api/qr-session
+├ ƒ /api/search
+├ ƒ /api/students/me/whatsapp-qr
+├ ƒ /api/webhooks/whatsapp
+├ ƒ /api/whatsapp/test
+├ ƒ /attendance
+├ ƒ /attendance/scan
+├ ƒ /audit
+├ ƒ /billing
+├ ƒ /calendar
+├ ƒ /checkin
+├ ƒ /dashboard
+├ ƒ /forgot-password
+├ ƒ /grades
+├ ƒ /grades/[id]
+├ ƒ /groups
+├ ƒ /groups/[id]
+├ ƒ /help
+├ ƒ /homework
+├ ƒ /homework/[id]
+├ ○ /icon.svg
+├ ƒ /invite/[token]
+├ ƒ /lessons
+├ ƒ /lessons/[id]
+├ ƒ /lessons/new
+├ ƒ /login
+├ ƒ /manifest.webmanifest
+├ ƒ /messages
+├ ƒ /notifications
+├ ƒ /onboarding
+├ ƒ /parent
+├ ƒ /parent/attendance
+├ ƒ /parent/children
+├ ƒ /parent/children/[id]
+├ ƒ /parent/children/[id]/report
+├ ƒ /parent/content
+├ ƒ /parent/grades
+├ ƒ /parent/homework
+├ ƒ /parent/payments
+├ ƒ /parents/[id]
+├ ƒ /payments
+├ ƒ /platform
+├ ƒ /pricing
+├ ƒ /privacy
+├ ƒ /reports
+├ ƒ /reset-password
+├ ○ /robots.txt
+├ ƒ /settings
+├ ƒ /signup
+├ ○ /sitemap.xml
+├ ƒ /status
+├ ƒ /student
+├ ƒ /student/classes
+├ ƒ /student/content
+├ ƒ /student/content/[courseId]
+├ ƒ /student/grades
+├ ƒ /student/homework
+├ ƒ /student/lessons
+├ ƒ /student/progress
+├ ƒ /students
+├ ƒ /students/[id]
+├ ƒ /students/[id]/report
+├ ƒ /students/import
+├ ƒ /support
+├ ƒ /support/tickets
+├ ƒ /suspended
+├ ƒ /teacher
+├ ƒ /teacher/assistants
+├ ƒ /teacher/content
+├ ƒ /teacher/content/[courseId]
+├ ƒ /teacher/content/[courseId]/lessons/[lessonId]
+└ ƒ /terms
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+BUILD_EXIT=0
+--- pnpm vitest run ---
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90m/home/ubuntu/my-academy-recovered-alt[39m
+
+ [2m[90m↓[39m[22m tests/cross-tenant-route.test.ts [2m([22m[2m9 tests[22m[2m | [22m[33m9 skipped[39m[2m)[22m
+ [32m✓[39m tests/cross-tenant.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/business-logic.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/integration.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m3 passed[39m[22m[2m | [22m[33m1 skipped[39m[90m (4)[39m
+[2m      Tests [22m [1m[32m44 passed[39m[22m[2m | [22m[33m9 skipped[39m[90m (53)[39m
+[2m   Start at [22m 09:05:27
+[2m   Duration [22m 492ms[2m (transform 431ms, setup 0ms, import 514ms, tests 33ms, environment 0ms)[22m
+
+VITEST_EXIT=0
+lint: pass
+build: pass
+vitest: 44 passed, 9 skipped

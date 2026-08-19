@@ -377,7 +377,11 @@ function uid() {
   return crypto.randomUUID();
 }
 
-export async function createStudent(input: StudentInput, authenticatedAcademyId?: string): Promise<Student> {
+export async function createStudent(
+  input: StudentInput,
+  authenticatedAcademyId?: string,
+  consentActorId?: string,
+): Promise<Student> {
   // Server Actions can cross an async boundary where AsyncLocalStorage context is lost.
   // Prefer the academy resolved by requireScopedRole; keep the fallback for existing callers.
   const academyId = authenticatedAcademyId ?? currentAcademyId();
@@ -435,7 +439,9 @@ export async function createStudent(input: StudentInput, authenticatedAcademyId?
     notes: rest.notes ?? null,
     status: rest.status ?? "ACTIVE",
     consent_given: rest.consent_given ?? false,
-    consent_version: "v1",
+    consent_at: rest.consent_given === true ? now : null,
+    consent_by: rest.consent_given === true ? (consentActorId ?? null) : null,
+    consent_version: rest.consent_given === true ? "1.0" : null,
     enrolled_at: now,
     created_at: now,
     updated_at: now,

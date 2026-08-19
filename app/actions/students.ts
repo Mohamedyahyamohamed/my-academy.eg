@@ -9,7 +9,7 @@ export async function createStudentAction(input: StudentInput) {
   try {
     const user = await requireScopedRole("ADMIN", "TEACHER");
     if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage students.");
-    const student = await StudentsService.createStudent(input, user.academy_id);
+    const student = await StudentsService.createStudent(input, user.academy_id, user.id);
     // WhatsApp هو القناة الافتراضية بعد تفعيل الدفع في Meta.
     // يمكن استخدام البريد مؤقتًا عبر WHATSAPP_QR_CHANNEL=email.
     try {

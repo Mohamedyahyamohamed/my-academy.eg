@@ -1,0 +1,3 @@
+timestamp	method	path	status	body
+2026-08-19T09:26:51Z	GET	/api/webhooks/whatsapp	403	Forbidden
+2026-08-19T09:26:51Z	POST	/api/webhooks/whatsapp	401	{"ok":false,"error":"Invalid signature"}

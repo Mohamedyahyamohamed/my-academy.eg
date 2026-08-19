@@ -157,6 +157,7 @@ export const SUPER_ADMIN_NAV: NavSection[] = [
     items: [
       { titleAr: "إدارة الأكاديميات", titleEn: "Academy Management", href: "/platform", icon: Crown },
       { titleAr: "مستخدمو المنصة", titleEn: "Platform Users", href: "/platform?tab=users", icon: UsersRound },
+      { titleAr: "الطلاب", titleEn: "Students", href: "/students", icon: Users },
     ],
   },
   {
@@ -179,6 +180,12 @@ export const SUPER_ADMIN_NAV: NavSection[] = [
 export const ACADEMY_MANAGER_NAV: NavSection[] = [
   {
     items: [{ titleAr: "لوحة التحكم", titleEn: "Dashboard", href: "/dashboard", icon: LayoutDashboard }],
+  },
+  {
+    titleAr: "الأشخاص", titleEn: "People",
+    items: [
+      { titleAr: "الطلاب", titleEn: "Students", href: "/students", icon: Users },
+    ],
   },
   {
     titleAr: "التقارير والمتابعة", titleEn: "Reports & Oversight",

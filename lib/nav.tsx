@@ -154,7 +154,7 @@ export const STUDENT_NAV: NavSection[] = [
 export const SUPER_ADMIN_NAV: NavSection[] = [
   {
     titleAr: "إدارة المنصة", titleEn: "Platform Management",
-    items: [{ titleAr: "المنصة", titleEn: "Platform", href: "/platform", icon: Crown }],
+    items: [{ titleAr: "إدارة الأكاديميات", titleEn: "Academy Management", href: "/platform", icon: Crown }],
   },
   {
     titleAr: "الرقابة والمالية", titleEn: "Governance & Finance",

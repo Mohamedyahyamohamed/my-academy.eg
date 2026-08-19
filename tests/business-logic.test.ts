@@ -17,8 +17,8 @@ import {
 } from "@/lib/constants";
 
 describe("Upload policy", () => {
-  it("uses a 10 MiB product file limit", () => {
-    expect(MAX_UPLOAD_BYTES).toBe(10 * 1024 * 1024);
+  it("uses a 500 MiB product file limit", () => {
+    expect(MAX_UPLOAD_BYTES).toBe(500 * 1024 * 1024);
   });
 
   it("keeps homework types narrower than lesson-content types", () => {

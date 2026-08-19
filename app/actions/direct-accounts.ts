@@ -41,7 +41,7 @@ export async function createDirectAccountAction(input: {
 
   const { error: profileError } = await client.from("profiles").upsert({
     id: userId, academy_id: academyId, email, role: input.role,
-    full_name: fullName, is_active: true, created_at: now, updated_at: now,
+    full_name: fullName, is_active: input.role !== "STUDENT", created_at: now, updated_at: now,
   });
   if (profileError) {
     await client.auth.admin.deleteUser(userId);
@@ -49,7 +49,8 @@ export async function createDirectAccountAction(input: {
   }
 
   const { error: membershipError } = await client.from("academy_memberships").upsert({
-    academy_id: academyId, profile_id: userId, role: input.role, status: "ACTIVE",
+    academy_id: academyId, profile_id: userId, role: input.role,
+    status: input.role === "STUDENT" ? "INVITED" : "ACTIVE",
     joined_at: now, updated_at: now,
   }, { onConflict: "academy_id,profile_id" });
   if (membershipError) {
@@ -77,7 +78,7 @@ export async function createDirectAccountAction(input: {
     const result = await client.from("students").insert({
       id: crypto.randomUUID(), academy_id: academyId, first_name: firstName, last_name: lastName,
       email, phone: null, date_of_birth: null, gender: null, parent_id: null, school: null,
-      grade: null, notes: null, status: "ACTIVE", consent_given: false, consent_at: null,
+      grade: null, notes: null, status: "INACTIVE", consent_given: false, consent_at: null,
       consent_by: null, consent_version: null, enrolled_at: now, created_at: now, updated_at: now,
     });
     roleError = result.error;

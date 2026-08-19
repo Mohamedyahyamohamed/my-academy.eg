@@ -124,7 +124,8 @@ export async function importStudentsAction(rows: ImportRow[]) {
       school: r.school?.trim() || null,
       grade: r.grade?.trim() || null,
       notes: null,
-      status: "ACTIVE",
+      // Imported students remain inactive until a parent approves consent.
+      status: "INACTIVE",
       consent_given: false,
       consent_at: null,
       consent_by: null,

@@ -24,6 +24,7 @@ import { getPaymentMetrics } from "./payments";
 import { performanceLevel } from "@/lib/constants";
 import { percentage, round } from "@/lib/utils";
 import { currentAcademyId } from "./session";
+import { isLessonUpcoming, lessonWallClockMinute } from "./lessons";
 
 function monthLabel(key: string) {
   const [y, m] = key.split("-").map(Number);
@@ -148,10 +149,9 @@ export async function getDashboardData(
   const gradePerformance = Object.entries(perfBuckets).map(([level, count]) => ({ level, count }));
 
   // upcoming lessons
-  const now = Date.now();
   const upcomingLessons = d.lessons
-    .filter((l: any) => d.scopedLessonIds.has(l.id) && +new Date(l.date) >= now)
-    .sort((a: any, b: any) => +new Date(a.date) - +new Date(b.date))
+    .filter((l: any) => d.scopedLessonIds.has(l.id) && isLessonUpcoming(l))
+    .sort((a: any, b: any) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time))
     .slice(0, 5)
     .map((l: any) => ({
       ...l,

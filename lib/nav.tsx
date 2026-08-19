@@ -159,7 +159,7 @@ export const SUPER_ADMIN_NAV: NavSection[] = [
   {
     titleAr: "الرقابة والمالية", titleEn: "Governance & Finance",
     items: [
-      { titleAr: "الاشتراكات", titleEn: "Subscriptions", href: "/billing", icon: Wallet },
+      { titleAr: "الاشتراكات", titleEn: "Subscriptions", href: "/platform?tab=billing", icon: Wallet },
       { titleAr: "سجل العمليات", titleEn: "Audit Logs", href: "/audit", icon: BarChart3 },
     ],
   },

@@ -10,7 +10,9 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { submitHomeworkAction } from "@/app/actions/homework";
-import { uploadHomeworkFile } from "@/app/actions/upload";
+import { createHomeworkUploadIntent, finalizeHomeworkUpload } from "@/app/actions/upload";
+import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB, HOMEWORK_UPLOAD_ACCEPT } from "@/lib/upload-policy";
 import { useClientLang } from "@/lib/i18n-client";
 
 export function SubmitHomework({
@@ -32,16 +34,38 @@ export function SubmitHomework({
   const router = useRouter();
 
   const upload = async (file: File) => {
+    if (file.size <= 0 || file.size > MAX_UPLOAD_BYTES) {
+      toast.error(en ? `File size must be ${MAX_UPLOAD_MB} MB or less.` : `يجب ألا يتجاوز حجم الملف ${MAX_UPLOAD_MB} ميجابايت.`);
+      return;
+    }
     setUploading(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("homeworkId", homeworkId);
-      fd.append("studentId", studentId);
-      const res = await uploadHomeworkFile(fd);
-      if (!res.ok) throw new Error(res.error);
-      setFileUrl(res.url!);
-      setFileName(res.name!);
+      const intentData = new FormData();
+      intentData.set("homeworkId", homeworkId);
+      intentData.set("studentId", studentId);
+      intentData.set("fileName", file.name);
+      intentData.set("fileSize", String(file.size));
+      intentData.set("contentType", file.type);
+      const intent = await createHomeworkUploadIntent(intentData);
+      if (!intent.ok) throw new Error(intent.error);
+      const uploadPath = intent.path;
+      const uploadToken = intent.token;
+      const uploadType = intent.contentType;
+      if (!uploadPath || !uploadToken || !uploadType) throw new Error("Upload intent is incomplete.");
+      const supabase = createBrowserSupabaseClient();
+      const uploaded = await supabase.storage.from("homework").uploadToSignedUrl(uploadPath, uploadToken, file, { contentType: uploadType });
+      if (uploaded.error) throw new Error("Upload failed.");
+      const finalizeData = new FormData();
+      finalizeData.set("homeworkId", homeworkId);
+      finalizeData.set("studentId", studentId);
+      finalizeData.set("path", uploadPath);
+      finalizeData.set("fileName", file.name);
+      finalizeData.set("fileSize", String(file.size));
+      finalizeData.set("contentType", uploadType);
+      const result = await finalizeHomeworkUpload(finalizeData);
+      if (!result.ok) throw new Error(result.error);
+      setFileUrl(result.url ?? uploadPath);
+      setFileName(result.name ?? file.name);
       toast.success(en ? "File attached." : "تم إرفاق الملف.");
     } catch (e) {
       toast.error((en ? "Could not upload file: " : "تعذّر رفع الملف: ") + (e as Error).message);
@@ -98,11 +122,11 @@ export function SubmitHomework({
           ) : (
             <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground hover:bg-accent/50">
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {uploading ? (en ? "Uploading…" : "جارٍ الرفع…") : (en ? "Attach a file (PDF, image, doc)" : "إرفاق ملف (PDF أو صورة أو مستند)")}
+              {uploading ? (en ? "Uploading…" : "جارٍ الرفع…") : (en ? `Attach a file (PDF, image, WEBP) up to ${MAX_UPLOAD_MB} MB` : `إرفاق ملف (PDF أو صورة أو WEBP) حتى ${MAX_UPLOAD_MB} ميجابايت`)}
               <input
                 type="file"
                 className="hidden"
-                accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.txt"
+                accept={HOMEWORK_UPLOAD_ACCEPT}
                 onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
               />
             </label>

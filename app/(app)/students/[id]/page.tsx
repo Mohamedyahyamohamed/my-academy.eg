@@ -24,6 +24,7 @@ import { StudentAvatar } from "@/components/shared/student-avatar";
 import { StudentStatusBadge, PaymentStatusBadge, AttendanceBadge, HomeworkBadge } from "@/components/shared/badges";
 import { StudentProfileTabs } from "@/components/students/student-profile-tabs";
 import { StudentNotes } from "@/components/students/student-notes";
+import { ParentConsentLink } from "@/components/students/parent-consent-link";
 import { EditStudentDialog } from "@/components/students/student-dialogs";
 import { StudentQrCard } from "@/components/attendance/student-qr-card";
 import { TrendArea, LineTrend } from "@/components/charts";
@@ -161,6 +162,7 @@ export default async function StudentProfilePage(
               <InfoItem icon={CalendarCheck} label={en ? "Accepted at" : "وقت القبول"} value={detail.consent_at ? formatDate(detail.consent_at, undefined, en ? "en-EG" : "ar-EG") : "—"} />
               <InfoItem icon={User} label={en ? "Actor" : "المنفّذ"} value={detail.consent_by || "—"} />
             </div>
+            {!detail.consent_given && <ParentConsentLink studentId={detail.id} en={en} />}
           </div>
         </CardContent>
       </Card>

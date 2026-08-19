@@ -6,9 +6,11 @@ import {
   GraduationCap,
   ShieldCheck,
   TrendingUp,
+  CreditCard,
   Users,
   Wallet,
 } from "lucide-react";
+import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,8 +32,10 @@ const percent = (numerator: number, denominator: number) =>
 const formatDate = (value: string | null | undefined, en = false) =>
   value ? new Date(value).toLocaleDateString(en ? "en-EG" : "ar-EG") : "—";
 
-export default async function PlatformPage() {
+export default async function PlatformPage(props: { searchParams?: Promise<{ tab?: string }> }) {
   await requireScopedRole("SUPER_ADMIN");
+  const searchParams = props.searchParams ? await props.searchParams : {};
+  const activeTab = searchParams.tab === "billing" || searchParams.tab === "subscriptions" ? "billing" : "overview";
   const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
   const en = lang === "en";
   const client = nodeSupabaseClient();
@@ -49,7 +53,7 @@ export default async function PlatformPage() {
     client.from("academies").select("id,name,created_at,is_active,suspension_reason").order("created_at", { ascending: false }),
     client.from("students").select("academy_id"),
     client.from("teachers").select("academy_id"),
-    client.from("subscriptions").select("academy_id,plan_id,status,cancel_at_period_end,canceled_at"),
+    client.from("subscriptions").select("academy_id,plan_id,status,current_period_end,cancel_at_period_end,canceled_at,provider,provider_subscription_id"),
     client.from("profiles").select("id,email,academy_id,role,is_active"),
     client.from("payments").select("academy_id,amount_paid"),
     client
@@ -124,6 +128,14 @@ export default async function PlatformPage() {
         description={en ? "A unified view of growth, activation, revenue, and academies requiring attention." : "صورة تشغيلية موحدة للنمو، التفعيل، الإيراد، والأكاديميات التي تحتاج متابعة."}
       />
 
+      <nav className="flex flex-wrap gap-2 border-b pb-3" aria-label={en ? "Platform sections" : "أقسام المنصة"}>
+        <Link href="/platform" className={`rounded-md px-3 py-2 text-sm ${activeTab === "overview" ? "bg-primary text-primary-foreground" : "border text-muted-foreground hover:text-foreground"}`}>{en ? "Overview" : "نظرة عامة"}</Link>
+        <Link href="/platform?tab=billing" className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm ${activeTab === "billing" ? "bg-primary text-primary-foreground" : "border text-muted-foreground hover:text-foreground"}`}><CreditCard className="h-4 w-4" />{en ? "Subscriptions" : "الاشتراكات"}</Link>
+      </nav>
+
+      {activeTab === "billing" ? (
+        <SubscriptionsTab en={en} academies={managedAcademies} subscriptions={subscriptionRows} sumPaid={sumPaid} />
+      ) : <>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard icon={<Banknote className="h-4 w-4" />} label={en ? "Actual monthly SaaS revenue" : "إيراد SaaS شهري فعلي"} value={EGP(mrr, en)} hint={`${activeSubscriptions.length} ${en ? "active subscriptions" : "اشتراك نشط"}`} tone="emerald" />
         <MetricCard icon={<TrendingUp className="h-4 w-4" />} label={en ? "Potential revenue after trials" : "إيراد محتمل بعد التجارب"} value={EGP(potentialMrr, en)} hint={`${trialSubscriptions.length} ${en ? "academies on trial" : "أكاديمية في تجربة"}`} tone="violet" />
@@ -232,7 +244,53 @@ export default async function PlatformPage() {
       <p className="text-center text-xs text-muted-foreground">
         {en ? "Actual monthly SaaS revenue includes active subscriptions only. Trials are shown separately as potential revenue." : "إيراد SaaS الشهري الفعلي يعتمد على الاشتراكات النشطة فقط. لا تُحسب التجارب ضمنه، وتظهر منفصلة ضمن الإيراد المحتمل."}
       </p>
+      </>}
     </div>
+  );
+}
+
+function SubscriptionsTab({
+  en,
+  academies,
+  subscriptions,
+  sumPaid,
+}: {
+  en: boolean;
+  academies: any[];
+  subscriptions: any[];
+  sumPaid: (academyId?: string) => number;
+}) {
+  const subscriptionFor = (academyId: string) => subscriptions.find((item) => item.academy_id === academyId);
+  return (
+    <Card>
+      <CardContent className="p-0">
+        <div className="border-b p-5">
+          <h2 className="font-semibold">{en ? "Academy subscriptions" : "اشتراكات الأكاديميات"}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{en ? "Review plan, lifecycle status, renewal date, and provider evidence for each academy." : "راجع الخطة والحالة وتاريخ التجديد ودليل مزود الدفع لكل أكاديمية."}</p>
+        </div>
+        <div className="divide-y">
+          {academies.map((academy) => {
+            const subscription = subscriptionFor(academy.id);
+            const plan = subscription?.plan_id ? PLANS[subscription.plan_id] : PLANS.free;
+            const status = subscription?.status ?? "active";
+            const atRisk = status === "past_due" || Boolean(subscription?.cancel_at_period_end || subscription?.canceled_at);
+            return (
+              <div key={academy.id} className="grid gap-3 p-4 md:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,1fr))] md:items-center">
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{academy.name || (en ? "Unnamed academy" : "أكاديمية بلا اسم")}</p>
+                  <p className="truncate text-xs text-muted-foreground">{en ? "Collected" : "التحصيل"}: {EGP(sumPaid(academy.id), en)}</p>
+                </div>
+                <div><p className="text-xs text-muted-foreground">{en ? "Plan" : "الخطة"}</p><p className="font-medium">{plan?.name ?? subscription?.plan_id ?? "Free"}</p></div>
+                <div><p className="text-xs text-muted-foreground">{en ? "Status" : "الحالة"}</p><Badge variant={atRisk ? "destructive" : status === "active" ? "success" : "secondary"}>{status}</Badge></div>
+                <div><p className="text-xs text-muted-foreground">{en ? "Next renewal" : "التجديد القادم"}</p><p className="text-sm">{formatDate(subscription?.current_period_end, en)}</p></div>
+                <div><p className="text-xs text-muted-foreground">{en ? "Provider" : "المزود"}</p><p className="text-sm">{subscription?.provider || (subscription?.provider_subscription_id ? (en ? "Configured" : "مهيأ") : (en ? "Not linked" : "غير مرتبط"))}</p></div>
+              </div>
+            );
+          })}
+          {academies.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">{en ? "No managed academies yet." : "لا توجد أكاديميات مُدارة بعد."}</p>}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -5,6 +5,7 @@ import { collections, ensureStoreLoaded } from "@/services/data/store";
 import { setRequestContext } from "@/services/request-context";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { requestIpKey } from "@/lib/request-identity";
+import { isLessonActive, lessonWallClockMinute } from "@/services/lessons";
 
 const GROUP_CONTEXT_COOKIE = "teacher_checkin_group";
 const GROUP_CONTEXT_TTL = 30 * 60;
@@ -20,35 +21,10 @@ function jsonError(error: string, status = 400) {
   return NextResponse.json({ ok: false, error }, { status });
 }
 
-function wallClockMinute(date: Date, timeZone = process.env.ACADEMY_TIMEZONE || "Africa/Cairo") {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(date);
-  const value = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? 0);
-  return (((value("year") * 12 + value("month")) * 31 + value("day")) * 24 + value("hour")) * 60 + value("minute");
-}
-
-function lessonWallClockMinute(date: string, time: string) {
-  const [year, month, day] = date.slice(0, 10).split("-").map(Number);
-  const [hour, minute] = time.slice(0, 5).split(":").map(Number);
-  return (((year * 12 + month) * 31 + day) * 24 + hour) * 60 + minute;
-}
-
 function activeLessonForGroup(groupId: string, academyId: string) {
-  const current = wallClockMinute(new Date());
   return collections().lessons
     .filter((lesson) => lesson.academy_id === academyId && lesson.group_id === groupId)
-    .filter((lesson) => {
-      const start = lessonWallClockMinute(lesson.date, lesson.start_time);
-      const end = lessonWallClockMinute(lesson.date, lesson.end_time);
-      return start <= current && current <= end;
-    })
+    .filter((lesson) => isLessonActive(lesson))
     .sort((a, b) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time))[0] ?? null;
 }
 

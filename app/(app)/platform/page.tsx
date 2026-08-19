@@ -35,7 +35,7 @@ const formatDate = (value: string | null | undefined, en = false) =>
 export default async function PlatformPage(props: { searchParams?: Promise<{ tab?: string }> }) {
   await requireScopedRole("SUPER_ADMIN");
   const searchParams = props.searchParams ? await props.searchParams : {};
-  const activeTab = searchParams.tab === "billing" || searchParams.tab === "subscriptions" ? "billing" : "overview";
+  const activeTab = searchParams.tab === "billing" || searchParams.tab === "subscriptions" ? "billing" : searchParams.tab === "users" ? "users" : "overview";
   const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
   const en = lang === "en";
   const client = nodeSupabaseClient();
@@ -131,10 +131,13 @@ export default async function PlatformPage(props: { searchParams?: Promise<{ tab
       <nav className="flex flex-wrap gap-2 border-b pb-3" aria-label={en ? "Platform sections" : "أقسام المنصة"}>
         <Link href="/platform" className={`rounded-md px-3 py-2 text-sm ${activeTab === "overview" ? "bg-primary text-primary-foreground" : "border text-muted-foreground hover:text-foreground"}`}>{en ? "Overview" : "نظرة عامة"}</Link>
         <Link href="/platform?tab=billing" className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm ${activeTab === "billing" ? "bg-primary text-primary-foreground" : "border text-muted-foreground hover:text-foreground"}`}><CreditCard className="h-4 w-4" />{en ? "Subscriptions" : "الاشتراكات"}</Link>
+        <Link href="/platform?tab=users" className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm ${activeTab === "users" ? "bg-primary text-primary-foreground" : "border text-muted-foreground hover:text-foreground"}`}><Users className="h-4 w-4" />{en ? "Platform Users" : "مستخدمو المنصة"}</Link>
       </nav>
 
       {activeTab === "billing" ? (
         <SubscriptionsTab en={en} academies={managedAcademies} subscriptions={subscriptionRows} sumPaid={sumPaid} />
+      ) : activeTab === "users" ? (
+        <PlatformUsersTab en={en} users={managedUsers.map((profile: any) => ({ id: profile.id, email: profile.email ?? (en ? "No email" : "بدون بريد"), role: profile.role, is_active: profile.is_active }))} />
       ) : <>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard icon={<Banknote className="h-4 w-4" />} label={en ? "Actual monthly SaaS revenue" : "إيراد SaaS شهري فعلي"} value={EGP(mrr, en)} hint={`${activeSubscriptions.length} ${en ? "active subscriptions" : "اشتراك نشط"}`} tone="emerald" />
@@ -227,7 +230,7 @@ export default async function PlatformPage(props: { searchParams?: Promise<{ tab
               <h2 className="font-semibold">{en ? "Platform-wide user management" : "إدارة المستخدمين على مستوى المنصة"}</h2>
               <p className="text-xs text-muted-foreground">{en ? "Suspend or delete any account except the platform owner." : "يمكنك إيقاف أو حذف أي حساب، باستثناء حساب مالك المنصة."}</p>
             </div>
-            <PlatformUserControls en={en} users={managedUsers.map((profile: any) => ({ id: profile.id, email: profile.email, role: profile.role, is_active: profile.is_active }))} />
+            <PlatformUserControls en={en} users={managedUsers.map((profile: any) => ({ id: profile.id, email: profile.email ?? (en ? "No email" : "بدون بريد"), role: profile.role, is_active: profile.is_active }))} />
           </CardContent>
         </Card>
         <Card>
@@ -246,6 +249,20 @@ export default async function PlatformPage(props: { searchParams?: Promise<{ tab
       </p>
       </>}
     </div>
+  );
+}
+
+function PlatformUsersTab({ en, users }: { en: boolean; users: Array<{ id: string; email: string; role: string; is_active: boolean }> }) {
+  return (
+    <Card>
+      <CardContent className="space-y-4 p-5">
+        <div>
+          <h2 className="font-semibold">{en ? "Platform user management" : "إدارة مستخدمي المنصة"}</h2>
+          <p className="text-xs text-muted-foreground">{en ? "Suspend or delete managed accounts without entering an academy workspace." : "يمكنك مراجعة مستخدمي الأكاديميات وإيقاف أو حذف الحسابات من دون الدخول إلى مساحة أكاديمية."}</p>
+        </div>
+        <PlatformUserControls en={en} users={users} />
+      </CardContent>
+    </Card>
   );
 }
 

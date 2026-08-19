@@ -156,3 +156,17 @@ Native XLSX import, a distinct persisted Assistant role, richer observability an
 Commit `42174f4d8d13e49fcdce7cdc538838377a68f384` was pushed to `main` and Vercel deployment `dpl_GQY8qM9vBtiB4iNsyU4A9c9X1Qf2` reached **READY / Production**. Immediately after deployment, the following public checks passed: `/api/health` HTTP 200 with `app=ok`, `qr=ok`, `db=ok`, and `latency_ms=133`; the custom unknown route returned HTTP 404; `/robots.txt` and `/sitemap.xml` returned HTTP 200. No secret or environment variable was changed.
 
 The consent metadata implementation is therefore deployed. This confirms deployment integrity, not legal closure: the consent checkbox, policy/version, direct-account/import behavior, and audit retrieval still require the product and compliance decisions described above.
+
+
+## Post-deployment verification — commit b1ceed1
+
+Commit `b1ceed136a2608d63b804f2b32325857daa1439b` (`fix: align lesson timing upload policy and consent evidence`) was pushed to `main`. Vercel deployment `dpl_3yG2wm65wiVu8Px5PZShv54Fwy6z` reached `READY` for Production on project `prj_OAJ78KzRhDjdNah4p3TMbLvPQsKH`.
+
+| Endpoint | Result |
+|---|---:|
+| `/api/health` | HTTP 200 |
+| Unknown route | HTTP 404 |
+| `/robots.txt` | HTTP 200 |
+| `/sitemap.xml` | HTTP 200 |
+
+The deployment includes the shared 10MB upload policy, same-day lesson time classification fixes, two regression tests, operator-facing consent status display, and corrected CSV-only import messaging. No environment variables, production records, payments, email messages, or WhatsApp messages were changed or sent.

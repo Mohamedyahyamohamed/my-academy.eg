@@ -203,3 +203,12 @@ After the consent metadata, lesson-time, and upload-policy changes, local checks
 Commit `42174f4d8d13e49fcdce7cdc538838377a68f384` was pushed to `main` and Vercel deployment `dpl_GQY8qM9vBtiB4iNsyU4A9c9X1Qf2` reached `READY` on Production. Immediately after deployment, `/api/health` returned HTTP 200 with `app=ok`, `qr=ok`, `db=ok`, and `latency_ms=133`; the custom unknown route returned HTTP 404; `/robots.txt` and `/sitemap.xml` returned HTTP 200. No environment variable or secret was modified.
 
 The consent metadata implementation is now deployed, but this does not close the legal blocker by itself. The complete acceptance policy, direct-account/import consent decision, audit retrieval, and runtime evidence remain outstanding. The overall release decision remains **Still Blocked**.
+
+
+## Post-deployment verification — commit b1ceed1
+
+Commit `b1ceed136a2608d63b804f2b32325857daa1439b` (`fix: align lesson timing upload policy and consent evidence`) was pushed to `main`. Vercel deployment `dpl_3yG2wm65wiVu8Px5PZShv54Fwy6z` reached `READY` for Production on project `prj_OAJ78KzRhDjdNah4p3TMbLvPQsKH`.
+
+After deployment, `/api/health` returned HTTP 200, an intentional unknown route returned HTTP 404, and `/robots.txt` and `/sitemap.xml` returned HTTP 200. The deployment includes the shared 10MB upload policy, same-day lesson time classification fixes, regression coverage, operator-facing consent status display, and corrected CSV-only import messaging. No environment variables, secrets, production records, payments, email messages, or WhatsApp messages were changed or sent.
+
+The release decision remains **Still Blocked** because runtime tenant isolation, physical QR, upload isolation, eligible-workspace payment/webhook proof, sandbox delivery proof, manual key confirmation, and legally complete consent workflow evidence remain outstanding.

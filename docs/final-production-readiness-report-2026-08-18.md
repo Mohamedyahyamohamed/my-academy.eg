@@ -196,3 +196,10 @@ After the consent metadata changes, local checks completed successfully: `pnpm l
 - `app/actions/content.ts`
 - `app/actions/upload.ts`
 - `services/attendance.ts`
+
+
+## Post-deployment verification — 19 August 2026
+
+Commit `42174f4d8d13e49fcdce7cdc538838377a68f384` was pushed to `main` and Vercel deployment `dpl_GQY8qM9vBtiB4iNsyU4A9c9X1Qf2` reached `READY` on Production. Immediately after deployment, `/api/health` returned HTTP 200 with `app=ok`, `qr=ok`, `db=ok`, and `latency_ms=133`; the custom unknown route returned HTTP 404; `/robots.txt` and `/sitemap.xml` returned HTTP 200. No environment variable or secret was modified.
+
+The consent metadata implementation is now deployed, but this does not close the legal blocker by itself. The complete acceptance policy, direct-account/import consent decision, audit retrieval, and runtime evidence remain outstanding. The overall release decision remains **Still Blocked**.

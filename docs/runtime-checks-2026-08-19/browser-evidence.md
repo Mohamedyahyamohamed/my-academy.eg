@@ -74,3 +74,6 @@ The roles tab rendered the documented role boundaries for Manager, Teacher, Pare
 ## Owner users tab
 
 The users tab loaded successfully and showed existing pending memberships, a control to add an academy member, and separate forms for creating a confirmed test account and a limited assistant. The assistant form explicitly scopes access to selected groups and labels the effective role as Teacher. No invitation was sent, no account was created, and no pending invitation was cancelled.
+
+Deployment dpl_GQY8qM9vBtiB4iNsyU4A9c9X1Qf2 READY for commit 42174f4d8d13e49fcdce7cdc538838377a68f384 at 2026-08-19.
+Post-deploy public checks: /api/health=200; custom 404=404; robots=200; sitemap=200.

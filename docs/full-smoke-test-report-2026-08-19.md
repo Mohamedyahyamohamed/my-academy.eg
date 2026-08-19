@@ -147,3 +147,10 @@ Native XLSX import, a distinct persisted Assistant role, richer observability an
 - [`teacher-evidence.md`](./runtime-checks-2026-08-19/teacher-evidence.md)
 - [`local-tests.txt`](./runtime-checks-2026-08-19/local-tests.txt)
 - [`closure-browser-evidence-2026-08-18.md`](./closure-browser-evidence-2026-08-18.md)
+
+
+## Post-deployment verification
+
+Commit `42174f4d8d13e49fcdce7cdc538838377a68f384` was pushed to `main` and Vercel deployment `dpl_GQY8qM9vBtiB4iNsyU4A9c9X1Qf2` reached **READY / Production**. Immediately after deployment, the following public checks passed: `/api/health` HTTP 200 with `app=ok`, `qr=ok`, `db=ok`, and `latency_ms=133`; the custom unknown route returned HTTP 404; `/robots.txt` and `/sitemap.xml` returned HTTP 200. No secret or environment variable was changed.
+
+The consent metadata implementation is therefore deployed. This confirms deployment integrity, not legal closure: the consent checkbox, policy/version, direct-account/import behavior, and audit retrieval still require the product and compliance decisions described above.

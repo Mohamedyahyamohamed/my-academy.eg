@@ -6,10 +6,28 @@ import { describe, it, expect } from "vitest";
 import { percentage, round, clamp } from "@/lib/utils";
 import { isLessonUpcoming } from "@/services/lessons";
 import {
+  MAX_UPLOAD_BYTES,
+  CONTENT_UPLOAD_EXTENSIONS,
+  HOMEWORK_UPLOAD_EXTENSIONS,
+} from "@/lib/upload-policy";
+import {
   performanceLevel,
   PERFORMANCE_LEVELS,
   PAYMENT_STATUS,
 } from "@/lib/constants";
+
+describe("Upload policy", () => {
+  it("uses a 10 MiB product file limit", () => {
+    expect(MAX_UPLOAD_BYTES).toBe(10 * 1024 * 1024);
+  });
+
+  it("keeps homework types narrower than lesson-content types", () => {
+    expect(CONTENT_UPLOAD_EXTENSIONS).toContain("docx");
+    expect(CONTENT_UPLOAD_EXTENSIONS).toContain("mp4");
+    expect(HOMEWORK_UPLOAD_EXTENSIONS).not.toContain("docx");
+    expect(HOMEWORK_UPLOAD_EXTENSIONS).not.toContain("mp4");
+  });
+});
 
 describe("Lesson time classification", () => {
   it("keeps a later lesson on the same day upcoming", () => {

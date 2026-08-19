@@ -19,6 +19,7 @@ import { requireScopedRole } from "@/services";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { PLANS } from "@/services/saas";
 import { PlatformAcademyControls, PlatformUserControls } from "@/components/platform/platform-admin-controls";
+import { PlatformUserHierarchy, type PlatformHierarchyAcademy } from "@/components/platform/platform-user-hierarchy";
 import { cookies } from "next/headers";
 import { getLangFromCookie } from "@/lib/i18n";
 import { isPlatformOwnerEmail } from "@/lib/auth";
@@ -42,19 +43,25 @@ export default async function PlatformPage(props: { searchParams?: Promise<{ tab
 
   const [
     { data: academies },
-    { data: students },
-    { data: teachers },
     { data: subs },
     { data: profiles },
+    { data: platformTeachers },
+    { data: platformGroups },
+    { data: platformGroupAssistants },
+    { data: platformGroupStudents },
+    { data: platformStudents },
     { data: payments },
     { data: lifecycleEvents },
     { data: billingEvents },
   ] = await Promise.all([
-    client.from("academies").select("id,name,created_at,is_active,suspension_reason").order("created_at", { ascending: false }),
-    client.from("students").select("academy_id"),
-    client.from("teachers").select("academy_id"),
+    client.from("academies").select("id,name,workspace_type,created_at,is_active,suspension_reason").order("created_at", { ascending: false }),
     client.from("subscriptions").select("academy_id,plan_id,status,current_period_end,cancel_at_period_end,canceled_at,provider,provider_subscription_id"),
-    client.from("profiles").select("id,email,academy_id,role,is_active"),
+    client.from("profiles").select("id,email,academy_id,role,is_active,full_name"),
+    client.from("teachers").select("id,academy_id,profile_id,first_name,last_name,email,is_active"),
+    client.from("groups").select("id,academy_id,name,teacher_id"),
+    client.from("group_assistants").select("group_id,teacher_id"),
+    client.from("group_students").select("group_id,student_id"),
+    client.from("students").select("id,academy_id,first_name,last_name,email,status"),
     client.from("payments").select("academy_id,amount_paid"),
     client
       .from("audit_logs")
@@ -75,12 +82,48 @@ export default async function PlatformPage(props: { searchParams?: Promise<{ tab
   const ownerAcademyId = profileRows.find((profile: any) => isPlatformOwnerEmail(profile.email))?.academy_id;
   const managedAcademies = academyRows.filter((academy: any) => academy.id !== ownerAcademyId);
   const managedAcademyIds = new Set(managedAcademies.map((academy: any) => academy.id));
-  const managedStudents = (students ?? []).filter((row: any) => managedAcademyIds.has(row.academy_id));
-  const managedTeachers = (teachers ?? []).filter((row: any) => managedAcademyIds.has(row.academy_id));
   const managedPayments = (payments ?? []).filter((row: any) => managedAcademyIds.has(row.academy_id));
   const managedLifecycleEvents = (lifecycleEvents ?? []).filter((row: any) => managedAcademyIds.has(row.academy_id));
   const managedBillingEvents = (billingEvents ?? []).filter((row: any) => managedAcademyIds.has(row.academy_id));
   const managedUsers = profileRows.filter((profile: any) => managedAcademyIds.has(profile.academy_id) && !isPlatformOwnerEmail(profile.email) && profile.role !== "SUPER_ADMIN");
+  const teacherRows: any[] = (platformTeachers ?? []) as any[];
+  const groupRows: any[] = (platformGroups ?? []) as any[];
+  const assistantRows: any[] = (platformGroupAssistants ?? []) as any[];
+  const groupStudentRows: any[] = (platformGroupStudents ?? []) as any[];
+  const studentRows: any[] = (platformStudents ?? []) as any[];
+  const managedStudents = studentRows.filter((row: any) => managedAcademyIds.has(row.academy_id));
+  const managedTeachers = teacherRows.filter((row: any) => managedAcademyIds.has(row.academy_id));
+  const profileById = new Map<string, any>(profileRows.map((profile: any) => [profile.id, profile] as [string, any]));
+  const teacherById = new Map<string, any>(teacherRows.map((teacher: any) => [teacher.id, teacher] as [string, any]));
+  const hierarchyAcademies: PlatformHierarchyAcademy[] = managedAcademies.map((academy: any) => {
+    const academyProfiles = profileRows.filter((profile: any) => profile.academy_id === academy.id);
+    const academyTeacherRows = teacherRows.filter((teacher: any) => teacher.academy_id === academy.id);
+    const academyGroupRows = groupRows.filter((group: any) => group.academy_id === academy.id);
+    const owners = academyProfiles
+      .filter((profile: any) => profile.role === "ADMIN" && !isPlatformOwnerEmail(profile.email))
+      .map((profile: any) => ({ id: profile.id, name: profile.full_name || profile.email || "Owner", email: profile.email ?? null, role: profile.role, isActive: profile.is_active !== false, teachers: [] }));
+    if (owners.length === 0 && academy.workspace_type === "TEACHER") {
+      const workspaceOwner = academyProfiles.find((profile: any) => profile.role === "TEACHER") ?? null;
+      if (workspaceOwner) owners.push({ id: workspaceOwner.id, name: workspaceOwner.full_name || workspaceOwner.email || "Owner", email: workspaceOwner.email ?? null, role: workspaceOwner.role, isActive: workspaceOwner.is_active !== false, teachers: [] });
+    }
+    const teachers = academyTeacherRows.map((teacher: any) => {
+      const teacherProfile = teacher.profile_id ? profileById.get(teacher.profile_id) : null;
+      const teacherGroups = academyGroupRows.filter((group: any) => group.teacher_id === teacher.id).map((group: any) => {
+        const students = groupStudentRows.filter((link: any) => link.group_id === group.id).map((link: any) => studentRows.find((student: any) => student.id === link.student_id)).filter(Boolean).map((student: any) => ({ id: student.id, name: `${student.first_name} ${student.last_name}`.trim(), email: student.email ?? null, status: student.status }));
+        const assistants = assistantRows.filter((link: any) => link.group_id === group.id).map((link: any) => {
+          const assistantTeacher = teacherById.get(link.teacher_id);
+          if (!assistantTeacher) return null;
+          const assistantProfile = assistantTeacher.profile_id ? profileById.get(assistantTeacher.profile_id) : null;
+          const assignedGroups = academyGroupRows.filter((candidate: any) => assistantRows.some((candidateLink: any) => candidateLink.group_id === candidate.id && candidateLink.teacher_id === assistantTeacher.id)).map((candidate: any) => candidate.name);
+          return { id: assistantTeacher.id, name: assistantProfile?.full_name || `${assistantTeacher.first_name} ${assistantTeacher.last_name}`.trim(), email: assistantProfile?.email ?? assistantTeacher.email ?? null, groups: assignedGroups };
+        }).filter(Boolean);
+        return { id: group.id, name: group.name, students, assistants };
+      });
+      return { id: teacher.id, profileId: teacher.profile_id ?? null, name: teacherProfile?.full_name || `${teacher.first_name} ${teacher.last_name}`.trim(), email: teacherProfile?.email ?? teacher.email ?? null, isActive: teacher.is_active !== false, groups: teacherGroups };
+    });
+    owners.forEach((owner: any) => { owner.teachers = teachers; });
+    return { id: academy.id, name: academy.name, workspaceType: academy.workspace_type, owners, teachers };
+  });
   const subscriptionRows = (subs ?? []).filter((row: any) => managedAcademyIds.has(row.academy_id));
   const count = (rows: Array<{ academy_id: string | null }> | null, academyId: string) =>
     (rows ?? []).filter((row) => row.academy_id === academyId).length;
@@ -137,7 +180,7 @@ export default async function PlatformPage(props: { searchParams?: Promise<{ tab
       {activeTab === "billing" ? (
         <SubscriptionsTab en={en} academies={managedAcademies} subscriptions={subscriptionRows} sumPaid={sumPaid} />
       ) : activeTab === "users" ? (
-        <PlatformUsersTab en={en} users={managedUsers.map((profile: any) => ({ id: profile.id, email: profile.email ?? (en ? "No email" : "بدون بريد"), role: profile.role, is_active: profile.is_active }))} />
+        <PlatformUsersTab en={en} users={managedUsers.map((profile: any) => ({ id: profile.id, email: profile.email ?? (en ? "No email" : "بدون بريد"), role: profile.role, is_active: profile.is_active }))} hierarchyAcademies={hierarchyAcademies} />
       ) : <>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard icon={<Banknote className="h-4 w-4" />} label={en ? "Actual monthly SaaS revenue" : "إيراد SaaS شهري فعلي"} value={EGP(mrr, en)} hint={`${activeSubscriptions.length} ${en ? "active subscriptions" : "اشتراك نشط"}`} tone="emerald" />
@@ -227,10 +270,10 @@ export default async function PlatformPage(props: { searchParams?: Promise<{ tab
         <Card>
           <CardContent className="space-y-4 p-5">
             <div>
-              <h2 className="font-semibold">{en ? "Platform-wide user management" : "إدارة المستخدمين على مستوى المنصة"}</h2>
-              <p className="text-xs text-muted-foreground">{en ? "Suspend or delete any account except the platform owner." : "يمكنك إيقاف أو حذف أي حساب، باستثناء حساب مالك المنصة."}</p>
+              <h2 className="font-semibold">{en ? "Platform users" : "مستخدمو المنصة"}</h2>
+              <p className="text-xs text-muted-foreground">{en ? "Open the hierarchical view of owners, teachers, assistants, groups, and students." : "افتح العرض الهرمي لمالكي الأكاديميات والمدرسين والمساعدين والمجموعات والطلاب."}</p>
             </div>
-            <PlatformUserControls en={en} users={managedUsers.map((profile: any) => ({ id: profile.id, email: profile.email ?? (en ? "No email" : "بدون بريد"), role: profile.role, is_active: profile.is_active }))} />
+            <Link href="/platform?tab=users" className="inline-flex w-fit items-center rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground">{en ? "Open platform users" : "فتح مستخدمي المنصة"}</Link>
           </CardContent>
         </Card>
         <Card>
@@ -252,7 +295,7 @@ export default async function PlatformPage(props: { searchParams?: Promise<{ tab
   );
 }
 
-function PlatformUsersTab({ en, users }: { en: boolean; users: Array<{ id: string; email: string; role: string; is_active: boolean }> }) {
+function PlatformUsersTab({ en, users, hierarchyAcademies }: { en: boolean; users: Array<{ id: string; email: string; role: string; is_active: boolean }>; hierarchyAcademies: PlatformHierarchyAcademy[] }) {
   return (
     <Card>
       <CardContent className="space-y-4 p-5">
@@ -260,7 +303,12 @@ function PlatformUsersTab({ en, users }: { en: boolean; users: Array<{ id: strin
           <h2 className="font-semibold">{en ? "Platform user management" : "إدارة مستخدمي المنصة"}</h2>
           <p className="text-xs text-muted-foreground">{en ? "Suspend or delete managed accounts without entering an academy workspace." : "يمكنك مراجعة مستخدمي الأكاديميات وإيقاف أو حذف الحسابات من دون الدخول إلى مساحة أكاديمية."}</p>
         </div>
-        <PlatformUserControls en={en} users={users} />
+        <PlatformUserHierarchy en={en} academies={hierarchyAcademies} />
+        <details className="border-t pt-4">
+          <summary className="cursor-pointer text-sm font-medium">{en ? "Administrative account actions" : "إجراءات الحسابات الإدارية"}</summary>
+          <p className="mb-3 mt-2 text-xs text-muted-foreground">{en ? "Suspend or delete an account only when required. The hierarchy above remains the primary view." : "أوقف أو احذف حسابًا عند الحاجة فقط. يظل العرض الهرمي بالأعلى هو العرض الأساسي."}</p>
+          <PlatformUserControls en={en} users={users} />
+        </details>
       </CardContent>
     </Card>
   );

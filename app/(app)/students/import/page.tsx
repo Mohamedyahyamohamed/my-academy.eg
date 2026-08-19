@@ -12,7 +12,7 @@ export default async function ImportStudentsPage() {
   return (
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
-        title={en ? "Import students from Excel" : "استيراد طلاب من Excel"}
+        title={en ? "Import students from CSV" : "استيراد طلاب من CSV"}
         description={en ? "Upload a CSV file or paste data to register students and parents in one batch." : "ارفع ملف CSV أو الصق البيانات، واتسجّل الطلاب وأولياء الأمور دفعة واحدة."}
       />
       <ImportStudents />

@@ -12,6 +12,7 @@ import {
   fetchTableRLS,
 } from "./_shared";
 import { percentage, round, fullName } from "@/lib/utils";
+import { isLessonUpcoming, lessonWallClockMinute } from "./lessons";
 
 /** Resolve the parent record for a logged-in PARENT user. */
 export function resolveParent(user: SessionUser): Parent | null {
@@ -173,8 +174,8 @@ export async function childSummary(studentId: string, academyId?: string): Promi
   const groups = groupsForStudent(studentId);
   const groupIds = groups.map((g: any) => g.id);
   const upcoming = lessons
-    .filter((l: any) => groupIds.includes(l.group_id) && +new Date(l.date) >= Date.now())
-    .sort((a: any, b: any) => +new Date(a.date) - +new Date(b.date))[0];
+    .filter((l: any) => groupIds.includes(l.group_id) && isLessonUpcoming(l))
+    .sort((a: any, b: any) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time))[0];
 
   const hw = homework.filter((h: any) => h.student_id === studentId);
   const pendingHomework = hw.filter((h: any) => h.status === "PENDING").length;
@@ -211,7 +212,7 @@ export async function studentLessons(
 
   return lessons
     .filter((l: any) => groupIds.includes(l.group_id))
-    .sort((a: any, b: any) => +new Date(a.date) - +new Date(b.date))
+    .sort((a: any, b: any) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time))
     .map((l: any) => ({ ...l, group: groups.find((g: any) => g.id === l.group_id) }));
 }
 
@@ -473,7 +474,7 @@ export async function getStudentDashboard(user: SessionUser): Promise<StudentDas
     groups,
     attendanceRate: summary.attendanceRate,
     averageGrade: summary.averageGrade,
-    upcomingLessons: myLessons.filter((l: any) => +new Date(l.date) >= Date.now()).slice(0, 5),
+    upcomingLessons: myLessons.filter((l: any) => isLessonUpcoming(l)).slice(0, 5),
     recentGrades: grades.slice(-5),
     pendingHomework: homework.filter((h: any) => h.student_id === student.id && h.status === "PENDING").slice(0, 5),
     recentAttendance: attendance.filter((a: any) => a.student_id === student.id).slice(-5).reverse(),

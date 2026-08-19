@@ -11,13 +11,13 @@
 
 | Area | Result | Evidence | Interpretation |
 |---|---|---|---|
-| Local quality | **PASS** | `pnpm lint`, `pnpm build`, and Vitest completed successfully. | No compile, lint, or current automated-test regression was found. |
+| Local quality | **PASS** | `pnpm lint`, `pnpm build`, and Vitest completed successfully; **46 passed / 9 skipped** after the lesson-time regression tests. | No compile, lint, or current automated-test regression was found. |
 | Public production routes | **PASS** | 9 public/application endpoints returned HTTP 200; intentional unknown route returned custom HTTP 404. | Public surface is reachable and the custom Arabic 404 is deployed. |
 | Production health | **PASS** | `/api/health` returned 200 with `app`, `qr`, and `db` healthy. Ten sequential checks remained 200; internal latency ranged 112–509 ms. | The first slower measurement is consistent with initialization/network variance; this is not a load test or p95 guarantee. |
 | Role boundaries | **PASS for tested route guards; partial workflow coverage** | Owner and Teacher read-only walkthroughs passed; Teacher→Parent redirected correctly; inherited six-account login matrix passed. | Student, Parent, and Assistant deeper workflows still need linked synthetic fixtures for complete closure. |
 | Academy B isolation | **PARTIAL — runtime evidence exists for scoped Student/search, full matrix incomplete** | Academy B synthetic account loaded `/student`; `/groups` and `/students` redirected; scoped search returned empty for an Academy A-only term. | All sensitive tables and storage still require a complete A/B runtime matrix. |
 | QR attendance | **BLOCKED** | UI and code checks pass; physical camera/write tests were not performed. | Real-device first scan, duplicate, wrong-group/time, offline, retry, and refresh behavior remain unproven. |
-| File uploads | **BLOCKED for runtime closure** | Content action supports up to 500 MB and enforces signatures, association, quota, private paths, and signed URLs; no runtime upload/isolation test was performed. | Homework attachments are intentionally capped at 10 MB; content upload still needs safe runtime evidence. |
+| File uploads | **BLOCKED for runtime closure** | Content and homework actions now share a **10MB product limit**, enforce signatures, association, quota, private paths, and signed URLs; no runtime upload/isolation test was performed. | Runtime valid/invalid/size/retry and cross-tenant storage evidence remain required. |
 | Billing | **BLOCKED for end-to-end proof** | Teacher checkout attempt was safely rejected before payment because the workspace type was ineligible; Owner is intentionally redirected to platform. | An eligible Academy Admin/Owner workspace and Sandbox payment are required to prove webhook activation. |
 | WhatsApp/email | **BLOCKED for positive delivery proof** | Unauthenticated test endpoint and unsigned webhooks were rejected; no message was sent. | Sandbox/stub delivery and webhook idempotency remain unproven. |
 | Parental consent | **PARTIAL — server metadata fix committed locally** | Main student creation now derives `consent_at`, `consent_by`, and version `1.0` only from a true consent checkbox and authenticated actor; import/invite/direct-account paths explicitly leave consent null/false. | The policy/version and operator-facing acceptance/audit retrieval still need legal/product confirmation and deployed runtime evidence. |
@@ -76,7 +76,7 @@ The critical runtime evidence is still missing. No physical phone camera was use
 
 ## File upload and content association
 
-The content upload action in `app/actions/content.ts` requires an authenticated Teacher/Admin role, blocks limited Assistants, rate-limits attempts, requires a course, optionally validates a lesson belonging to that course, checks file signatures and declared type, enforces a 500 MB application cap, checks tenant storage quota, prefixes storage paths with the academy ID, writes `content_files` with the same academy ID, and returns a one-hour signed URL. Failure during database recording or signed-URL creation triggers cleanup. Homework attachments use a separate action with an intentional 10 MB cap.
+The content upload action in `app/actions/content.ts` requires an authenticated Teacher/Admin role, blocks limited Assistants, rate-limits attempts, requires a course, optionally validates a lesson belonging to that course, checks file signatures and declared type, enforces the shared **10MB product cap**, checks tenant storage quota, prefixes storage paths with the academy ID, writes `content_files` with the same academy ID, and returns a one-hour signed URL. Failure during database recording or signed-URL creation triggers cleanup. Homework attachments use the same shared 10MB cap with a narrower type allowlist. Next.js retains a 12MB transport allowance for multipart overhead; this is not a user-facing file limit.
 
 This is a strong code-level result but not runtime closure. No valid content file was uploaded, no invalid signature was submitted, no interrupted retry was tested, and no Academy A/B signed-download denial was recorded. The production upload blocker therefore remains open.
 
@@ -85,6 +85,8 @@ This is a strong code-level result but not runtime closure. No valid content fil
 The production import UI accepts CSV or pasted data and documents a 1000-row limit. The displayed required columns include `first_name,last_name,phone,grade,school,parent_name,parent_phone`. It does not accept native `.xlsx`; users must save Excel as CSV. The server action prevents duplicate rows by normalized name/phone and returns created, duplicate, and per-row error counts, but it is not one transaction: a mixed file may create earlier valid rows while later rows fail.
 
 A 100+ row import was not run against production because it would intentionally add records. The safe next test is a disposable academy/fixture or a transaction-capable staging workflow.
+
+The current implementation also corrected product copy across the student list/import pages and landing page: Excel files must be exported as CSV before import; native `.xlsx` parsing remains a post-launch enhancement unless explicitly prioritized.
 
 ## Billing and provider integrations
 

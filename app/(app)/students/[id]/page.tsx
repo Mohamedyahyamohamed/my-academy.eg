@@ -50,6 +50,7 @@ import { setRequestContext } from "@/services/request-context";
 import { groupsForStudent } from "@/services/_shared";
 import { collections } from "@/services/data/store";
 import { formatCurrency, formatDate, formatTime } from "@/lib/utils";
+import { lessonWallClockMinute } from "@/services/lessons";
 import { performanceLevel, performanceColor, performanceLabel } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -83,7 +84,7 @@ export default async function StudentProfilePage(
   const groupIds = studentGroups.map((g) => g.id);
   const lessons = collections()
     .lessons.filter((l) => groupIds.includes(l.group_id))
-    .sort((a, b) => +new Date(b.date) - +new Date(a.date))
+    .sort((a, b) => lessonWallClockMinute(b.date, b.start_time) - lessonWallClockMinute(a.date, a.start_time))
     .slice(0, 10)
     .map((l) => ({ ...l, group: groups.find((g) => g.id === l.group_id) }));
 
@@ -151,6 +152,15 @@ export default async function StudentProfilePage(
             <InfoItem icon={School} label={en ? "School" : "المدرسة"} value={detail.school || "—"} />
             <InfoItem icon={Phone} label={en ? "Phone" : "الموبايل"} value={detail.phone || "—"} />
             <InfoItem icon={Mail} label={en ? "Email" : "البريد الإلكتروني"} value={detail.email || "—"} />
+          </div>
+          <div className="mt-4 rounded-lg border bg-muted/20 p-4">
+            <div className="mb-3 text-sm font-semibold">{en ? "Parental consent audit" : "سجل موافقة ولي الأمر"}</div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <InfoItem icon={User} label={en ? "Status" : "الحالة"} value={detail.consent_given === true ? (en ? "Accepted" : "مقبولة") : (en ? "Pending consent" : "بانتظار الموافقة")} />
+              <InfoItem icon={FileText} label={en ? "Policy version" : "إصدار السياسة"} value={detail.consent_version || "—"} />
+              <InfoItem icon={CalendarCheck} label={en ? "Accepted at" : "وقت القبول"} value={detail.consent_at ? formatDate(detail.consent_at, undefined, en ? "en-EG" : "ar-EG") : "—"} />
+              <InfoItem icon={User} label={en ? "Actor" : "المنفّذ"} value={detail.consent_by || "—"} />
+            </div>
           </div>
         </CardContent>
       </Card>

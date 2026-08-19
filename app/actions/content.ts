@@ -9,8 +9,9 @@ import { measureTenantStorageUsage } from "@/lib/storage-quota";
 import { getPlan } from "@/services/saas";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { can } from "@/lib/permissions";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from "@/lib/upload-policy";
 
-const MAX_CONTENT_FILE_SIZE = 500 * 1024 * 1024;
+const MAX_CONTENT_FILE_SIZE = MAX_UPLOAD_BYTES;
 
 type SafeContentUpload = { contentType: string; extension: string };
 
@@ -81,7 +82,7 @@ export async function uploadContentFile(formData: FormData) {
   const lessonIdRaw = String(formData.get("lessonId") ?? "");
   const lessonId = lessonIdRaw || null;
   if (!(file instanceof File) || !courseId) return { ok: false, error: "A file and course are required." };
-  if (file.size <= 0 || file.size > MAX_CONTENT_FILE_SIZE) return { ok: false, error: "File is empty or larger than 500MB." };
+  if (file.size <= 0 || file.size > MAX_CONTENT_FILE_SIZE) return { ok: false, error: `File is empty or larger than ${MAX_UPLOAD_MB}MB.` };
 
   const course = await ContentService.getCourse(courseId, user);
   if (!course) return { ok: false, error: "Course not found or outside your scope." };

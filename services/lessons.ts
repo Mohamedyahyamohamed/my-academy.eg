@@ -70,9 +70,11 @@ export async function listLessons(
     );
   }
   if (groupId !== "ALL") items = items.filter((l) => l.group_id === groupId);
-  if (upcoming) items = items.filter((l) => +new Date(l.date) >= now);
-  if (past) items = items.filter((l) => +new Date(l.date) < now);
-  items.sort((a, b) => +new Date(b.date) - +new Date(a.date));
+  const currentWallClock = wallClockMinute(new Date(now));
+  const startWallClock = (lesson: Lesson) => lessonWallClockMinute(lesson.date, lesson.start_time);
+  if (upcoming) items = items.filter((l) => startWallClock(l) >= currentWallClock);
+  if (past) items = items.filter((l) => startWallClock(l) < currentWallClock);
+  items.sort((a, b) => startWallClock(b) - startWallClock(a));
 
   const total = items.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -103,10 +105,14 @@ function wallClockMinute(date: Date, timeZone = process.env.ACADEMY_TIMEZONE || 
   return (((value("year") * 12 + value("month")) * 31 + value("day")) * 24 + value("hour")) * 60 + value("minute");
 }
 
-function lessonWallClockMinute(date: string, time: string) {
+export function lessonWallClockMinute(date: string, time: string) {
   const [year, month, day] = date.slice(0, 10).split("-").map(Number);
   const [hour, minute] = time.slice(0, 5).split(":").map(Number);
   return (((year * 12 + month) * 31 + day) * 24 + hour) * 60 + minute;
+}
+
+export function isLessonUpcoming(lesson: Pick<Lesson, "date" | "start_time">, now = new Date()) {
+  return lessonWallClockMinute(lesson.date, lesson.start_time) >= wallClockMinute(now);
 }
 
 function validateLessonWindow(date: string, start: string, end: string) {
@@ -157,7 +163,7 @@ export function getActiveLessonForTeacher(now = new Date()): Lesson | null {
 export async function getUpcomingLessons(limit = 5): Promise<Lesson[]> {
   const result = await listLessons({ upcoming: true, pageSize: limit });
   return result.items
-    .sort((a, b) => +new Date(a.date) - +new Date(b.date))
+    .sort((a, b) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time))
     .slice(0, limit);
 }
 

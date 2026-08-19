@@ -116,12 +116,12 @@ export function ImportStudents() {
               {en ? "Columns:" : "الأعمدة:"} {HEADER}
             </div>
             <Button variant="outline" size="sm" onClick={downloadTemplate}>
-              <Upload className="me-2 h-4 w-4" /> {en ? "Download Excel template" : "نزّل قالب Excel"}
+              <Upload className="me-2 h-4 w-4" /> {en ? "Download CSV template" : "نزّل قالب CSV"}
             </Button>
           </div>
 
           <div className="space-y-1.5">
-            <Label>{en ? "Upload CSV file" : "ارفع ملف CSV"}</Label>
+            <Label>{en ? "Upload a CSV file" : "ارفع ملف CSV"}</Label>
             <input
               type="file"
               accept=".csv,text/csv"
@@ -129,7 +129,7 @@ export function ImportStudents() {
               className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-primary-foreground hover:file:bg-primary/90"
             />
             <p className="text-xs text-muted-foreground">
-              {en ? "In Excel: File → Save As → CSV (Comma delimited) (*.csv). Maximum 1,000 students per import." : "في Excel: File → Save As → CSV (Comma delimited) (*.csv). الحد الأقصى 1000 طالب في العملية الواحدة."}
+              {en ? "CSV only for now. In Excel: File → Save As → CSV (Comma delimited) (*.csv). Maximum 1,000 students per import." : "الاستيراد يدعم CSV حاليًا. من Excel اختر File → Save As → CSV (Comma delimited) (*.csv). الحد الأقصى 1000 طالب في العملية الواحدة."}
             </p>
           </div>
 

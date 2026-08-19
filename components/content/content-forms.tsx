@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { createContentCourseAction, createContentLessonAction, markLessonCompleteAction, uploadContentFile, addContentLink } from "@/app/actions/content";
+import { CONTENT_UPLOAD_ACCEPT, CONTENT_UPLOAD_EXTENSIONS, MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from "@/lib/upload-policy";
 
 export function CreateCourseForm({ groups }: { groups: Array<{ id: string; name: string }> }) {
   const lang = useClientLang();
@@ -65,14 +66,14 @@ export function UploadContentFileForm({ courseId, lessonId, lessons = [] }: { co
   const en = lang === "en";
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const MAX_FILE_SIZE = 500 * 1024 * 1024;
-  const ALLOWED_EXTENSIONS = new Set(["pdf", "png", "jpg", "jpeg", "webp", "docx", "mp4"]);
+  const MAX_FILE_SIZE = MAX_UPLOAD_BYTES;
+  const ALLOWED_EXTENSIONS = new Set<string>(CONTENT_UPLOAD_EXTENSIONS);
   return (
-    <form onSubmit={(event) => { event.preventDefault(); const form = event.currentTarget; const input = form.elements.namedItem("file"); const file = input instanceof HTMLInputElement ? input.files?.[0] : undefined; if (!file) { toast.error(en ? "Choose a file first." : "اختر ملفًا أولًا."); return; } const extension = file.name.split(".").pop()?.toLowerCase() ?? ""; if (!ALLOWED_EXTENSIONS.has(extension)) { toast.error(en ? "This file type is not allowed." : "نوع الملف غير مسموح."); return; } if (file.size > MAX_FILE_SIZE) { toast.error(en ? "File size must be 500 MB or less." : "يجب ألا يتجاوز حجم الملف 500 ميجابايت."); return; } const formData = new FormData(form); startTransition(async () => { try { const result = await uploadContentFile(formData); if (!result?.ok) toast.error(result?.error || (en ? "Upload failed." : "فشل رفع الملف.")); else { toast.success(en ? "File uploaded." : "تم رفع الملف."); form.reset(); router.refresh(); } } catch (error) { toast.error(error instanceof Error ? error.message : (en ? "Upload failed." : "فشل رفع الملف.")); } }); }} className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4">
+    <form onSubmit={(event) => { event.preventDefault(); const form = event.currentTarget; const input = form.elements.namedItem("file"); const file = input instanceof HTMLInputElement ? input.files?.[0] : undefined; if (!file) { toast.error(en ? "Choose a file first." : "اختر ملفًا أولًا."); return; } const extension = file.name.split(".").pop()?.toLowerCase() ?? ""; if (!ALLOWED_EXTENSIONS.has(extension)) { toast.error(en ? "This file type is not allowed." : "نوع الملف غير مسموح."); return; } if (file.size > MAX_FILE_SIZE) { toast.error(en ? `File size must be ${MAX_UPLOAD_MB} MB or less.` : `يجب ألا يتجاوز حجم الملف ${MAX_UPLOAD_MB} ميجابايت.`); return; } const formData = new FormData(form); startTransition(async () => { try { const result = await uploadContentFile(formData); if (!result?.ok) toast.error(result?.error || (en ? "Upload failed." : "فشل رفع الملف.")); else { toast.success(en ? "File uploaded." : "تم رفع الملف."); form.reset(); router.refresh(); } } catch (error) { toast.error(error instanceof Error ? error.message : (en ? "Upload failed." : "فشل رفع الملف.")); } }); }} className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4">
       <input type="hidden" name="courseId" value={courseId} />
       {lessons.length > 0 ? <div className="min-w-[220px] flex-1 space-y-1"><Label htmlFor={`content-file-lesson-${courseId}`}>{en ? "Attach to" : "إرفاق إلى"}</Label><select id={`content-file-lesson-${courseId}`} name="lessonId" defaultValue={lessonId ?? ""} className="h-10 w-full rounded-md border bg-background px-3 text-sm"><option value="">{en ? "Course overview" : "الكورس بالكامل"}</option>{lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}</select></div> : lessonId ? <input type="hidden" name="lessonId" value={lessonId} /> : null}
-      <div className="min-w-[220px] flex-1 space-y-1"><Label htmlFor={`content-file-${lessonId ?? "course"}`}>{en ? "File" : "الملف"}</Label><Input id={`content-file-${lessonId ?? "course"}`} name="file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.docx,.mp4" required /></div>
-      <p className="w-full text-xs text-muted-foreground">{en ? "PDF, DOCX, images, or MP4 up to 500 MB." : "PDF أو DOCX أو صور أو MP4 حتى 500 ميجابايت."}</p><Button type="submit" variant="soft" disabled={pending}>{pending ? (en ? "Uploading…" : "جارٍ الرفع…") : (en ? "Upload file" : "رفع الملف")}</Button>
+      <div className="min-w-[220px] flex-1 space-y-1"><Label htmlFor={`content-file-${lessonId ?? "course"}`}>{en ? "File" : "الملف"}</Label><Input id={`content-file-${lessonId ?? "course"}`} name="file" type="file" accept={CONTENT_UPLOAD_ACCEPT} required /></div>
+      <p className="w-full text-xs text-muted-foreground">{en ? `PDF, DOCX, images, or MP4 up to ${MAX_UPLOAD_MB} MB.` : `PDF أو DOCX أو صور أو MP4 حتى ${MAX_UPLOAD_MB} ميجابايت.`}</p><Button type="submit" variant="soft" disabled={pending}>{pending ? (en ? "Uploading…" : "جارٍ الرفع…") : (en ? "Upload file" : "رفع الملف")}</Button>
     </form>
   );
 }

@@ -4,11 +4,28 @@
  */
 import { describe, it, expect } from "vitest";
 import { percentage, round, clamp } from "@/lib/utils";
+import { isLessonUpcoming } from "@/services/lessons";
 import {
   performanceLevel,
   PERFORMANCE_LEVELS,
   PAYMENT_STATUS,
 } from "@/lib/constants";
+
+describe("Lesson time classification", () => {
+  it("keeps a later lesson on the same day upcoming", () => {
+    expect(isLessonUpcoming(
+      { date: "2026-08-19", start_time: "18:30" },
+      new Date("2026-08-19T12:00:00+03:00"),
+    )).toBe(true);
+  });
+
+  it("classifies an earlier lesson on the same day as past", () => {
+    expect(isLessonUpcoming(
+      { date: "2026-08-19", start_time: "10:30" },
+      new Date("2026-08-19T12:00:00+03:00"),
+    )).toBe(false);
+  });
+});
 
 // ─── Payment derivation ───────────────────────────────────────────
 describe("Payment remaining & status", () => {

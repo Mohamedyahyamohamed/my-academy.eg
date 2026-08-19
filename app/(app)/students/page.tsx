@@ -68,7 +68,7 @@ export default async function StudentsPage(
       >
         <div className="flex gap-2">
           <Button asChild variant="outline">
-            <Link href="/students/import">{en ? "Import from Excel" : "استيراد من Excel"}</Link>
+            <Link href="/students/import">{en ? "Import CSV" : "استيراد CSV"}</Link>
           </Button>
           <CreateAccountsButton />
           <AddStudentDialog parents={parents} groups={groups} />

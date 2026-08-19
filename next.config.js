@@ -14,7 +14,8 @@ const nextConfig = {
   },
   experimental: {
     serverActions: {
-      bodySizeLimit: "500mb",
+      // The product limit is 10 MiB; the small overhead allowance is for multipart encoding.
+      bodySizeLimit: "12mb",
     },
   },
   async headers() {

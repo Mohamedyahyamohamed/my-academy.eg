@@ -7,8 +7,9 @@ import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { measureTenantStorageUsage } from "@/lib/storage-quota";
 import { getPlan } from "@/services/saas";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from "@/lib/upload-policy";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILE_SIZE = MAX_UPLOAD_BYTES;
 
 type SafeUpload = { contentType: string; extension: string };
 
@@ -49,7 +50,7 @@ export async function uploadHomeworkFile(formData: FormData) {
     return { ok: false, error: "A file and homework are required." };
   }
   if (file.size <= 0 || file.size > MAX_FILE_SIZE) {
-    return { ok: false, error: "File too large or empty (max 10MB)." };
+    return { ok: false, error: `File too large or empty (max ${MAX_UPLOAD_MB}MB).` };
   }
 
   const homework = collections().homework.find(

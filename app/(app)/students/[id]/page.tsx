@@ -101,6 +101,9 @@ export default async function StudentProfilePage(
     .map((l) => ({ ...l, group: groups.find((g) => g.id === l.group_id) }));
 
   const stats = detail.stats!;
+  // Platform owners may not have an active academy context. Resolve the
+  // student's academy explicitly so the read-only profile does not crash.
+  const academy = await MiscService.getAcademyAsync(detail.academy_id);
 
   return (
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
@@ -120,7 +123,7 @@ export default async function StudentProfilePage(
           studentId={detail.id}
           name={`${detail.first_name} ${detail.last_name}`}
           grade={detail.grade}
-          academyName={MiscService.getAcademy().name}
+          academyName={academy.name}
           trigger={<Button variant="outline">{en ? "QR card" : "بطاقة QR"}</Button>}
         />
         {!isPlatformOwner && <EditStudentDialog student={detail} parents={parents} groups={groups} />}

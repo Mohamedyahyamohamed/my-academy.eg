@@ -5,6 +5,7 @@
 import { collections } from "./data/store";
 import { currentAcademyId } from "./session";
 import { headers } from "next/headers";
+import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
 export interface AuditEntry {
   action: string;
@@ -29,6 +30,7 @@ export interface AuditLog {
   ip: string | null;
   user_agent: string | null;
   created_at: string;
+  actor_name?: string | null;
 }
 
 /**
@@ -89,13 +91,28 @@ export async function audit(entry: AuditEntry, actor?: { id: string; role: strin
 }
 
 /** List audit logs for the current academy (admin only). */
-export function listAuditLogs(
+export async function listAuditLogs(
   filters: { search?: string; action?: string; entity_type?: string; actor?: string; page?: number; pageSize?: number } = {},
   academyId?: string,
 ) {
   let items = ((collections() as any).auditLogs ?? []) as AuditLog[];
   const aid = academyId ?? currentAcademyId();
   items = items.filter((l) => l.academy_id === aid);
+
+  const admin = nodeSupabaseClient();
+  if (admin && aid) {
+    try {
+      const live = await admin
+        .from("audit_logs")
+        .select("id, academy_id, actor_user_id, actor_role, action, entity_type, entity_id, old_data, new_data, metadata, ip, user_agent, created_at")
+        .eq("academy_id", aid)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (!live.error) items = (live.data ?? []) as AuditLog[];
+    } catch {
+      // Use the request snapshot when the optional audit table is unavailable.
+    }
+  }
   if (filters.search) {
     const q = filters.search.toLowerCase();
     items = items.filter((l) =>
@@ -107,6 +124,22 @@ export function listAuditLogs(
   if (filters.action && filters.action !== "ALL") items = items.filter((l) => l.action === filters.action);
   if (filters.entity_type && filters.entity_type !== "ALL") items = items.filter((l) => l.entity_type === filters.entity_type);
   items.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
+
+  const actorIds = [...new Set(items.map((item) => item.actor_user_id).filter(Boolean))] as string[];
+  const actorNames = new Map<string, string>();
+  if (admin && aid && actorIds.length) {
+    try {
+      const profiles = await admin.from("profiles").select("id, full_name").eq("academy_id", aid).in("id", actorIds);
+      if (!profiles.error) {
+        for (const profile of profiles.data ?? []) actorNames.set(profile.id, profile.full_name);
+      }
+    } catch {}
+  } else {
+    for (const profile of collections().profiles.filter((item) => item.academy_id === aid)) {
+      actorNames.set(profile.id, profile.full_name);
+    }
+  }
+  items = items.map((item) => ({ ...item, actor_name: item.actor_user_id ? actorNames.get(item.actor_user_id) ?? null : null }));
   const total = items.length;
   const page = filters.page ?? 1;
   const pageSize = filters.pageSize ?? 30;

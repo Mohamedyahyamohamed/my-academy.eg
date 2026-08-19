@@ -24,7 +24,7 @@ import { PaymentStatusBadge } from "@/components/shared/badges";
 import { TrendArea, Donut, LineTrend } from "@/components/charts";
 import { DashboardService, MiscService, requireScopedRole } from "@/services";
 import { atRiskStudents } from "@/services/insights";
-import { formatCurrency, formatDate, formatTime, initials } from "@/lib/utils";
+import { formatClockTime, formatCurrency, formatDate, formatTime, initials } from "@/lib/utils";
 import type { DashboardPeriod } from "@/types";
 import { cookies } from "next/headers";
 import { getLangFromCookie } from "@/lib/i18n";
@@ -180,6 +180,7 @@ export default async function DashboardPage(
           hint={`${d.activeStudents} ${en ? "active" : "نشط"}`}
           icon={Users}
           accent="primary"
+          href="/students"
         />
         <StatCard
           label={en ? "Active groups" : "المجموعات النشطة"}
@@ -194,6 +195,7 @@ export default async function DashboardPage(
           value={formatCurrency(d.collectedForPeriod, "EGP", en ? "en-EG" : "ar-EG")}
           icon={Wallet}
           accent="success"
+          href="/payments"
           trend={period === "month" ? { value: Math.abs(collectionTrend), positive: collectionTrend >= 0, label: en ? "Compared with last month" : "مقارنة بالشهر الماضي" } : undefined}
         />
         <StatCard
@@ -201,6 +203,7 @@ export default async function DashboardPage(
           value={formatCurrency(d.outstanding, "EGP", en ? "en-EG" : "ar-EG")}
           icon={TrendingDown}
           accent="warning"
+          href="/payments"
         />
       </div>
 
@@ -211,24 +214,28 @@ export default async function DashboardPage(
           value={formatCurrency(d.monthlyRevenue, "EGP", en ? "en-EG" : "ar-EG")}
           icon={Wallet}
           accent="primary"
+          href="/payments"
         />
         <StatCard
           label={en ? "Active students" : "الطلاب النشطون"}
           value={d.activeStudents}
           icon={UserCheck}
           accent="success"
+          href="/students"
         />
         <StatCard
           label={en ? "Attendance rate" : "نسبة الحضور"}
           value={`${d.attendanceRate}%`}
           icon={CalendarCheck}
           accent="info"
+          href="/attendance"
         />
         <StatCard
           label={en ? "Average grade" : "متوسط الدرجات"}
           value={`${d.averageGrade}%`}
           icon={GraduationCap}
           accent="warning"
+          href="/grades"
         />
       </div>
 
@@ -372,7 +379,7 @@ export default async function DashboardPage(
                   </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock className="h-3.5 w-3.5" />
-                    {formatTime(`${l.date.slice(0, 10)}T${l.start_time}:00`, en ? "en-EG" : "ar-EG")}
+                    {formatClockTime(l.start_time)}
                   </div>
                 </Link>
               ))

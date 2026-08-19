@@ -38,12 +38,13 @@ export async function listHomework(
   const teacher = teacherProfileId
     ? await resolveTeacherForGroups(academyId, teacherProfileId, getCurrentUser()?.email)
     : null;
+  const scopedGroups = academyId ? await fetchTableRLS<any>("groups", academyId) : collections().groups;
+  const scopedAssistants = teacher && academyId ? await fetchTableRLS<any>("group_assistants", academyId) : [];
   const tScope = teacher
     ? new Set([
-        ...collections().groups.filter((g) => g.academy_id === academyId && g.teacher_id === teacher.id).map((g) => g.id),
-        ...collections().groupAssistants
-          .filter((ga) => ga.teacher_id === teacher.id && collections().groups.some((g) => g.academy_id === academyId && g.id === ga.group_id))
-          .map((ga) => ga.group_id),
+        ...scopedGroups.filter((g: any) => g.academy_id === academyId && g.teacher_id === teacher.id).map((g: any) => g.id),
+        ...scopedAssistants.filter((ga: any) => ga.teacher_id === teacher.id).map((ga: any) => ga.group_id),
+        ...collections().groupAssistants.filter((ga) => ga.teacher_id === teacher.id).map((ga) => ga.group_id),
       ])
     : teacherProfileId
       ? new Set<string>()

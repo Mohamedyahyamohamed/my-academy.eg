@@ -8,7 +8,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { resolveStudent, studentLessons, requireScopedRole } from "@/services";
-import { formatDate, formatTime } from "@/lib/utils";
+import { formatDate, formatClockTime } from "@/lib/utils";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +39,7 @@ export default async function StudentLessonsPage() {
                       <TableCell className="text-sm">{formatDate(l.date, undefined, en ? "en-EG" : "ar-EG")}</TableCell>
                       <TableCell className="font-medium">{l.topic}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{l.group?.name}</TableCell>
-                      <TableCell className="text-sm">{formatTime(`${l.date.slice(0, 10)}T${l.start_time}:00`, en ? "en-EG" : "ar-EG")}</TableCell>
+                      <TableCell className="text-sm">{formatClockTime(l.start_time, en ? "en-EG" : "ar-EG")}</TableCell>
                     </TableRow>
                   ))}
                   {upcoming.length === 0 && <TableRow><TableCell colSpan={4} className="py-6 text-center text-sm text-muted-foreground">{en ? "No upcoming lessons." : "لا توجد حصص قادمة."}</TableCell></TableRow>}

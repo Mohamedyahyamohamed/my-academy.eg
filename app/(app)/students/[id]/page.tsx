@@ -50,7 +50,7 @@ import {
 import { setRequestContext } from "@/services/request-context";
 import { groupsForStudent } from "@/services/_shared";
 import { collections } from "@/services/data/store";
-import { formatCurrency, formatDate, formatTime } from "@/lib/utils";
+import { formatCurrency, formatDate, formatClockTime } from "@/lib/utils";
 import { lessonWallClockMinute } from "@/services/lessons";
 import { performanceLevel, performanceColor, performanceLabel } from "@/lib/constants";
 
@@ -395,7 +395,7 @@ export default async function StudentProfilePage(
                         <Link href={`/lessons/${l.id}`} className="hover:text-primary">{l.topic}</Link>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{l.group?.name ?? "—"}</TableCell>
-                      <TableCell className="text-sm">{formatTime(`${l.date.slice(0, 10)}T${l.start_time}:00`, en ? "en-EG" : "ar-EG")}</TableCell>
+                      <TableCell className="text-sm">{formatClockTime(l.start_time, en ? "en-EG" : "ar-EG")}</TableCell>
                     </TableRow>
                   ))}
                   {lessons.length === 0 && (

@@ -9,9 +9,6 @@ export const lessonSchema = z.object({
   topic: z.string().min(1, "Topic is required").max(120),
   description: z.string().max(1000).optional(),
   notes: z.string().max(2000).optional(),
-}).refine((d) => d.end_time > d.start_time, {
-  message: "End time must be after start time",
-  path: ["end_time"],
 });
 
 export type LessonValues = z.infer<typeof lessonSchema>;

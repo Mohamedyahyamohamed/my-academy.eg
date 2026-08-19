@@ -59,8 +59,9 @@ export async function listGroups(search = "", academyId?: string, teacherProfile
     : null;
 
   const scopedItems = await fetchTableRLS<Group>("groups", academyId);
+  const scopedAssistants = teacher ? await fetchTableRLS<any>("group_assistants", academyId) : [];
   let items = teacher
-    ? scopedItems.filter((g) => g.teacher_id === teacher.id || collections().groupAssistants.some((ga) => ga.teacher_id === teacher.id && ga.group_id === g.id))
+    ? scopedItems.filter((g) => g.teacher_id === teacher.id || scopedAssistants.some((ga: any) => ga.teacher_id === teacher.id && ga.group_id === g.id) || collections().groupAssistants.some((ga) => ga.teacher_id === teacher.id && ga.group_id === g.id))
     : teacherProfileId
       ? []
       : applyTeacherGroupScope(scopedItems);

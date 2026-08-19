@@ -1,0 +1,1 @@
+{"project_id":"fpcdaiyktnoiwaulbhcn","query":"select a.id as academy_id, a.name as academy_name, p.id as profile_id, p.email, p.full_name, p.role, p.is_active from public.academies a left join public.profiles p on p.academy_id = a.id and p.role in ('ADMIN','SUPER_ADMIN') order by a.created_at desc, p.role, p.email limit 200"}

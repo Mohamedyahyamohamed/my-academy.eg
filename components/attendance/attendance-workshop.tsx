@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StudentAvatar } from "@/components/shared/student-avatar";
 import { EmptyState } from "@/components/shared/empty-state";
-import { cn, fullName, percentage } from "@/lib/utils";
+import { cn, formatClockTime, fullName, percentage } from "@/lib/utils";
 import type { AttendanceStatus, Group, Lesson, Student } from "@/types";
 import { saveAttendanceAction } from "@/app/actions/attendance";
 import { QrCheckin } from "@/components/attendance/qr-checkin";
@@ -94,9 +94,16 @@ export function AttendanceWorkshop({
     }
     setSaving(true);
     try {
+      if (!groupId || !lessonId) {
+        throw new Error(en ? "Choose a group and lesson first." : "اختر المجموعة والحصة أولًا.");
+      }
       await saveAttendanceAction(groupId, lessonId, entries);
       toast.success(en ? `Attendance saved for ${entries.length} students.` : `تم حفظ حضور ${entries.length} طالب.`);
       router.refresh();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      console.error("attendance save failed:", error);
+      toast.error(en ? `Could not save attendance${message ? `: ${message}` : "."}` : `تعذّر حفظ الحضور${message ? `: ${message}` : "."}`);
     } finally {
       setSaving(false);
     }
@@ -138,7 +145,7 @@ export function AttendanceWorkshop({
               <option value="">{en ? "Choose lesson…" : "اختر حصة…"}</option>
               {groupLessons.map((l) => (
                 <option key={l.id} value={l.id}>
-                  {l.topic} — {new Date(l.date).toLocaleDateString(en ? "en-EG" : "ar-EG")}
+                  {l.topic} — {new Date(l.date).toLocaleDateString(en ? "en-EG" : "ar-EG")} — {formatClockTime(l.start_time)}–{formatClockTime(l.end_time)}
                 </option>
               ))}
             </select>

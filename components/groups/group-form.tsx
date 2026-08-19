@@ -71,7 +71,7 @@ export function GroupForm({
     if (!courseName.trim()) return toast.error(en ? "Course is required." : "المادة مطلوبة.");
     if (!teacherId) return toast.error(en ? "Teacher is required." : "المعلّم مطلوب.");
     if (selectedDays.length === 0) return toast.error(en ? "Choose at least one day." : "اختر يومًا واحدًا على الأقل.");
-    if (startTime >= endTime) return toast.error(en ? "End time must be after start time." : "وقت النهاية يجب أن يكون بعد وقت البداية.");
+    if (startTime === endTime) return toast.error(en ? "Start and end time cannot be the same." : "وقت البداية والنهاية لا يمكن أن يكونا متساويين.");
 
     setSaving(true);
     try {
@@ -193,6 +193,11 @@ export function GroupForm({
             return <button key={day.key} type="button" onClick={() => setSelectedDays((current) => checked ? current.filter((item) => item !== day.key) : [...current, day.key])} className={`rounded-md border px-3 py-2 text-sm transition-colors ${checked ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-accent"}`} aria-pressed={checked}>{en ? day.en : day.ar}</button>;
           })}
         </div>
+        {startTime !== endTime && startTime > endTime && (
+          <p className="rounded-md bg-primary/5 px-3 py-2 text-xs text-primary">
+            {en ? "This lesson ends the next day." : "هذه الحصة ستنتهي في اليوم التالي."}
+          </p>
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>{en ? "Start time *" : "وقت البداية *"}</Label>

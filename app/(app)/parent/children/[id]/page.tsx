@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 import { ArrowLeft, FileText } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,16 +39,29 @@ export default async function ParentChildPage(props: { params: Promise<{ id: str
   if (!childDB || !parent || childDB.parent_id !== parent.id) notFound();
   const child = childDB as any;
 
+  const { data: memberships } = await client
+    .from("group_students")
+    .select("group_id")
+    .eq("student_id", child.id)
+    .limit(1000);
+  const groupIds = (memberships ?? []).map((row: any) => row.group_id).filter(Boolean);
+  const { data: groupRows } = groupIds.length
+    ? await client.from("groups").select("*").eq("academy_id", user.academy_id).in("id", groupIds).limit(1000)
+    : { data: [] as any[] };
+  const groups = groupRows ?? [];
   let summary: any;
-  try { summary = await childSummary(child.id); } catch { summary = {}; }
-  const groups = (collections().groups.filter((g) =>
-    collections().groupStudents.some((gs) => gs.group_id === g.id && gs.student_id === child.id),
-  ));
-  const att = AttendanceService.studentAttendanceSummary(child.id);
+  try { summary = await childSummary(child.id, user.academy_id, groups as any); } catch { summary = {}; }
+  const { data: attendanceRows } = await client
+    .from("attendance")
+    .select("*")
+    .eq("academy_id", user.academy_id)
+    .eq("student_id", child.id)
+    .limit(1000);
+  const att = { byLesson: attendanceRows ?? [] };
   const payments = (await PaymentsService.listPayments({ studentId: child.id, pageSize: 50 })).items;
   const grades = (await GradesService.listGrades({ studentId: child.id, pageSize: 50 })).items;
   const homework = await HomeworkService.homeworkForStudent(child.id);
-  const lessons = (await studentLessons(child.id)).slice(0, 10);
+  const lessons = (await studentLessons(child.id, user.academy_id, groups as any)).slice(0, 10);
   const notes = MiscService.notesForStudent(child.id);
 
   return (
@@ -95,8 +108,8 @@ export default async function ParentChildPage(props: { params: Promise<{ id: str
               <TableHeader><TableRow><TableHead>{en ? "Date" : "التاريخ"}</TableHead><TableHead>{en ? "Group" : "المجموعة"}</TableHead><TableHead>{en ? "Status" : "الحالة"}</TableHead></TableRow></TableHeader>
               <TableBody>
                 {att.byLesson.slice().reverse().map((a) => {
-                  const lesson = collections().lessons.find((l) => l.id === a.lesson_id);
-                  const group = lesson ? groups.find((g) => g.id === lesson.group_id) : undefined;
+                  const lesson = lessons.find((l: any) => l.id === a.lesson_id) ?? collections().lessons.find((l) => l.id === a.lesson_id);
+                  const group = lesson ? groups.find((g: any) => g.id === lesson.group_id) : undefined;
                   return (
                     <TableRow key={a.id}>
                       <TableCell className="text-sm">{lesson ? formatDate(lesson.date, undefined, en ? "en-EG" : "ar-EG") : "—"}</TableCell>

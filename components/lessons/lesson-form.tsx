@@ -57,6 +57,9 @@ export function LessonForm({ lesson, groups, teachers, defaultGroupId, onDone }:
   });
 
   const groupId = watch("group_id");
+  const startTime = watch("start_time");
+  const endTime = watch("end_time");
+  const crossesMidnight = Boolean(startTime && endTime && endTime < startTime);
 
   const onSubmit = async (values: LessonValues) => {
     setSaving(true);
@@ -77,9 +80,7 @@ export function LessonForm({ lesson, groups, teachers, defaultGroupId, onDone }:
         ? (en ? "The selected group is not available in this academy." : "المجموعة المختارة غير متاحة في هذه الأكاديمية.")
         : message === "You do not have permission to create a lesson for this group."
           ? (en ? "You do not have permission to manage this group." : "ليس لديك صلاحية إدارة هذه المجموعة.")
-          : message === "End time must be after start time."
-            ? (en ? "End time must be after start time." : "يجب أن يكون وقت النهاية بعد وقت البداية.")
-            : message || (en ? "The lesson could not be saved. Please try again." : "تعذر حفظ الحصة. حاول مرة أخرى.");
+          : message || (en ? "The lesson could not be saved. Please try again." : "تعذر حفظ الحصة. حاول مرة أخرى.");
       toast.error(translated);
     } finally {
       setSaving(false);
@@ -135,6 +136,11 @@ export function LessonForm({ lesson, groups, teachers, defaultGroupId, onDone }:
           </Field>
           <Field label={en ? "End time" : "وقت النهاية"} error={errors.end_time?.message} required>
             <Input type="time" {...register("end_time")} />
+            {crossesMidnight && !errors.end_time && (
+              <p className="text-xs text-muted-foreground">
+                {en ? "This lesson ends the next day." : "هذه الحصة تنتهي في صباح اليوم التالي."}
+              </p>
+            )}
           </Field>
         </div>
       </div>

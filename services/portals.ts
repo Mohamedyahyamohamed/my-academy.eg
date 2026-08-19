@@ -144,7 +144,11 @@ export interface ChildSummary {
   pendingHomework: number;
 }
 
-export async function childSummary(studentId: string, academyId?: string): Promise<ChildSummary> {
+export async function childSummary(
+  studentId: string,
+  academyId?: string,
+  knownGroups?: ReturnType<typeof groupsForStudent>,
+): Promise<ChildSummary> {
   // RLS-backed fetch.
   const [attendance, allGrades, payments, lessons, homework, exams] = await Promise.all([
     fetchTableRLS<any>("attendance", academyId),
@@ -171,7 +175,7 @@ export async function childSummary(studentId: string, academyId?: string): Promi
   const pays = payments.filter((p: any) => p.student_id === studentId);
   const outstanding = pays.reduce((s: number, p: any) => s + Math.max(0, p.amount_due - p.amount_paid), 0);
 
-  const groups = groupsForStudent(studentId);
+  const groups = knownGroups ?? groupsForStudent(studentId);
   const groupIds = groups.map((g: any) => g.id);
   const upcoming = lessons
     .filter((l: any) => groupIds.includes(l.group_id) && isLessonUpcoming(l))
@@ -290,8 +294,9 @@ export interface TeacherDashboardData {
   pendingReview: number;
   upcomingLessons: any[];
   groups: any[];
-  needsAttendance: { id: string; topic: string; date: string; groupName: string }[];
+  needsAttendance: { id: string; topic: string; date: string; group_id: string; groupName: string }[];
   recentSubmissions: { id: string; studentName: string; title: string; status: string; homeworkId: string }[];
+  assistantFor: string[];
 }
 
 export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDashboardData | null> {
@@ -310,6 +315,8 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
   let allStudents = snapshot.students ?? [];
   let allCourses = snapshot.courses ?? [];
   let allGroupStudents = snapshot.groupStudents ?? snapshot.group_students ?? [];
+  let allGroupAssistants = snapshot.groupAssistants ?? snapshot.group_assistants ?? [];
+  let allTeachers = snapshot.teachers ?? [];
 
   // Use the server-side tenant-scoped client as the authoritative source for
   // teacher dashboards. A browser Supabase session can be valid for auth but
@@ -318,7 +325,7 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
   if (isSupabaseConfigured()) {
     const admin = nodeSupabaseClient();
     if (admin) {
-      const [groupsRes, lessonsRes, attendanceRes, homeworkRes, submissionsRes, studentsRes, coursesRes] = await Promise.all([
+      const [groupsRes, lessonsRes, attendanceRes, homeworkRes, submissionsRes, studentsRes, coursesRes, assistantsRes, teachersRes] = await Promise.all([
         admin.from("groups").select("*").eq("academy_id", user.academy_id),
         admin.from("lessons").select("*").eq("academy_id", user.academy_id),
         admin.from("attendance").select("*").eq("academy_id", user.academy_id),
@@ -326,6 +333,8 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
         admin.from("homework_submissions").select("*").eq("academy_id", user.academy_id),
         admin.from("students").select("*").eq("academy_id", user.academy_id),
         admin.from("courses").select("*").eq("academy_id", user.academy_id),
+        admin.from("group_assistants").select("*"),
+        admin.from("teachers").select("*").eq("academy_id", user.academy_id),
       ]);
       if (!groupsRes.error) allGroups = groupsRes.data ?? [];
       if (!lessonsRes.error) allLessons = lessonsRes.data ?? [];
@@ -334,6 +343,8 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
       if (!submissionsRes.error) allSubmissions = submissionsRes.data ?? [];
       if (!studentsRes.error) allStudents = studentsRes.data ?? [];
       if (!coursesRes.error) allCourses = coursesRes.data ?? [];
+      if (!assistantsRes.error) allGroupAssistants = assistantsRes.data ?? [];
+      if (!teachersRes.error) allTeachers = teachersRes.data ?? [];
       const groupIds = allGroups.map((g: any) => g.id);
       if (groupIds.length) {
         const groupStudentsRes = await admin.from("group_students").select("*").in("group_id", groupIds);
@@ -343,7 +354,8 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
   }
 
   const ownGroupIds = allGroups.filter((g: any) => g.teacher_id === teacher.id).map((g: any) => g.id);
-  const assistantGroupIds = collections().groupAssistants
+  const assistantRows = allGroupAssistants.length ? allGroupAssistants : collections().groupAssistants;
+  const assistantGroupIds = assistantRows
     .filter((ga: any) => ga.teacher_id === teacher.id && allGroups.some((g: any) => g.id === ga.group_id))
     .map((ga: any) => ga.group_id);
   const groupIds = new Set([...ownGroupIds, ...assistantGroupIds]);
@@ -365,7 +377,7 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
   const needsAttendance = myLessons
     .filter((l: any) => +new Date(l.date) <= Date.now() && !allAttendance.some((a: any) => a.lesson_id === l.id))
     .slice(0, 5)
-    .map((l: any) => ({ id: l.id, topic: l.topic, date: l.date, groupName: allGroups.find((g: any) => g.id === l.group_id)?.name ?? "" }));
+    .map((l: any) => ({ id: l.id, topic: l.topic, date: l.date, group_id: l.group_id, groupName: allGroups.find((g: any) => g.id === l.group_id)?.name ?? "" }));
 
   const myHwIds = allHomework.filter((h: any) => groupIds.has(h.group_id)).map((h: any) => h.id);
   const recentSubmissions = allSubmissions
@@ -378,6 +390,15 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
       return { id: s.id, studentName: st ? fullName(st) : "—", title: hw?.title ?? "", status: s.status, homeworkId: s.homework_id };
     });
   const pendingReview = allSubmissions.filter((s: any) => myHwIds.includes(s.homework_id) && s.status === "SUBMITTED").length;
+  const assistantForIds = new Set(
+    assistantGroupIds
+      .map((groupId: string) => allGroups.find((g: any) => g.id === groupId)?.teacher_id)
+      .filter((teacherId: any) => teacherId && teacherId !== teacher.id),
+  );
+  const assistantFor = [...assistantForIds].map((teacherId) => {
+    const linkedTeacher = allTeachers.find((item: any) => item.id === teacherId);
+    return linkedTeacher ? `${linkedTeacher.first_name} ${linkedTeacher.last_name}`.trim() : "";
+  }).filter(Boolean);
 
   return {
     teacherName: `${teacher.first_name} ${teacher.last_name}`,
@@ -390,6 +411,7 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
     groups: myGroups,
     needsAttendance,
     recentSubmissions,
+    assistantFor,
   };
 }
 

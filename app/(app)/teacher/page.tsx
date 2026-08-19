@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { HomeworkBadge } from "@/components/shared/badges";
 import { getTeacherDashboard, requireScopedRole } from "@/services";
-import { formatDate, formatTime, formatSchedule } from "@/lib/utils";
+import { formatDate, formatClockTime, formatSchedule } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +40,13 @@ export default async function TeacherDashboard() {
   return (
     <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>
       <PageHeader title={`${t.welcome}، ${(d.teacherName || displayName).split(/\s+/)[0]} 👋`} description={t.overview} />
+
+      {d.assistantFor.length > 0 && (
+        <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+          <Badge variant="secondary">{isRTL ? "مساعد للمدرس" : "Assistant to"}</Badge>
+          <span className="font-medium">{d.assistantFor.join(isRTL ? "، " : ", ")}</span>
+        </div>
+      )}
 
       <Card className="border-border bg-card">
         <CardHeader className="pb-3">
@@ -108,7 +115,7 @@ export default async function TeacherDashboard() {
                   </div>
                   <span className="flex items-center gap-1 text-xs text-muted-foreground">
                     <CalendarClock className="h-3.5 w-3.5" />
-                    {formatTime(`${l.date.slice(0, 10)}T${l.start_time}:00`, lang === "en" ? "en-EG" : "ar-EG")}
+                    {formatClockTime(l.start_time, lang === "en" ? "en-EG" : "ar-EG")}
                   </span>
                 </Link>
               ))
@@ -126,7 +133,7 @@ export default async function TeacherDashboard() {
               <p className="py-6 text-center text-sm text-muted-foreground">{t.allRecorded}</p>
             ) : (
               d.needsAttendance.map((l) => (
-                <Link key={l.id} href={`/attendance?lesson=${l.id}`} className="flex items-center justify-between rounded-lg p-2.5 hover:bg-accent">
+                <Link key={l.id} href={`/attendance?group=${l.group_id}&lesson=${l.id}`} className="flex items-center justify-between rounded-lg p-2.5 hover:bg-accent">
                   <div>
                     <p className="text-sm font-medium">{l.topic}</p>
                     <p className="text-xs text-muted-foreground">{l.groupName}</p>

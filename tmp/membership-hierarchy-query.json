@@ -1,0 +1,1 @@
+{"project_id":"fpcdaiyktnoiwaulbhcn","query":"select m.academy_id, a.name as academy_name, m.profile_id, p.full_name, p.email, m.role, m.status from public.academy_memberships m join public.academies a on a.id = m.academy_id join public.profiles p on p.id = m.profile_id order by a.name, m.role, p.full_name limit 500"}

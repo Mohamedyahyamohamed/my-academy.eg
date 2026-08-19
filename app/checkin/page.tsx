@@ -162,12 +162,12 @@ function CheckInInner() {
           <>
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary"><Users className="h-8 w-8" /></div>
             <h1 className="text-lg font-semibold">{en ? "Choose the attendance group" : "اختر مجموعة الحضور"}</h1>
-            <p aria-live="polite" className={`text-sm ${hasActiveLesson ? "text-muted-foreground" : "text-amber-700"}`}>
+            <p dir={en ? "ltr" : "rtl"} aria-live="polite" className={`text-sm ${hasActiveLesson ? "text-muted-foreground" : "text-amber-700"}`}>
               {msg || (hasActiveLesson
                 ? (en ? "Your choice is remembered on this phone for 30 minutes." : "سيتم حفظ اختيارك على هذا الهاتف لمدة 30 دقيقة.")
                 : (en ? "No lesson is active for this group right now. Attendance will open when the lesson starts." : "لا توجد حصة جارية لهذه المجموعة الآن. سيفتح تسجيل الحضور عند بدء الحصة."))}
             </p>
-            <select className="w-full rounded-md border bg-background px-3 py-3 text-sm" value={selectedGroupId} onChange={(event) => setSelectedGroupId(event.target.value)}>
+            <select dir={en ? "ltr" : "rtl"} className="w-full rounded-md border bg-background px-3 py-3 text-sm" value={selectedGroupId} onChange={(event) => setSelectedGroupId(event.target.value)}>
               {groups.map((group) => <option key={group.id} value={group.id}>{group.name}{group.lesson ? ` — ${group.lesson.topic}` : ` — ${en ? "No active lesson" : "لا توجد حصة جارية"}`}</option>)}
             </select>
             <Button className="w-full" disabled={!selectedGroupId || !hasActiveLesson} onClick={() => void recordForGroup(selectedGroupId)}>{en ? "Record attendance" : "تسجيل الحضور"}</Button>

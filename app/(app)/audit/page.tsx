@@ -26,7 +26,7 @@ export default async function AuditLogsPage(
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
 
-  const result = listAuditLogs({
+  const result = await listAuditLogs({
     search: sp("search"),
     action: sp("action") ?? "ALL",
     entity_type: sp("entity") ?? "ALL",
@@ -64,7 +64,7 @@ export default async function AuditLogsPage(
                 <TableRow key={log.id}>
                   <TableCell><Badge variant={actionColor(log.action) as any}>{log.action}</Badge></TableCell>
                   <TableCell className="text-sm">{log.entity_type} {log.entity_id ? `· ${log.entity_id.slice(0, 8)}…` : ""}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{log.actor_role ?? "—"}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{log.actor_name ? `${log.actor_name} · ` : ""}{log.actor_role ?? "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{new Date(log.created_at).toLocaleString(en ? "en-GB" : "ar-EG")}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{log.ip ?? "—"}</TableCell>
                 </TableRow>

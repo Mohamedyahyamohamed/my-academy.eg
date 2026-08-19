@@ -6,6 +6,7 @@ import { collections } from "./data/store";
 import { currentAcademyId, currentTeacherId, getCurrentUser } from "./session";
 import { persistInsert, persistUpdate, persistDelete } from "./data/store";
 import { getGroup, getTeacher, byAcademy, teacherGroupScope, fetchTableRLS } from "./_shared";
+import { resolveTeacherForGroups } from "./groups";
 import { parseSchedule } from "@/lib/utils";
 
 function attach(l: Lesson): Lesson {
@@ -44,17 +45,23 @@ export async function listLessons(
   } = filters;
   const now = Date.now();
   let items = await fetchTableRLS<Lesson>("lessons", academyId);
-  // Teachers only see lessons in their groups.
+  // Teachers only see lessons in their groups. Resolve the teacher from the
+  // tenant-scoped server data when the request-local snapshot is incomplete.
+  const currentUser = getCurrentUser();
   const teacher = teacherProfileId
-    ? collections().teachers.find(
-        (t) => t.academy_id === academyId && (t.profile_id === teacherProfileId || t.email.toLowerCase() === getCurrentUser()?.email?.toLowerCase()),
-      )
+    ? await resolveTeacherForGroups(academyId, teacherProfileId, currentUser?.email)
     : null;
+  const scopedGroups = teacher ? await fetchTableRLS<any>("groups", academyId) : [];
+  const scopedAssistants = teacher ? await fetchTableRLS<any>("group_assistants", academyId) : [];
   const tScope = teacher
     ? new Set([
+        ...scopedGroups.filter((g: any) => g.academy_id === academyId && g.teacher_id === teacher.id).map((g: any) => g.id),
+        ...scopedAssistants
+          .filter((ga: any) => ga.teacher_id === teacher.id)
+          .map((ga: any) => ga.group_id),
         ...collections().groups.filter((g) => g.academy_id === academyId && g.teacher_id === teacher.id).map((g) => g.id),
         ...collections().groupAssistants
-          .filter((ga) => ga.teacher_id === teacher.id && collections().groups.some((g) => g.academy_id === academyId && g.id === ga.group_id))
+          .filter((ga) => ga.teacher_id === teacher.id)
           .map((ga) => ga.group_id),
       ])
     : teacherProfileId
@@ -72,8 +79,9 @@ export async function listLessons(
   if (groupId !== "ALL") items = items.filter((l) => l.group_id === groupId);
   const currentWallClock = wallClockMinute(new Date(now));
   const startWallClock = (lesson: Lesson) => lessonWallClockMinute(lesson.date, lesson.start_time);
-  if (upcoming) items = items.filter((l) => startWallClock(l) >= currentWallClock);
-  if (past) items = items.filter((l) => startWallClock(l) < currentWallClock);
+  const endWallClock = (lesson: Lesson) => lessonEndWallClockMinute(lesson.date, lesson.start_time, lesson.end_time);
+  if (upcoming) items = items.filter((l) => endWallClock(l) >= currentWallClock);
+  if (past) items = items.filter((l) => endWallClock(l) < currentWallClock);
   items.sort((a, b) => startWallClock(b) - startWallClock(a));
 
   const total = items.length;
@@ -102,13 +110,25 @@ export function wallClockMinute(date: Date, timeZone = process.env.ACADEMY_TIMEZ
     hourCycle: "h23",
   }).formatToParts(date);
   const value = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? 0);
-  return (((value("year") * 12 + value("month")) * 31 + value("day")) * 24 + value("hour")) * 60 + value("minute");
+  const daySerial = Math.floor(Date.UTC(value("year"), value("month") - 1, value("day")) / 86_400_000);
+  return daySerial * 24 * 60 + value("hour") * 60 + value("minute");
 }
 
 export function lessonWallClockMinute(date: string, time: string) {
   const [year, month, day] = date.slice(0, 10).split("-").map(Number);
   const [hour, minute] = time.slice(0, 5).split(":").map(Number);
-  return (((year * 12 + month) * 31 + day) * 24 + hour) * 60 + minute;
+  const daySerial = Math.floor(Date.UTC(year, month - 1, day) / 86_400_000);
+  return daySerial * 24 * 60 + hour * 60 + minute;
+}
+
+/**
+ * Return the wall-clock end minute, carrying the end into the next day when
+ * a lesson crosses midnight (for example 8:00 PM → 6:00 AM).
+ */
+export function lessonEndWallClockMinute(date: string, start: string, end: string) {
+  const startsAt = lessonWallClockMinute(date, start);
+  const endsAt = lessonWallClockMinute(date, end);
+  return endsAt <= startsAt ? endsAt + 24 * 60 : endsAt;
 }
 
 export function isLessonUpcoming(lesson: Pick<Lesson, "date" | "start_time">, now = new Date()) {
@@ -121,7 +141,7 @@ export function isLessonActive(
 ) {
   const current = wallClockMinute(now);
   const startsAt = lessonWallClockMinute(lesson.date, lesson.start_time);
-  const endsAt = lessonWallClockMinute(lesson.date, lesson.end_time);
+  const endsAt = lessonEndWallClockMinute(lesson.date, lesson.start_time, lesson.end_time);
   return startsAt <= current && current <= endsAt;
 }
 
@@ -134,19 +154,19 @@ function validateLessonWindow(date: string, start: string, end: string) {
   }
   const startMinute = Number(start.slice(0, 2)) * 60 + Number(start.slice(3, 5));
   const endMinute = Number(end.slice(0, 2)) * 60 + Number(end.slice(3, 5));
-  if (startMinute > 1439 || endMinute > 1439 || endMinute <= startMinute) {
-    throw new Error("End time must be after start time.");
+  if (startMinute > 1439 || endMinute > 1439 || endMinute === startMinute) {
+    throw new Error("End time must be after start time, including across midnight.");
   }
 }
 
 function assertNoLessonConflict(candidate: Pick<Lesson, "id" | "group_id" | "teacher_id" | "date" | "start_time" | "end_time">) {
   const start = lessonWallClockMinute(candidate.date, candidate.start_time);
-  const end = lessonWallClockMinute(candidate.date, candidate.end_time);
+  const end = lessonEndWallClockMinute(candidate.date, candidate.start_time, candidate.end_time);
   const conflict = collections().lessons.find((lesson) => {
-    if (lesson.id === candidate.id || lesson.date !== candidate.date) return false;
+    if (lesson.id === candidate.id) return false;
     if (lesson.group_id !== candidate.group_id && lesson.teacher_id !== candidate.teacher_id) return false;
     const otherStart = lessonWallClockMinute(lesson.date, lesson.start_time);
-    const otherEnd = lessonWallClockMinute(lesson.date, lesson.end_time);
+    const otherEnd = lessonEndWallClockMinute(lesson.date, lesson.start_time, lesson.end_time);
     return start < otherEnd && end > otherStart;
   });
   if (conflict) throw new Error("This lesson overlaps another lesson for the same group or teacher.");

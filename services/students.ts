@@ -292,6 +292,64 @@ export async function getStudentDetail(
 /**
  * Get a single student — RLS-enforced.
  */
+/**
+ * Platform-owner read path. Uses the platform service client only after the
+ * caller has passed the SUPER_ADMIN route guard. The academy_id is retained
+ * on every related query so a student can never be mixed with another academy.
+ */
+export async function getPlatformStudentDetail(id: string): Promise<StudentDetail | null> {
+  if (!isSupabaseConfigured()) return getStudentDetailFromCache(id);
+
+  const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
+  const client = nodeSupabaseClient();
+  const { data: rawStudent, error } = await client.from("students").select("*").eq("id", id).maybeSingle();
+  if (error || !rawStudent) return null;
+
+  const student = rawStudent as Student;
+  const [{ data: parent }, { data: links }, { data: attendanceRows }, { data: paymentRows }, { data: gradeRows }] = await Promise.all([
+    student.parent_id ? client.from("parents").select("*").eq("id", student.parent_id).eq("academy_id", student.academy_id).maybeSingle() : Promise.resolve({ data: null }),
+    client.from("group_students").select("group_id").eq("student_id", student.id),
+    client.from("attendance").select("status").eq("student_id", student.id),
+    client.from("payments").select("amount_due,amount_paid").eq("student_id", student.id).eq("academy_id", student.academy_id),
+    client.from("grades").select("score,exam_id").eq("student_id", student.id),
+  ]);
+
+  const groupIds = (links ?? []).map((link: any) => link.group_id).filter(Boolean);
+  const { data: groupRows } = groupIds.length
+    ? await client.from("groups").select("*").in("id", groupIds).eq("academy_id", student.academy_id)
+    : { data: [] };
+  const examIds = (gradeRows ?? []).map((grade: any) => grade.exam_id).filter(Boolean);
+  const { data: examRows } = examIds.length
+    ? await client.from("exams").select("id,max_score").in("id", examIds).eq("academy_id", student.academy_id)
+    : { data: [] };
+  const examMax = new Map<string, number>((examRows ?? []).map((exam: any) => [String(exam.id), Number(exam.max_score || 0)]));
+  const attendance: Array<{ status: string }> = attendanceRows ?? [];
+  const present = attendance.filter((row) => row.status === "PRESENT").length;
+  const late = attendance.filter((row) => row.status === "LATE").length;
+  const gradePercentages: number[] = (gradeRows ?? []).map((grade: any) => {
+    const max = examMax.get(String(grade.exam_id)) || 0;
+    return max > 0 ? (Number(grade.score || 0) / max) * 100 : 0;
+  });
+  const payments: Array<{ amount_due: number; amount_paid: number; remaining: number }> = (paymentRows ?? []).map((row: any) => ({ amount_due: Number(row.amount_due || 0), amount_paid: Number(row.amount_paid || 0), remaining: Math.max(Number(row.amount_due || 0) - Number(row.amount_paid || 0), 0) }));
+  const totalPaid = payments.reduce((sum: number, row) => sum + row.amount_paid, 0);
+  const outstanding = payments.reduce((sum: number, row) => sum + row.remaining, 0);
+
+  return {
+    ...student,
+    parent: parent ?? null,
+    groups: groupRows ?? [],
+    stats: {
+      attendanceRate: attendance.length ? percentage(present + late, attendance.length) : 0,
+      averageGrade: gradePercentages.length ? round(gradePercentages.reduce((sum: number, value: number) => sum + value, 0) / gradePercentages.length, 1) : 0,
+      monthlyFee: payments.length ? Math.max(...payments.map((row: { amount_due: number }) => row.amount_due)) : 0,
+      totalPaid,
+      outstanding,
+      attendanceTrend: [],
+      gradeTrend: [],
+    },
+  };
+}
+
 export async function getStudent(id: string): Promise<Student | null> {
   if (!isSupabaseConfigured()) {
     return getStudentFromCache(id);

@@ -66,25 +66,36 @@ export default async function StudentProfilePage(
   const user = await loadCurrentUser();
   if (!user) redirect("/login");
   setRequestContext(user);
-  if (user.role !== "ADMIN" && user.role !== "TEACHER") redirect(roleHome(user.role));
-  const detail = await StudentsService.getStudentDetail(params.id);
+  const isPlatformOwner = user.role === "SUPER_ADMIN";
+  if (!isPlatformOwner && user.role !== "ADMIN" && user.role !== "TEACHER") redirect(roleHome(user.role));
+  const detail = isPlatformOwner
+    ? await StudentsService.getPlatformStudentDetail(params.id)
+    : await StudentsService.getStudentDetail(params.id);
   if (!detail) notFound();
 
-  const groups = await GroupsService.listGroups();
-  const parents = await MiscService.listParents();
-  const studentGroups = groupsForStudent(params.id);
+  const groups = (isPlatformOwner ? detail.groups : await GroupsService.listGroups()) ?? [];
+  const parents = isPlatformOwner
+    ? (detail.parent ? [detail.parent] : [])
+    : await MiscService.listParents();
+  const studentGroups = (isPlatformOwner ? detail.groups : groupsForStudent(params.id)) ?? [];
 
-  const attendance = AttendanceService.studentAttendanceSummary(params.id);
-  const payments = (await PaymentsService.listPayments({
-    studentId: params.id,
-    pageSize: 50,
-  })).items;
-  const grades = (await GradesService.listGrades({ studentId: params.id, pageSize: 50 })).items;
-  const homework = await HomeworkService.homeworkForStudent(params.id);
-  const notes = MiscService.notesForStudent(params.id);
+  const attendance = isPlatformOwner
+    ? { present: 0, late: 0, absent: 0, byLesson: [] as Array<{ id: string; lesson_id: string; status: "PRESENT" | "LATE" | "ABSENT" }> }
+    : AttendanceService.studentAttendanceSummary(params.id);
+  const payments = isPlatformOwner
+    ? []
+    : (await PaymentsService.listPayments({
+        studentId: params.id,
+        pageSize: 50,
+      })).items;
+  const grades = isPlatformOwner
+    ? []
+    : (await GradesService.listGrades({ studentId: params.id, pageSize: 50 })).items;
+  const homework = isPlatformOwner ? [] : await HomeworkService.homeworkForStudent(params.id);
+  const notes = isPlatformOwner ? [] : MiscService.notesForStudent(params.id);
   const groupIds = studentGroups.map((g) => g.id);
   const lessons = collections()
-    .lessons.filter((l) => groupIds.includes(l.group_id))
+    .lessons.filter((l) => l.academy_id === detail.academy_id && groupIds.includes(l.group_id))
     .sort((a, b) => lessonWallClockMinute(b.date, b.start_time) - lessonWallClockMinute(a.date, a.start_time))
     .slice(0, 10)
     .map((l) => ({ ...l, group: groups.find((g) => g.id === l.group_id) }));
@@ -112,7 +123,7 @@ export default async function StudentProfilePage(
           academyName={MiscService.getAcademy().name}
           trigger={<Button variant="outline">{en ? "QR card" : "بطاقة QR"}</Button>}
         />
-        <EditStudentDialog student={detail} parents={parents} groups={groups} />
+        {!isPlatformOwner && <EditStudentDialog student={detail} parents={parents} groups={groups} />}
         <Button asChild variant="outline">
           <Link href={`/students/${params.id}/report`} target="_blank">
             <FileText className="me-2 h-4 w-4" /> {en ? "Grade report" : "كشف درجات"}
@@ -396,7 +407,7 @@ export default async function StudentProfilePage(
             </CardContent>
           </Card>
         }
-        notes={<StudentNotes studentId={params.id} notes={notes} />}
+        notes={<StudentNotes studentId={params.id} notes={notes} readOnly={isPlatformOwner} />}
       />
     </div>
   );

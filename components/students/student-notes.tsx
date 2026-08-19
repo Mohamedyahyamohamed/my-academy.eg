@@ -15,9 +15,11 @@ import { useClientLang } from "@/lib/i18n-client";
 export function StudentNotes({
   studentId,
   notes,
+  readOnly = false,
 }: {
   studentId: string;
   notes: Note[];
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const en = useClientLang() === "en";
@@ -42,7 +44,7 @@ export function StudentNotes({
 
   return (
     <div className="space-y-4" dir={en ? "ltr" : "rtl"}>
-      <div className="card-surface p-4">
+      {!readOnly && <div className="card-surface p-4">
         <Textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
@@ -54,7 +56,7 @@ export function StudentNotes({
             {saving && <Loader2 className="h-4 w-4 animate-spin" />} {en ? "Add note" : "إضافة ملاحظة"}
           </Button>
         </div>
-      </div>
+      </div>}
 
       {notes.length === 0 ? (
         <EmptyState
@@ -73,7 +75,7 @@ export function StudentNotes({
                     {n.author_name ?? (en ? "Unknown" : "غير معروف")} · {formatRelative(n.created_at, en ? "en-EG" : "ar-EG")}
                   </p>
                 </div>
-                <Button
+                {!readOnly && <Button
                   variant="ghost"
                   size="icon-sm"
                   aria-label={en ? "Delete note" : "حذف الملاحظة"}
@@ -89,7 +91,7 @@ export function StudentNotes({
                   }}
                 >
                   <Trash2 className="h-4 w-4 text-muted-foreground" />
-                </Button>
+                </Button>}
               </div>
             </div>
           ))}

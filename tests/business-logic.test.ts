@@ -3,7 +3,7 @@
  * Run: npx vitest run
  */
 import { describe, it, expect } from "vitest";
-import { percentage, round, clamp } from "@/lib/utils";
+import { percentage, round, clamp, formatClockTime } from "@/lib/utils";
 import { isLessonActive, isLessonUpcoming } from "@/services/lessons";
 import {
   MAX_UPLOAD_BYTES,
@@ -207,6 +207,11 @@ describe("Gamification points formula", () => {
 
 // ─── Utility functions ────────────────────────────────────────────
 describe("Utility functions", () => {
+  it("formats wall-clock values with seconds using a 12-hour clock", () => {
+    expect(formatClockTime("16:00:00", "en-EG")).toMatch(/4:00 PM/i);
+    expect(formatClockTime("17:30:00.123", "en-EG")).toMatch(/5:30 PM/i);
+  });
+
   it("percentage divides correctly", () => {
     expect(percentage(3, 4)).toBe(75);
     expect(percentage(0, 0)).toBe(0);

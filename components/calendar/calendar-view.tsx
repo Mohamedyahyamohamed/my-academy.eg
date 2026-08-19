@@ -36,7 +36,7 @@ export function CalendarView({ lessons }: { lessons: any[] }) {
             {days.map((_, di) => {
               const cellLessons = lessons.filter((l) => {
                 if (!l.date) return false;
-                return dayIndex(l.date) === di && l.start_time?.startsWith(String(hi + 9));
+                return dayIndex(l.date) === di && Number.parseInt(l.start_time?.split(":")[0] ?? "-1", 10) === hi + 9;
               });
               return (
                 <div key={di} className="min-h-[40px] rounded-md p-0.5">

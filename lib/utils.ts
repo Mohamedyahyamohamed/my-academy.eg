@@ -60,11 +60,11 @@ export function formatTime(date: string | Date | null | undefined, locale: strin
 /** Format a database wall-clock value such as "16:00" without applying a timezone. */
 export function formatClockTime(value: string | null | undefined, locale: string = "ar-EG") {
   if (!value) return "—";
-  const match = value.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+  const match = value.trim().match(/^(\d{1,2})(?::(\d{2})(?::(\d{2})(?:\.\d+)?)?)?\s*(AM|PM)?$/i);
   if (!match) return value;
   let hour = Number(match[1]);
   const minute = Number(match[2] ?? "0");
-  const meridiem = match[3]?.toUpperCase();
+  const meridiem = match[4]?.toUpperCase();
   if (meridiem) hour = (hour % 12) + (meridiem === "PM" ? 12 : 0);
   if (hour > 23 || minute > 59) return value;
   const d = new Date(2000, 0, 1, hour, minute, 0, 0);
@@ -104,7 +104,7 @@ export function formatSchedule(schedule: string | null | undefined, locale: stri
     const days = structured.days.map((day) => DAY_LABELS[day]?.[language] ?? day).join(language === "en" ? ", " : "، ");
     return `${days || "—"} · ${formatTimeRange(structured.start, structured.end, locale)}`;
   }
-  return schedule.replace(/\b(\d{1,2}:\d{2})(?!\s*(?:AM|PM|ص|م)\b)/gi, (token) => formatClockTime(token, locale));
+  return schedule.replace(/\b(\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?)(?!\s*(?:AM|PM|ص|م)\b)/gi, (token) => formatClockTime(token, locale));
 }
 
 /** Relative time, e.g. "2 days ago". */

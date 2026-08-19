@@ -140,12 +140,13 @@ export function AttendanceWorkshop({
                 router.replace(`/attendance?${next.toString()}`);
               }}
               disabled={!groupId}
-              className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+              dir="ltr"
+              className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-left focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
             >
               <option value="">{en ? "Choose lesson…" : "اختر حصة…"}</option>
               {groupLessons.map((l) => (
                 <option key={l.id} value={l.id}>
-                  {l.topic} — {new Date(l.date).toLocaleDateString(en ? "en-EG" : "ar-EG")} — {formatClockTime(l.start_time)}–{formatClockTime(l.end_time)}
+                  {l.topic} — {new Date(l.date).toLocaleDateString(en ? "en-EG" : "ar-EG")} — {formatClockTime(l.start_time, en ? "en-EG" : "ar-EG")}–{formatClockTime(l.end_time, en ? "en-EG" : "ar-EG")}
                 </option>
               ))}
             </select>

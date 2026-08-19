@@ -102,7 +102,7 @@ export default async function LessonsPage(
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{l.group?.name}</TableCell>
                     <TableCell className="text-sm">{formatDate(l.date, undefined, en ? "en-EG" : "ar-EG")}</TableCell>
-                    <TableCell className="text-sm">{formatTimeRange(l.start_time, l.end_time, en ? "en-EG" : "ar-EG")}</TableCell>
+                    <TableCell className="text-sm"><span dir="ltr" className="whitespace-nowrap">{formatTimeRange(l.start_time, l.end_time, en ? "en-EG" : "ar-EG")}</span></TableCell>
                     <TableCell>
                       <Badge variant={l.attendance_taken ? "success" : "outline"}>
                         {l.attendance_taken ? (en ? "Recorded" : "تم تسجيله") : (en ? "Pending" : "معلّق")}
@@ -126,7 +126,7 @@ export default async function LessonsPage(
                 <p className="mt-1 text-sm text-muted-foreground">{l.group?.name}</p>
                 <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {formatDate(l.date, undefined, en ? "en-EG" : "ar-EG")}</span>
-                  <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {formatClockTime(l.start_time, en ? "en-EG" : "ar-EG")}</span>
+                  <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> <span dir="ltr">{formatClockTime(l.start_time, en ? "en-EG" : "ar-EG")}</span></span>
                 </div>
               </Link>
             ))}

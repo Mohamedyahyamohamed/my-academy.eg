@@ -79,14 +79,14 @@ export async function loadCurrentUser(): Promise<SessionUser | null> {
 }
 
 /**
- * Repair legacy/stale signed sessions that predate academy_id being persisted.
- * The tenant is resolved only from the server-side profile row; we never infer
- * an academy from the first available record. Invalid or disabled profiles fail
- * closed by returning null, which sends the browser back through login.
+ * Reconcile the signed session with the current server-side profile.
+ * The role is refreshed on every request so a legacy Assistant/Teacher session
+ * cannot be rejected or redirected using a stale role claim. The academy is
+ * always resolved from the profile when the signed session has no tenant; when
+ * it already has one, the profile remains the source of truth for role and
+ * active status while the selected tenant context is preserved.
  */
 async function hydrateTenantContext(user: SessionUser): Promise<SessionUser | null> {
-  if (user.academy_id) return user;
-
   const client = nodeSupabaseClient();
   if (!client) return user;
 
@@ -102,7 +102,7 @@ async function hydrateTenantContext(user: SessionUser): Promise<SessionUser | nu
 
     const hydrated: SessionUser = normalizePlatformOwner({
       ...user,
-      academy_id: profile.academy_id,
+      academy_id: user.academy_id || profile.academy_id,
       role: profile.role ?? user.role,
       full_name: profile.full_name ?? user.full_name,
       avatar_url: profile.avatar_url ?? user.avatar_url,
@@ -110,7 +110,7 @@ async function hydrateTenantContext(user: SessionUser): Promise<SessionUser | nu
 
     return hydrated;
   } catch (error) {
-    console.error("[session] unable to hydrate legacy academy context:", (error as Error).message);
+    console.error("[session] unable to reconcile authenticated profile:", (error as Error).message);
     return null;
   }
 }

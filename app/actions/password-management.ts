@@ -29,6 +29,9 @@ async function writePasswordAudit(
     targetUserId: string;
     result: "SUCCESS" | "FAILED";
     reason?: string;
+    errorType?: string;
+    errorCode?: string;
+    errorStatus?: number | null;
   },
 ) {
   try {
@@ -45,6 +48,9 @@ async function writePasswordAudit(
         result: input.result,
         control_plane: "owner_password_management",
         ...(input.reason ? { reason: input.reason } : {}),
+        ...(input.errorType ? { error_type: input.errorType } : {}),
+        ...(input.errorCode ? { error_code: input.errorCode } : {}),
+        ...(typeof input.errorStatus === "number" ? { error_status: input.errorStatus } : {}),
       },
     });
   } catch (error) {
@@ -135,6 +141,12 @@ export async function resetUserPasswordAction(
     password: newPassword,
   });
   if (updateError) {
+    console.error("[password-management] auth update failed", {
+      name: updateError.name,
+      code: updateError.code ?? null,
+      status: updateError.status ?? null,
+      message: updateError.message,
+    });
     await writePasswordAudit(client, {
       actorId: actor.id,
       actorRole: actor.role,
@@ -142,6 +154,9 @@ export async function resetUserPasswordAction(
       targetUserId: target.id,
       result: "FAILED",
       reason: "auth_update_failed",
+      errorType: updateError.name,
+      errorCode: updateError.code,
+      errorStatus: updateError.status,
     });
     return { ok: false, error: safePasswordError(updateError.message) };
   }

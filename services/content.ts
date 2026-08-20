@@ -4,7 +4,7 @@ import { collections, persistInsert, persistUpdate } from "./data/store";
 import { currentAcademyId, currentTeacherId, getCurrentUser } from "./session";
 import { can, hasAcademyWideScope } from "@/lib/permissions";
 import { resolveTeacherForGroups } from "./groups";
-import { fetchTableRLS, teacherGroupScope } from "./_shared";
+import { fetchTableRLS, fetchTeacherAssistantGroupIds } from "./_shared";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { canCreate } from "./saas";
 
@@ -41,10 +41,19 @@ function studentGroupIds(studentId: string, academyId: string): Set<string> {
   );
 }
 
-function accessibleGroupIds(user: SessionUser): Set<string> | null {
-  const groups = collections().groups.filter((group) => group.academy_id === user.academy_id);
-  if (hasAcademyWideScope(user.role)) return new Set(groups.map((group) => group.id));
-  if (user.role === "TEACHER") return teacherGroupScope() ?? new Set();
+async function accessibleGroupIds(user: SessionUser): Promise<Set<string> | null> {
+  const groups = await fetchTableRLS<any>("groups", user.academy_id);
+  if (hasAcademyWideScope(user.role)) return new Set(groups.map((group: any) => group.id));
+  if (user.role === "TEACHER") {
+    const teacher = await resolveTeacherForGroups(user.academy_id, user.id, user.email);
+    if (!teacher) return new Set();
+    const assistantGroupIds = new Set(await fetchTeacherAssistantGroupIds(teacher.id, user.academy_id));
+    return new Set(
+      groups
+        .filter((group: any) => group.teacher_id === teacher.id || assistantGroupIds.has(group.id))
+        .map((group: any) => group.id),
+    );
+  }
   if (user.role === "STUDENT") {
     const studentId = currentStudentId(user);
     return studentId ? studentGroupIds(studentId, user.academy_id) : new Set();
@@ -85,15 +94,9 @@ async function assertGroupAccess(user: SessionUser, groupId: string, write = fal
 
   if (!group) throw new Error("The selected group is outside the authenticated academy.");
 
-  if (user.role === "TEACHER") {
-    const teacher = await resolveTeacherForGroups(user.academy_id, user.id, user.email);
-    const teacherId = teacher?.id ?? currentTeacherId();
-    if (!teacherId || group.teacher_id !== teacherId) {
-      throw new Error(write ? "You can only manage content for your assigned groups." : "You do not have access to this group.");
-    }
-  } else {
-    const scope = accessibleGroupIds(user);
-    if (!scope?.has(groupId) && !hasAcademyWideScope(user.role)) throw new Error("You do not have access to this group.");
+  const scope = await accessibleGroupIds(user);
+  if (!scope?.has(groupId) && !hasAcademyWideScope(user.role)) {
+    throw new Error(write ? "You can only manage content for your assigned groups." : "You do not have access to this group.");
   }
 
   return group;
@@ -118,22 +121,7 @@ export async function listCourses(user: SessionUser): Promise<ContentCourse[]> {
   // teacher row, especially after a fresh mobile/SSR request. In that case the
   // old synchronous teacherGroupScope() returned an empty set and hid valid
   // courses even though listGroups() correctly resolved the teacher remotely.
-  let scope: Set<string> | null = accessibleGroupIds(user);
-  if (user.role === "TEACHER") {
-    const teacher = await resolveTeacherForGroups(user.academy_id, user.id, user.email);
-    if (!teacher) return [];
-    const groups = await fetchTableRLS<any>("groups", user.academy_id);
-    const assistantGroupIds = new Set(
-      collections().groupAssistants
-        .filter((row) => row.teacher_id === teacher.id)
-        .map((row) => row.group_id),
-    );
-    scope = new Set(
-      groups
-        .filter((group: any) => group.teacher_id === teacher.id || assistantGroupIds.has(group.id))
-        .map((group: any) => group.id),
-    );
-  }
+  const scope = await accessibleGroupIds(user);
   if (!scope) return [];
   const courses = await contentRows<ContentCourse>("content_courses", user.academy_id);
   return courses
@@ -232,7 +220,7 @@ export async function listLessons(courseId: string, user: SessionUser): Promise<
   assertContentPermission(user, "read");
   const course = (await contentRows<ContentCourse>("content_courses", user.academy_id)).find((item) => item.id === courseId);
   if (!course) return [];
-  const scope = accessibleGroupIds(user);
+  const scope = await accessibleGroupIds(user);
   if (!scope?.has(course.group_id)) return [];
   const lessons = await contentRows<ContentLesson>("content_lessons", user.academy_id);
   const progress = user.role === "STUDENT" ? await listProgressForStudent(user) : [];
@@ -246,7 +234,8 @@ export async function listLessons(courseId: string, user: SessionUser): Promise<
 export async function listContentFiles(courseId: string, user: SessionUser, lessonId?: string): Promise<ContentFile[]> {
   assertContentPermission(user, "read");
   const course = (await contentRows<ContentCourse>("content_courses", user.academy_id)).find((item) => item.id === courseId);
-  if (!course || !accessibleGroupIds(user)?.has(course.group_id)) return [];
+  const scope = await accessibleGroupIds(user);
+  if (!course || !scope?.has(course.group_id)) return [];
   const files = await contentRows<ContentFile>("content_files", user.academy_id);
   const filtered = files.filter((file) => file.course_id === courseId && (lessonId === undefined ? true : file.lesson_id === lessonId));
   const client = nodeSupabaseClient();
@@ -262,7 +251,8 @@ export async function listContentFiles(courseId: string, user: SessionUser, less
 export async function listContentLinks(courseId: string, user: SessionUser, lessonId?: string): Promise<ContentLink[]> {
   assertContentPermission(user, "read");
   const course = (await contentRows<ContentCourse>("content_courses", user.academy_id)).find((item) => item.id === courseId);
-  if (!course || !accessibleGroupIds(user)?.has(course.group_id)) return [];
+  const scope = await accessibleGroupIds(user);
+  if (!course || !scope?.has(course.group_id)) return [];
   const links = await contentRows<ContentLink>("content_links", user.academy_id);
   return links
     .filter((link) => link.course_id === courseId && (lessonId === undefined ? true : link.lesson_id === lessonId))

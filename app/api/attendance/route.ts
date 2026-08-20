@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { loadCurrentUser, AttendanceService } from "@/services";
+import { requireAttendanceTeacher, AttendanceService } from "@/services";
 
 export async function GET(req: NextRequest) {
-  const user = await loadCurrentUser();
-  if (!user) return NextResponse.json({ statuses: {} }, { status: 401 });
+  await requireAttendanceTeacher();
   const lessonId = req.nextUrl.searchParams.get("lesson");
   if (!lessonId) return NextResponse.json({ statuses: {} });
   const records = AttendanceService.attendanceForLessonExport(lessonId);

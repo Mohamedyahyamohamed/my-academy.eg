@@ -128,7 +128,7 @@ export async function createPayment(input: CreatePaymentInput, academyIdOverride
     amount_due: input.amount_due,
     amount_paid: input.amount_paid ?? 0,
     remaining: 0,
-    due_date: input.due_date ?? now,
+    due_date: input.due_date ?? now.slice(0, 10),
     payment_date: (input.amount_paid ?? 0) > 0 ? now : null,
     method: input.method ?? null,
     status: "UNPAID",
@@ -137,19 +137,21 @@ export async function createPayment(input: CreatePaymentInput, academyIdOverride
     updated_at: now,
   };
   const payment = derivePayment(draft);
-  collections().payments.push(payment);
   // `remaining` is a GENERATED column in Postgres — never insert it.
   const { remaining: _r, ...paymentPersist } = payment;
   await persistInsert("payments", paymentPersist);
+  collections().payments.push(payment);
   if (payment.amount_paid > 0) {
-    collections().transactions.push({
+    const tx = {
       id: crypto.randomUUID(),
       payment_id: payment.id,
       amount: payment.amount_paid,
       method: input.method ?? "Cash",
       paid_at: now,
       note: null,
-    });
+    };
+    await persistInsert("payment_transactions", tx);
+    collections().transactions.push(tx);
   }
   return { ok: true, payment: attach(payment) };
 }
@@ -172,7 +174,7 @@ export async function recordPayment(
   p.payment_date = now;
   p.method = method;
   p.notes = note ?? p.notes;
-  Object.assign(p, derivePayment(p).status);
+  p.status = derivePayment(p).status;
   p.updated_at = now;
   await persistUpdate("payments", paymentId, {
     amount_paid: p.amount_paid, payment_date: now, method, status: p.status,

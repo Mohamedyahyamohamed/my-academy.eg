@@ -62,8 +62,11 @@ export function AttendanceWorkshop({
       setStatuses({});
       return;
     }
-    fetch(`/api/attendance?lesson=${lessonId}`, { cache: "no-store" })
-      .then((r) => r.json())
+    fetch(`/api/attendance?lesson=${encodeURIComponent(lessonId)}&_=${Date.now()}`, { cache: "no-store" })
+      .then((r) => {
+        if (!r.ok) throw new Error("Attendance status request failed");
+        return r.json();
+      })
       .then((data) => setStatuses(data.statuses ?? {}))
       .catch(() => setStatuses({}));
   }, [lessonId]);

@@ -482,6 +482,7 @@ export async function createStudent(
 
   const { groupIds = [], ...rest } = input;
   const now = new Date().toISOString();
+  const consentGiven = rest.consent_given === true;
   const student: Student = {
     id: uid(),
     academy_id: academyId,
@@ -495,11 +496,12 @@ export async function createStudent(
     school: rest.school ?? null,
     grade: rest.grade ?? null,
     notes: rest.notes ?? null,
-    status: rest.status ?? "ACTIVE",
-    consent_given: rest.consent_given ?? false,
-    consent_at: rest.consent_given === true ? now : null,
-    consent_by: rest.consent_given === true ? (consentActorId ?? null) : null,
-    consent_version: rest.consent_given === true ? "1.0" : null,
+    // Student access stays inactive until consent is actually recorded.
+    status: consentGiven ? (rest.status ?? "ACTIVE") : "INACTIVE",
+    consent_given: consentGiven,
+    consent_at: consentGiven ? now : null,
+    consent_by: consentGiven ? (consentActorId ?? null) : null,
+    consent_version: consentGiven ? "1.0" : null,
     enrolled_at: now,
     created_at: now,
     updated_at: now,
@@ -537,11 +539,11 @@ export async function createStudent(
           email: loginEmail,
           role: "STUDENT",
           full_name: `${student.first_name} ${student.last_name}`,
-          is_active: true,
+          is_active: consentGiven,
         });
         const { error: membershipError } = profileError ? { error: profileError } : await client
           .from("academy_memberships")
-          .upsert({ academy_id: aid, profile_id: aData.user.id, role: "STUDENT", status: "ACTIVE", joined_at: now }, { onConflict: "academy_id,profile_id" });
+          .upsert({ academy_id: aid, profile_id: aData.user.id, role: "STUDENT", status: consentGiven ? "ACTIVE" : "INVITED", joined_at: now }, { onConflict: "academy_id,profile_id" });
         if (membershipError) {
           await client.auth.admin.deleteUser(aData.user.id);
           throw new Error(`Could not grant student access: ${membershipError.message}`);

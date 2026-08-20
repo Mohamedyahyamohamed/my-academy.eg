@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { percentage, round, clamp, formatClockTime } from "@/lib/utils";
-import { isLessonActive, isLessonUpcoming } from "@/services/lessons";
+import { isLessonActive, isLessonUpcoming, lessonEndWallClockMinute, lessonWallClockMinute } from "@/services/lessons";
 import {
   MAX_UPLOAD_BYTES,
   CONTENT_UPLOAD_EXTENSIONS,
@@ -63,6 +63,12 @@ describe("Lesson time classification", () => {
       { date: "2026-08-22", start_time: "16:00", end_time: "17:30" },
       new Date("2026-08-22T17:31:00+03:00"),
     )).toBe(false);
+  });
+
+  it("carries an overnight lesson end into the next wall-clock day", () => {
+    const start = lessonWallClockMinute("2026-08-22", "23:00");
+    const end = lessonEndWallClockMinute("2026-08-22", "23:00", "01:00");
+    expect(end - start).toBe(120);
   });
 });
 

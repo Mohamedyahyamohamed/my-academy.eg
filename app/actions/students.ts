@@ -84,7 +84,15 @@ export async function archiveStudentAction(id: string) {
 export async function restoreStudentAction(id: string) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
   if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage students.");
-  await StudentsService.setStudentStatus(id, "ACTIVE");
+  // A student may only return to ACTIVE after a server-recorded parental
+  // consent event. Restoring an archived row must not fabricate consent.
+  const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
+  const client = nodeSupabaseClient();
+  const aid = currentAcademyId();
+  const { data: student } = client && aid
+    ? await client.from("students").select("consent_given").eq("id", id).eq("academy_id", aid).maybeSingle()
+    : { data: null };
+  await StudentsService.setStudentStatus(id, student?.consent_given === true ? "ACTIVE" : "INACTIVE");
   revalidatePath("/students");
   revalidatePath(`/students/${id}`);
 }
@@ -122,17 +130,25 @@ export async function createMissingStudentAccountsAction() {
       errors.push(`${s.first_name} ${s.last_name}: ${aErr.message}`);
       continue;
     }
+    const { data: sourceStudent } = await client
+      .from("students")
+      .select("consent_given")
+      .eq("id", s.id)
+      .eq("academy_id", aid)
+      .maybeSingle();
+    const consentGiven = sourceStudent?.consent_given === true;
     const { error: profileError } = await client.from("profiles").upsert({
       id: aData.user!.id,
       academy_id: aid,
       email: loginEmail,
       role: "STUDENT",
       full_name: `${s.first_name} ${s.last_name}`,
-      is_active: true,
+      // Never activate a student login before server-recorded consent.
+      is_active: consentGiven,
     });
     const { error: membershipError } = profileError ? { error: profileError } : await client
       .from("academy_memberships")
-      .upsert({ academy_id: aid, profile_id: aData.user!.id, role: "STUDENT", status: "ACTIVE", joined_at: new Date().toISOString() }, { onConflict: "academy_id,profile_id" });
+      .upsert({ academy_id: aid, profile_id: aData.user!.id, role: "STUDENT", status: consentGiven ? "ACTIVE" : "INVITED", joined_at: new Date().toISOString() }, { onConflict: "academy_id,profile_id" });
     if (membershipError) {
       await client.auth.admin.deleteUser(aData.user!.id);
       errors.push(`${s.first_name} ${s.last_name}: ${membershipError.message}`);

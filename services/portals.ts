@@ -13,7 +13,7 @@ import {
   fetchStudentGroupIds,
 } from "./_shared";
 import { percentage, round, fullName } from "@/lib/utils";
-import { isLessonUpcoming, lessonWallClockMinute } from "./lessons";
+import { isLessonUpcoming, lessonEndWallClockMinute, lessonWallClockMinute, wallClockMinute } from "./lessons";
 
 /** Resolve the parent record for a logged-in PARENT user. */
 export function resolveParent(user: SessionUser): Parent | null {
@@ -347,15 +347,18 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
     groupStudentRows.filter((gs: any) => groupIds.has(gs.group_id)).map((gs: any) => gs.student_id)
   );
   const myLessons = allLessons.filter((l: any) => groupIds.has(l.group_id))
-    .sort((a: any, b: any) => +new Date(a.date) - +new Date(b.date));
-  const upcoming = myLessons.filter((l: any) => +new Date(l.date) >= Date.now()).slice(0, 6);
+    .sort((a: any, b: any) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time));
+  const currentWallClock = wallClockMinute(new Date());
+  const upcoming = myLessons
+    .filter((l: any) => lessonEndWallClockMinute(l.date, l.start_time, l.end_time) >= currentWallClock)
+    .slice(0, 6);
 
   const att = allAttendance.filter((a: any) => myLessons.some((l: any) => l.id === a.lesson_id));
   const present = att.filter((a: any) => a.status !== "ABSENT").length;
   const attendanceRate = att.length ? percentage(present, att.length) : 0;
 
   const needsAttendance = myLessons
-    .filter((l: any) => +new Date(l.date) <= Date.now() && !allAttendance.some((a: any) => a.lesson_id === l.id))
+    .filter((l: any) => lessonEndWallClockMinute(l.date, l.start_time, l.end_time) < currentWallClock && !allAttendance.some((a: any) => a.lesson_id === l.id))
     .slice(0, 5)
     .map((l: any) => ({ id: l.id, topic: l.topic, date: l.date, group_id: l.group_id, groupName: allGroups.find((g: any) => g.id === l.group_id)?.name ?? "" }));
 

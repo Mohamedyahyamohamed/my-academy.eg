@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { ScanLine } from "lucide-react";
 import { AttendanceWorkshop } from "@/components/attendance/attendance-workshop";
-import { GroupsService, LessonsService, StudentsService, currentTeacherId, requireAttendanceTeacher } from "@/services";
+import { GroupsService, LessonsService, StudentsService, requireAttendanceTeacher } from "@/services";
 import { collections } from "@/services/data/store";
 import { cookies } from "next/headers";
 import { getLangFromCookie } from "@/lib/i18n";
@@ -14,8 +14,11 @@ export default async function AttendancePage() {
   const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
   const en = lang === "en";
   const user = await requireAttendanceTeacher();
-  const teacherProfileId = currentTeacherId() ?? undefined;
-  const groups = await GroupsService.listGroups("", user.academy_id, teacherProfileId);
+  // Scope both groups and lessons with the authenticated profile id/email.
+  // Assistant records have a separate teachers.id, so passing currentTeacherId()
+  // here can show the group while filtering out all of its lessons.
+  const teacherProfileId = user.id;
+  const groups = await GroupsService.listGroups("", user.academy_id, teacherProfileId, user.email);
   const lessons = (await LessonsService.listLessons({ pageSize: 500 }, user.academy_id, teacherProfileId)).items;
   const students = (await StudentsService.listStudents({ pageSize: 500 }, user.academy_id)).items;
   const allowedGroupIds = new Set(groups.map((group) => group.id));

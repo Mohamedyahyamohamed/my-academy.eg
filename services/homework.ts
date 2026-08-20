@@ -79,8 +79,8 @@ export async function listHomework(
   };
 }
 
-export async function getHomework(id: string): Promise<Homework | null> {
-  const academyId = currentAcademyId();
+export async function getHomework(id: string, academyIdOverride?: string): Promise<Homework | null> {
+  const academyId = academyIdOverride ?? currentAcademyId();
   let items = await fetchTableRLS<Homework>("homework", academyId);
   if (academyId && isSupabaseConfigured()) {
     const admin = nodeSupabaseClient();
@@ -232,8 +232,9 @@ export function getSubmission(
 
 export async function listSubmissions(
   homeworkId: string,
+  academyIdOverride?: string,
 ): Promise<HomeworkSubmission[]> {
-  const homework = await getHomework(homeworkId);
+  const homework = await getHomework(homeworkId, academyIdOverride);
   if (!homework) return [];
   assertHomeworkManager(homework);
   const [liveSubmissions, liveStudents] = await Promise.all([

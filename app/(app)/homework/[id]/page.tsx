@@ -16,10 +16,10 @@ export const dynamic = "force-dynamic";
 export default async function HomeworkDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
-  await requireScopedRole("TEACHER");
-  const hw = await HomeworkService.getHomework(params.id);
+  const user = await requireScopedRole("TEACHER");
+  const hw = await HomeworkService.getHomework(params.id, user.academy_id);
   if (!hw) notFound();
-  const submissions = await HomeworkService.listSubmissions(params.id);
+  const submissions = await HomeworkService.listSubmissions(params.id, user.academy_id);
   const submitted = submissions.filter((s) => s.status !== "PENDING").length;
   const reviewed = submissions.filter((s) => s.status === "REVIEWED").length;
 

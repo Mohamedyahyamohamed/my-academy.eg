@@ -45,6 +45,21 @@ export function formatDate(
   }).format(d);
 }
 
+/** Format an ISO date and time using a 12-hour clock. */
+export function formatDateTime(date: string | Date | null | undefined, locale: string = "ar-EG") {
+  if (!date) return "—";
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return "—";
+  return new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(d);
+}
+
 /** Format an ISO date string to time only using a 12-hour clock. */
 export function formatTime(date: string | Date | null | undefined, locale: string = "ar-EG") {
   if (!date) return "—";

@@ -11,6 +11,7 @@ import { requireScopedRole } from "@/services";
 import { listAuditLogs } from "@/services/audit";
 import { cookies } from "next/headers";
 import { getLangFromCookie } from "@/lib/i18n";
+import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +66,7 @@ export default async function AuditLogsPage(
                   <TableCell><Badge variant={actionColor(log.action) as any}>{log.action}</Badge></TableCell>
                   <TableCell className="text-sm">{log.entity_type} {log.entity_id ? `· ${log.entity_id.slice(0, 8)}…` : ""}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{log.actor_name ? `${log.actor_name} · ` : ""}{log.actor_role ?? "—"}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{new Date(log.created_at).toLocaleString(en ? "en-GB" : "ar-EG")}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{formatDateTime(log.created_at, en ? "en-GB" : "ar-EG")}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{log.ip ?? "—"}</TableCell>
                 </TableRow>
               ))}

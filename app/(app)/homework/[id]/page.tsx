@@ -19,7 +19,7 @@ export default async function HomeworkDetailPage(props: { params: Promise<{ id: 
   const user = await requireScopedRole("TEACHER");
   const hw = await HomeworkService.getHomework(params.id, user.academy_id);
   if (!hw) notFound();
-  const submissions = await HomeworkService.listSubmissions(params.id, user.academy_id);
+  const submissions = await HomeworkService.listSubmissions(params.id, user.academy_id, user);
   const submitted = submissions.filter((s) => s.status !== "PENDING").length;
   const reviewed = submissions.filter((s) => s.status === "REVIEWED").length;
 

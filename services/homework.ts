@@ -3,6 +3,7 @@
  */
 import type {
   Homework,
+  SessionUser,
   HomeworkSubmission,
   HomeworkStatus,
   PaginatedResult,
@@ -233,10 +234,18 @@ export function getSubmission(
 export async function listSubmissions(
   homeworkId: string,
   academyIdOverride?: string,
+  managerOverride?: SessionUser,
 ): Promise<HomeworkSubmission[]> {
   const homework = await getHomework(homeworkId, academyIdOverride);
   if (!homework) return [];
-  assertHomeworkManager(homework);
+  const manager = managerOverride ?? getCurrentUser();
+  if (!manager || !can(manager, "homework.manage")) throw new Error("You are not allowed to manage homework.");
+  if (!hasAcademyWideScope(manager.role)) {
+    const visible = await listHomework({}, homework.academy_id, manager.id);
+    if (!visible.items.some((item) => item.id === homework.id)) {
+      throw new Error("You can only manage homework for an assigned group.");
+    }
+  }
   const [liveSubmissions, liveStudents] = await Promise.all([
     fetchTableRLS<any>("homework_submissions", homework.academy_id),
     fetchTableRLS<any>("students", homework.academy_id),

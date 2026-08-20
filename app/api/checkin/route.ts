@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { loadCurrentUser, resolveStudentForDashboard, LessonsService } from "@/services";
 import { verifyQrSession } from "@/lib/qr-session";
 import { fetchTableRLS } from "@/services/_shared";
+import { ensureStoreLoaded } from "@/services/data/store";
+import { setRequestContext } from "@/services/request-context";
 import { AttendanceService } from "@/services";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { isLessonActive } from "@/services/lessons";
@@ -10,9 +12,15 @@ import { requestIpKey } from "@/lib/request-identity";
 /** Student self check-in via a tenant-scoped, short-lived QR token. */
 export async function POST(req: NextRequest) {
   const user = await loadCurrentUser();
-  if (!user || user.role !== "STUDENT") {
+  if (!user || user.role !== "STUDENT" || !user.academy_id) {
     return NextResponse.json({ ok: false, error: "Must be logged in as a student." }, { status: 401 });
   }
+
+  // QR redirects authenticate through the app session cookie. Hydrate and
+  // rebind the tenant before any lesson/student/attendance lookup so the
+  // serverless request does not depend on a browser Supabase auth cookie.
+  await ensureStoreLoaded(user.academy_id);
+  setRequestContext(user);
 
   // Rate limit.
   const userLimit = await rateLimit(`checkin:user:${user.id}`, LIMITS.checkin.max, LIMITS.checkin.window);

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { loadCurrentUser, resolveStudentForDashboard } from "@/services";
+import { loadCurrentUser, resolveStudentForDashboard, LessonsService } from "@/services";
 import { verifyQrSession } from "@/lib/qr-session";
-import { collections } from "@/services/data/store";
+import { fetchTableRLS } from "@/services/_shared";
 import { AttendanceService } from "@/services";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { isLessonActive } from "@/services/lessons";
@@ -41,10 +41,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "No student profile linked." }, { status: 403 });
   }
 
-  // Verify the lesson exists and student is enrolled.
-  const lesson = collections().lessons.find(
-    (l) => l.id === lessonId && l.academy_id === user.academy_id,
-  );
+  // Verify the lesson through the same tenant-scoped service used to create
+  // the QR session. A serverless request may not have a hydrated collections
+  // snapshot, so never use collections().lessons as the source of truth here.
+  const lesson = await LessonsService.getLesson(lessonId, user.academy_id);
   if (!lesson) return NextResponse.json({ ok: false, error: "Lesson not found." }, { status: 404 });
 
   // QR self-check-in is valid only while the lesson is in progress.
@@ -52,7 +52,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "This lesson is not active right now." }, { status: 403 });
   }
 
-  const enrolled = collections().groupStudents.some(
+  const groupStudents = await fetchTableRLS<{ group_id: string; student_id: string }>(
+    "group_students",
+    user.academy_id,
+  );
+  const enrolled = groupStudents.some(
     (gs) => gs.group_id === lesson.group_id && gs.student_id === student.id,
   );
   if (!enrolled) {
@@ -60,7 +64,11 @@ export async function POST(req: NextRequest) {
   }
 
   // Check if already checked in (replay prevention).
-  const existing = collections().attendance.find(
+  const attendance = await fetchTableRLS<{ lesson_id: string; student_id: string }>(
+    "attendance",
+    user.academy_id,
+  );
+  const existing = attendance.find(
     (a) => a.lesson_id === lessonId && a.student_id === student.id,
   );
   if (existing) {

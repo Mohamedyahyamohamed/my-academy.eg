@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { requireScopedRole, AttendanceService } from "@/services";
 import type { AttendanceStatus } from "@/types";
-import { NotificationsService, getCurrentUser } from "@/services";
 import { audit } from "@/services/audit";
 
 export async function checkinAction(lessonId: string) {
@@ -59,27 +58,55 @@ export async function scanCheckinAction(lessonId: string | null | undefined, stu
   };
 }
 
+export type AttendanceSaveResult =
+  | { ok: true; saved: number }
+  | { ok: false; error: string };
+
 export async function saveAttendanceAction(
   groupId: string,
   lessonId: string,
   entries: { studentId: string; status: AttendanceStatus }[],
-) {
+): Promise<AttendanceSaveResult> {
+  // Keep authentication/authorization redirects outside the error boundary. Next.js
+  // implements redirects by throwing a control-flow error that must propagate.
   const user = await requireScopedRole("TEACHER");
-  await AttendanceService.saveAttendance(lessonId, entries);
+
+  try {
+    await AttendanceService.saveAttendance(lessonId, entries);
     void audit({ action: "attendance.save" }, user);
-  // إشعار Push لأولياء الأمور
-  const { notifyAcademy } = await import("@/services/push");
-  const absent = entries.filter((e) => e.status === "ABSENT").length;
-  void notifyAcademy(user.academy_id, "✅ تم تسجيل الحضور", `تم تسجيل حضور ${entries.length} طالب.${absent > 0 ? ` (${absent} غائب)` : ""}`);
-  // إشعار واتساب لأولياء أمور الطلاب الغائبين
-  const { notifyParentsWhatsApp } = await import("@/services/whatsapp");
-  void notifyParentsWhatsApp(
-    entries.filter((e) => e.status === "ABSENT").map((e) => e.studentId),
-    "⚠️ تنبيه غياب",
-    () => "نود إعلامكم بغياب ابنكم عن الحصة اليوم. برجاء المتابعة.",
-    "ATTENDANCE_ABSENCE",
-  );
-  revalidatePath(`/lessons/${lessonId}`);
-  revalidatePath(`/groups/${groupId}`);
-  revalidatePath("/dashboard");
+
+    // Notifications are best-effort. A notification provider outage must not turn a
+    // successful attendance write into a failed Server Action / RSC render.
+    try {
+      const { notifyAcademy } = await import("@/services/push");
+      const absent = entries.filter((e) => e.status === "ABSENT").length;
+      void notifyAcademy(
+        user.academy_id,
+        "✅ تم تسجيل الحضور",
+        `تم تسجيل حضور ${entries.length} طالب.${absent > 0 ? ` (${absent} غائب)` : ""}`,
+      );
+
+      const { notifyParentsWhatsApp } = await import("@/services/whatsapp");
+      void notifyParentsWhatsApp(
+        entries.filter((e) => e.status === "ABSENT").map((e) => e.studentId),
+        "⚠️ تنبيه غياب",
+        () => "نود إعلامكم بغياب ابنكم عن الحصة اليوم. برجاء المتابعة.",
+        "ATTENDANCE_ABSENCE",
+      );
+    } catch (notificationError) {
+      console.error(
+        "[attendance] notification dispatch failed after attendance save:",
+        notificationError instanceof Error ? notificationError.message : notificationError,
+      );
+    }
+
+    revalidatePath(`/lessons/${lessonId}`);
+    revalidatePath(`/groups/${groupId}`);
+    revalidatePath("/dashboard");
+    return { ok: true, saved: entries.length };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to save attendance.";
+    console.error("[attendance] save failed:", message);
+    return { ok: false, error: message };
+  }
 }

@@ -97,8 +97,11 @@ export function AttendanceWorkshop({
       if (!groupId || !lessonId) {
         throw new Error(en ? "Choose a group and lesson first." : "اختر المجموعة والحصة أولًا.");
       }
-      await saveAttendanceAction(groupId, lessonId, entries);
-      toast.success(en ? `Attendance saved for ${entries.length} students.` : `تم حفظ حضور ${entries.length} طالب.`);
+      const result = await saveAttendanceAction(groupId, lessonId, entries);
+      if (!result.ok) {
+        throw new Error(result.error);
+      }
+      toast.success(en ? `Attendance saved for ${result.saved} students.` : `تم حفظ حضور ${result.saved} طالب.`);
       router.refresh();
     } catch (error) {
       const message = error instanceof Error ? error.message : "";

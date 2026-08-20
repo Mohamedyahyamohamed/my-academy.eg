@@ -1,7 +1,6 @@
 import { PageHeader } from "@/components/shared/page-header";
 import { ScanWorkshop } from "@/components/attendance/scan-workshop";
-import { GroupsService, LessonsService, StudentsService, currentTeacherId, requireAttendanceTeacher } from "@/services";
-import { collections } from "@/services/data/store";
+import { GroupsService, LessonsService, StudentsService, requireAttendanceTeacher } from "@/services";
 import { cookies } from "next/headers";
 import { getLangFromCookie, isRTL } from "@/lib/i18n";
 
@@ -11,9 +10,11 @@ export default async function ScanAttendancePage() {
   const user = await requireAttendanceTeacher();
   const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
   const en = lang === "en";
-  const teacherProfileId = currentTeacherId() ?? undefined;
-  const groups = await GroupsService.listGroups("", user.academy_id, teacherProfileId);
-  const lessons = (await LessonsService.listLessons({ pageSize: 500 }, user.academy_id, teacherProfileId)).items;
+  // Group/lesson services resolve the teachers row from the authenticated
+  // profile id/email. currentTeacherId() returns teachers.id and is reserved
+  // for lower-level write/scope operations, so do not pass it here.
+  const groups = await GroupsService.listGroups("", user.academy_id, user.id, user.email);
+  const lessons = (await LessonsService.listLessons({ pageSize: 500 }, user.academy_id, user.id)).items;
   const students = (await StudentsService.listStudents({ pageSize: 500 }, user.academy_id)).items;
 
   return (

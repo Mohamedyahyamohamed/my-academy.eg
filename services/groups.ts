@@ -202,10 +202,38 @@ export async function deleteGroup(id: string): Promise<boolean> {
   return collections().groups.length < before;
 }
 
+async function verifyGroupStudentScope(groupId: string, studentId: string): Promise<boolean> {
+  const academyId = currentAcademyId();
+  if (!academyId) return false;
+
+  if (!isSupabaseConfigured()) {
+    return collections().groups.some((group) => group.id === groupId && group.academy_id === academyId)
+      && collections().students.some((student) => student.id === studentId && student.academy_id === academyId);
+  }
+
+  const client = nodeSupabaseClient();
+  if (!client) return false;
+  const [{ data: group, error: groupError }, { data: student, error: studentError }] = await Promise.all([
+    client.from("groups").select("id").eq("id", groupId).eq("academy_id", academyId).maybeSingle(),
+    client.from("students").select("id").eq("id", studentId).eq("academy_id", academyId).maybeSingle(),
+  ]);
+  if (groupError || studentError) {
+    console.error("group membership scope check failed", {
+      group: groupError?.message,
+      student: studentError?.message,
+    });
+    return false;
+  }
+  return Boolean(group && student);
+}
+
 export async function addStudent(
   groupId: string,
   studentId: string,
 ): Promise<{ ok: boolean; error?: string }> {
+  if (!(await verifyGroupStudentScope(groupId, studentId))) {
+    return { ok: false, error: "المجموعة أو الطالب خارج نطاق الأكاديمية الحالية." };
+  }
   const exists = collections().groupStudents.some(
     (gs) => gs.group_id === groupId && gs.student_id === studentId,
   );
@@ -232,6 +260,7 @@ export async function addStudent(
 }
 
 export async function removeStudent(groupId: string, studentId: string): Promise<boolean> {
+  if (!(await verifyGroupStudentScope(groupId, studentId))) return false;
   const before = collections().groupStudents.length;
   collections().groupStudents = collections().groupStudents.filter(
     (gs) => !(gs.group_id === groupId && gs.student_id === studentId),

@@ -11,7 +11,7 @@ import type {
   StudentStats,
 } from "@/types";
 import { collections } from "./data/store";
-import { currentAcademyId, getCurrentUser } from "./session";
+import { currentAcademyId, currentTeacherId, getCurrentUser } from "./session";
 import { persistInsert, persistUpdate } from "./data/store";
 import {
   attendanceForStudent,
@@ -37,6 +37,53 @@ function attachRelations(s: Student): Student {
     parent: getParent(s.parent_id) ?? null,
     groups: groupsForStudent(s.id),
   };
+}
+
+async function liveTeacherStudentScope(client: any, academyId: string): Promise<Set<string> | null> {
+  const user = getCurrentUser();
+  if (!user || hasAcademyWideScope(user.role)) return null;
+
+  const teacherId = currentTeacherId();
+  if (!teacherId) return new Set();
+
+  const [{ data: ownedGroups, error: ownedError }, { data: assistantLinks, error: assistantError }] = await Promise.all([
+    client.from("groups").select("id").eq("academy_id", academyId).eq("teacher_id", teacherId).limit(1000),
+    client.from("group_assistants").select("group_id").eq("teacher_id", teacherId).limit(1000),
+  ]);
+  if (ownedError || assistantError) {
+    console.error("liveTeacherStudentScope group lookup failed", ownedError?.message ?? assistantError?.message);
+    return new Set();
+  }
+
+  const candidateGroupIds = [...new Set([
+    ...(ownedGroups ?? []).map((row: any) => row.id),
+    ...(assistantLinks ?? []).map((row: any) => row.group_id),
+  ].filter(Boolean))];
+  if (!candidateGroupIds.length) return new Set();
+
+  const { data: scopedGroups, error: scopedGroupsError } = await client
+    .from("groups")
+    .select("id")
+    .eq("academy_id", academyId)
+    .in("id", candidateGroupIds)
+    .limit(1000);
+  if (scopedGroupsError) {
+    console.error("liveTeacherStudentScope academy group lookup failed", scopedGroupsError.message);
+    return new Set();
+  }
+
+  const groupIds = (scopedGroups ?? []).map((row: any) => row.id).filter(Boolean);
+  if (!groupIds.length) return new Set();
+  const { data: memberships, error: membershipsError } = await client
+    .from("group_students")
+    .select("student_id")
+    .in("group_id", groupIds)
+    .limit(5000);
+  if (membershipsError) {
+    console.error("liveTeacherStudentScope membership lookup failed", membershipsError.message);
+    return new Set();
+  }
+  return new Set((memberships ?? []).map((row: any) => row.student_id).filter(Boolean));
 }
 
 function assertStudentManager() {
@@ -179,8 +226,19 @@ export async function listStudents(
   } = filters;
 
   let query = client.from("students").select("*", { count: "exact" });
+  const effectiveAcademyId = academyId ?? currentAcademyId();
+  if (effectiveAcademyId) query = query.eq("academy_id", effectiveAcademyId);
 
-  // RLS filters by academy_id automatically.
+  // RLS filters by academy_id automatically; this extra live scope restricts
+  // Teacher and Assistant to students in their owned/assisted groups.
+  const scopedStudentIds = effectiveAcademyId
+    ? await liveTeacherStudentScope(client, effectiveAcademyId)
+    : null;
+  if (scopedStudentIds && scopedStudentIds.size === 0) {
+    return { items: [], pagination: { page, pageSize, total: 0, totalPages: 1 } };
+  }
+  if (scopedStudentIds) query = query.in("id", [...scopedStudentIds]);
+
   if (status !== "ALL") query = query.eq("status", status);
 
   if (search.trim()) {
@@ -281,7 +339,11 @@ export async function getStudentDetail(
   const student = data as Student;
   // Teacher scope check (app-layer, Phase 1 — extra defense).
   const tScope = teacherStudentScope();
-  if (tScope && !tScope.has(id)) return null;
+  if (tScope && !tScope.has(id)) {
+    const effectiveAcademyId = currentAcademyId();
+    const liveScope = effectiveAcademyId ? await liveTeacherStudentScope(client, effectiveAcademyId) : new Set<string>();
+    if (liveScope && !liveScope.has(id)) return null;
+  }
 
   return {
     ...attachRelations(student),
@@ -368,7 +430,11 @@ export async function getStudent(id: string): Promise<Student | null> {
 
   const student = data as Student;
   const tScope = teacherStudentScope();
-  if (tScope && !tScope.has(id)) return null;
+  if (tScope && !tScope.has(id)) {
+    const effectiveAcademyId = currentAcademyId();
+    const liveScope = effectiveAcademyId ? await liveTeacherStudentScope(client, effectiveAcademyId) : new Set<string>();
+    if (liveScope && !liveScope.has(id)) return null;
+  }
   return attachRelations(student);
 }
 

@@ -23,7 +23,6 @@ import { StudentsService, GroupsService, MiscService, requireScopedRole } from "
 import { archiveStudentAction } from "@/app/actions/students";
 import type { StudentFilters } from "@/types";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { getLangFromCookie } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +36,7 @@ export default async function StudentsPage(
   const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
   const en = lang === "en";
   const user = await requireScopedRole("ADMIN", "TEACHER");
-  if (user.is_assistant) redirect("/teacher");
+  const canManageStudents = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
 
@@ -52,7 +51,12 @@ export default async function StudentsPage(
   };
 
   const result = await StudentsService.listStudents(filters, user.academy_id);
-  const groups = await GroupsService.listGroups("", user.academy_id);
+  const groups = await GroupsService.listGroups(
+    "",
+    user.academy_id,
+    user.role === "TEACHER" ? user.id : undefined,
+    user.role === "TEACHER" ? user.email : undefined,
+  );
   const parents = await MiscService.listParents(user.academy_id);
 
   const groupOptions = [
@@ -67,11 +71,15 @@ export default async function StudentsPage(
         description={en ? "Manage student profiles, enrollment, and status in your academy." : "إدارة ملفات الطلاب والتسجيل والحالة في أكاديميتك."}
       >
         <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link href="/students/import">{en ? "Import CSV" : "استيراد CSV"}</Link>
-          </Button>
-          <CreateAccountsButton />
-          <AddStudentDialog parents={parents} groups={groups} />
+          {canManageStudents && (
+            <>
+              <Button asChild variant="outline">
+                <Link href="/students/import">{en ? "Import CSV" : "استيراد CSV"}</Link>
+              </Button>
+              <CreateAccountsButton />
+              <AddStudentDialog parents={parents} groups={groups} />
+            </>
+          )}
         </div>
       </PageHeader>
 
@@ -92,8 +100,10 @@ export default async function StudentsPage(
         <EmptyState
           icon={Users}
           title={en ? "No students yet" : "لا يوجد طلاب بعد"}
-          description={en ? "Add your first student to start tracking attendance, payments, and grades." : "أضف أول طالب لبدء متابعة الحضور والمصاريف والدرجات."}
-          action={<AddStudentDialog parents={parents} groups={groups} />}
+          description={canManageStudents
+            ? (en ? "Add your first student to start tracking attendance, payments, and grades." : "أضف أول طالب لبدء متابعة الحضور والمصاريف والدرجات.")
+            : (en ? "Students assigned to your groups will appear here." : "سيظهر هنا الطلاب المرتبطون بمجموعاتك.")}
+          action={canManageStudents ? <AddStudentDialog parents={parents} groups={groups} /> : undefined}
         />
       ) : (
         <>
@@ -163,8 +173,8 @@ export default async function StudentsPage(
                             <Eye className="h-4 w-4" />
                           </Link>
                         </Button>
-                        <EditStudentDialog student={s} parents={parents} groups={groups} />
-                        {s.status !== "ARCHIVED" && (
+                        {canManageStudents && <EditStudentDialog student={s} parents={parents} groups={groups} />}
+                        {canManageStudents && s.status !== "ARCHIVED" && (
                           <ConfirmDialog
                             destructive
                             trigger={

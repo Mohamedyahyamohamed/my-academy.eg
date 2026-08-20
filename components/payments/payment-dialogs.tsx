@@ -25,9 +25,11 @@ import { useClientLang } from "@/lib/i18n-client";
 export function RecordPaymentDialog({
   payment,
   students,
+  cashOnly = false,
 }: {
   payment: Payment;
   students: Student[];
+  cashOnly?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
   const en = useClientLang() === "en";
@@ -88,8 +90,14 @@ export function RecordPaymentDialog({
           </div>
           <div className="space-y-1.5">
             <Label>{en ? "Payment method" : "طريقة الدفع"}</Label>
-            <Input defaultValue="Cash" {...register("method")} list="methods" />
-            <datalist id="methods">{PAYMENT_METHODS.map((m) => <option key={m} value={m} label={paymentMethodLabel(m, en)} />)}</datalist>
+            {cashOnly ? (
+              <div className="flex h-9 items-center rounded-lg border bg-muted px-3 text-sm">{en ? "Cash" : "نقدي"}</div>
+            ) : (
+              <>
+                <Input defaultValue="Cash" {...register("method")} list="methods" />
+                <datalist id="methods">{PAYMENT_METHODS.map((m) => <option key={m} value={m} label={paymentMethodLabel(m, en)} />)}</datalist>
+              </>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label>{en ? "Note (optional)" : "ملاحظة (اختياري)"}</Label>
@@ -113,9 +121,11 @@ export function RecordPaymentDialog({
 export function CreatePaymentDialog({
   students,
   groups,
+  cashOnly = false,
 }: {
   students: Student[];
   groups: Group[];
+  cashOnly?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
   const en = useClientLang() === "en";
@@ -185,9 +195,13 @@ export function CreatePaymentDialog({
             </div>
             <div className="space-y-1.5">
               <Label>{en ? "Payment method" : "طريقة الدفع"}</Label>
-              <select value={method} onChange={(e) => setMethod(e.target.value)} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{paymentMethodLabel(m, en)}</option>)}
-              </select>
+              {cashOnly ? (
+                <div className="flex h-9 items-center rounded-lg border bg-muted px-3 text-sm">{en ? "Cash" : "نقدي"}</div>
+              ) : (
+                <select value={method} onChange={(e) => setMethod(e.target.value)} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                  {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{paymentMethodLabel(m, en)}</option>)}
+                </select>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>{en ? "Due amount *" : "المبلغ المستحق *"}</Label>

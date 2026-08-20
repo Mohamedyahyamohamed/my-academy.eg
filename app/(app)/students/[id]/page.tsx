@@ -27,6 +27,7 @@ import { StudentNotes } from "@/components/students/student-notes";
 import { ParentConsentLink } from "@/components/students/parent-consent-link";
 import { EditStudentDialog } from "@/components/students/student-dialogs";
 import { StudentQrCard } from "@/components/attendance/student-qr-card";
+import { CreatePaymentDialog, RecordPaymentDialog } from "@/components/payments/payment-dialogs";
 import { TrendArea, LineTrend } from "@/components/charts";
 import {
   Table,
@@ -275,6 +276,15 @@ export default async function StudentProfilePage(
         }
         payments={
           <Card>
+            {!isPlatformOwner && (
+              <CardHeader className="flex flex-row items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base">{en ? "Cash payments" : "المدفوعات النقدية"}</CardTitle>
+                  <CardDescription>{en ? "Record cash received from this student." : "سجّل النقد المستلم من هذا الطالب."}</CardDescription>
+                </div>
+                <CreatePaymentDialog students={[detail]} groups={studentGroups} cashOnly={user.role === "TEACHER"} />
+              </CardHeader>
+            )}
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
@@ -284,6 +294,7 @@ export default async function StudentProfilePage(
                     <TableHead>{en ? "Paid" : "المدفوع"}</TableHead>
                     <TableHead>{en ? "Remaining" : "المتبقي"}</TableHead>
                     <TableHead>{en ? "Status" : "الحالة"}</TableHead>
+                    {!isPlatformOwner && <TableHead>{en ? "Action" : "إجراء"}</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -296,11 +307,12 @@ export default async function StudentProfilePage(
                         {formatCurrency(p.remaining, "EGP", en ? "en-EG" : "ar-EG")}
                       </TableCell>
                       <TableCell><PaymentStatusBadge status={p.status} /></TableCell>
+                      {!isPlatformOwner && <TableCell><RecordPaymentDialog payment={p} students={[detail]} cashOnly={user.role === "TEACHER"} /></TableCell>}
                     </TableRow>
                   ))}
                   {payments.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
+                      <TableCell colSpan={isPlatformOwner ? 5 : 6} className="py-8 text-center text-sm text-muted-foreground">
                         {en ? "No payments recorded." : "لا توجد مدفوعات مسجّلة."}
                       </TableCell>
                     </TableRow>

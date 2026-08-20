@@ -15,10 +15,10 @@ export const dynamic = "force-dynamic";
 
 export default async function ExamGradePage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  await requireScopedRole("TEACHER");
-  const exam = await GradesService.getExam(params.id);
+  const user = await requireScopedRole("TEACHER");
+  const exam = await GradesService.getExam(params.id, user.academy_id);
   if (!exam) notFound();
-  const roster = await GradesService.gradesForExam(params.id);
+  const roster = await GradesService.gradesForExam(params.id, user.academy_id);
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
   const rosterNamed = roster.map((r) => {
     const s = collections().students.find((x) => x.id === r.studentId);

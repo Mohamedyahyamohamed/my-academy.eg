@@ -54,8 +54,8 @@ export async function listExams(academyId?: string, teacherProfileId?: string): 
     .map(attachExam);
 }
 
-export async function getExam(id: string): Promise<Exam | null> {
-  const academyId = currentAcademyId();
+export async function getExam(id: string, academyIdOverride?: string): Promise<Exam | null> {
+  const academyId = academyIdOverride ?? currentAcademyId();
   let items = await fetchTableRLS<Exam>("exams", academyId);
   if (academyId && isSupabaseConfigured()) {
     const admin = nodeSupabaseClient();
@@ -196,8 +196,9 @@ export async function listGrades(filters: GradeFilters = {}, academyId?: string)
 /** Grades for an exam, keyed by student (for the grade-entry table). */
 export async function gradesForExam(
   examId: string,
+  academyIdOverride?: string,
 ): Promise<{ studentId: string; score: number | null; gradeId: string | null }[]> {
-  const exam = await getExam(examId);
+  const exam = await getExam(examId, academyIdOverride);
   if (!exam) return [];
   const [roster, grades] = await Promise.all([
     fetchGroupStudentIds(exam.group_id),

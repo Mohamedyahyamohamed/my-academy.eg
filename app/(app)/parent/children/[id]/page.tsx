@@ -76,12 +76,16 @@ export default async function ParentChildPage(props: { params: Promise<{ id: str
     upcomingLesson: null,
     pendingHomework: 0,
   }));
-  const { data: attendanceRows } = await client
-    .from("attendance")
-    .select("*")
-    .eq("academy_id", user.academy_id)
-    .eq("student_id", child.id)
-    .limit(1000);
+  const allChildLessons = await studentLessons(child.id, user.academy_id, groups as any);
+  const childLessonIds = allChildLessons.map((lesson: any) => lesson.id).filter(Boolean);
+  const { data: attendanceRows } = childLessonIds.length
+    ? await client
+      .from("attendance")
+      .select("*")
+      .eq("student_id", child.id)
+      .in("lesson_id", childLessonIds)
+      .limit(1000)
+    : { data: [] as any[] };
   const att = { byLesson: attendanceRows ?? [] };
   const [paymentsPage, gradesPage, homework] = await Promise.all([
     PaymentsService.listPayments({ studentId: child.id, pageSize: 50 }, user.academy_id),
@@ -91,7 +95,7 @@ export default async function ParentChildPage(props: { params: Promise<{ id: str
   const payments = paymentsPage.items;
   const grades = gradesPage.items;
   const exams = await GradesService.listExams(user.academy_id);
-  const lessons = (await studentLessons(child.id, user.academy_id, groups as any)).slice(0, 10);
+  const lessons = allChildLessons.slice(0, 10);
   const notes = MiscService.notesForStudent(child.id, user.academy_id);
 
   return (

@@ -62,7 +62,7 @@ export function AttendanceWorkshop({
       setStatuses({});
       return;
     }
-    fetch(`/api/attendance?lesson=${lessonId}`)
+    fetch(`/api/attendance?lesson=${lessonId}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => setStatuses(data.statuses ?? {}))
       .catch(() => setStatuses({}));

@@ -1,3 +1,5 @@
+"use server";
+
 import { revalidatePath } from "next/cache";
 import { requireScopedRole, currentAcademyId, isLimitedAssistant } from "@/services";
 import { collections, invalidateStore } from "@/services/data/store";

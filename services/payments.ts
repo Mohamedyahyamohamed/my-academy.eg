@@ -94,8 +94,10 @@ export interface CreatePaymentInput {
   notes?: string | null;
 }
 
-function validStudent(id: string) {
-  return collections().students.some((s) => s.id === id);
+async function validStudent(id: string) {
+  const academyId = currentAcademyId();
+  const students = await fetchTableRLS<Payment & { id: string }>("students", academyId);
+  return students.some((student) => student.id === id);
 }
 
 function pid() {
@@ -107,7 +109,7 @@ export async function createPayment(input: CreatePaymentInput): Promise<{
   error?: string;
   payment?: Payment;
 }> {
-  if (!validStudent(input.student_id))
+  if (!(await validStudent(input.student_id)))
     return { ok: false, error: "Invalid student." };
   if (input.amount_due < 0 || (input.amount_paid ?? 0) < 0)
     return { ok: false, error: "Amounts cannot be negative." };

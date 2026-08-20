@@ -1,4 +1,3 @@
-"use server";
 import { revalidatePath } from "next/cache";
 import { requireScopedRole, currentAcademyId, isLimitedAssistant } from "@/services";
 import { collections, invalidateStore } from "@/services/data/store";
@@ -6,13 +5,30 @@ import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { audit } from "@/services/audit";
 
 export interface ImportRow {
-  first_name: string; last_name: string; phone?: string;
-  grade?: string; school?: string; parent_name?: string; parent_phone?: string;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+  grade?: string;
+  school?: string;
+  parent_name?: string;
+  parent_phone?: string;
+}
+
+const BATCH_SIZE = 50;
+
+function chunks<T>(items: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    result.push(items.slice(index, index + size));
+  }
+  return result;
 }
 
 /**
  * Bulk import students (+ optional parents) from parsed CSV rows.
  * Uses the service-role client directly so we can check + report errors.
+ * Parent and student writes are batched to keep 100+ row imports within the
+ * serverless request budget while preserving pending parental consent.
  */
 export async function importStudentsAction(rows: ImportRow[], requestedAcademyId?: string) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
@@ -44,16 +60,30 @@ export async function importStudentsAction(rows: ImportRow[], requestedAcademyId
   if (!rows || rows.length === 0) return { ok: false, error: "مفيش بيانات للاستيراد." };
   if (rows.length > 1000) return { ok: false, error: "الحد الأقصى للاستيراد في المرة الواحدة هو 1000 طالب." };
 
-  // ── منع التكرار: جيب الطلاب الموجودين وابني مفتاح فريد لكل واحد ──
-  const norm = (s?: string | null) => (s ?? "").trim().toLowerCase();
-  const keyOf = (fn: string, ln: string, ph?: string | null) =>
-    `${norm(fn)}|${norm(ln)}|${norm(ph)}`;
-  const { data: existing } = await client
+  const norm = (value?: string | null) => (value ?? "").trim().toLowerCase();
+  const keyOf = (firstName: string, lastName: string, phone?: string | null) =>
+    `${norm(firstName)}|${norm(lastName)}|${norm(phone)}`;
+  const parentKeyOf = (name: string, phone?: string | null) => {
+    const parts = name.trim().split(/\s+/);
+    const firstName = parts[0] ?? "";
+    const lastName = parts.slice(1).join(" ") || "-";
+    const phoneKey = norm(phone);
+    return {
+      key: phoneKey ? `phone:${phoneKey}` : `name:${norm(firstName)}|${norm(lastName)}`,
+      firstName,
+      lastName,
+      phoneKey,
+    };
+  };
+
+  const { data: existingStudents } = await client
     .from("students")
     .select("first_name,last_name,phone")
     .eq("academy_id", aid);
   const seen = new Set(
-    (existing ?? []).map((s: any) => keyOf(s.first_name, s.last_name, s.phone)),
+    (existingStudents ?? []).map((student: any) =>
+      keyOf(student.first_name, student.last_name, student.phone),
+    ),
   );
 
   const { data: existingParents } = await client
@@ -70,94 +100,147 @@ export async function importStudentsAction(rows: ImportRow[], requestedAcademyId
   }
 
   const now = new Date().toISOString();
-  let created = 0;
-  let skippedDup = 0;
   const errors: string[] = [];
+  const accepted: Array<{ row: ImportRow; rowNumber: number; parentKey?: string }> = [];
+  let skippedDup = 0;
 
-  for (let i = 0; i < rows.length; i++) {
-    const r = rows[i];
-    const rowErr = (m: string) => errors.push(`صف ${i + 2}: ${m}`);
-
-    if (!r.first_name?.trim() || !r.last_name?.trim()) {
-      rowErr("ناقص الاسم");
+  for (let index = 0; index < rows.length; index++) {
+    const row = rows[index];
+    const rowNumber = index + 2;
+    if (!row.first_name?.trim() || !row.last_name?.trim()) {
+      errors.push(`صف ${rowNumber}: ناقص الاسم`);
       continue;
     }
 
-    // فحص التكرار (موجود قبل كده أو مكرر جوّه نفس الملف)
-    const key = keyOf(r.first_name, r.last_name, r.phone);
+    const key = keyOf(row.first_name, row.last_name, row.phone);
     if (seen.has(key)) {
       skippedDup++;
       continue;
     }
     seen.add(key);
 
-    // ولي الأمر (لو موجود)
-    let parentId: string | null = null;
-    if (r.parent_name?.trim()) {
-      const parts = r.parent_name.trim().split(/\s+/);
-      const firstName = parts[0];
-      const lastName = parts.slice(1).join(" ") || "-";
-      const phoneKey = norm(r.parent_phone);
-      const nameKey = `${norm(firstName)}|${norm(lastName)}`;
-      parentId = (phoneKey && parentCache.get(`phone:${phoneKey}`)) || parentCache.get(`name:${nameKey}`) || null;
+    accepted.push({
+      row,
+      rowNumber,
+      parentKey: row.parent_name?.trim()
+        ? parentKeyOf(row.parent_name, row.parent_phone).key
+        : undefined,
+    });
+  }
 
-      if (!parentId) {
-        const pid = crypto.randomUUID();
-        const parent = {
-          id: pid,
-          academy_id: aid,
-          profile_id: null,
-          first_name: firstName,
-          last_name: lastName,
-          email: `p.${pid.slice(0, 8)}@parent.local`,
-          phone: r.parent_phone?.trim() || null,
-          occupation: null,
-          created_at: now,
-          updated_at: now,
-        };
-        const pr = await client.from("parents").insert(parent);
-        if (pr.error) {
-          rowErr(`ولي الأمر: ${pr.error.message}`);
-          continue;
+  // Build unique new parents in memory, then insert them in batches.
+  const newParentByKey = new Map<string, { key: string; id: string; rowNumbers: number[]; record: Record<string, unknown> }>();
+  for (const item of accepted) {
+    if (!item.parentKey || parentCache.has(item.parentKey) || newParentByKey.has(item.parentKey)) continue;
+    const details = parentKeyOf(item.row.parent_name ?? "", item.row.parent_phone);
+    const id = crypto.randomUUID();
+    newParentByKey.set(item.parentKey, {
+      key: item.parentKey,
+      id,
+      rowNumbers: [item.rowNumber],
+      record: {
+        id,
+        academy_id: aid,
+        profile_id: null,
+        first_name: details.firstName,
+        last_name: details.lastName,
+        email: `p.${id.slice(0, 8)}@parent.local`,
+        phone: item.row.parent_phone?.trim() || null,
+        occupation: null,
+        created_at: now,
+        updated_at: now,
+      },
+    });
+  }
+
+  for (const item of accepted) {
+    if (!item.parentKey) continue;
+    const pending = newParentByKey.get(item.parentKey);
+    if (pending && !pending.rowNumbers.includes(item.rowNumber)) pending.rowNumbers.push(item.rowNumber);
+  }
+
+  const parentFailures = new Set<string>();
+  for (const batch of chunks([...newParentByKey.values()], BATCH_SIZE)) {
+    const response = await client.from("parents").insert(batch.map((item) => item.record));
+    if (response.error) {
+      // Fall back to row-level inserts only for a failed batch, preserving a
+      // useful error per affected row without making the normal path slow.
+      for (const item of batch) {
+        const single = await client.from("parents").insert(item.record);
+        if (single.error) {
+          parentFailures.add(item.id);
+          for (const rowNumber of item.rowNumbers) {
+            errors.push(`صف ${rowNumber}: ولي الأمر: ${single.error.message}`);
+          }
         }
-        collections().parents.push(parent as any);
-        parentId = parent.id;
-        if (phoneKey) parentCache.set(`phone:${phoneKey}`, parent.id);
-        parentCache.set(`name:${nameKey}`, parent.id);
       }
     }
+    for (const item of batch) {
+      if (!parentFailures.has(item.id)) {
+        parentCache.set(item.key, item.id);
+        const parent = item.record as any;
+        collections().parents.push(parent);
+      }
+    }
+  }
 
-    // الطالب
-    const student = {
-      id: crypto.randomUUID(),
-      academy_id: aid,
-      first_name: r.first_name.trim(),
-      last_name: r.last_name.trim(),
-      phone: r.phone?.trim() || null,
-      email: null,
-      date_of_birth: null,
-      gender: null,
-      parent_id: parentId,
-      school: r.school?.trim() || null,
-      grade: r.grade?.trim() || null,
-      notes: null,
-      // Imported students remain inactive until a parent approves consent.
-      status: "INACTIVE",
-      consent_given: false,
-      consent_at: null,
-      consent_by: null,
-      consent_version: null,
-      enrolled_at: now,
-      created_at: now,
-      updated_at: now,
-    };
-    const sr = await client.from("students").upsert(student);
-    if (sr.error) {
-      rowErr(sr.error.message);
+  const studentRecords: Array<{ id: string; record: Record<string, unknown>; rowNumber: number }> = [];
+  for (const item of accepted) {
+    let parentId: string | null = null;
+    if (item.parentKey) {
+      const pending = newParentByKey.get(item.parentKey);
+      parentId = parentCache.get(item.parentKey) ?? pending?.id ?? null;
+      if (pending && parentFailures.has(pending.id)) continue;
+    }
+
+    const id = crypto.randomUUID();
+    studentRecords.push({
+      rowNumber: item.rowNumber,
+      id,
+      record: {
+        id,
+        academy_id: aid,
+        first_name: item.row.first_name.trim(),
+        last_name: item.row.last_name.trim(),
+        phone: item.row.phone?.trim() || null,
+        email: null,
+        date_of_birth: null,
+        gender: null,
+        parent_id: parentId,
+        school: item.row.school?.trim() || null,
+        grade: item.row.grade?.trim() || null,
+        notes: null,
+        // Imported students remain inactive until a parent approves consent.
+        status: "INACTIVE",
+        consent_given: false,
+        consent_at: null,
+        consent_by: null,
+        consent_version: null,
+        enrolled_at: now,
+        created_at: now,
+        updated_at: now,
+      },
+    });
+  }
+
+  let created = 0;
+  for (const batch of chunks(studentRecords, BATCH_SIZE)) {
+    const response = await client.from("students").insert(batch.map((item) => item.record));
+    if (!response.error) {
+      created += batch.length;
+      for (const item of batch) collections().students.push(item.record as any);
       continue;
     }
-    collections().students.push(student as any);
-    created++;
+
+    // Keep partial-row diagnostics for unexpected schema/constraint errors.
+    for (const item of batch) {
+      const single = await client.from("students").insert(item.record);
+      if (single.error) errors.push(`صف ${item.rowNumber}: ${single.error.message}`);
+      else {
+        created++;
+        collections().students.push(item.record as any);
+      }
+    }
   }
 
   invalidateStore();

@@ -282,7 +282,12 @@ export default async function StudentProfilePage(
                   <CardTitle className="text-base">{en ? "Cash payments" : "المدفوعات النقدية"}</CardTitle>
                   <CardDescription>{en ? "Record cash received from this student." : "سجّل النقد المستلم من هذا الطالب."}</CardDescription>
                 </div>
-                <CreatePaymentDialog students={[detail]} groups={studentGroups} cashOnly={user.role === "TEACHER"} />
+                <CreatePaymentDialog
+                  students={[detail]}
+                  groups={studentGroups}
+                  cashOnly={user.role === "TEACHER"}
+                  defaultStudentId={detail.id}
+                />
               </CardHeader>
             )}
             <CardContent className="p-0">

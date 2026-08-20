@@ -122,16 +122,18 @@ export function CreatePaymentDialog({
   students,
   groups,
   cashOnly = false,
+  defaultStudentId,
 }: {
   students: Student[];
   groups: Group[];
   cashOnly?: boolean;
+  defaultStudentId?: string;
 }) {
   const [open, setOpen] = React.useState(false);
   const en = useClientLang() === "en";
   const router = useRouter();
   const [saving, setSaving] = React.useState(false);
-  const [studentId, setStudentId] = React.useState("");
+  const [studentId, setStudentId] = React.useState(defaultStudentId ?? "");
   const [groupId, setGroupId] = React.useState("");
   const [month, setMonth] = React.useState(new Date().toISOString().slice(0, 7));
   const [amountDue, setAmountDue] = React.useState(0);

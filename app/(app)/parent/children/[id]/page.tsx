@@ -14,9 +14,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  StudentsService, getParentDashboard, childSummary,
-  resolveParent, studentLessons, requireScopedRole,
-  PaymentsService, GradesService, HomeworkService, AttendanceService, MiscService,
+  StudentsService,   childSummary,
+  studentLessons, requireScopedRole,
+  PaymentsService, GradesService, HomeworkService, MiscService,
 } from "@/services";
 import { collections } from "@/services/data/store";
 import { formatCurrency, formatDate, fullName } from "@/lib/utils";
@@ -32,11 +32,31 @@ export default async function ParentChildPage(props: { params: Promise<{ id: str
   // Authorization via DB (مش الكاش)
   const { createServerSupabaseClient } = await import("@/lib/supabase/server");
   const client = await createServerSupabaseClient();
-  const { data: parent } = await client
-    .from("parents").select("*").eq("email", user.email).maybeSingle();
-  const { data: childDB } = await client
-    .from("students").select("*").eq("id", params.id).maybeSingle();
-  if (!childDB || !parent || childDB.parent_id !== parent.id) notFound();
+  const { data: profileParent } = await client
+    .from("parents")
+    .select("*")
+    .eq("academy_id", user.academy_id)
+    .eq("profile_id", user.id)
+    .maybeSingle();
+  const { data: emailParent } = profileParent
+    ? { data: null }
+    : await client
+      .from("parents")
+      .select("*")
+      .eq("academy_id", user.academy_id)
+      .ilike("email", user.email)
+      .maybeSingle();
+  const parent = profileParent ?? emailParent;
+  const { data: childDB } = parent
+    ? await client
+      .from("students")
+      .select("*")
+      .eq("academy_id", user.academy_id)
+      .eq("id", params.id)
+      .eq("parent_id", parent.id)
+      .maybeSingle()
+    : { data: null };
+  if (!childDB || !parent) notFound();
   const child = childDB as any;
 
   const { data: memberships } = await client
@@ -49,8 +69,13 @@ export default async function ParentChildPage(props: { params: Promise<{ id: str
     ? await client.from("groups").select("*").eq("academy_id", user.academy_id).in("id", groupIds).limit(1000)
     : { data: [] as any[] };
   const groups = groupRows ?? [];
-  let summary: any;
-  try { summary = await childSummary(child.id, user.academy_id, groups as any); } catch { summary = {}; }
+  const summary = await childSummary(child.id, user.academy_id, groups as any).catch(() => ({
+    attendanceRate: 0,
+    averageGrade: 0,
+    outstanding: 0,
+    upcomingLesson: null,
+    pendingHomework: 0,
+  }));
   const { data: attendanceRows } = await client
     .from("attendance")
     .select("*")
@@ -58,9 +83,14 @@ export default async function ParentChildPage(props: { params: Promise<{ id: str
     .eq("student_id", child.id)
     .limit(1000);
   const att = { byLesson: attendanceRows ?? [] };
-  const payments = (await PaymentsService.listPayments({ studentId: child.id, pageSize: 50 })).items;
-  const grades = (await GradesService.listGrades({ studentId: child.id, pageSize: 50 })).items;
-  const homework = await HomeworkService.homeworkForStudent(child.id);
+  const [paymentsPage, gradesPage, homework] = await Promise.all([
+    PaymentsService.listPayments({ studentId: child.id, pageSize: 50 }, user.academy_id),
+    GradesService.listGrades({ studentId: child.id, pageSize: 50 }, user.academy_id),
+    HomeworkService.homeworkForStudent(child.id, user.academy_id),
+  ]);
+  const payments = paymentsPage.items;
+  const grades = gradesPage.items;
+  const exams = await GradesService.listExams(user.academy_id);
   const lessons = (await studentLessons(child.id, user.academy_id, groups as any)).slice(0, 10);
   const notes = MiscService.notesForStudent(child.id);
 
@@ -148,7 +178,7 @@ export default async function ParentChildPage(props: { params: Promise<{ id: str
               <TableHeader><TableRow><TableHead>{en ? "Exam" : "الاختبار"}</TableHead><TableHead>{en ? "Score" : "الدرجة"}</TableHead><TableHead>%</TableHead><TableHead>{en ? "Rating" : "التقدير"}</TableHead></TableRow></TableHeader>
               <TableBody>
                 {grades.map((g) => {
-                  const exam = collections().exams.find((e) => e.id === g.exam_id);
+                  const exam = exams.find((e) => e.id === g.exam_id);
                   const lvl = g.level ?? performanceLevel(g.percentage ?? 0);
                   return (
                     <TableRow key={g.id}>
@@ -198,7 +228,7 @@ export default async function ParentChildPage(props: { params: Promise<{ id: str
             </Table>
           </CardContent></Card>
         }
-        notes={<StudentNotes studentId={child.id} notes={notes} />}
+        notes={<StudentNotes studentId={child.id} notes={notes} readOnly />}
       />
     </div>
   );

@@ -92,7 +92,7 @@ export default async function ParentChildPage(props: { params: Promise<{ id: str
   const grades = gradesPage.items;
   const exams = await GradesService.listExams(user.academy_id);
   const lessons = (await studentLessons(child.id, user.academy_id, groups as any)).slice(0, 10);
-  const notes = MiscService.notesForStudent(child.id);
+  const notes = MiscService.notesForStudent(child.id, user.academy_id);
 
   return (
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>

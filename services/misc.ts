@@ -89,8 +89,8 @@ export async function listTeachers(academyId?: string): Promise<Teacher[]> {
 
 /* ---------------- Notes ---------------- */
 
-export function notesForStudent(studentId: string): Note[] {
-  return byAcademy(collections().notes)
+export function notesForStudent(studentId: string, academyId?: string): Note[] {
+  return byAcademy(collections().notes, academyId)
     .filter((n) => n.student_id === studentId)
     .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
 }

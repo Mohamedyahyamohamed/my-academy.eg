@@ -45,6 +45,13 @@ const tenantSnapshots =
   globalThis.__MY_ACADEMY_TENANT_SNAPSHOTS__ ??
   (globalThis.__MY_ACADEMY_TENANT_SNAPSHOTS__ = new Map<string, SeedData>());
 
+// Keep navigation fast by reusing a tenant snapshot briefly. Writes can call
+// invalidateStore(), while a short TTL prevents an idle warm instance from
+// serving an indefinitely stale view. The snapshot is still keyed by academy.
+const TENANT_SNAPSHOT_TTL_MS = 15_000;
+const tenantSnapshotLoadedAt = new Map<string, number>();
+const tenantHydrationPromises = new Map<string, Promise<SeedData | null>>();
+
 function activeAcademyId(): string | null {
   return getRequestAcademyId();
 }
@@ -81,16 +88,39 @@ export const collections = (): SeedData => {
  */
 export async function ensureStoreLoaded(academyId?: string): Promise<void> {
   if (!isSupabaseConfigured() || !academyId) return;
-  const data = await hydrateFromSupabase(academyId);
+
+  const now = Date.now();
+  const cached = tenantSnapshots.get(academyId);
+  const loadedAt = tenantSnapshotLoadedAt.get(academyId) ?? 0;
+  if (cached && now - loadedAt < TENANT_SNAPSHOT_TTL_MS) {
+    requestData.enterWith(cached);
+    return;
+  }
+
+  // Several server components/actions can request the same tenant at once
+  // during an App Router navigation. Share one hydration promise instead of
+  // starting another full batch of Supabase reads for each caller.
+  let hydration = tenantHydrationPromises.get(academyId);
+  if (!hydration) {
+    hydration = hydrateFromSupabase(academyId);
+    tenantHydrationPromises.set(academyId, hydration);
+    void hydration.finally(() => tenantHydrationPromises.delete(academyId));
+  }
+
+  const data = await hydration;
   if (data) {
     tenantSnapshots.set(academyId, data);
+    tenantSnapshotLoadedAt.set(academyId, Date.now());
     requestData.enterWith(data);
   }
 }
 
 /** Discard the active academy snapshot after a destructive or bulk mutation. */
 export function invalidateStore(academyId = activeAcademyId() ?? undefined) {
-  if (academyId) tenantSnapshots.delete(academyId);
+  if (academyId) {
+    tenantSnapshots.delete(academyId);
+    tenantSnapshotLoadedAt.delete(academyId);
+  }
 }
 
 async function hydrateFromSupabase(academyId: string): Promise<SeedData | null> {
@@ -322,6 +352,7 @@ export async function persistInsert(table: string, row: any) {
       );
       throw new Error(`Could not save ${table}: ${error.message}`);
     }
+    invalidateStore(academyId ?? activeAcademyId() ?? undefined);
   } catch (error) {
     console.error(`persistInsert ${table} EXCEPTION:`, (error as Error)?.message);
     throw error;
@@ -351,6 +382,7 @@ export async function persistUpdate(table: string, id: string, patch: any) {
       );
       throw new Error(`Could not update ${table}: ${error.message}`);
     }
+    invalidateStore(academyId ?? activeAcademyId() ?? undefined);
   } catch (error) {
     console.error(`persistUpdate ${table} EXCEPTION:`, (error as Error)?.message);
     throw error;
@@ -385,6 +417,7 @@ export async function persistDelete(
       );
       throw new Error(`Could not delete from ${table}: ${error.message}`);
     }
+    invalidateStore(academyId ?? activeAcademyId() ?? undefined);
   } catch (error) {
     console.error(`persistDelete ${table} EXCEPTION:`, (error as Error)?.message);
     throw error;

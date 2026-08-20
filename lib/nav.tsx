@@ -171,6 +171,7 @@ export const SUPER_ADMIN_NAV: NavSection[] = [
   {
     titleAr: "النظام والدعم", titleEn: "System & Support",
     items: [
+      { titleAr: "الإعدادات", titleEn: "Settings", href: "/settings", icon: Settings },
       { titleAr: "المساعدة والدعم", titleEn: "Help & Support", href: "/support", icon: CircleHelp },
       { titleAr: "الخصوصية", titleEn: "Privacy", href: "/privacy", icon: Settings },
     ],

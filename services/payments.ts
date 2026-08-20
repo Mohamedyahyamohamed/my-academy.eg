@@ -78,8 +78,8 @@ export async function listPayments(
   };
 }
 
-export function getPayment(id: string): Payment | null {
-  const p = collections().payments.find((x) => x.id === id);
+export function getPayment(id: string, academyId?: string): Payment | null {
+  const p = collections().payments.find((x) => x.id === id && (!academyId || x.academy_id === academyId));
   return p ? attach(p) : null;
 }
 
@@ -162,8 +162,9 @@ export async function recordPayment(
   amount: number,
   method: string,
   note?: string,
+  academyId?: string,
 ): Promise<{ ok: boolean; error?: string; payment?: Payment }> {
-  const p = collections().payments.find((x) => x.id === paymentId);
+  const p = collections().payments.find((x) => x.id === paymentId && (!academyId || x.academy_id === academyId));
   if (!p) return { ok: false, error: "Payment not found." };
   if (amount <= 0) return { ok: false, error: "Amount must be positive." };
   const newPaid = p.amount_paid + amount;
@@ -193,9 +194,9 @@ export async function recordPayment(
   return { ok: true, payment: attach(p) };
 }
 
-export async function deletePayment(id: string): Promise<boolean> {
+export async function deletePayment(id: string, academyId?: string): Promise<boolean> {
   // Soft delete — never hard-delete financial records.
-  const p = collections().payments.find((x) => x.id === id);
+  const p = collections().payments.find((x) => x.id === id && (!academyId || x.academy_id === academyId));
   if (!p) return false;
   p.deleted_at = new Date().toISOString();
   await persistUpdate("payments", id, { deleted_at: p.deleted_at });

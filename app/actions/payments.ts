@@ -109,13 +109,13 @@ export async function recordPaymentAction(
   note?: string,
 ) {
   const user = await requirePaymentRecorder();
-  const payment = PaymentsService.getPayment(paymentId);
+  const payment = PaymentsService.getPayment(paymentId, user.academy_id);
   if (!payment || payment.academy_id !== user.academy_id) {
     throw new Error("Payment is outside the authenticated academy.");
   }
   await assertTeacherStudentScope(user, payment.student_id);
   const effectiveMethod = user.role === "TEACHER" ? "Cash" : method;
-  const res = await PaymentsService.recordPayment(paymentId, amount, effectiveMethod, note);
+  const res = await PaymentsService.recordPayment(paymentId, amount, effectiveMethod, note, user.academy_id);
   if (res.ok) {
     await import("@/services/audit").then((m) => m.audit(
       {
@@ -150,8 +150,8 @@ export async function recordPaymentAction(
 }
 
 export async function deletePaymentAction(id: string) {
-  await requireScopedRole("ADMIN");
-  await PaymentsService.deletePayment(id);
+  const user = await requireScopedRole("ADMIN");
+  await PaymentsService.deletePayment(id, user.academy_id);
   revalidatePath("/payments");
   revalidatePath("/dashboard");
 }

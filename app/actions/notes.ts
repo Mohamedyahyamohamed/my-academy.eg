@@ -15,7 +15,7 @@ export async function addNoteAction(studentId: string, content: string) {
 export async function deleteNoteAction(studentId: string, noteId: string) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
   if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage student notes.");
-  await MiscService.deleteNote(noteId);
+  await MiscService.deleteNote(noteId, studentId);
     void audit({ action: "note.delete" });
   revalidatePath(`/students/${studentId}`);
 }

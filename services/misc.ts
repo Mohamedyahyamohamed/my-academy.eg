@@ -102,9 +102,14 @@ export async function addNote(
   authorName: string,
   content: string,
 ): Promise<Note> {
+  const academyId = currentAcademyId();
+  const students = await fetchTableRLS<{ id: string }>("students", academyId);
+  if (!students.some((student) => student.id === studentId)) {
+    throw new Error("Student is outside the authenticated academy.");
+  }
   const n: Note = {
     id: crypto.randomUUID(),
-    academy_id: currentAcademyId(),
+    academy_id: academyId,
     student_id: studentId,
     author_id: authorId,
     author_name: authorName,
@@ -116,9 +121,13 @@ export async function addNote(
   return n;
 }
 
-export async function deleteNote(id: string): Promise<boolean> {
+export async function deleteNote(id: string, studentId: string): Promise<boolean> {
+  const academyId = currentAcademyId();
+  const note = byAcademy(collections().notes, academyId)
+    .find((item) => item.id === id && item.student_id === studentId);
+  if (!note) return false;
   const before = collections().notes.length;
-  collections().notes = collections().notes.filter((n) => n.id !== id);
+  collections().notes = collections().notes.filter((item) => item.id !== id);
   await persistDelete("notes", { id });
   return collections().notes.length < before;
 }

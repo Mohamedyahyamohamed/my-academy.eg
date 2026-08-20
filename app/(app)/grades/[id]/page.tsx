@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GradeEntry } from "@/components/grades/grade-entry";
 import { GradesService, requireScopedRole } from "@/services";
-import { collections } from "@/services/data/store";
+import { fetchTableRLS } from "@/services/_shared";
 import { fullName, formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -19,9 +19,10 @@ export default async function ExamGradePage(props: { params: Promise<{ id: strin
   const exam = await GradesService.getExam(params.id, user.academy_id);
   if (!exam) notFound();
   const roster = await GradesService.gradesForExam(params.id, user.academy_id);
+  const students = await fetchTableRLS<any>("students", user.academy_id);
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
   const rosterNamed = roster.map((r) => {
-    const s = collections().students.find((x) => x.id === r.studentId);
+    const s = students.find((x: any) => x.id === r.studentId);
     return {
       studentId: r.studentId,
       score: r.score,

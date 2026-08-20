@@ -9,7 +9,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreateHomeworkDialog } from "@/components/homework/create-homework-dialog";
 import { HomeworkService, GroupsService, requireScopedRole } from "@/services";
-import { collections } from "@/services/data/store";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -30,16 +29,11 @@ export default async function HomeworkPage(
     pageSize: 12,
   }, user.academy_id, user.id);
   const groups = await GroupsService.listGroups("", user.academy_id, user.id, user.email);
+  const submissionCounts = await HomeworkService.submissionStats(
+    result.items.map((homework) => homework.id),
+    user.academy_id,
+  );
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
-
-  const subStats = (hwId: string) => {
-    const subs = collections().submissions.filter((s) => s.homework_id === hwId);
-    return {
-      total: subs.length,
-      submitted: subs.filter((s) => s.status !== "PENDING").length,
-      reviewed: subs.filter((s) => s.status === "REVIEWED").length,
-    };
-  };
 
   return (
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
@@ -70,7 +64,7 @@ export default async function HomeworkPage(
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {result.items.map((h) => {
-            const stats = subStats(h.id);
+            const stats = submissionCounts[h.id] ?? { total: 0, submitted: 0, reviewed: 0 };
             const overdue = new Date(h.deadline).getTime() < Date.now();
             return (
               <Link key={h.id} href={`/homework/${h.id}`}>

@@ -18,8 +18,15 @@ export default async function GradesPage() {
   const courses = await MiscService.listCourses(user.academy_id);
   const groups = await GroupsService.listGroups("", user.academy_id);
   // Pre-fetch all grades to compute counts (avoids await inside .map()).
-  const allGrades = (await GradesService.listGrades({ pageSize: 5000 }, user.academy_id)).items;
-  const gradeCountFor = (examId: string) => allGrades.filter((g: any) => g.exam_id === examId).length;
+  const allGrades = (await GradesService.listGrades({ pageSize: 5000 }, user.academy_id, user.id)).items;
+  const gradeStats = new Map<string, { count: number; average: number }>();
+  for (const exam of exams) {
+    const examGrades = allGrades.filter((grade) => grade.exam_id === exam.id);
+    const average = examGrades.length
+      ? Math.round(examGrades.reduce((sum, grade) => sum + (grade.score / exam.max_score) * 100, 0) / examGrades.length)
+      : 0;
+    gradeStats.set(exam.id, { count: examGrades.length, average });
+  }
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
 
   return (
@@ -41,9 +48,10 @@ export default async function GradesPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {exams.map((e) => {
-            const avg = GradesService.examAverage(e.id);
+            const stats = gradeStats.get(e.id) ?? { count: 0, average: 0 };
+            const avg = stats.average;
             const level = performanceLevel(avg);
-            const count = gradeCountFor(e.id);
+            const count = stats.count;
             return (
               <Link key={e.id} href={`/grades/${e.id}`}>
                 <Card className="h-full transition-shadow hover:shadow-elevated">
@@ -58,7 +66,7 @@ export default async function GradesPage() {
                       </span>
                     </div>
                     <div className="mt-4 flex items-center justify-between">
-                      <Badge variant="secondary">{gradeCountFor(e.id)} {en ? "grades recorded" : "درجات مسجّلة"}</Badge>
+                      <Badge variant="secondary">{count} {en ? "grades recorded" : "درجات مسجّلة"}</Badge>
                       <div className="text-right">
                         <p className="text-lg font-semibold">{avg}%</p>
                         <p className="text-[11px] text-muted-foreground">{en ? "Group average" : "متوسط المجموعة"}</p>

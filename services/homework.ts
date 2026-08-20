@@ -259,6 +259,50 @@ export async function listSubmissions(
     .sort((a: any, b: any) => fullName(a.student!).localeCompare(fullName(b.student!)));
 }
 
+export interface HomeworkSubmissionStats {
+  total: number;
+  submitted: number;
+  reviewed: number;
+}
+
+/** Live submission counts for teacher homework cards, scoped by tenant homework ids. */
+export async function submissionStats(
+  homeworkIds: string[],
+  academyId?: string,
+): Promise<Record<string, HomeworkSubmissionStats>> {
+  if (!homeworkIds.length) return {};
+  const aid = academyId ?? currentAcademyId();
+  const homeworkRows = (await fetchTableRLS<Homework>("homework", aid)).filter((row) => homeworkIds.includes(row.id));
+  let submissions = (await fetchTableRLS<any>("homework_submissions", aid)).filter((row: any) => homeworkIds.includes(row.homework_id));
+
+  if (aid && isSupabaseConfigured()) {
+    const admin = nodeSupabaseClient();
+    if (admin) {
+      const { data: liveSubmissions, error } = await admin
+        .from("homework_submissions")
+        .select("homework_id,status")
+        .in("homework_id", homeworkIds)
+        .limit(5000);
+      if (!error) submissions = liveSubmissions ?? [];
+    }
+  }
+
+  const rosterCounts = new Map<string, number>();
+  const groupIds = [...new Set(homeworkRows.map((row) => row.group_id))];
+  const rosters = await Promise.all(groupIds.map(async (groupId) => [groupId, (await fetchGroupStudentIds(groupId)).length] as const));
+  for (const [groupId, count] of rosters) rosterCounts.set(groupId, count);
+
+  return Object.fromEntries(homeworkIds.map((homeworkId) => {
+    const rows = submissions.filter((row: any) => row.homework_id === homeworkId);
+    const homework = homeworkRows.find((row) => row.id === homeworkId);
+    return [homeworkId, {
+      total: Math.max(rows.length, homework ? (rosterCounts.get(homework.group_id) ?? 0) : 0),
+      submitted: rows.filter((row: any) => row.status !== "PENDING").length,
+      reviewed: rows.filter((row: any) => row.status === "REVIEWED").length,
+    }];
+  }));
+}
+
 export async function submitHomework(
   homeworkId: string,
   studentId: string,

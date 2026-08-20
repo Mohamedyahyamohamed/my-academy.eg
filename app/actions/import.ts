@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireScopedRole, currentAcademyId, isLimitedAssistant } from "@/services";
+import { requireScopedRole, isLimitedAssistant } from "@/services";
 import { collections, invalidateStore } from "@/services/data/store";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { audit } from "@/services/audit";
@@ -56,7 +56,8 @@ export async function importStudentsAction(rows: ImportRow[], requestedAcademyId
     if (academyError || !academy) return { ok: false, error: "الأكاديمية المختارة غير موجودة." };
     if (academy.is_active === false) return { ok: false, error: "لا يمكن الاستيراد إلى أكاديمية غير نشطة." };
   } else {
-    aid = currentAcademyId();
+    aid = user.academy_id ?? "";
+    if (!aid) return { ok: false, error: "لا يوجد سياق أكاديمية صالح لحسابك." };
   }
 
   if (!rows || rows.length === 0) return { ok: false, error: "مفيش بيانات للاستيراد." };

@@ -23,20 +23,16 @@ export default async function AuthenticatedLayout({
   const restriction = await getAccessRestriction(user);
   if (restriction.blocked) redirect(`/suspended?reason=${restriction.reason}`);
 
-  // Production data is hydrated only after resolving the academy from the
-  // signed server session, keeping each request isolated to its tenant.
-  // A stale session must not turn into a 500 or reveal a different tenant.
+  // Resolve only the small academy record needed by the shell. Do not hydrate
+  // every tenant table here: this layout wraps every internal navigation, and
+  // a full snapshot is far more expensive than the page-specific RLS reads.
   const activeMembership = user.memberships?.find((membership) => membership.academy_id === user.academy_id);
   let academyName = activeMembership?.academy_name ?? "MY Academy";
   try {
-    await ensureStoreLoaded(user.academy_id);
     const academy = await MiscService.getAcademyAsync(user.academy_id);
     academyName = academy.name;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    // The signed session already contains the explicitly selected active
-    // membership. Keep the shell available during a cold-start snapshot miss;
-    // page data still comes from tenant-scoped RLS queries.
     if (!message.includes("Academy data is unavailable") && !message.includes("Missing authenticated academy context")) {
       throw error;
     }
@@ -53,11 +49,9 @@ export default async function AuthenticatedLayout({
   let studentCount = 0;
   let groupCount = 0;
   if (shouldCheckOnboarding) {
-    // The user has already been authenticated and the academy snapshot has
-    // already been hydrated above. Filter the snapshot explicitly here instead
-    // of calling helpers that depend on AsyncLocalStorage during layout render.
-    // This keeps first-login onboarding safe even when the layout and page are
-    // rendered in separate server contexts.
+    // Onboarding is the only layout concern that needs the complete snapshot.
+    // Keep this exceptional path out of normal page navigation.
+    await ensureStoreLoaded(user.academy_id);
     const snapshot = collections();
     teacherCount = snapshot.teachers.filter((item) => item.academy_id === user.academy_id).length;
     studentCount = snapshot.students.filter((item) => item.academy_id === user.academy_id).length;

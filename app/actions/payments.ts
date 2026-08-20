@@ -82,6 +82,7 @@ export async function createPaymentAction(input: CreatePaymentInput) {
   if (!res.ok) return res;
   await import("@/services/audit").then((m) => m.audit(
     {
+      academy_id: user.academy_id,
       action: "payment.create",
       entity_type: "payment",
       entity_id: res.payment?.id,
@@ -118,6 +119,7 @@ export async function recordPaymentAction(
   if (res.ok) {
     await import("@/services/audit").then((m) => m.audit(
       {
+        academy_id: user.academy_id,
         action: "payment.record",
         entity_type: "payment",
         entity_id: paymentId,

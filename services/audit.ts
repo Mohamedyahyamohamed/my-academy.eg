@@ -8,6 +8,7 @@ import { headers } from "next/headers";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
 export interface AuditEntry {
+  academy_id?: string;
   action: string;
   entity_type?: string;
   entity_id?: string;
@@ -37,7 +38,7 @@ export interface AuditLog {
  * Log an audit entry. Reads the current user + academy from the session.
  * Best-effort: never throws (don't break the main operation).
  */
-export async function audit(entry: AuditEntry, actor?: { id: string; role: string }): Promise<void> {
+export async function audit(entry: AuditEntry, actor?: { id: string; role: string; academy_id?: string }): Promise<void> {
   try {
     const now = new Date().toISOString();
     let ip: string | null = null;
@@ -48,9 +49,19 @@ export async function audit(entry: AuditEntry, actor?: { id: string; role: strin
       ua = h.get("user-agent") ?? null;
     } catch {}
 
+    let academyId = entry.academy_id ?? actor?.academy_id ?? null;
+    if (!academyId) {
+      try {
+        academyId = currentAcademyId();
+      } catch {
+        // Explicit academy context is preferred; skip persistence if none exists.
+      }
+    }
+    if (!academyId) return;
+
     const log: AuditLog = {
       id: crypto.randomUUID(),
-      academy_id: currentAcademyId(),
+      academy_id: academyId,
       actor_user_id: actor?.id ?? null,
       actor_role: actor?.role ?? null,
       action: entry.action,

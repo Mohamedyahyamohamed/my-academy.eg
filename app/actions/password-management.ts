@@ -12,10 +12,13 @@ function isPrivilegedOwner(role: string) {
   return role === "ADMIN" || role === "SUPER_ADMIN";
 }
 
-function safePasswordError(message: string) {
+function safePasswordError(message: string, status?: number | null) {
   const lowered = message.toLowerCase();
   if (["breach", "compromised", "leaked", "pwned", "common", "weak_password"].some((term) => lowered.includes(term))) {
     return "كلمة المرور شائعة أو ظهرت في تسريب بيانات. استخدم كلمة مرور أطول وفريدة ومتنوعة الأحرف.";
+  }
+  if (status === 500 || lowered.includes("unexpected_failure") || lowered.includes("authretryablefetcherror")) {
+    return "تعذر الوصول إلى خدمة المصادقة مؤقتًا. حدّث الصفحة وحاول مرة أخرى.";
   }
   return "تعذر تحديث كلمة المرور. تحقق من السياسة وحاول مرة أخرى.";
 }
@@ -158,7 +161,7 @@ export async function resetUserPasswordAction(
       errorCode: updateError.code,
       errorStatus: updateError.status,
     });
-    return { ok: false, error: safePasswordError(updateError.message) };
+    return { ok: false, error: safePasswordError(updateError.message, updateError.status) };
   }
 
   await writePasswordAudit(client, {

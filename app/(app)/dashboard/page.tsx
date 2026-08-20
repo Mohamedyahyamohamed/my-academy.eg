@@ -76,7 +76,6 @@ export default async function DashboardPage(
     { href: "/students", label: en ? "Add student" : "إضافة طالب", icon: Users },
     { href: "/groups", label: en ? "Create group" : "إنشاء مجموعة", icon: UsersRound },
     { href: "/lessons", label: en ? "View lessons" : "عرض الحصص", icon: BookOpen },
-    { href: "/attendance", label: en ? "Take attendance" : "تسجيل الحضور", icon: CalendarCheck },
   ];
   const setupSteps = [
       teachers.length === 0
@@ -228,7 +227,6 @@ export default async function DashboardPage(
           value={`${d.attendanceRate}%`}
           icon={CalendarCheck}
           accent="info"
-          href="/attendance"
         />
         <StatCard
           label={en ? "Average grade" : "متوسط الدرجات"}

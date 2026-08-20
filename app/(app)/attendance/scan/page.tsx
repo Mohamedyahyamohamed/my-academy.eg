@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/shared/page-header";
 import { ScanWorkshop } from "@/components/attendance/scan-workshop";
-import { GroupsService, LessonsService, StudentsService, currentTeacherId, requireScopedRole } from "@/services";
+import { GroupsService, LessonsService, StudentsService, currentTeacherId, requireAttendanceTeacher } from "@/services";
 import { collections } from "@/services/data/store";
 import { cookies } from "next/headers";
 import { getLangFromCookie, isRTL } from "@/lib/i18n";
@@ -8,7 +8,7 @@ import { getLangFromCookie, isRTL } from "@/lib/i18n";
 export const dynamic = "force-dynamic";
 
 export default async function ScanAttendancePage() {
-  const user = await requireScopedRole("TEACHER");
+  const user = await requireAttendanceTeacher();
   const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
   const en = lang === "en";
   const teacherProfileId = currentTeacherId() ?? undefined;

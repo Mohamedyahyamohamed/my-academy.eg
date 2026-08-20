@@ -29,7 +29,7 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   SUPER_ADMIN: [
     "academy.manage", "academy.billing.manage", "academy.members.manage",
     "students.read", "students.manage", "groups.read", "groups.manage",
-    "lessons.read", "lessons.manage", "lessons.write", "courses.read", "courses.write", "content.upload", "content.progress", "attendance.record", "grades.record",
+    "lessons.read", "lessons.manage", "lessons.write", "courses.read", "courses.write", "content.upload", "content.progress", "grades.record",
     "homework.manage", "homework.submit", "payments.read_own", "payments.manage",
     "reports.read", "messages.send", "audit.read",
   ],

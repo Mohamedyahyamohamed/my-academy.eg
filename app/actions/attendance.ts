@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireScopedRole, AttendanceService } from "@/services";
+import { requireAttendanceTeacher, requireScopedRole, AttendanceService } from "@/services";
 import type { AttendanceStatus } from "@/types";
 import { audit } from "@/services/audit";
 
@@ -25,7 +25,7 @@ export async function checkinAction(lessonId: string) {
 
 /** Teacher scans a student's personal QR → records them present for an explicit or active lesson. */
 export async function scanCheckinAction(lessonId: string | null | undefined, studentId: string) {
-  const user = await requireScopedRole("TEACHER");
+  const user = await requireAttendanceTeacher();
 
   // Rate limit QR scans.
   const { rateLimit, LIMITS } = await import("@/lib/rate-limit-redis");
@@ -69,7 +69,7 @@ export async function saveAttendanceAction(
 ): Promise<AttendanceSaveResult> {
   // Keep authentication/authorization redirects outside the error boundary. Next.js
   // implements redirects by throwing a control-flow error that must propagate.
-  const user = await requireScopedRole("TEACHER");
+  const user = await requireAttendanceTeacher();
 
   try {
     await AttendanceService.saveAttendance(lessonId, entries);

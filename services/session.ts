@@ -246,6 +246,17 @@ export async function requireScopedRole(...roles: Role[]): Promise<SessionUser> 
   return sessionUser;
 }
 
+/**
+ * Attendance is an operational teacher workflow. Platform and academy owners
+ * may manage the academy, but they must not record attendance. Assistants share
+ * the TEACHER role and remain allowed through the existing server-derived scope.
+ */
+export async function requireAttendanceTeacher(): Promise<SessionUser> {
+  const user = await requireScopedRole("TEACHER");
+  if (user.role !== "TEACHER") redirect(roleHome(user.role));
+  return user;
+}
+
 /** The teacher record id of the current user, or null if they're not a teacher. */
 export function currentTeacherId(): string | null {
   const u = getCurrentUser();

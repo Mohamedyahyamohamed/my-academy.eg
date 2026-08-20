@@ -20,6 +20,7 @@ import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { PLANS } from "@/services/saas";
 import { PlatformAcademyControls, PlatformUserControls, PlatformSubscriptionControls } from "@/components/platform/platform-admin-controls";
 import { PlatformUserHierarchy, type PlatformHierarchyAcademy } from "@/components/platform/platform-user-hierarchy";
+import { UserPasswordManagement } from "@/components/settings/user-password-management";
 import { cookies } from "next/headers";
 import { getLangFromCookie } from "@/lib/i18n";
 import { isPlatformOwnerEmail } from "@/lib/auth";
@@ -82,6 +83,7 @@ export default async function PlatformPage(props: { searchParams?: Promise<{ tab
   const ownerAcademyId = profileRows.find((profile: any) => isPlatformOwnerEmail(profile.email))?.academy_id;
   const managedAcademies = academyRows.filter((academy: any) => academy.id !== ownerAcademyId);
   const managedAcademyIds = new Set(managedAcademies.map((academy: any) => academy.id));
+  const academyNameById = new Map(managedAcademies.map((academy: any) => [academy.id, academy.name]));
   const managedPayments = (payments ?? []).filter((row: any) => managedAcademyIds.has(row.academy_id));
   const managedLifecycleEvents = (lifecycleEvents ?? []).filter((row: any) => managedAcademyIds.has(row.academy_id));
   const managedBillingEvents = (billingEvents ?? []).filter((row: any) => managedAcademyIds.has(row.academy_id));
@@ -180,7 +182,7 @@ export default async function PlatformPage(props: { searchParams?: Promise<{ tab
       {activeTab === "billing" ? (
         <SubscriptionsTab en={en} academies={managedAcademies} subscriptions={subscriptionRows} sumPaid={sumPaid} />
       ) : activeTab === "users" ? (
-        <PlatformUsersTab en={en} users={managedUsers.map((profile: any) => ({ id: profile.id, email: profile.email ?? (en ? "No email" : "بدون بريد"), role: profile.role, is_active: profile.is_active }))} hierarchyAcademies={hierarchyAcademies} />
+        <PlatformUsersTab en={en} users={managedUsers.map((profile: any) => ({ id: profile.id, full_name: profile.full_name, email: profile.email ?? (en ? "No email" : "بدون بريد"), role: profile.role, is_active: profile.is_active, academy_name: academyNameById.get(profile.academy_id) ?? null }))} hierarchyAcademies={hierarchyAcademies} />
       ) : <>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard icon={<Banknote className="h-4 w-4" />} label={en ? "Actual monthly SaaS revenue" : "إيراد SaaS شهري فعلي"} value={EGP(mrr, en)} hint={`${activeSubscriptions.length} ${en ? "active subscriptions" : "اشتراك نشط"}`} tone="emerald" />
@@ -295,7 +297,7 @@ export default async function PlatformPage(props: { searchParams?: Promise<{ tab
   );
 }
 
-function PlatformUsersTab({ en, users, hierarchyAcademies }: { en: boolean; users: Array<{ id: string; email: string; role: string; is_active: boolean }>; hierarchyAcademies: PlatformHierarchyAcademy[] }) {
+function PlatformUsersTab({ en, users, hierarchyAcademies }: { en: boolean; users: Array<{ id: string; full_name?: string | null; email: string; role: string; is_active: boolean; academy_name?: string | null }>; hierarchyAcademies: PlatformHierarchyAcademy[] }) {
   return (
     <Card>
       <CardContent className="space-y-4 p-5">
@@ -303,6 +305,7 @@ function PlatformUsersTab({ en, users, hierarchyAcademies }: { en: boolean; user
           <h2 className="font-semibold">{en ? "Platform user management" : "إدارة مستخدمي المنصة"}</h2>
           <p className="text-xs text-muted-foreground">{en ? "Suspend or delete managed accounts without entering an academy workspace." : "يمكنك مراجعة مستخدمي الأكاديميات وإيقاف أو حذف الحسابات من دون الدخول إلى مساحة أكاديمية."}</p>
         </div>
+        <UserPasswordManagement lang={en ? "en" : "ar"} users={users} title={en ? "Platform user password management" : "إدارة كلمات مرور مستخدمي المنصة"} description={en ? "Platform owners can reset synthetic academy accounts. Authorization is checked again on the server." : "يمكن لمالك المنصة إعادة تعيين كلمات مرور الحسابات الاصطناعية، مع إعادة فحص الصلاحيات على الخادم."} />
         <PlatformUserHierarchy en={en} academies={hierarchyAcademies} />
         <details className="border-t pt-4">
           <summary className="cursor-pointer text-sm font-medium">{en ? "Administrative account actions" : "إجراءات الحسابات الإدارية"}</summary>

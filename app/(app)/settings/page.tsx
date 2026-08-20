@@ -13,6 +13,7 @@ import { AssistantManager } from "@/components/settings/assistant-manager";
 import { DirectAccountManager } from "@/components/settings/direct-account-manager";
 import { listAcademyInvites } from "@/app/actions/invites";
 import { ChangePasswordForm } from "@/components/settings/change-password";
+import { UserPasswordManagement } from "@/components/settings/user-password-management";
 import { GroupsService, MiscService, requireScopedRole } from "@/services";
 import { initials } from "@/lib/utils";
 import { PAYMENT_METHODS, paymentMethodLabel } from "@/lib/constants";
@@ -125,7 +126,7 @@ export default async function SettingsPage({
 
         <TabsContent value="courses"><Card><CardHeader><CardTitle className="text-base">{text.coursesTitle}</CardTitle><CardDescription>{text.coursesDescription}</CardDescription></CardHeader><CardContent><CoursesManager courses={courses} /></CardContent></Card></TabsContent>
         <TabsContent value="payments"><Card><CardHeader><CardTitle className="text-base">{text.paymentTitle}</CardTitle><CardDescription>{text.paymentDescription}</CardDescription></CardHeader><CardContent><div className="flex flex-wrap gap-2">{PAYMENT_METHODS.map((m) => <Badge key={m} variant="secondary">{paymentMethodLabel(m, lang === "en")}</Badge>)}</div></CardContent></Card></TabsContent>
-        <TabsContent value="security"><ChangePasswordForm /></TabsContent>
+        <TabsContent value="security"><div className="space-y-4"><ChangePasswordForm /><UserPasswordManagement lang={lang} users={users.map((profile: any) => ({ id: profile.id, full_name: profile.full_name, email: profile.email, role: profile.role, is_active: profile.is_active, academy_name: academy.name }))} /></div></TabsContent>
 
         <TabsContent value="roles">
           <Card>

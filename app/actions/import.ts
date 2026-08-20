@@ -14,18 +14,35 @@ export interface ImportRow {
  * Bulk import students (+ optional parents) from parsed CSV rows.
  * Uses the service-role client directly so we can check + report errors.
  */
-export async function importStudentsAction(rows: ImportRow[]) {
+export async function importStudentsAction(rows: ImportRow[], requestedAcademyId?: string) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
   if (await isLimitedAssistant(user)) {
     return { ok: false, error: "حساب المساعد لا يملك صلاحية استيراد الطلاب." };
   }
-  const aid = currentAcademyId();
-  if (!aid) return { ok: false, error: "لا توجد أكاديمية." };
-  if (!rows || rows.length === 0) return { ok: false, error: "مفيش بيانات للاستيراد." };
-  if (rows.length > 1000) return { ok: false, error: "الحد الأقصى للاستيراد في المرة الواحدة هو 1000 طالب." };
 
   const client = nodeSupabaseClient();
   if (!client) return { ok: false, error: "Supabase not configured." };
+
+  // Platform owners do not necessarily have an academy_id in their session.
+  // They must select the target tenant explicitly; regular users stay bound to
+  // the authenticated academy context and cannot override it from the client.
+  let aid: string;
+  if (user.role === "SUPER_ADMIN") {
+    aid = requestedAcademyId?.trim() ?? "";
+    if (!aid) return { ok: false, error: "اختر الأكاديمية المستهدفة قبل الاستيراد." };
+    const { data: academy, error: academyError } = await client
+      .from("academies")
+      .select("id,is_active")
+      .eq("id", aid)
+      .maybeSingle();
+    if (academyError || !academy) return { ok: false, error: "الأكاديمية المختارة غير موجودة." };
+    if (academy.is_active === false) return { ok: false, error: "لا يمكن الاستيراد إلى أكاديمية غير نشطة." };
+  } else {
+    aid = currentAcademyId();
+  }
+
+  if (!rows || rows.length === 0) return { ok: false, error: "مفيش بيانات للاستيراد." };
+  if (rows.length > 1000) return { ok: false, error: "الحد الأقصى للاستيراد في المرة الواحدة هو 1000 طالب." };
 
   // ── منع التكرار: جيب الطلاب الموجودين وابني مفتاح فريد لكل واحد ──
   const norm = (s?: string | null) => (s ?? "").trim().toLowerCase();

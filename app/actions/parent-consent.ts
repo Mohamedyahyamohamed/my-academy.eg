@@ -78,7 +78,12 @@ export async function createParentConsentRequestAction(input: {
     action: "student.consent_request.create",
     entity_type: "student",
     entity_id: student.id,
-    metadata: { expires_at: expiresAt, parent_email: parentEmail, consent_version: CONSENT_VERSION },
+    metadata: {
+        expires_at: expiresAt,
+        parent_email: parentEmail,
+        consent_version: CONSENT_VERSION,
+        source: "admin-generated-parent-consent-link",
+      },
   }, actor);
   return { ok: true, url: `${appUrl()}/consent/${token}`, expiresAt };
 }
@@ -175,13 +180,14 @@ export async function approveParentConsentAction(input: {
     entity_type: "student",
     entity_id: request.student_id,
       metadata: {
-      consent_at: now,
-      consent_by: consentBy,
-      parent_id: request.parent_id,
-      approved_by_email: parentEmail,
-      consent_version: request.consent_version || CONSENT_VERSION,
-      request_id: request.id,
-    },
+        consent_at: now,
+        consent_by: consentBy,
+        parent_id: request.parent_id,
+        approved_by_email: parentEmail,
+        consent_version: request.consent_version || CONSENT_VERSION,
+        request_id: request.id,
+        source: "parent-consent-link",
+      },
   }, consentBy ? { id: consentBy, role: "PARENT" } : undefined);
   revalidatePath(`/students/${request.student_id}`);
   revalidatePath("/students");

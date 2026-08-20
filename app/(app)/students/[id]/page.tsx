@@ -48,6 +48,7 @@ import {
   roleHome,
 } from "@/services";
 import { setRequestContext } from "@/services/request-context";
+import { listAuditLogs } from "@/services/audit";
 import { groupsForStudent } from "@/services/_shared";
 import { collections } from "@/services/data/store";
 import { formatCurrency, formatDate, formatClockTime } from "@/lib/utils";
@@ -104,6 +105,12 @@ export default async function StudentProfilePage(
   // Platform owners may not have an active academy context. Resolve the
   // student's academy explicitly so the read-only profile does not crash.
   const academy = await MiscService.getAcademyAsync(detail.academy_id);
+  const consentAudit = detail.consent_given === true
+    ? (await listAuditLogs({ action: "student.consent.approve", entity_type: "student", page: 1, pageSize: 50 }, detail.academy_id)).items.find((entry) => entry.entity_id === detail.id)
+    : null;
+  const consentSource = typeof consentAudit?.metadata?.source === "string"
+    ? consentAudit.metadata.source
+    : detail.consent_given === true ? (en ? "Recorded consent" : "موافقة مسجلة") : null;
 
   return (
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
@@ -175,6 +182,7 @@ export default async function StudentProfilePage(
               <InfoItem icon={FileText} label={en ? "Policy version" : "إصدار السياسة"} value={detail.consent_version || "—"} />
               <InfoItem icon={CalendarCheck} label={en ? "Accepted at" : "وقت القبول"} value={detail.consent_at ? formatDate(detail.consent_at, undefined, en ? "en-EG" : "ar-EG") : "—"} />
               <InfoItem icon={User} label={en ? "Actor" : "المنفّذ"} value={detail.consent_by || "—"} />
+              <InfoItem icon={FileText} label={en ? "Source" : "المصدر"} value={consentSource || "—"} />
             </div>
             {!detail.consent_given && <ParentConsentLink studentId={detail.id} en={en} />}
           </div>

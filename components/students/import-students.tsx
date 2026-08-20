@@ -19,6 +19,8 @@ const EXAMPLE_AR =
 const EXAMPLE_EN =
   "first_name,last_name,phone,grade,school,parent_name,parent_phone\nAhmed,Mahmoud,01012345678,Grade 3,Al Noor,Sara Mahmoud,01012345678\nMaryem,Ali,01098765432,Grade 2,Al Salam,Fatima Ali,01098765432";
 
+type ImportAcademy = { id: string; name: string };
+
 function parseCSV(text: string): ImportRow[] {
   const lines = text.trim().split(/\r?\n/).filter((l) => l.trim());
   if (lines.length === 0) return [];
@@ -58,12 +60,13 @@ function parseCSV(text: string): ImportRow[] {
   return rows;
 }
 
-export function ImportStudents() {
+export function ImportStudents({ academies = [], isPlatformOwner = false }: { academies?: ImportAcademy[]; isPlatformOwner?: boolean }) {
   const router = useRouter();
   const en = useClientLang() === "en";
   const [text, setText] = React.useState("");
   const [loading, setLoading] = React.useState(false);
-  const [result, setResult] = React.useState<null | { created: number; errors: string[] }>(null);
+  const [academyId, setAcademyId] = React.useState(academies[0]?.id ?? "");
+  const [result, setResult] = React.useState<null | { created: number; skippedDup: number; errors: string[] }>(null);
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -84,6 +87,10 @@ export function ImportStudents() {
 
   const doImport = async () => {
     const rows = parseCSV(text);
+    if (isPlatformOwner && !academyId) {
+      toast.error(en ? "Select the target academy first." : "اختر الأكاديمية المستهدفة أولًا.");
+      return;
+    }
     if (rows.length === 0) {
       toast.error(en ? "No data. Paste students or upload a file." : "مفيش بيانات. الصق الطلاب أو ارفع ملف.");
       return;
@@ -91,11 +98,11 @@ export function ImportStudents() {
     setLoading(true);
     setResult(null);
     try {
-      const res = await importStudentsAction(rows);
+      const res = await importStudentsAction(rows, isPlatformOwner ? academyId : undefined);
       if (res.ok === false) {
         toast.error(res.error ?? (en ? "Import failed." : "فشل الاستيراد"));
       } else {
-        setResult({ created: res.created ?? 0, errors: res.errors ?? [] });
+        setResult({ created: res.created ?? 0, skippedDup: res.skippedDup ?? 0, errors: res.errors ?? [] });
         toast.success(en ? `${res.created} student(s) imported.` : `تم استيراد ${res.created} طالب 🎉`);
         router.refresh();
       }
@@ -119,6 +126,28 @@ export function ImportStudents() {
               <Upload className="me-2 h-4 w-4" /> {en ? "Download CSV template" : "نزّل قالب CSV"}
             </Button>
           </div>
+
+          {isPlatformOwner && (
+            <div className="space-y-1.5">
+              <Label htmlFor="import-academy">{en ? "Target academy" : "الأكاديمية المستهدفة"}</Label>
+              <select
+                id="import-academy"
+                value={academyId}
+                onChange={(event) => setAcademyId(event.target.value)}
+                disabled={loading || academies.length === 0}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                {academies.length === 0 ? (
+                  <option value="">{en ? "No active academies found" : "لا توجد أكاديميات نشطة"}</option>
+                ) : academies.map((academy) => (
+                  <option key={academy.id} value={academy.id}>{academy.name || (en ? "Unnamed academy" : "أكاديمية بدون اسم")}</option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                {en ? "Platform owners must choose a tenant explicitly before importing." : "يجب على مالك المنصة اختيار مستأجر صريح قبل الاستيراد."}
+              </p>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label>{en ? "Upload a CSV file" : "ارفع ملف CSV"}</Label>
@@ -161,6 +190,9 @@ export function ImportStudents() {
         <Card>
           <CardContent className="p-5 text-sm">
             <p className="font-semibold text-emerald-600">✅ {en ? `${result.created} student(s) imported` : `تم استيراد ${result.created} طالب`}</p>
+            {result.skippedDup > 0 && (
+              <p className="mt-1 text-xs text-muted-foreground">{en ? `${result.skippedDup} duplicate row(s) skipped.` : `تم تخطي ${result.skippedDup} صفوف مكررة.`}</p>
+            )}
             {result.errors.length > 0 && (
               <div className="mt-2">
                 <p className="font-medium text-destructive">{en ? `Rows with errors (${result.errors.length}):` : `في صفوف مارضتش (${result.errors.length}):`}</p>

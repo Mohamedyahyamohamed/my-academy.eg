@@ -4,13 +4,59 @@ import { revalidatePath } from "next/cache";
 import { requireScopedRole, PaymentsService } from "@/services";
 import type { CreatePaymentInput } from "@/services/payments";
 import { teacherStudentScope } from "@/services/_shared";
+import { resolveTeacherForGroups } from "@/services/groups";
+import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
 async function requirePaymentRecorder() {
   return requireScopedRole("ADMIN", "TEACHER");
 }
 
-function assertTeacherStudentScope(user: { role: string; academy_id: string }, studentId: string) {
+async function assertTeacherStudentScope(user: { id: string; email: string; role: string; academy_id: string }, studentId: string) {
   if (user.role !== "TEACHER") return;
+
+  // The page-level teacher scope resolves the internal teachers.id from the
+  // authenticated profile id/email. Use the same source for writes so an
+  // Assistant (whose group_assistants.teacher_id is teachers.id) is not
+  // rejected merely because its profile id differs from that row id.
+  const teacher = await resolveTeacherForGroups(user.academy_id, user.id, user.email);
+  const client = nodeSupabaseClient();
+  if (teacher && client) {
+    const [{ data: ownedGroups, error: ownedError }, { data: assistantLinks, error: assistantError }] = await Promise.all([
+      client.from("groups").select("id").eq("academy_id", user.academy_id).eq("teacher_id", teacher.id).limit(1000),
+      client.from("group_assistants").select("group_id").eq("teacher_id", teacher.id).limit(1000),
+    ]);
+    if (ownedError || assistantError) {
+      throw new Error("Unable to verify the student's assigned group.");
+    }
+
+    const candidateGroupIds = [...new Set([
+      ...(ownedGroups ?? []).map((row: any) => row.id),
+      ...(assistantLinks ?? []).map((row: any) => row.group_id),
+    ].filter(Boolean))];
+    if (candidateGroupIds.length) {
+      const { data: scopedGroups, error: scopedGroupsError } = await client
+        .from("groups")
+        .select("id")
+        .eq("academy_id", user.academy_id)
+        .in("id", candidateGroupIds)
+        .limit(1000);
+      if (scopedGroupsError) throw new Error("Unable to verify the student's assigned group.");
+
+      const groupIds = (scopedGroups ?? []).map((row: any) => row.id).filter(Boolean);
+      if (groupIds.length) {
+        const { data: memberships, error: membershipsError } = await client
+          .from("group_students")
+          .select("student_id")
+          .in("group_id", groupIds)
+          .limit(5000);
+        if (membershipsError) throw new Error("Unable to verify the student's assigned group.");
+        if ((memberships ?? []).some((row: any) => row.student_id === studentId)) return;
+      }
+    }
+    throw new Error("Teachers can only record payments for students in their assigned groups.");
+  }
+
+  // Demo/no-client fallback; still fail closed if no local teacher scope exists.
   const scope = teacherStudentScope();
   if (!scope || !scope.has(studentId)) {
     throw new Error("Teachers can only record payments for students in their assigned groups.");
@@ -28,7 +74,7 @@ function receiverAudit(user: { id: string; role: string; full_name: string; emai
 
 export async function createPaymentAction(input: CreatePaymentInput) {
   const user = await requirePaymentRecorder();
-  assertTeacherStudentScope(user, input.student_id);
+  await assertTeacherStudentScope(user, input.student_id);
   const paymentInput: CreatePaymentInput = user.role === "TEACHER"
     ? { ...input, method: "Cash" }
     : input;
@@ -66,7 +112,7 @@ export async function recordPaymentAction(
   if (!payment || payment.academy_id !== user.academy_id) {
     throw new Error("Payment is outside the authenticated academy.");
   }
-  assertTeacherStudentScope(user, payment.student_id);
+  await assertTeacherStudentScope(user, payment.student_id);
   const effectiveMethod = user.role === "TEACHER" ? "Cash" : method;
   const res = await PaymentsService.recordPayment(paymentId, amount, effectiveMethod, note);
   if (res.ok) {

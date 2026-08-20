@@ -18,14 +18,37 @@ export function QrCheckin({ lessonId }: { lessonId: string }) {
   const [token, setToken] = React.useState("");
   const [expiresAt, setExpiresAt] = React.useState(0);
   const [remaining, setRemaining] = React.useState(0);
+  const [generating, setGenerating] = React.useState(false);
+  const [error, setError] = React.useState("");
 
   const generate = async () => {
-    const res = await fetch("/api/qr-session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lessonId }),
-    }).then((r) => r.json()).catch(() => null);
-    if (res?.token) { setToken(res.token); setExpiresAt(res.expiresAt); }
+    setGenerating(true);
+    setError("");
+    try {
+      const response = await fetch("/api/qr-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lessonId }),
+      });
+      const res = await response.json().catch(() => null);
+      if (!response.ok || !res?.token) {
+        setToken("");
+        setExpiresAt(0);
+        setError(
+          res?.message || res?.error ||
+          (en ? "Unable to create a QR code for this lesson." : "تعذّر إنشاء رمز QR لهذه الحصة."),
+        );
+        return;
+      }
+      setToken(res.token);
+      setExpiresAt(Number(res.expiresAt) || 0);
+    } catch {
+      setToken("");
+      setExpiresAt(0);
+      setError(en ? "Network error. Please try again." : "حدث خطأ في الاتصال. حاول مرة أخرى.");
+    } finally {
+      setGenerating(false);
+    }
   };
 
   React.useEffect(() => { if (typeof window !== "undefined") setOrigin(window.location.origin); }, []);
@@ -40,7 +63,7 @@ export function QrCheckin({ lessonId }: { lessonId: string }) {
     return () => clearInterval(timer);
   }, [open, expiresAt]);
 
-  const url = token ? `${origin}/checkin?token=${token}` : "";
+  const url = token ? `${origin || (typeof window !== "undefined" ? window.location.origin : "")}/checkin?token=${token}` : "";
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v && !token) generate(); }}>
@@ -54,6 +77,11 @@ export function QrCheckin({ lessonId }: { lessonId: string }) {
             {en ? "Token expires in" : "ينتهي الرمز خلال"} {remaining > 0 ? `${remaining}s` : "—"}. {en ? "Students scan to check in." : "يمسح الطلاب الرمز لتسجيل الحضور."}
           </DialogDescription>
         </DialogHeader>
+        {error && (
+          <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </div>
+        )}
         {token ? (
           <div className="flex flex-col items-center gap-3 py-2">
             <div className="rounded-2xl bg-white p-4 shadow-soft">
@@ -69,7 +97,10 @@ export function QrCheckin({ lessonId }: { lessonId: string }) {
             </div>
           </div>
         ) : (
-          <Button onClick={generate}><RefreshCw className="h-4 w-4" /> {en ? "Generate QR code" : "إنشاء رمز QR"}</Button>
+          <Button onClick={generate} disabled={generating}>
+            <RefreshCw className={`h-4 w-4 ${generating ? "animate-spin" : ""}`} />
+            {generating ? (en ? "Creating…" : "جارٍ إنشاء الرمز…") : (en ? "Generate QR code" : "إنشاء رمز QR")}
+          </Button>
         )}
         <Button variant="outline" onClick={() => setOpen(false)}>
           <X className="h-4 w-4" /> {en ? "Close" : "إغلاق"}

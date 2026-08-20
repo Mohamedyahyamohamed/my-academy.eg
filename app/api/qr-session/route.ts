@@ -10,8 +10,8 @@ import { requestIpKey } from "@/lib/request-identity";
 export async function POST(req: NextRequest) {
   const user = await loadCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!["TEACHER", "ADMIN", "SUPER_ADMIN"].includes(user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (user.role !== "TEACHER") {
+    return NextResponse.json({ error: "Attendance QR is available to teachers and their assistants only." }, { status: 403 });
   }
 
   const userLimit = await rateLimit(`qr:user:${user.id}`, LIMITS.qr.max, LIMITS.qr.window);
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   );
   if (!lesson) return NextResponse.json({ error: "Lesson not found" }, { status: 404 });
 
-  if (user.role === "TEACHER" && lesson.teacher_id !== currentTeacherId()) {
+  if (lesson.teacher_id !== currentTeacherId()) {
     return NextResponse.json({ error: "You do not own this lesson" }, { status: 403 });
   }
 

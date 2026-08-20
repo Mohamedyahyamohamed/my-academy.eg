@@ -5,7 +5,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { HomeworkBadge } from "@/components/shared/badges";
 import { SubmitHomework } from "@/components/homework/submit-homework";
-import { resolveStudent, HomeworkService, requireScopedRole } from "@/services";
+import { resolveStudentForDashboard, HomeworkService, requireScopedRole } from "@/services";
 import { formatDate } from "@/lib/utils";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function StudentHomeworkPage() {
   const user = await requireScopedRole("STUDENT");
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
-  const student = resolveStudent(user);
+  const student = await resolveStudentForDashboard(user);
   const homework = student ? await HomeworkService.homeworkForStudent(student.id, user.academy_id) : [];
 
   return (

@@ -9,7 +9,7 @@ import type {
 } from "@/types";
 import { collections } from "./data/store";
 import { persistInsert, persistUpdate } from "./data/store";
-import { getGroup, getLesson, studentsInGroup, byAcademy, teacherGroupScope, fetchTableRLS } from "./_shared";
+import { getGroup, getLesson, studentsInGroup, byAcademy, teacherGroupScope, fetchTableRLS, fetchStudentGroupIds, fetchGroupStudentIds } from "./_shared";
 import { fullName } from "./_shared";
 import { currentAcademyId, getCurrentUser } from "./session";
 import { can, hasAcademyWideScope } from "@/lib/permissions";
@@ -71,11 +71,15 @@ export async function listHomework(
 }
 
 export async function getHomework(id: string): Promise<Homework | null> {
-  const items = await fetchTableRLS<Homework>("homework");
-  const h = items.find((x) => x.id === id);
+  const academyId = currentAcademyId();
+  const items = await fetchTableRLS<Homework>("homework", academyId);
+  const h = items.find((x) => x.id === id && (!academyId || x.academy_id === academyId));
   if (!h) return null;
-  const tScope = teacherGroupScope();
-  if (tScope && !tScope.has(h.group_id)) return null;
+  const user = getCurrentUser();
+  if (user && !hasAcademyWideScope(user.role)) {
+    const visible = await listHomework({}, academyId, user.id);
+    if (!visible.items.some((item) => item.id === h.id)) return null;
+  }
   return attachHw(h);
 }
 
@@ -213,14 +217,20 @@ export function getSubmission(
 export async function listSubmissions(
   homeworkId: string,
 ): Promise<HomeworkSubmission[]> {
-  assertHomeworkManager(homeworkInCurrentAcademy(homeworkId));
-  return collections()
-    .submissions.filter((s) => s.homework_id === homeworkId)
-    .map((s) => ({
+  const homework = await getHomework(homeworkId);
+  if (!homework) return [];
+  assertHomeworkManager(homework);
+  const [liveSubmissions, liveStudents] = await Promise.all([
+    fetchTableRLS<any>("homework_submissions", homework.academy_id),
+    fetchTableRLS<any>("students", homework.academy_id),
+  ]);
+  return liveSubmissions
+    .filter((s: any) => s.homework_id === homeworkId)
+    .map((s: any) => ({
       ...s,
-      student: collections().students.find((st) => st.id === s.student_id),
+      student: liveStudents.find((st: any) => st.id === s.student_id) ?? collections().students.find((st) => st.id === s.student_id),
     }))
-    .sort((a, b) => fullName(a.student!).localeCompare(fullName(b.student!)));
+    .sort((a: any, b: any) => fullName(a.student!).localeCompare(fullName(b.student!)));
 }
 
 export async function submitHomework(
@@ -286,13 +296,12 @@ export async function reviewSubmission(
 
 /** Homework assigned to a student (via their groups). */
 export async function homeworkForStudent(studentId: string, academyId?: string): Promise<HomeworkSubmission[]> {
+  const aid = academyId ?? currentAcademyId();
   const [homework, submissions] = await Promise.all([
-    fetchTableRLS<Homework>("homework", academyId),
-    fetchTableRLS<any>("homework_submissions", academyId),
+    fetchTableRLS<Homework>("homework", aid),
+    fetchTableRLS<any>("homework_submissions", aid),
   ]);
-  const groupIds = collections()
-    .groupStudents.filter((gs) => gs.student_id === studentId)
-    .map((gs) => gs.group_id);
+  const groupIds = aid ? await fetchStudentGroupIds(studentId, aid) : [];
   const hwIds = homework.filter((h) => groupIds.includes(h.group_id)).map((h) => h.id);
   return submissions
     .filter((s: any) => hwIds.includes(s.homework_id) && s.student_id === studentId)

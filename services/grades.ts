@@ -6,7 +6,7 @@ import type { Exam, Grade, PaginatedResult } from "@/types";
 import { collections } from "./data/store";
 import { currentAcademyId, getCurrentUser } from "./session";
 import { persistInsert, persistDelete, persistUpdate } from "./data/store";
-import { getCourse, getGroup, byAcademy, academyExamIds, teacherGroupScope, fetchTableRLS } from "./_shared";
+import { getCourse, getGroup, byAcademy, academyExamIds, teacherGroupScope, fetchTableRLS, fetchGroupStudentIds } from "./_shared";
 import { resolveTeacherForGroups } from "./groups";
 import { performanceLevel } from "@/lib/constants";
 import { can, hasAcademyWideScope } from "@/lib/permissions";
@@ -39,11 +39,19 @@ export async function listExams(academyId?: string, teacherProfileId?: string): 
 }
 
 export async function getExam(id: string): Promise<Exam | null> {
-  const items = await fetchTableRLS<Exam>("exams");
-  const e = items.find((x) => x.id === id);
+  const academyId = currentAcademyId();
+  const items = await fetchTableRLS<Exam>("exams", academyId);
+  let e = items.find((x) => x.id === id && (!academyId || x.academy_id === academyId));
+  if (!e && academyId) {
+    const liveItems = await fetchTableRLS<Exam>("exams", academyId);
+    e = liveItems.find((x) => x.id === id && x.academy_id === academyId);
+  }
   if (!e) return null;
-  const tScope = teacherGroupScope();
-  if (tScope && !tScope.has(e.group_id)) return null;
+  const user = getCurrentUser();
+  if (user && !hasAcademyWideScope(user.role)) {
+    const visible = await listExams(academyId, user.id);
+    if (!visible.some((item) => item.id === e!.id)) return null;
+  }
   return attachExam(e);
 }
 
@@ -105,14 +113,14 @@ export async function deleteExam(id: string): Promise<boolean> {
 
 /* ---------------- Grades ---------------- */
 
-function attachGrade(g: Grade): Grade {
-  const exam = collections().exams.find((e) => e.id === g.exam_id);
+function attachGrade(g: Grade, exams: Exam[] = collections().exams, students = collections().students): Grade {
+  const exam = exams.find((e) => e.id === g.exam_id);
   const pct = exam ? (g.score / exam.max_score) * 100 : 0;
   return {
     ...g,
     percentage: pct,
     level: performanceLevel(pct),
-    student: collections().students.find((s) => s.id === g.student_id),
+    student: students.find((s) => s.id === g.student_id),
   };
 }
 
@@ -139,8 +147,8 @@ export async function listGrades(filters: GradeFilters = {}, academyId?: string)
   if (studentId !== "ALL")
     items = items.filter((g) => g.student_id === studentId);
   if (groupId !== "ALL") {
-    const examIds = collections()
-      .exams.filter((e) => e.group_id === groupId)
+    const examIds = scopedExams
+      .filter((e) => e.group_id === groupId)
       .map((e) => e.id);
     items = items.filter((g) => examIds.includes(g.exam_id));
   }
@@ -149,24 +157,23 @@ export async function listGrades(filters: GradeFilters = {}, academyId?: string)
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const start = (page - 1) * pageSize;
   return {
-    items: items.slice(start, start + pageSize).map(attachGrade),
+    items: items.slice(start, start + pageSize).map((grade) => attachGrade(grade, scopedExams)),
     pagination: { page, pageSize, total, totalPages },
   };
 }
 
 /** Grades for an exam, keyed by student (for the grade-entry table). */
-export function gradesForExam(
+export async function gradesForExam(
   examId: string,
-): { studentId: string; score: number | null; gradeId: string | null }[] {
-  const exam = collections().exams.find((e) => e.id === examId);
+): Promise<{ studentId: string; score: number | null; gradeId: string | null }[]> {
+  const exam = await getExam(examId);
   if (!exam) return [];
-  const roster = collections()
-    .groupStudents.filter((gs) => gs.group_id === exam.group_id)
-    .map((gs) => gs.student_id);
+  const [roster, grades] = await Promise.all([
+    fetchGroupStudentIds(exam.group_id),
+    fetchTableRLS<Grade>("grades", exam.academy_id),
+  ]);
   return roster.map((studentId) => {
-    const existing = collections().grades.find(
-      (g) => g.exam_id === examId && g.student_id === studentId,
-    );
+    const existing = grades.find((g) => g.exam_id === examId && g.student_id === studentId);
     return {
       studentId,
       score: existing?.score ?? null,

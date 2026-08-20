@@ -59,9 +59,24 @@ export async function listGroups(search = "", academyId?: string, teacherProfile
     : null;
 
   const scopedItems = await fetchTableRLS<Group>("groups", academyId);
-  const scopedAssistants = teacher ? await fetchTableRLS<any>("group_assistants", academyId) : [];
+  let scopedAssistants: any[] = [];
+  if (teacher && isSupabaseConfigured() && academyId && scopedItems.length) {
+    try {
+      const admin = nodeSupabaseClient();
+      const { data } = await admin
+        .from("group_assistants")
+        .select("group_id, teacher_id, assistant_id")
+        .in("group_id", scopedItems.map((g) => g.id));
+      scopedAssistants = data ?? [];
+    } catch (error) {
+      console.error("listGroups assistant scope failed:", (error as Error)?.message);
+    }
+  }
+  if (!scopedAssistants.length && teacher) {
+    scopedAssistants = collections().groupAssistants.filter((ga) => ga.teacher_id === teacher.id);
+  }
   let items = teacher
-    ? scopedItems.filter((g) => g.teacher_id === teacher.id || scopedAssistants.some((ga: any) => ga.teacher_id === teacher.id && ga.group_id === g.id) || collections().groupAssistants.some((ga) => ga.teacher_id === teacher.id && ga.group_id === g.id))
+    ? scopedItems.filter((g) => g.teacher_id === teacher.id || scopedAssistants.some((ga: any) => ga.teacher_id === teacher.id && ga.group_id === g.id))
     : teacherProfileId
       ? []
       : applyTeacherGroupScope(scopedItems);

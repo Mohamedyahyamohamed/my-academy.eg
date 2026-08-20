@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { resolveStudent, GradesService, requireScopedRole } from "@/services";
+import { resolveStudentForDashboard, GradesService, requireScopedRole } from "@/services";
 import { collections } from "@/services/data/store";
 import { formatDate, round } from "@/lib/utils";
 import { performanceLevel, performanceColor, performanceLabel } from "@/lib/constants";
@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 export default async function StudentGradesPage() {
   const user = await requireScopedRole("STUDENT");
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
-  const student = resolveStudent(user);
+  const student = await resolveStudentForDashboard(user);
   const grades = student ? (await GradesService.listGrades({ studentId: student.id, pageSize: 100 }, user.academy_id)).items : [];
   const avg = grades.length ? round(grades.reduce((s, g) => s + (g.percentage ?? 0), 0) / grades.length, 0) : 0;
   const best = grades.length ? round(Math.max(...grades.map((g) => g.percentage ?? 0)), 0) : 0;

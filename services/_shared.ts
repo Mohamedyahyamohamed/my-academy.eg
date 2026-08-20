@@ -43,6 +43,88 @@ const DIRECT_TENANT_TABLES = new Set([
   "content_progress", "audit_logs",
 ]);
 
+export async function fetchStudentGroupIds(studentId: string, academyId: string): Promise<string[]> {
+  if (!isSupabaseConfigured()) {
+    return collections().groupStudents.filter((row) => row.student_id === studentId).map((row) => row.group_id);
+  }
+
+  try {
+    let client: any = await createServerSupabaseClient();
+    let membershipsResult = await client
+      .from("group_students")
+      .select("group_id")
+      .eq("student_id", studentId)
+      .limit(1000);
+    if (membershipsResult.error) {
+      const admin = nodeSupabaseClient();
+      if (!admin) throw membershipsResult.error;
+      client = admin;
+      membershipsResult = await client
+        .from("group_students")
+        .select("group_id")
+        .eq("student_id", studentId)
+        .limit(1000);
+    }
+    if (membershipsResult.error) throw membershipsResult.error;
+    const candidateIds = (membershipsResult.data ?? []).map((row: any) => row.group_id).filter(Boolean);
+    if (!candidateIds.length) return [];
+    const { data: groups, error: groupsError } = await client
+      .from("groups")
+      .select("id")
+      .eq("academy_id", academyId)
+      .in("id", candidateIds)
+      .limit(1000);
+    if (groupsError) throw groupsError;
+    return (groups ?? []).map((group: any) => group.id).filter(Boolean);
+  } catch (error) {
+    console.error("fetchStudentGroupIds error:", error instanceof Error ? error.message : String(error));
+    return collections().groupStudents.filter((row) => row.student_id === studentId).map((row) => row.group_id);
+  }
+}
+
+export async function fetchGroupStudentIds(groupId: string): Promise<string[]> {
+  const cached = collections().groupStudents.filter((row) => row.group_id === groupId).map((row) => row.student_id);
+  if (!isSupabaseConfigured()) return cached;
+  try {
+    let client: any = await createServerSupabaseClient();
+    let result = await client.from("group_students").select("student_id").eq("group_id", groupId).limit(1000);
+    if (result.error) {
+      const admin = nodeSupabaseClient();
+      if (!admin) throw result.error;
+      result = await admin.from("group_students").select("student_id").eq("group_id", groupId).limit(1000);
+    }
+    if (result.error) throw result.error;
+    return (result.data ?? []).map((row: any) => row.student_id).filter(Boolean);
+  } catch (error) {
+    console.error("fetchGroupStudentIds error:", error instanceof Error ? error.message : String(error));
+    return cached;
+  }
+}
+
+export async function fetchTeacherAssistantGroupIds(teacherId: string, academyId: string): Promise<string[]> {
+  const cached = collections().groupAssistants.filter((row) => row.teacher_id === teacherId).map((row) => row.group_id);
+  if (!isSupabaseConfigured()) return cached;
+  try {
+    let client: any = await createServerSupabaseClient();
+    let result = await client.from("group_assistants").select("group_id").eq("teacher_id", teacherId).limit(1000);
+    if (result.error) {
+      const admin = nodeSupabaseClient();
+      if (!admin) throw result.error;
+      result = await admin.from("group_assistants").select("group_id").eq("teacher_id", teacherId).limit(1000);
+      client = admin;
+    }
+    if (result.error) throw result.error;
+    const candidateIds = (result.data ?? []).map((row: any) => row.group_id).filter(Boolean);
+    if (!candidateIds.length) return cached;
+    const { data: groups, error } = await client.from("groups").select("id").eq("academy_id", academyId).in("id", candidateIds).limit(1000);
+    if (error) throw error;
+    return (groups ?? []).map((group: any) => group.id).filter(Boolean);
+  } catch (error) {
+    console.error("fetchTeacherAssistantGroupIds error:", error instanceof Error ? error.message : String(error));
+    return cached;
+  }
+}
+
 export async function fetchTableRLS<T = any>(table: string, academyId?: string): Promise<T[]> {
   const aid = academyId ?? getRequestAcademyId();
   // Hydrated SeedData stores underscored SQL tables as camelCase keys

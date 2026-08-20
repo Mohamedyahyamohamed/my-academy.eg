@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { resolveStudent, studentLessons, requireScopedRole } from "@/services";
+import { resolveStudentForDashboard, studentLessons, requireScopedRole } from "@/services";
 import { formatDate, formatClockTime } from "@/lib/utils";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export default async function StudentLessonsPage() {
   const user = await requireScopedRole("STUDENT");
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
-  const student = resolveStudent(user);
+  const student = await resolveStudentForDashboard(user);
   const lessons = student ? await studentLessons(student.id, user.academy_id) : [];
   const upcoming = lessons.filter((l) => +new Date(l.date) >= Date.now());
   const past = lessons.filter((l) => +new Date(l.date) < Date.now());

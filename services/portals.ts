@@ -10,6 +10,7 @@ import {
   groupsForStudent,
   teacherGroupScope,
   fetchTableRLS,
+  fetchStudentGroupIds,
 } from "./_shared";
 import { percentage, round, fullName } from "@/lib/utils";
 import { isLessonUpcoming, lessonWallClockMinute } from "./lessons";
@@ -40,7 +41,7 @@ export function resolveStudent(user: SessionUser): Student | null {
  * The fallback is intentionally constrained by both the signed session's
  * academy_id and email; it never searches globally or selects another tenant.
  */
-async function resolveStudentForDashboard(user: SessionUser): Promise<Student | null> {
+export async function resolveStudentForDashboard(user: SessionUser): Promise<Student | null> {
   const cached = resolveStudent(user);
   if (cached) return cached;
   if (!isSupabaseConfigured()) return null;
@@ -82,43 +83,21 @@ async function groupsForStudentDashboard(
   academyId: string,
 ): Promise<ReturnType<typeof groupsForStudent>> {
   const cached = groupsForStudent(studentId);
-  if (cached.length || !isSupabaseConfigured()) return cached;
+  if (!isSupabaseConfigured()) return cached;
 
   try {
-    const requestClient = await (await import("@/lib/supabase/server")).createServerSupabaseClient();
-    let client: any = requestClient;
-    let membershipsResult = await client
-      .from("group_students")
-      .select("group_id")
-      .eq("student_id", studentId)
-      .limit(1000);
-    if (membershipsResult.error) {
-      const admin = nodeSupabaseClient();
-      if (!admin) throw membershipsResult.error;
-      client = admin;
-      membershipsResult = await client
-        .from("group_students")
-        .select("group_id")
-        .eq("student_id", studentId)
-        .limit(1000);
-    }
-    const { data: memberships, error: membershipError } = membershipsResult;
-    if (membershipError) throw membershipError;
-
-    const groupIds = (memberships ?? []).map((row: any) => row.group_id).filter(Boolean);
-    if (!groupIds.length) return [];
-
-    const [{ data: groups, error: groupsError }, { data: courses, error: coursesError }] = await Promise.all([
-      client.from("groups").select("*").eq("academy_id", academyId).in("id", groupIds).limit(1000),
-      client.from("courses").select("*").eq("academy_id", academyId).limit(1000),
+    const groupIds = await fetchStudentGroupIds(studentId, academyId);
+    if (!groupIds.length) return cached;
+    const [groups, courses] = await Promise.all([
+      fetchTableRLS<any>("groups", academyId),
+      fetchTableRLS<any>("courses", academyId),
     ]);
-    if (groupsError) throw groupsError;
-    if (coursesError) throw coursesError;
-
-    return (groups ?? []).map((group: any) => ({
-      ...group,
-      course: (courses ?? []).find((course: any) => course.id === group.course_id),
-    })) as ReturnType<typeof groupsForStudent>;
+    return groups
+      .filter((group: any) => groupIds.includes(group.id))
+      .map((group: any) => ({
+        ...group,
+        course: courses.find((course: any) => course.id === group.course_id),
+      })) as ReturnType<typeof groupsForStudent>;
   } catch (error) {
     console.error("groupsForStudentDashboard error:", error instanceof Error ? error.message : String(error));
     return cached;
@@ -197,7 +176,7 @@ export async function studentLessons(
     fetchTableRLS<any>("lessons", academyId),
     fetchTableRLS<any>("groups", academyId),
   ]);
-  const scopedGroups = knownGroups ?? groupsForStudent(studentId);
+  const scopedGroups = knownGroups ?? await groupsForStudentDashboard(studentId, academyId ?? "");
   const groupIds = scopedGroups.map((g: any) => g.id);
 
   // If the request snapshot is empty/stale, use the same server-side tenant

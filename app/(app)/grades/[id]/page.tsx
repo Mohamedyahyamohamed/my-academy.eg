@@ -18,7 +18,7 @@ export default async function ExamGradePage(props: { params: Promise<{ id: strin
   await requireScopedRole("TEACHER");
   const exam = await GradesService.getExam(params.id);
   if (!exam) notFound();
-  const roster = GradesService.gradesForExam(params.id);
+  const roster = await GradesService.gradesForExam(params.id);
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
   const rosterNamed = roster.map((r) => {
     const s = collections().students.find((x) => x.id === r.studentId);

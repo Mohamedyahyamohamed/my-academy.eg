@@ -9,7 +9,6 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { resolveStudentForDashboard, GradesService, requireScopedRole } from "@/services";
-import { collections } from "@/services/data/store";
 import { formatDate, round } from "@/lib/utils";
 import { performanceLevel, performanceColor, performanceLabel } from "@/lib/constants";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
@@ -20,7 +19,13 @@ export default async function StudentGradesPage() {
   const user = await requireScopedRole("STUDENT");
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
   const student = await resolveStudentForDashboard(user);
-  const grades = student ? (await GradesService.listGrades({ studentId: student.id, pageSize: 100 }, user.academy_id)).items : [];
+  const [grades, exams] = student
+    ? await Promise.all([
+        GradesService.listGrades({ studentId: student.id, pageSize: 100 }, user.academy_id).then((result) => result.items),
+        GradesService.listExams(user.academy_id),
+      ])
+    : [[], []];
+  const examById = new Map(exams.map((exam) => [exam.id, exam]));
   const avg = grades.length ? round(grades.reduce((s, g) => s + (g.percentage ?? 0), 0) / grades.length, 0) : 0;
   const best = grades.length ? round(Math.max(...grades.map((g) => g.percentage ?? 0)), 0) : 0;
 
@@ -42,7 +47,7 @@ export default async function StudentGradesPage() {
                 <TableHeader><TableRow><TableHead>{en ? "Exam" : "الاختبار"}</TableHead><TableHead>{en ? "Date" : "التاريخ"}</TableHead><TableHead>{en ? "Score" : "الدرجة"}</TableHead><TableHead>%</TableHead><TableHead>{en ? "Rating" : "التقدير"}</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {grades.map((g) => {
-                    const exam = collections().exams.find((e) => e.id === g.exam_id);
+                    const exam = examById.get(g.exam_id);
                     const lvl = g.level ?? performanceLevel(g.percentage ?? 0);
                     return (
                       <TableRow key={g.id}>

@@ -14,6 +14,8 @@ import { fullName } from "./_shared";
 import { currentAcademyId, getCurrentUser } from "./session";
 import { can, hasAcademyWideScope } from "@/lib/permissions";
 import { resolveTeacherForGroups } from "./groups";
+import { isSupabaseConfigured } from "./supabase/config";
+import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
 function attachHw(h: Homework): Homework {
   return { ...h, group: getGroup(h.group_id), lesson: getLesson(h.lesson_id) };
@@ -35,6 +37,13 @@ export async function listHomework(
 ): Promise<PaginatedResult<Homework>> {
   const { search = "", groupId = "ALL", page = 1, pageSize = 12 } = filters;
   let items = await fetchTableRLS<Homework>("homework", academyId);
+  if (academyId && isSupabaseConfigured()) {
+    const admin = nodeSupabaseClient();
+    if (admin) {
+      const { data: liveHomework, error } = await admin.from("homework").select("*").eq("academy_id", academyId).limit(1000);
+      if (!error && liveHomework?.length) items = liveHomework as Homework[];
+    }
+  }
   const teacher = teacherProfileId
     ? await resolveTeacherForGroups(academyId, teacherProfileId, getCurrentUser()?.email)
     : null;
@@ -72,7 +81,14 @@ export async function listHomework(
 
 export async function getHomework(id: string): Promise<Homework | null> {
   const academyId = currentAcademyId();
-  const items = await fetchTableRLS<Homework>("homework", academyId);
+  let items = await fetchTableRLS<Homework>("homework", academyId);
+  if (academyId && isSupabaseConfigured()) {
+    const admin = nodeSupabaseClient();
+    if (admin) {
+      const { data: liveHomework } = await admin.from("homework").select("*").eq("academy_id", academyId).eq("id", id).maybeSingle();
+      if (liveHomework) items = [liveHomework as Homework];
+    }
+  }
   const h = items.find((x) => x.id === id && (!academyId || x.academy_id === academyId));
   if (!h) return null;
   const user = getCurrentUser();
@@ -297,11 +313,36 @@ export async function reviewSubmission(
 /** Homework assigned to a student (via their groups). */
 export async function homeworkForStudent(studentId: string, academyId?: string): Promise<HomeworkSubmission[]> {
   const aid = academyId ?? currentAcademyId();
-  const [homework, submissions] = await Promise.all([
+  let [homework, submissions] = await Promise.all([
     fetchTableRLS<Homework>("homework", aid),
     fetchTableRLS<any>("homework_submissions", aid),
   ]);
   const groupIds = aid ? await fetchStudentGroupIds(studentId, aid) : [];
+
+  // Prefer live tenant-scoped rows: homework_submissions is a child table and
+  // can lag behind the request snapshot even when the durable row exists.
+  if (aid && groupIds.length && isSupabaseConfigured()) {
+    const admin = nodeSupabaseClient();
+    if (admin) {
+      const { data: liveHomework, error: homeworkError } = await admin
+        .from("homework")
+        .select("*")
+        .eq("academy_id", aid)
+        .in("group_id", groupIds)
+        .limit(1000);
+      if (!homeworkError && liveHomework?.length) homework = liveHomework as Homework[];
+      const liveHomeworkIds = homework.filter((h) => groupIds.includes(h.group_id)).map((h) => h.id);
+      if (liveHomeworkIds.length) {
+        const { data: liveSubmissions, error: submissionsError } = await admin
+          .from("homework_submissions")
+          .select("*")
+          .in("homework_id", liveHomeworkIds)
+          .limit(2000);
+        if (!submissionsError && liveSubmissions?.length) submissions = liveSubmissions;
+      }
+    }
+  }
+
   const hwIds = homework.filter((h) => groupIds.includes(h.group_id)).map((h) => h.id);
   return submissions
     .filter((s: any) => hwIds.includes(s.homework_id) && s.student_id === studentId)

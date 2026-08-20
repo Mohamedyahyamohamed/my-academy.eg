@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function MessagesRoute() {
   const lang = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value);
   const en = lang === "en";
-  const user = await requireScopedRole("ADMIN", "TEACHER", "PARENT");
+  const user = await requireScopedRole("ADMIN", "TEACHER", "PARENT", "STUDENT");
   const [inbox, sent, contacts] = await Promise.all([
     getInbox(user),
     getSentMessages(user),

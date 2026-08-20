@@ -65,7 +65,7 @@ export async function listGroups(search = "", academyId?: string, teacherProfile
       const admin = nodeSupabaseClient();
       const { data } = await admin
         .from("group_assistants")
-        .select("group_id, teacher_id, assistant_id")
+        .select("group_id, teacher_id, assigned_at")
         .in("group_id", scopedItems.map((g) => g.id));
       scopedAssistants = data ?? [];
     } catch (error) {

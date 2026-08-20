@@ -10,6 +10,8 @@ import { getCourse, getGroup, byAcademy, academyExamIds, teacherGroupScope, fetc
 import { resolveTeacherForGroups } from "./groups";
 import { performanceLevel } from "@/lib/constants";
 import { can, hasAcademyWideScope } from "@/lib/permissions";
+import { isSupabaseConfigured } from "./supabase/config";
+import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
 function attachExam(e: Exam): Exam {
   return { ...e, course: getCourse(e.course_id), group: getGroup(e.group_id) };
@@ -19,8 +21,22 @@ export async function listExams(academyId?: string, teacherProfileId?: string): 
   const teacher = teacherProfileId
     ? await resolveTeacherForGroups(academyId, teacherProfileId, getCurrentUser()?.email)
     : null;
-  const scopedGroups = academyId ? await fetchTableRLS<any>("groups", academyId) : collections().groups;
-  const scopedAssistants = teacher && academyId ? await fetchTableRLS<any>("group_assistants", academyId) : [];
+  let scopedGroups = academyId ? await fetchTableRLS<any>("groups", academyId) : collections().groups;
+  let scopedAssistants = teacher && academyId ? await fetchTableRLS<any>("group_assistants", academyId) : [];
+  let liveExams: Exam[] | null = null;
+  if (academyId && isSupabaseConfigured()) {
+    const admin = nodeSupabaseClient();
+    if (admin) {
+      const [{ data: groups }, { data: assistants }, { data: exams }] = await Promise.all([
+        admin.from("groups").select("id, academy_id, teacher_id").eq("academy_id", academyId).limit(1000),
+        admin.from("group_assistants").select("group_id, teacher_id").limit(2000),
+        admin.from("exams").select("*").eq("academy_id", academyId).limit(1000),
+      ]);
+      if (groups?.length) scopedGroups = groups;
+      if (teacher && assistants?.length) scopedAssistants = assistants;
+      if (exams?.length) liveExams = exams as Exam[];
+    }
+  }
   const tScope = teacher
     ? new Set([
         ...scopedGroups.filter((g: any) => g.academy_id === academyId && g.teacher_id === teacher.id).map((g: any) => g.id),
@@ -30,7 +46,7 @@ export async function listExams(academyId?: string, teacherProfileId?: string): 
     : teacherProfileId
       ? new Set<string>()
       : teacherGroupScope();
-  const items = await fetchTableRLS<Exam>("exams", academyId);
+  const items = liveExams ?? await fetchTableRLS<Exam>("exams", academyId);
   return items
     .filter((e) => !tScope || tScope.has(e.group_id))
     .slice()
@@ -40,12 +56,15 @@ export async function listExams(academyId?: string, teacherProfileId?: string): 
 
 export async function getExam(id: string): Promise<Exam | null> {
   const academyId = currentAcademyId();
-  const items = await fetchTableRLS<Exam>("exams", academyId);
-  let e = items.find((x) => x.id === id && (!academyId || x.academy_id === academyId));
-  if (!e && academyId) {
-    const liveItems = await fetchTableRLS<Exam>("exams", academyId);
-    e = liveItems.find((x) => x.id === id && x.academy_id === academyId);
+  let items = await fetchTableRLS<Exam>("exams", academyId);
+  if (academyId && isSupabaseConfigured()) {
+    const admin = nodeSupabaseClient();
+    if (admin) {
+      const { data: liveExam } = await admin.from("exams").select("*").eq("academy_id", academyId).eq("id", id).maybeSingle();
+      if (liveExam) items = [liveExam as Exam];
+    }
   }
+  let e = items.find((x) => x.id === id && (!academyId || x.academy_id === academyId));
   if (!e) return null;
   const user = getCurrentUser();
   if (user && !hasAcademyWideScope(user.role)) {
@@ -134,14 +153,26 @@ export interface GradeFilters {
 
 export async function listGrades(filters: GradeFilters = {}, academyId?: string): Promise<PaginatedResult<Grade>> {
   const { examId = "ALL", studentId = "ALL", groupId = "ALL", page = 1, pageSize = 12 } = filters;
-  const scopedExams = await fetchTableRLS<Exam>("exams", academyId);
+  let scopedExams = await fetchTableRLS<Exam>("exams", academyId);
+  let scopedGrades = await fetchTableRLS<Grade>("grades", academyId);
+  if (academyId && isSupabaseConfigured()) {
+    const admin = nodeSupabaseClient();
+    if (admin) {
+      const [{ data: liveExams, error: examsError }, { data: liveGrades, error: gradesError }] = await Promise.all([
+        admin.from("exams").select("*").eq("academy_id", academyId).limit(1000),
+        admin.from("grades").select("*").limit(5000),
+      ]);
+      if (!examsError && liveExams?.length) scopedExams = liveExams as Exam[];
+      if (!gradesError && liveGrades?.length) scopedGrades = liveGrades as Grade[];
+    }
+  }
   const teacherScope = teacherGroupScope();
   const examIds = new Set(
     scopedExams
       .filter((e) => (!academyId || e.academy_id === academyId) && (!teacherScope || teacherScope.has(e.group_id)))
       .map((e) => e.id),
   );
-  let items = (await fetchTableRLS<Grade>("grades", academyId)).filter((g) => examIds.has(g.exam_id));
+  let items = scopedGrades.filter((g) => examIds.has(g.exam_id));
 
   if (examId !== "ALL") items = items.filter((g) => g.exam_id === examId);
   if (studentId !== "ALL")

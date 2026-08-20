@@ -43,6 +43,16 @@ const DIRECT_TENANT_TABLES = new Set([
   "content_progress", "audit_logs",
 ]);
 
+/** Child tables have no academy_id; scope them through their tenant-owned parent. */
+const CHILD_TABLE_PARENTS: Record<string, { parentTable: string; foreignKey: string }> = {
+  group_students: { parentTable: "groups", foreignKey: "group_id" },
+  group_assistants: { parentTable: "groups", foreignKey: "group_id" },
+  attendance: { parentTable: "lessons", foreignKey: "lesson_id" },
+  grades: { parentTable: "exams", foreignKey: "exam_id" },
+  homework_submissions: { parentTable: "homework", foreignKey: "homework_id" },
+  payment_transactions: { parentTable: "payments", foreignKey: "payment_id" },
+};
+
 export async function fetchStudentGroupIds(studentId: string, academyId: string): Promise<string[]> {
   if (!isSupabaseConfigured()) {
     return collections().groupStudents.filter((row) => row.student_id === studentId).map((row) => row.group_id);
@@ -133,32 +143,65 @@ export async function fetchTableRLS<T = any>(table: string, academyId?: string):
   const snapshot = collections() as any;
   const snapshotKey = table.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
   const cacheData = snapshot[table] ?? snapshot[snapshotKey] ?? [];
+  const childRelation = CHILD_TABLE_PARENTS[table];
 
   if (cacheData.length > 0) {
-    if (!DIRECT_TENANT_TABLES.has(table)) return cacheData as T[];
-    return aid ? (cacheData.filter((row: any) => row.academy_id === aid) as T[]) : [];
+    if (DIRECT_TENANT_TABLES.has(table)) {
+      const filtered = aid ? cacheData.filter((row: any) => row.academy_id === aid) : [];
+      // A stale/partial SSR snapshot must not mask a live tenant read.
+      if (filtered.length || !isSupabaseConfigured() || !aid) return filtered as T[];
+    } else if (childRelation) {
+      const parentKey = childRelation.parentTable.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+      const parentRows = snapshot[childRelation.parentTable] ?? snapshot[parentKey] ?? [];
+      const parentIds = new Set(
+        parentRows
+          .filter((row: any) => !aid || row.academy_id === aid)
+          .map((row: any) => row.id),
+      );
+      const filtered = cacheData.filter((row: any) => parentIds.has(row[childRelation.foreignKey]));
+      if (filtered.length || !isSupabaseConfigured() || !aid) return filtered as T[];
+    } else {
+      return cacheData as T[];
+    }
   }
 
-  if (!isSupabaseConfigured() || !aid || !DIRECT_TENANT_TABLES.has(table)) return [];
+  if (!isSupabaseConfigured() || !aid) return [];
 
   try {
     // Prefer the request-bound user client so RLS remains the primary boundary.
-    // A service-role read is only a narrowly filtered cold-start fallback.
-    const requestClient = await createServerSupabaseClient();
-    const requestResult = await requestClient.from(table).select("*").eq("academy_id", aid);
-    if (!requestResult.error) return (requestResult.data ?? []) as T[];
+    let client: any = await createServerSupabaseClient();
+    let result: any;
+    if (DIRECT_TENANT_TABLES.has(table)) {
+      result = await client.from(table).select("*").eq("academy_id", aid).limit(5000);
+    } else if (childRelation) {
+      const parentRows = await fetchTableRLS<any>(childRelation.parentTable, aid);
+      const parentIds = parentRows.map((row: any) => row.id).filter(Boolean);
+      if (!parentIds.length) return [];
+      result = await client.from(table).select("*").in(childRelation.foreignKey, parentIds).limit(5000);
+    } else {
+      return [];
+    }
 
-    const admin = nodeSupabaseClient();
-    if (!admin) {
-      console.error(`[data] ${table} tenant read failed:`, requestResult.error.message);
+    if (result.error) {
+      const admin = nodeSupabaseClient();
+      if (!admin) {
+        console.error(`[data] ${table} tenant read failed:`, result.error.message);
+        return [];
+      }
+      if (DIRECT_TENANT_TABLES.has(table)) {
+        result = await admin.from(table).select("*").eq("academy_id", aid).limit(5000);
+      } else {
+        const parentRows = await fetchTableRLS<any>(childRelation!.parentTable, aid);
+        const parentIds = parentRows.map((row: any) => row.id).filter(Boolean);
+        if (!parentIds.length) return [];
+        result = await admin.from(table).select("*").in(childRelation!.foreignKey, parentIds).limit(5000);
+      }
+    }
+    if (result.error) {
+      console.error(`[data] ${table} tenant read failed:`, result.error.message);
       return [];
     }
-    const adminResult = await admin.from(table).select("*").eq("academy_id", aid);
-    if (adminResult.error) {
-      console.error(`[data] ${table} tenant read failed:`, adminResult.error.message);
-      return [];
-    }
-    return (adminResult.data ?? []) as T[];
+    return (result.data ?? []) as T[];
   } catch (error) {
     console.error(`[data] ${table} tenant read failed:`, error instanceof Error ? error.message : String(error));
     return [];

@@ -179,17 +179,18 @@ export async function studentLessons(
   const scopedGroups = knownGroups ?? await groupsForStudentDashboard(studentId, academyId ?? "");
   const groupIds = scopedGroups.map((g: any) => g.id);
 
-  // If the request snapshot is empty/stale, use the same server-side tenant
-  // boundary as the student resolver rather than returning a false empty view.
-  if (!lessons.length && isSupabaseConfigured() && academyId) {
+  // Prefer a live tenant-scoped read whenever Supabase is configured. The
+  // request snapshot can be stale or contain older lesson projections (for
+  // example a missing topic), even though the current row is complete.
+  if (isSupabaseConfigured() && academyId && groupIds.length) {
     const admin = nodeSupabaseClient();
     if (admin) {
-      const [{ data: directLessons }, { data: directGroups }] = await Promise.all([
-        admin.from("lessons").select("*").eq("academy_id", academyId).limit(1000),
+      const [{ data: directLessons, error: lessonsError }, { data: directGroups, error: groupsError }] = await Promise.all([
+        admin.from("lessons").select("*").eq("academy_id", academyId).in("group_id", groupIds).limit(1000),
         admin.from("groups").select("*").eq("academy_id", academyId).in("id", groupIds).limit(1000),
       ]);
-      lessons = directLessons ?? [];
-      groups = directGroups ?? [];
+      if (!lessonsError && directLessons?.length) lessons = directLessons;
+      if (!groupsError && directGroups?.length) groups = directGroups;
     }
   }
 

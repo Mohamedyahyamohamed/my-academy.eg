@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { loadCurrentUser, resolveStudent } from "@/services";
+import { loadCurrentUser, resolveStudentForDashboard } from "@/services";
 import { verifyQrSession } from "@/lib/qr-session";
 import { collections } from "@/services/data/store";
 import { AttendanceService } from "@/services";
@@ -33,7 +33,10 @@ export async function POST(req: NextRequest) {
   const lessonId = session.lessonId;
 
   // Resolve student.
-  const student = resolveStudent(user);
+  // The in-memory tenant snapshot can be empty in a serverless API request.
+  // Resolve from the current tenant-scoped Supabase request, with the same
+  // academy + email constraints, before falling back to the local snapshot.
+  const student = await resolveStudentForDashboard(user);
   if (!student) {
     return NextResponse.json({ ok: false, error: "No student profile linked." }, { status: 403 });
   }

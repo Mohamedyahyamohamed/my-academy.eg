@@ -1,10 +1,11 @@
 import { BookOpen } from "lucide-react";
+import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LessonForm } from "@/components/lessons/lesson-form";
-import { GroupsService, MiscService, requireScopedRole } from "@/services";
+import { GroupsService, MiscService, isLimitedAssistant, requireScopedRole } from "@/services";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export default async function NewLessonPage(
 ) {
   const searchParams = await props.searchParams;
   const user = await requireScopedRole("TEACHER");
+  if (await isLimitedAssistant(user)) redirect("/lessons");
   const groups = await GroupsService.listGroups("", user.academy_id, user.id);
   const teachers = await MiscService.listTeachers(user.academy_id);
   const defaultGroup =

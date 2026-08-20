@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { LessonsService, GroupsService, requireScopedRole } from "@/services";
+import { LessonsService, GroupsService, isLimitedAssistant, requireScopedRole } from "@/services";
 import { formatDate, formatTimeRange, formatClockTime } from "@/lib/utils";
 import { cookies } from "next/headers";
 import { getLangFromCookie, isRTL } from "@/lib/i18n";
@@ -24,6 +24,7 @@ export default async function LessonsPage(
 ) {
   const searchParams = await props.searchParams;
   const user = await requireScopedRole("TEACHER");
+  const limitedAssistant = await isLimitedAssistant(user);
   const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
   const en = lang === "en";
   const sp = (k: string) =>
@@ -45,7 +46,13 @@ export default async function LessonsPage(
         title={en ? "Lessons" : "الحصص"}
         description={en ? "Schedule and track lessons across all your groups." : "جدوِل وتابع الحصص عبر كل مجموعاتك."}
       >
-        <Button asChild disabled={groups.length === 0}><Link href={groups.length === 0 ? "/groups" : "/lessons/new"}><Plus className="h-4 w-4" /> {groups.length === 0 ? (en ? "Create a group first" : "أنشئ مجموعة أولًا") : (en ? "Add lesson" : "إضافة حصة")}</Link></Button>
+        {limitedAssistant ? (
+          <Button disabled title={en ? "Assistant accounts cannot manage lessons." : "حساب المساعد لا يدير الحصص."}>
+            <Plus className="h-4 w-4" /> {en ? "Add lesson (teacher only)" : "إضافة حصة (للمعلم فقط)"}
+          </Button>
+        ) : (
+          <Button asChild disabled={groups.length === 0}><Link href={groups.length === 0 ? "/groups" : "/lessons/new"}><Plus className="h-4 w-4" /> {groups.length === 0 ? (en ? "Create a group first" : "أنشئ مجموعة أولًا") : (en ? "Add lesson" : "إضافة حصة")}</Link></Button>
+        )}
       </PageHeader>
 
       {groups.length === 0 && (
@@ -79,7 +86,7 @@ export default async function LessonsPage(
           icon={BookOpen}
           title={en ? "No lessons yet" : "لا توجد حصص بعد"}
           description={en ? "Add your first lesson to record attendance and assign homework." : "أضف أول حصة لتسجيل الحضور وتكليف الواجبات."}
-          action={groups.length === 0 ? <Button asChild><Link href="/groups"><UsersRound className="h-4 w-4" /> {en ? "Create a group first" : "إنشاء مجموعة أولًا"}</Link></Button> : <Button asChild><Link href="/lessons/new"><Plus className="h-4 w-4" /> {en ? "Add lesson" : "إضافة حصة"}</Link></Button>}
+          action={limitedAssistant ? undefined : groups.length === 0 ? <Button asChild><Link href="/groups"><UsersRound className="h-4 w-4" /> {en ? "Create a group first" : "إنشاء مجموعة أولًا"}</Link></Button> : <Button asChild><Link href="/lessons/new"><Plus className="h-4 w-4" /> {en ? "Add lesson" : "إضافة حصة"}</Link></Button>}
         />
       ) : (
         <>

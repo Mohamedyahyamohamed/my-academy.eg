@@ -111,6 +111,16 @@ BEGIN
        '','','','');
   END IF;
 
+  -- GoTrue expects legacy token columns to be strings when loading a user.
+  -- Keep this demo-only seed compatible with Auth-created users.
+  UPDATE auth.users
+  SET confirmation_token = COALESCE(confirmation_token, ''),
+      recovery_token = COALESCE(recovery_token, ''),
+      email_change_token_new = COALESCE(email_change_token_new, ''),
+      email_change = COALESCE(email_change, ''),
+      updated_at = now()
+  WHERE id IN (v_t, v_p, v_s);
+
   INSERT INTO profiles (id, academy_id, email, role, full_name, phone, avatar_url, is_active, created_at, updated_at)
   VALUES (v_s, v_academy, 'student@myacademy.edu', 'STUDENT', 'سارة التجريبية', '01000000003', NULL, true, now(), now())
   ON CONFLICT (id) DO UPDATE SET

@@ -6,7 +6,8 @@ import { describe, it, expect } from "vitest";
 import { percentage, round, clamp, formatClockTime } from "@/lib/utils";
 import { isLessonActive, isLessonUpcoming, lessonEndWallClockMinute, lessonWallClockMinute } from "@/services/lessons";
 import {
-  MAX_UPLOAD_BYTES,
+  MAX_CONTENT_UPLOAD_BYTES,
+  MAX_HOMEWORK_UPLOAD_BYTES,
   CONTENT_UPLOAD_EXTENSIONS,
   HOMEWORK_UPLOAD_EXTENSIONS,
 } from "@/lib/upload-policy";
@@ -17,8 +18,12 @@ import {
 } from "@/lib/constants";
 
 describe("Upload policy", () => {
-  it("uses a 500 MiB product file limit", () => {
-    expect(MAX_UPLOAD_BYTES).toBe(500 * 1024 * 1024);
+  it("uses a 500 MiB lesson-content file limit", () => {
+    expect(MAX_CONTENT_UPLOAD_BYTES).toBe(500 * 1024 * 1024);
+  });
+
+  it("keeps homework attachments at the intentional 10 MiB limit", () => {
+    expect(MAX_HOMEWORK_UPLOAD_BYTES).toBe(10 * 1024 * 1024);
   });
 
   it("keeps homework types narrower than lesson-content types", () => {

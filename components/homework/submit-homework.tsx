@@ -12,7 +12,7 @@ import {
 import { submitHomeworkAction } from "@/app/actions/homework";
 import { createHomeworkUploadIntent, finalizeHomeworkUpload } from "@/app/actions/upload";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
-import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB, HOMEWORK_UPLOAD_ACCEPT } from "@/lib/upload-policy";
+import { MAX_HOMEWORK_UPLOAD_BYTES, MAX_HOMEWORK_UPLOAD_MB, HOMEWORK_UPLOAD_ACCEPT } from "@/lib/upload-policy";
 import { useClientLang } from "@/lib/i18n-client";
 
 export function SubmitHomework({
@@ -34,8 +34,8 @@ export function SubmitHomework({
   const router = useRouter();
 
   const upload = async (file: File) => {
-    if (file.size <= 0 || file.size > MAX_UPLOAD_BYTES) {
-      toast.error(en ? `File size must be ${MAX_UPLOAD_MB} MB or less.` : `يجب ألا يتجاوز حجم الملف ${MAX_UPLOAD_MB} ميجابايت.`);
+    if (file.size <= 0 || file.size > MAX_HOMEWORK_UPLOAD_BYTES) {
+      toast.error(en ? `File size must be ${MAX_HOMEWORK_UPLOAD_MB} MB or less.` : `يجب ألا يتجاوز حجم الملف ${MAX_HOMEWORK_UPLOAD_MB} ميجابايت.`);
       return;
     }
     setUploading(true);
@@ -122,7 +122,7 @@ export function SubmitHomework({
           ) : (
             <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground hover:bg-accent/50">
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {uploading ? (en ? "Uploading…" : "جارٍ الرفع…") : (en ? `Attach a file (PDF, image, WEBP) up to ${MAX_UPLOAD_MB} MB` : `إرفاق ملف (PDF أو صورة أو WEBP) حتى ${MAX_UPLOAD_MB} ميجابايت`)}
+              {uploading ? (en ? "Uploading…" : "جارٍ الرفع…") : (en ? `Attach a file (PDF, image, WEBP) up to ${MAX_HOMEWORK_UPLOAD_MB} MB` : `إرفاق ملف (PDF أو صورة أو WEBP) حتى ${MAX_HOMEWORK_UPLOAD_MB} ميجابايت`)}
               <input
                 type="file"
                 className="hidden"

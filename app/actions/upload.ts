@@ -7,9 +7,9 @@ import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { measureTenantStorageUsage } from "@/lib/storage-quota";
 import { getPlan } from "@/services/saas";
-import { hasAllowedExtension, MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from "@/lib/upload-policy";
+import { hasAllowedExtension, MAX_HOMEWORK_UPLOAD_BYTES, MAX_HOMEWORK_UPLOAD_MB } from "@/lib/upload-policy";
 
-const MAX_FILE_SIZE = MAX_UPLOAD_BYTES;
+const MAX_FILE_SIZE = MAX_HOMEWORK_UPLOAD_BYTES;
 
 type SafeUpload = { contentType: string; extension: string };
 
@@ -74,7 +74,7 @@ export async function createHomeworkUploadIntent(formData: FormData) {
   const fileName = String(formData.get("fileName") ?? "").trim();
   const fileSize = Number(formData.get("fileSize") ?? 0);
   const declaredType = String(formData.get("contentType") ?? "");
-  if (!fileName || !Number.isSafeInteger(fileSize) || fileSize <= 0 || fileSize > MAX_FILE_SIZE) return { ok: false, error: `File is empty or larger than ${MAX_UPLOAD_MB}MB.` };
+  if (!fileName || !Number.isSafeInteger(fileSize) || fileSize <= 0 || fileSize > MAX_FILE_SIZE) return { ok: false, error: `File is empty or larger than ${MAX_HOMEWORK_UPLOAD_MB}MB.` };
   const contentType = declaredHomeworkMime(fileName, declaredType);
   if (!contentType) return { ok: false, error: "Unsupported or invalid file. Upload a PDF, PNG, JPEG, or WEBP file." };
   const client = nodeSupabaseClient();
@@ -126,7 +126,7 @@ export async function uploadHomeworkFile(formData: FormData) {
     return { ok: false, error: "A file and homework are required." };
   }
   if (file.size <= 0 || file.size > MAX_FILE_SIZE) {
-    return { ok: false, error: `File too large or empty (max ${MAX_UPLOAD_MB}MB).` };
+    return { ok: false, error: `File too large or empty (max ${MAX_HOMEWORK_UPLOAD_MB}MB).` };
   }
 
   const homework = collections().homework.find(

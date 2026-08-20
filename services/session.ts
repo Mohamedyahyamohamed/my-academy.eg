@@ -97,10 +97,34 @@ async function hydrateTenantContext(user: SessionUser): Promise<SessionUser | nu
       return null;
     }
 
+    const selectedAcademyId = user.academy_id || profile.academy_id;
+    let activeMembershipId = user.active_membership_id;
+    let serverRole = profile.role ?? user.role;
+
+    // A signed cookie is not enough to keep a tenant session alive. Re-check
+    // the active membership on every request so membership removal or
+    // deactivation invalidates an old session before any scoped data is read.
+    // SUPER_ADMIN is platform-scoped and may not require a tenant membership;
+    // all tenant-scoped roles must have an active membership for the selected
+    // academy, and the membership role is the server-side role authority.
+    if (serverRole !== "SUPER_ADMIN") {
+      const { data: membership, error: membershipError } = await client
+        .from("academy_memberships")
+        .select("id,academy_id,role,status")
+        .eq("profile_id", user.id)
+        .eq("academy_id", selectedAcademyId)
+        .eq("status", "ACTIVE")
+        .maybeSingle();
+      if (membershipError || !membership) return null;
+      activeMembershipId = membership.id;
+      serverRole = membership.role ?? serverRole;
+    }
+
     const hydrated: SessionUser = {
       ...user,
-      academy_id: user.academy_id || profile.academy_id,
-      role: profile.role ?? user.role,
+      academy_id: selectedAcademyId,
+      active_membership_id: activeMembershipId,
+      role: serverRole,
       full_name: profile.full_name ?? user.full_name,
       avatar_url: profile.avatar_url ?? user.avatar_url,
     };

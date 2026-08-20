@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { collections } from "@/services/data/store";
-import { currentTeacherId, loadCurrentUser } from "@/services";
+import { LessonsService, requireAttendanceTeacher } from "@/services";
 import { createQrSession } from "@/lib/qr-session";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { isLessonActive } from "@/services/lessons";
@@ -8,9 +7,10 @@ import { requestIpKey } from "@/lib/request-identity";
 
 /** Generate a signed, short-lived QR session token for an owned lesson. */
 export async function POST(req: NextRequest) {
-  const user = await loadCurrentUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (user.role !== "TEACHER") {
+  let user;
+  try {
+    user = await requireAttendanceTeacher();
+  } catch {
     return NextResponse.json({ error: "Attendance QR is available to teachers and their assistants only." }, { status: 403 });
   }
 
@@ -25,12 +25,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing lessonId" }, { status: 400 });
   }
 
-  const lesson = collections().lessons.find(
-    (item) => item.id === lessonId && item.academy_id === user.academy_id,
-  );
+  // Resolve through the same tenant-scoped service used by the attendance page.
+  // The request-local collections snapshot is not guaranteed to be hydrated in an API request.
+  const lesson = await LessonsService.getLesson(lessonId, user.academy_id);
   if (!lesson) return NextResponse.json({ error: "Lesson not found" }, { status: 404 });
 
-  if (lesson.teacher_id !== currentTeacherId()) {
+  // Verify that this lesson belongs to a group owned by or assigned to this teacher/assistant.
+  const scopedLessons = await LessonsService.listLessons(
+    { groupId: lesson.group_id, pageSize: 500 },
+    user.academy_id,
+    user.id,
+  );
+  if (!scopedLessons.items.some((item) => item.id === lesson.id)) {
     return NextResponse.json({ error: "You do not own this lesson" }, { status: 403 });
   }
 

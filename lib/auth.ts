@@ -15,13 +15,6 @@ export const STUDENT_DEFAULT_PASSWORD = "student1234";
 /** الباسورد الافتراضي لحسابات أولياء الأمور (الأدمن بيعملهم). */
 export const PARENT_DEFAULT_PASSWORD = "parent1234";
 
-/** The platform owner is not a tenant customer and is never billed or suspended. */
-export const PLATFORM_OWNER_EMAIL = "mohamedyahya13579@gmail.com";
-
-export function isPlatformOwnerEmail(email?: string | null): boolean {
-  return email?.trim().toLowerCase() === PLATFORM_OWNER_EMAIL;
-}
-
 export const DEMO_ACCOUNTS: { email: string; role: Role; name: string }[] = [
   { email: "admin@myacademy.edu", role: "ADMIN", name: "Yasmin Hassan" },
   { email: "teacher@myacademy.edu", role: "TEACHER", name: "Omar Khaled" },

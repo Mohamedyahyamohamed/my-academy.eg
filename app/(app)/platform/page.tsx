@@ -23,7 +23,6 @@ import { PlatformUserHierarchy, type PlatformHierarchyAcademy } from "@/componen
 import { UserPasswordManagement } from "@/components/settings/user-password-management";
 import { cookies } from "next/headers";
 import { getLangFromCookie } from "@/lib/i18n";
-import { isPlatformOwnerEmail } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -80,14 +79,14 @@ export default async function PlatformPage(props: { searchParams?: Promise<{ tab
 
   const academyRows = academies ?? [];
   const profileRows = profiles ?? [];
-  const ownerAcademyId = profileRows.find((profile: any) => isPlatformOwnerEmail(profile.email))?.academy_id;
+  const ownerAcademyId = profileRows.find((profile: any) => profile.role === "SUPER_ADMIN")?.academy_id;
   const managedAcademies = academyRows.filter((academy: any) => academy.id !== ownerAcademyId);
   const managedAcademyIds = new Set(managedAcademies.map((academy: any) => academy.id));
   const academyNameById = new Map(managedAcademies.map((academy: any) => [academy.id, academy.name]));
   const managedPayments = (payments ?? []).filter((row: any) => managedAcademyIds.has(row.academy_id));
   const managedLifecycleEvents = (lifecycleEvents ?? []).filter((row: any) => managedAcademyIds.has(row.academy_id));
   const managedBillingEvents = (billingEvents ?? []).filter((row: any) => managedAcademyIds.has(row.academy_id));
-  const managedUsers = profileRows.filter((profile: any) => managedAcademyIds.has(profile.academy_id) && !isPlatformOwnerEmail(profile.email) && profile.role !== "SUPER_ADMIN");
+  const managedUsers = profileRows.filter((profile: any) => managedAcademyIds.has(profile.academy_id) && profile.role !== "SUPER_ADMIN");
   const teacherRows: any[] = (platformTeachers ?? []) as any[];
   const groupRows: any[] = (platformGroups ?? []) as any[];
   const assistantRows: any[] = (platformGroupAssistants ?? []) as any[];
@@ -102,7 +101,7 @@ export default async function PlatformPage(props: { searchParams?: Promise<{ tab
     const academyTeacherRows = teacherRows.filter((teacher: any) => teacher.academy_id === academy.id);
     const academyGroupRows = groupRows.filter((group: any) => group.academy_id === academy.id);
     const owners = academyProfiles
-      .filter((profile: any) => profile.role === "ADMIN" && !isPlatformOwnerEmail(profile.email))
+      .filter((profile: any) => profile.role === "ADMIN")
       .map((profile: any) => ({ id: profile.id, name: profile.full_name || profile.email || "Owner", email: profile.email ?? null, role: profile.role, isActive: profile.is_active !== false, teachers: [] }));
     if (owners.length === 0 && academy.workspace_type === "TEACHER") {
       const workspaceOwner = academyProfiles.find((profile: any) => profile.role === "TEACHER") ?? null;

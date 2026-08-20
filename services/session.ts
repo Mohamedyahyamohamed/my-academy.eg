@@ -20,7 +20,6 @@ import {
   DEMO_PASSWORD,
   DEMO_ACCOUNTS,
   roleHome,
-  isPlatformOwnerEmail,
 } from "@/lib/auth";
 import {
   createSignedSession,
@@ -39,11 +38,10 @@ function resolveLocalUser(email: string): SessionUser | null {
     (p) => p.email.toLowerCase() === email.toLowerCase(),
   );
   if (!profile) return null;
-  const isPlatformOwner = isPlatformOwnerEmail(profile.email);
   return {
     id: profile.id,
     email: profile.email,
-    role: isPlatformOwner ? "SUPER_ADMIN" : profile.role,
+    role: profile.role,
     full_name: profile.full_name,
     avatar_url: profile.avatar_url,
     academy_id: profile.academy_id,
@@ -63,8 +61,7 @@ export async function loadCurrentUser(): Promise<SessionUser | null> {
   const raw = cookieStore.get(SESSION_COOKIE)?.value;
   const user = readSignedSession(raw);
   if (user) {
-    const normalizedUser = normalizePlatformOwner(user);
-    const hydratedUser = await hydrateTenantContext(normalizedUser);
+    const hydratedUser = await hydrateTenantContext(user);
     if (!hydratedUser) {
       setRequestContext(null);
       return null;
@@ -100,13 +97,13 @@ async function hydrateTenantContext(user: SessionUser): Promise<SessionUser | nu
       return null;
     }
 
-    const hydrated: SessionUser = normalizePlatformOwner({
+    const hydrated: SessionUser = {
       ...user,
       academy_id: user.academy_id || profile.academy_id,
       role: profile.role ?? user.role,
       full_name: profile.full_name ?? user.full_name,
       avatar_url: profile.avatar_url ?? user.avatar_url,
-    });
+    };
 
     return hydrated;
   } catch (error) {
@@ -151,10 +148,6 @@ async function hydrateAssistantFlag(user: SessionUser): Promise<SessionUser> {
   }
 }
 
-function normalizePlatformOwner(user: SessionUser): SessionUser {
-  return isPlatformOwnerEmail(user.email) ? { ...user, role: "SUPER_ADMIN" } : user;
-}
-
 export type AccessRestriction = {
   blocked: boolean;
   reason: "academy_suspended" | "subscription_past_due" | "subscription_expired" | null;
@@ -163,7 +156,7 @@ export type AccessRestriction = {
 
 /** Resolve the platform access state for one tenant. The owner is never blocked. */
 export async function getAccessRestriction(user: SessionUser): Promise<AccessRestriction> {
-  if (user.role === "SUPER_ADMIN" || isPlatformOwnerEmail(user.email)) {
+  if (user.role === "SUPER_ADMIN") {
     return { blocked: false, reason: null };
   }
 
@@ -202,7 +195,7 @@ export function requireUser(): SessionUser {
 export function requireRole(...roles: Role[]): SessionUser {
   const user = requireUser();
   // SUPER_ADMIN يقدر يفتح أي صفحة (صاحب المنصة)
-  if (user.role === "SUPER_ADMIN" || isPlatformOwnerEmail(user.email)) return { ...user, role: "SUPER_ADMIN" };
+  if (user.role === "SUPER_ADMIN") return user;
   if (!roles.includes(user.role)) redirect(roleHome(user.role));
   return user;
 }

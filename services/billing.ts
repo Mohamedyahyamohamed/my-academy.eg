@@ -5,13 +5,14 @@ import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { isSupabaseConfigured } from "@/services/supabase/config";
 import { getWorkspaceType, PLANS, resolvePlanIdForWorkspace, setPlan, type Plan, type WorkspaceType } from "@/services/saas";
 import { sendSubscriptionSuspensionEmail } from "@/lib/email";
-import { isPlatformOwnerEmail } from "@/lib/auth";
+import type { Role } from "@/types";
 
 export type BillingProvider = "stripe" | "paymob";
 
 type CheckoutActor = {
   academyId: string;
   email: string;
+  role: Role;
   fullName?: string | null;
 };
 
@@ -193,7 +194,7 @@ async function createPaymobCheckout(actor: CheckoutActor, plan: Plan): Promise<C
 
 /** Start a hosted checkout. A paid plan is never activated by this method. */
 export async function createCheckout(actor: CheckoutActor, planId: string): Promise<CheckoutResult> {
-  if (isPlatformOwnerEmail(actor.email)) {
+  if (actor.role === "SUPER_ADMIN") {
     return { ok: false, error: "مالك المنصة لا يحتاج إلى خطة عميل أو اشتراك خاص به." };
   }
   const workspaceType = getWorkspaceType(actor.academyId);

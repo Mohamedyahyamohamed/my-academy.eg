@@ -11,6 +11,7 @@ export async function startBillingCheckoutAction(planId: string) {
   const result = await createCheckout({
     academyId: user.academy_id,
     email: user.email,
+    role: user.role,
     fullName: user.full_name,
   }, planId);
 

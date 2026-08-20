@@ -16,6 +16,30 @@ import {
   PERFORMANCE_LEVELS,
   PAYMENT_STATUS,
 } from "@/lib/constants";
+import { hasPermission, permissions } from "@/lib/permissions";
+
+describe("Role permission matrix", () => {
+  it("keeps platform control exclusive to SUPER_ADMIN semantics", () => {
+    expect(hasPermission("SUPER_ADMIN", "academy.manage")).toBe(true);
+    expect(hasPermission("SUPER_ADMIN", "academy.billing.manage")).toBe(true);
+    expect(hasPermission("ADMIN", "academy.manage")).toBe(true);
+    expect(hasPermission("TEACHER", "academy.manage")).toBe(false);
+    expect(hasPermission("STUDENT", "academy.members.manage")).toBe(false);
+  });
+
+  it("keeps portal roles away from mutation and audit controls", () => {
+    expect(hasPermission("PARENT", "messages.send")).toBe(true);
+    expect(hasPermission("PARENT", "students.manage")).toBe(false);
+    expect(hasPermission("STUDENT", "homework.submit")).toBe(true);
+    expect(hasPermission("STUDENT", "grades.record")).toBe(false);
+    expect(hasPermission("TEACHER", "attendance.record")).toBe(true);
+    expect(hasPermission("TEACHER", "payments.manage")).toBe(false);
+  });
+
+  it("exposes a complete matrix for every persisted role", () => {
+    expect(Object.keys(permissions).sort()).toEqual(["ADMIN", "PARENT", "STUDENT", "SUPER_ADMIN", "TEACHER"]);
+  });
+});
 
 describe("Upload policy", () => {
   it("uses a 500 MiB lesson-content file limit", () => {

@@ -78,7 +78,7 @@ export async function createPaymentAction(input: CreatePaymentInput) {
   const paymentInput: CreatePaymentInput = user.role === "TEACHER"
     ? { ...input, method: "Cash" }
     : input;
-  const res = await PaymentsService.createPayment(paymentInput);
+  const res = await PaymentsService.createPayment(paymentInput, user.academy_id);
   if (!res.ok) return res;
   await import("@/services/audit").then((m) => m.audit(
     {

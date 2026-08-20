@@ -94,8 +94,7 @@ export interface CreatePaymentInput {
   notes?: string | null;
 }
 
-async function validStudent(id: string) {
-  const academyId = currentAcademyId();
+async function validStudent(id: string, academyId: string) {
   const students = await fetchTableRLS<Payment & { id: string }>("students", academyId);
   return students.some((student) => student.id === id);
 }
@@ -104,12 +103,15 @@ function pid() {
   return crypto.randomUUID();
 }
 
-export async function createPayment(input: CreatePaymentInput): Promise<{
+export async function createPayment(input: CreatePaymentInput, academyIdOverride?: string): Promise<{
   ok: boolean;
   error?: string;
   payment?: Payment;
 }> {
-  if (!(await validStudent(input.student_id)))
+  // Capture the tenant before any await. Next Server Actions can lose the
+  // AsyncLocalStorage request context across multiple awaited reads.
+  const academyId = academyIdOverride ?? currentAcademyId();
+  if (!(await validStudent(input.student_id, academyId)))
     return { ok: false, error: "Invalid student." };
   if (input.amount_due < 0 || (input.amount_paid ?? 0) < 0)
     return { ok: false, error: "Amounts cannot be negative." };
@@ -119,7 +121,7 @@ export async function createPayment(input: CreatePaymentInput): Promise<{
   const now = new Date().toISOString();
   const draft: Payment = {
     id: pid(),
-    academy_id: currentAcademyId(),
+    academy_id: academyId,
     student_id: input.student_id,
     group_id: input.group_id ?? null,
     month: input.month,

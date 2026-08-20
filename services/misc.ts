@@ -7,6 +7,7 @@ import type {
   Parent,
   Teacher,
   Academy,
+  Profile,
 } from "@/types";
 import { collections } from "./data/store";
 import { persistInsert, persistDelete } from "./data/store";
@@ -205,8 +206,8 @@ export function updateAcademy(input: Partial<Academy>): Academy {
   return a;
 }
 
-export function listProfiles(academyId?: string) {
-  return byAcademy(collections().profiles, academyId);
+export async function listProfiles(academyId?: string): Promise<Profile[]> {
+  return fetchTableRLS<Profile>("profiles", academyId);
 }
 
 export { APP_CONFIG };

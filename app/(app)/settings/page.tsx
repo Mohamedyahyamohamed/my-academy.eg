@@ -67,7 +67,7 @@ export default async function SettingsPage({
   const user = await requireScopedRole("ADMIN");
   const academy = await MiscService.getAcademyAsync(user.academy_id);
   const courses = await MiscService.listCourses(user.academy_id);
-  const users = MiscService.listProfiles(user.academy_id);
+  const users = await MiscService.listProfiles(user.academy_id);
   const invites = await listAcademyInvites(user.academy_id);
   const assistantGroups = (await GroupsService.listGroups("", user.academy_id)).map(group => ({ id: group.id, name: group.name }));
 

@@ -6,6 +6,13 @@ type AudioWindow = Window & {
   webkitAudioContext?: AudioContextConstructor;
 };
 
+const SOUND_URLS: Record<QrSoundKind, string> = {
+  success: "/sounds/qr-success.wav",
+  error: "/sounds/qr-error.wav",
+};
+
+let successAudio: HTMLAudioElement | null = null;
+let errorAudio: HTMLAudioElement | null = null;
 let audioContext: AudioContext | null = null;
 
 function getAudioContext(): AudioContext | null {
@@ -16,9 +23,25 @@ function getAudioContext(): AudioContext | null {
   return audioContext;
 }
 
+function getHtmlAudio(kind: QrSoundKind): HTMLAudioElement | null {
+  if (typeof window === "undefined" || typeof Audio === "undefined") return null;
+  const current = kind === "success" ? successAudio : errorAudio;
+  if (current) return current;
+
+  try {
+    const audio = new Audio(SOUND_URLS[kind]);
+    audio.preload = "auto";
+    audio.setAttribute("playsinline", "true");
+    if (kind === "success") successAudio = audio;
+    else errorAudio = audio;
+    return audio;
+  } catch {
+    return null;
+  }
+}
+
 function unlockContext(context: AudioContext): void {
-  // A very short silent source makes iOS/Safari accept subsequent audio
-  // scheduled after the camera callback, which is not itself a user gesture.
+  // Keep the Web Audio fallback unlocked when the browser supports it.
   try {
     const oscillator = context.createOscillator();
     const gain = context.createGain();
@@ -32,8 +55,34 @@ function unlockContext(context: AudioContext): void {
   }
 }
 
-/** Prime the audio context from a user gesture, such as pressing Start camera. */
+function primeHtmlAudio(kind: QrSoundKind): void {
+  const audio = getHtmlAudio(kind);
+  if (!audio) return;
+  try {
+    audio.load();
+    // A muted play/pause during the Start-camera gesture unlocks the media
+    // element on iOS/Safari. The actual result tone is played later by the
+    // asynchronous QR callback.
+    audio.muted = true;
+    const unlock = audio.play();
+    void unlock.then(() => {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.muted = false;
+    }).catch(() => {
+      audio.muted = false;
+    });
+  } catch {
+    audio.muted = false;
+  }
+}
+
+/** Prime audio from a user gesture, such as pressing Start camera. */
 export function primeQrSound(): void {
+  if (typeof window === "undefined") return;
+  primeHtmlAudio("success");
+  primeHtmlAudio("error");
+
   const context = getAudioContext();
   if (!context) return;
   unlockContext(context);
@@ -63,19 +112,33 @@ function scheduleTone(context: AudioContext, kind: QrSoundKind): void {
   });
 }
 
-/** Play a short, non-blocking result tone for QR attendance. */
-export function playQrResultSound(kind: QrSoundKind): void {
+function playWebAudioFallback(kind: QrSoundKind): void {
   const context = getAudioContext();
   if (!context) return;
 
-  // The scan callback is asynchronous. Always resume first, then schedule;
-  // scheduling while suspended is ignored or delayed inconsistently on phones.
   if (context.state === "suspended") {
     void context.resume().then(() => {
       if (context.state === "running") scheduleTone(context, kind);
     }).catch(() => undefined);
     return;
   }
-
   if (context.state === "running") scheduleTone(context, kind);
+}
+
+/** Play a short, non-blocking result tone for QR attendance. */
+export function playQrResultSound(kind: QrSoundKind): void {
+  const audio = getHtmlAudio(kind);
+  if (audio) {
+    try {
+      audio.currentTime = 0;
+      audio.muted = false;
+      audio.volume = 0.85;
+      const playback = audio.play();
+      void playback.catch(() => playWebAudioFallback(kind));
+      return;
+    } catch {
+      // Fall through to the Web Audio fallback.
+    }
+  }
+  playWebAudioFallback(kind);
 }

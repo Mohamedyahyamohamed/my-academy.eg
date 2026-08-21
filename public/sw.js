@@ -1,9 +1,11 @@
-const STATIC_CACHE = "my-academy-static-v3";
+const STATIC_CACHE = "my-academy-static-v4";
 const STATIC_ASSETS = [
   "/manifest.webmanifest",
   "/icon.svg",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
+  "/sounds/qr-success.wav",
+  "/sounds/qr-error.wav",
 ];
 
 self.addEventListener("install", (event) => {
@@ -24,7 +26,7 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   // Never cache authenticated pages or API responses: both may contain tenant-scoped data.
-  const isStaticAsset = url.pathname.startsWith("/_next/static/") || ["/manifest.webmanifest", "/icon.svg", "/favicon.ico"].includes(url.pathname);
+  const isStaticAsset = url.pathname.startsWith("/_next/static/") || ["/manifest.webmanifest", "/icon.svg", "/favicon.ico", "/sounds/qr-success.wav", "/sounds/qr-error.wav"].includes(url.pathname);
   if (!isStaticAsset) return;
 
   event.respondWith(

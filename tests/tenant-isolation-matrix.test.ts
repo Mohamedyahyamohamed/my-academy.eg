@@ -6,10 +6,10 @@ import { getStudent, createStudent, updateStudent } from "@/services/students";
 import { getGroup, createGroup, updateGroup, deleteGroup } from "@/services/groups";
 import { getLesson, createLesson, updateLesson, deleteLesson } from "@/services/lessons";
 import { getAttendanceSheet, saveAttendance, studentAttendanceSummary } from "@/services/attendance";
-import { getHomework, createHomework, deleteHomework } from "@/services/homework";
+import { getHomework, createHomework, deleteHomework, reviewSubmission } from "@/services/homework";
 import { getExam, createExam, deleteExam, saveGrades, listGrades } from "@/services/grades";
 import { addNote, notesForStudent, deleteNote, listParents, createParent, listCourses, createCourse, updateCourse, deleteCourse } from "@/services/misc";
-import { getPayment, createPayment, deletePayment, listPayments } from "@/services/payments";
+import { getPayment, createPayment, deletePayment, listPayments, recordPayment } from "@/services/payments";
 import { getInbox, sendMessage } from "@/services/messaging";
 import { getCourse as getContentCourse, getContentFile, createCourse as createContentCourse, createLesson as createContentLesson, listContentFiles } from "@/services/content";
 
@@ -191,11 +191,9 @@ describe("Tenant isolation matrix — synthetic A/B service paths", () => {
       ["group", () => updateGroup(ids.group, { name: "cross" })],
       ["lesson", () => updateLesson(ids.lesson, { topic: "cross" })],
       ["attendance", () => saveAttendance(ids.lesson, [{ studentId: ids.student, status: "LATE" }])],
-      ["homework", () => createHomework({ group_id: ids.group, lesson_id: ids.lesson, title: "cross", description: "", deadline: "2099-02-01T12:00:00.000Z" } as any)],
-      ["exam", () => saveGrades(ids.exam, [{ studentId: ids.student, score: 1 }])],
-      ["note", () => addNote(ids.student, "cross-author", "Cross Author", "cross")],
-      ["payment", () => createPayment({ student_id: ids.student, group_id: ids.group, month: "2099-01", amount_due: 1, amount_paid: 0 })],
-      ["content", () => createContentLesson({ course_id: ids.contentCourse, title: "cross", description: "", sort_order: 2 } as any, actor === A ? A_USER : B_USER)],
+      ["homework submission", () => reviewSubmission(ids.submission, "cross-tenant review", 1)],
+      ["exam grades", () => saveGrades(ids.exam, [{ studentId: ids.student, score: 1 }])],
+      ["payment", () => recordPayment(ids.payment, 1, "Cash", "cross-tenant update")],
     ];
     for (const actor of [A, B]) {
       useTenant(actor);

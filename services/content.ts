@@ -131,9 +131,18 @@ export async function listCourses(user: SessionUser): Promise<ContentCourse[]> {
 }
 
 export async function getCourse(id: string, user: SessionUser): Promise<ContentCourse | null> {
-  const courses = await listCourses(user);
-  const course = courses.find((item) => item.id === id);
+  assertContentPermission(user, "read");
+  // Detail routes must not depend on a potentially stale list-page snapshot.
+  // Resolve the requested course directly inside the authenticated academy,
+  // then apply the same group and publication rules before loading children.
+  const course = (await contentRows<ContentCourse>("content_courses", user.academy_id)).find((item) => item.id === id);
   if (!course) return null;
+  if (!hasAcademyWideScope(user.role) && user.role !== "TEACHER" && !course.is_published) return null;
+  try {
+    await assertGroupAccess(user, course.group_id);
+  } catch {
+    return null;
+  }
   const lessons = await listLessons(id, user);
   const files = await listContentFiles(id, user);
   const links = await listContentLinks(id, user);

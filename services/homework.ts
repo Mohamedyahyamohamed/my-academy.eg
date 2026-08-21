@@ -198,6 +198,7 @@ export async function createHomework(input: HomeworkInput): Promise<Homework> {
       homework_id: h.id,
       student_id: s.id,
       content: null,
+      file_id: null,
       file_url: null,
       status: "PENDING" as const,
       submitted_at: null,
@@ -262,6 +263,7 @@ export async function listSubmissions(
     .filter((s: any) => s.homework_id === homeworkId)
     .map((s: any) => ({
       ...s,
+      file_url: s.file_id ? `/api/homework/files/${s.file_id}` : s.file_url,
       student: liveStudents.find((st: any) => st.id === s.student_id) ?? collections().students.find((st) => st.id === s.student_id),
     }))
     .sort((a: any, b: any) => fullName(a.student!).localeCompare(fullName(b.student!)));
@@ -311,26 +313,54 @@ export async function submissionStats(
   }));
 }
 
+async function validateHomeworkAttachment(
+  fileId: string,
+  fileUrl: string | undefined,
+  homework: Homework,
+  studentId: string,
+): Promise<{ id: string } | null> {
+  const user = getCurrentUser();
+  const client = nodeSupabaseClient();
+  if (!user || !client) throw new Error("Attachment storage is not configured.");
+  const { data: file, error } = await client
+    .from("files")
+    .select("id, academy_id, owner_id, url")
+    .eq("id", fileId)
+    .eq("academy_id", homework.academy_id)
+    .eq("owner_id", user.id)
+    .maybeSingle();
+  const expectedPrefix = `${homework.academy_id}/${homework.id}/${studentId}/`;
+  const expectedUrl = `/api/homework/files/${fileId}`;
+  if (error || !file || typeof file.url !== "string" || !file.url.startsWith(expectedPrefix) || (fileUrl && fileUrl !== expectedUrl)) {
+    throw new Error("Attachment is invalid or outside this homework.");
+  }
+  return { id: file.id };
+}
+
 export async function submitHomework(
   homeworkId: string,
   studentId: string,
   content: string,
   fileUrl?: string,
+  fileId?: string,
 ): Promise<HomeworkSubmission | null> {
   const homework = homeworkInCurrentAcademy(homeworkId);
   assertStudentSubmissionScope(homework, studentId);
   if (new Date(homework.deadline).getTime() < Date.now()) throw new Error("Homework deadline has passed.");
+
+  const attachment = fileId ? await validateHomeworkAttachment(fileId, fileUrl, homework, studentId) : null;
   let s = collections().submissions.find(
     (x) => x.homework_id === homeworkId && x.student_id === studentId,
   );
   const now = new Date().toISOString();
   if (s) {
     s.content = content;
-    s.file_url = fileUrl ?? s.file_url;
+    s.file_id = attachment?.id ?? s.file_id ?? null;
+    s.file_url = attachment ? `/api/homework/files/${attachment.id}` : fileUrl ?? s.file_url;
     s.status = "SUBMITTED";
     s.submitted_at = now;
     await persistUpdate("homework_submissions", s.id, {
-      content, file_url: s.file_url, status: "SUBMITTED", submitted_at: now,
+      content, file_id: s.file_id, file_url: s.file_url, status: "SUBMITTED", submitted_at: now,
     });
   } else {
     s = {
@@ -338,7 +368,8 @@ export async function submitHomework(
       homework_id: homeworkId,
       student_id: studentId,
       content,
-      file_url: fileUrl ?? null,
+      file_id: attachment?.id ?? null,
+      file_url: attachment ? `/api/homework/files/${attachment.id}` : fileUrl ?? null,
       status: "SUBMITTED",
       submitted_at: now,
       reviewed_at: null,
@@ -410,6 +441,7 @@ export async function homeworkForStudent(studentId: string, academyId?: string):
     .filter((s: any) => hwIds.includes(s.homework_id) && s.student_id === studentId)
     .map((s: any) => ({
       ...s,
+      file_url: s.file_id ? `/api/homework/files/${s.file_id}` : s.file_url,
       homework: homework.find((h) => h.id === s.homework_id),
     }))
     .sort((a: any, b: any) => +new Date(b.homework?.created_at ?? 0) - +new Date(a.homework?.created_at ?? 0));

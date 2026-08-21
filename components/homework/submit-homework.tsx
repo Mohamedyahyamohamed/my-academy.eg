@@ -28,6 +28,7 @@ export function SubmitHomework({
   const [open, setOpen] = React.useState(false);
   const [content, setContent] = React.useState("");
   const [fileUrl, setFileUrl] = React.useState<string | null>(null);
+  const [fileId, setFileId] = React.useState<string | null>(null);
   const [fileName, setFileName] = React.useState<string | null>(null);
   const [uploading, setUploading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -64,7 +65,8 @@ export function SubmitHomework({
       finalizeData.set("contentType", uploadType);
       const result = await finalizeHomeworkUpload(finalizeData);
       if (!result.ok) throw new Error(result.error);
-      setFileUrl(result.url ?? uploadPath);
+      setFileUrl(result.url ?? `/api/homework/files/${result.fileId}`);
+      setFileId(result.fileId ?? null);
       setFileName(result.name ?? file.name);
       toast.success(en ? "File attached." : "تم إرفاق الملف.");
     } catch (e) {
@@ -81,11 +83,12 @@ export function SubmitHomework({
     }
     setSaving(true);
     try {
-      await submitHomeworkAction(homeworkId, studentId, content.trim(), fileUrl ?? undefined);
+      await submitHomeworkAction(homeworkId, studentId, content.trim(), fileUrl ?? undefined, fileId ?? undefined);
       toast.success(en ? "Homework submitted." : "تم تسليم الواجب.");
       setOpen(false);
       setContent("");
       setFileUrl(null);
+      setFileId(null);
       setFileName(null);
       router.refresh();
     } finally {
@@ -115,7 +118,7 @@ export function SubmitHomework({
                 <Paperclip className="h-4 w-4 shrink-0 text-primary" />
                 <span className="truncate">{fileName}</span>
               </span>
-              <Button variant="ghost" size="icon-sm" onClick={() => { setFileUrl(null); setFileName(null); }}>
+              <Button variant="ghost" size="icon-sm" onClick={() => { setFileUrl(null); setFileId(null); setFileName(null); }}>
                 <X className="h-4 w-4" />
               </Button>
             </div>

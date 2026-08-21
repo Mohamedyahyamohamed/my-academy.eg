@@ -7,10 +7,8 @@ import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { measureTenantStorageUsage } from "@/lib/storage-quota";
 import { getPlan } from "@/services/saas";
-import { hasAllowedExtension, MAX_HOMEWORK_UPLOAD_BYTES, MAX_HOMEWORK_UPLOAD_MB } from "@/lib/upload-policy";
+import { hasAllowedExtension, isWithinUploadLimit, MAX_HOMEWORK_UPLOAD_MB } from "@/lib/upload-policy";
 import { detectUpload } from "@/lib/upload-validation";
-
-const MAX_FILE_SIZE = MAX_HOMEWORK_UPLOAD_BYTES;
 
 async function homeworkUploadContext(formData: FormData) {
   const user = await requireScopedRole("STUDENT", "ADMIN", "TEACHER");
@@ -48,7 +46,7 @@ export async function createHomeworkUploadIntent(formData: FormData) {
   const fileName = String(formData.get("fileName") ?? "").trim();
   const fileSize = Number(formData.get("fileSize") ?? 0);
   const declaredType = String(formData.get("contentType") ?? "");
-  if (!fileName || !Number.isSafeInteger(fileSize) || fileSize <= 0 || fileSize > MAX_FILE_SIZE) return { ok: false, error: `File is empty or larger than ${MAX_HOMEWORK_UPLOAD_MB}MB.` };
+  if (!fileName || !isWithinUploadLimit(fileSize, "homework")) return { ok: false, error: `File is empty or larger than ${MAX_HOMEWORK_UPLOAD_MB}MB.` };
   const contentType = declaredHomeworkMime(fileName, declaredType);
   if (!contentType) return { ok: false, error: "Unsupported or invalid file. Upload a PDF, PNG, JPEG, or WEBP file." };
   const client = nodeSupabaseClient();
@@ -72,7 +70,7 @@ export async function finalizeHomeworkUpload(formData: FormData) {
   const fileSize = Number(formData.get("fileSize") ?? 0);
   const declaredType = String(formData.get("contentType") ?? "");
   const prefix = `${context.user.academy_id}/${context.homeworkId}/${context.studentId}/`;
-  if (!path.startsWith(prefix) || path.includes("..") || !fileName || !Number.isSafeInteger(fileSize) || fileSize <= 0 || fileSize > MAX_FILE_SIZE) return { ok: false, error: "Invalid upload metadata." };
+  if (!path.startsWith(prefix) || path.includes("..") || !fileName || !isWithinUploadLimit(fileSize, "homework")) return { ok: false, error: "Invalid upload metadata." };
   const contentType = declaredHomeworkMime(fileName, declaredType);
   if (!contentType) return { ok: false, error: "Unsupported or invalid file." };
   const client = nodeSupabaseClient();
@@ -82,10 +80,9 @@ export async function finalizeHomeworkUpload(formData: FormData) {
   if (!safeUpload) { await client.storage.from("homework").remove([path]); return { ok: false, error: "Uploaded object failed file validation." }; }
   const inserted = await client.from("files").insert({ academy_id: context.user.academy_id, owner_id: context.user.id, name: fileName, url: path, size: fileSize, mime_type: safeUpload.contentType }).select("id").single();
   if (inserted.error) { await client.storage.from("homework").remove([path]); return { ok: false, error: "Could not record the uploaded file." }; }
-  const signed = await client.storage.from("homework").createSignedUrl(path, 3600);
-  if (signed.error || !signed.data?.signedUrl) { await client.storage.from("homework").remove([path]); await client.from("files").delete().eq("id", inserted.data.id).eq("academy_id", context.user.academy_id); return { ok: false, error: "Could not create a private download link." }; }
-  void audit({ action: "upload.completed", metadata: { userId: context.user.id, academyId: context.user.academy_id, directUpload: true, homeworkId: context.homeworkId, size: fileSize } }, context.user);
-  return { ok: true, url: signed.data.signedUrl, name: fileName };
+  const downloadUrl = `/api/homework/files/${inserted.data.id}`;
+  void audit({ action: "upload.completed", metadata: { userId: context.user.id, academyId: context.user.academy_id, directUpload: true, homeworkId: context.homeworkId, size: fileSize, fileId: inserted.data.id } }, context.user);
+  return { ok: true, url: downloadUrl, fileId: inserted.data.id, name: fileName };
 }
 
 /** Upload a homework attachment using tenant-validated private storage. */
@@ -99,7 +96,7 @@ export async function uploadHomeworkFile(formData: FormData) {
   if (!(file instanceof File) || typeof homeworkId !== "string" || !homeworkId) {
     return { ok: false, error: "A file and homework are required." };
   }
-  if (file.size <= 0 || file.size > MAX_FILE_SIZE) {
+  if (!isWithinUploadLimit(file.size, "homework")) {
     return { ok: false, error: `File too large or empty (max ${MAX_HOMEWORK_UPLOAD_MB}MB).` };
   }
 
@@ -183,22 +180,22 @@ export async function uploadHomeworkFile(formData: FormData) {
     url: path,
     size: file.size,
     mime_type: safeUpload.contentType,
-  });
+  }).select("id").single();
   if (fileRecord.error) {
     await client.storage.from("homework").remove([path]);
     return { ok: false, error: "Could not record the uploaded file." };
   }
 
-  const signed = await client.storage.from("homework").createSignedUrl(path, 3600);
-  if (signed.error || !signed.data?.signedUrl) {
+  const fileId = fileRecord.data?.id;
+  if (!fileId) {
     await client.storage.from("homework").remove([path]);
     await client.from("files").delete().eq("academy_id", user.academy_id).eq("url", path);
-    return { ok: false, error: "Could not create a private download link." };
+    return { ok: false, error: "Could not identify the uploaded file." };
   }
 
   void audit(
-    { action: "upload.completed", metadata: { userId: user.id, academyId: user.academy_id } },
+    { action: "upload.completed", metadata: { userId: user.id, academyId: user.academy_id, fileId } },
     user,
   );
-  return { ok: true, url: signed.data.signedUrl, name: file.name };
+  return { ok: true, url: `/api/homework/files/${fileId}`, fileId, name: file.name };
 }

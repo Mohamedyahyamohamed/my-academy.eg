@@ -74,9 +74,10 @@ export async function submitHomeworkAction(
   studentId: string,
   content: string,
   fileUrl?: string,
+  fileId?: string,
 ) {
   await requireScopedRole("STUDENT");
-  await HomeworkService.submitHomework(homeworkId, studentId, content, fileUrl);
+  await HomeworkService.submitHomework(homeworkId, studentId, content, fileUrl, fileId);
   void audit({ action: "mutation" });
   revalidatePath("/student/homework");
 }

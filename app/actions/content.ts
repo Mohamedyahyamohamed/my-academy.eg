@@ -9,10 +9,8 @@ import { measureTenantStorageUsage } from "@/lib/storage-quota";
 import { getPlan } from "@/services/saas";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { can } from "@/lib/permissions";
-import { hasAllowedExtension, MAX_CONTENT_UPLOAD_BYTES, MAX_CONTENT_UPLOAD_MB } from "@/lib/upload-policy";
+import { hasAllowedExtension, isWithinUploadLimit, MAX_CONTENT_UPLOAD_MB } from "@/lib/upload-policy";
 import { detectUpload } from "@/lib/upload-validation";
-
-const MAX_CONTENT_FILE_SIZE = MAX_CONTENT_UPLOAD_BYTES;
 
 function contentPaths(courseId: string) {
   return ["/teacher/content", `/teacher/content/${courseId}`, `/student/content`, `/student/content/${courseId}`];
@@ -93,7 +91,7 @@ export async function createContentUploadIntent(formData: FormData) {
   const fileName = String(formData.get("fileName") ?? "").trim();
   const fileSize = Number(formData.get("fileSize") ?? 0);
   const declaredType = String(formData.get("contentType") ?? "");
-  if (!fileName || !Number.isSafeInteger(fileSize) || fileSize <= 0 || fileSize > MAX_CONTENT_FILE_SIZE) return { ok: false, error: `File is empty or larger than ${MAX_CONTENT_UPLOAD_MB}MB.` };
+  if (!fileName || !isWithinUploadLimit(fileSize, "content")) return { ok: false, error: `File is empty or larger than ${MAX_CONTENT_UPLOAD_MB}MB.` };
   const contentType = declaredContentMime(fileName, declaredType);
   if (!contentType) return { ok: false, error: "Unsupported file type." };
   const client = nodeSupabaseClient();
@@ -119,7 +117,7 @@ export async function finalizeContentUpload(formData: FormData) {
   const fileSize = Number(formData.get("fileSize") ?? 0);
   const declaredType = String(formData.get("contentType") ?? "");
   const prefix = `${user.academy_id}/courses/${context.courseId}/`;
-  if (!path.startsWith(prefix) || path.includes("..") || !fileName || !Number.isSafeInteger(fileSize) || fileSize <= 0 || fileSize > MAX_CONTENT_FILE_SIZE) return { ok: false, error: "Invalid upload metadata." };
+  if (!path.startsWith(prefix) || path.includes("..") || !fileName || !isWithinUploadLimit(fileSize, "content")) return { ok: false, error: "Invalid upload metadata." };
   const contentType = declaredContentMime(fileName, declaredType);
   if (!contentType) return { ok: false, error: "Unsupported file type." };
   const client = nodeSupabaseClient();
@@ -135,15 +133,10 @@ export async function finalizeContentUpload(formData: FormData) {
     await client.storage.from("content").remove([path]);
     return { ok: false, error: "Could not record the uploaded file." };
   }
-  const signed = await client.storage.from("content").createSignedUrl(path, 3600);
-  if (signed.error || !signed.data?.signedUrl) {
-    await client.storage.from("content").remove([path]);
-    await client.from("content_files").delete().eq("id", inserted.data.id).eq("academy_id", user.academy_id);
-    return { ok: false, error: "Could not create a private download link." };
-  }
+  const downloadUrl = `/api/content/files/${inserted.data.id}`;
   for (const pathToRevalidate of contentPaths(context.courseId)) revalidatePath(pathToRevalidate);
-  await audit({ action: "content.file.uploaded", metadata: { courseId: context.courseId, lessonId: context.lessonId, size: fileSize, mimeType: safeUpload.contentType, directUpload: true } }, user);
-  return { ok: true, url: signed.data.signedUrl, name: fileName, fileId: inserted.data.id };
+  await audit({ action: "content.file.uploaded", metadata: { courseId: context.courseId, lessonId: context.lessonId, size: fileSize, mimeType: safeUpload.contentType, directUpload: true, fileId: inserted.data.id } }, user);
+  return { ok: true, url: downloadUrl, name: fileName, fileId: inserted.data.id };
 }
 
 export async function uploadContentFile(formData: FormData) {
@@ -158,7 +151,7 @@ export async function uploadContentFile(formData: FormData) {
   const lessonIdRaw = String(formData.get("lessonId") ?? "");
   const lessonId = lessonIdRaw || null;
   if (!(file instanceof File) || !courseId) return { ok: false, error: "A file and course are required." };
-  if (file.size <= 0 || file.size > MAX_CONTENT_FILE_SIZE) return { ok: false, error: `File is empty or larger than ${MAX_CONTENT_UPLOAD_MB}MB.` };
+  if (!isWithinUploadLimit(file.size, "content")) return { ok: false, error: `File is empty or larger than ${MAX_CONTENT_UPLOAD_MB}MB.` };
 
   const course = await ContentService.getCourse(courseId, user);
   if (!course) return { ok: false, error: "Course not found or outside your scope." };
@@ -195,16 +188,10 @@ export async function uploadContentFile(formData: FormData) {
     return { ok: false, error: "Could not record the uploaded file." };
   }
 
-  const signed = await client.storage.from("content").createSignedUrl(path, 3600);
-  if (signed.error || !signed.data?.signedUrl) {
-    await client.storage.from("content").remove([path]);
-    await client.from("content_files").delete().eq("id", inserted.data.id).eq("academy_id", user.academy_id);
-    return { ok: false, error: "Could not create a private download link." };
-  }
-
+  const downloadUrl = `/api/content/files/${inserted.data.id}`;
   for (const pathToRevalidate of contentPaths(courseId)) revalidatePath(pathToRevalidate);
-  await audit({ action: "content.file.uploaded", metadata: { courseId, lessonId, size: file.size, mimeType: safeUpload.contentType } }, user);
-  return { ok: true, url: signed.data.signedUrl, name: file.name, fileId: inserted.data.id };
+  await audit({ action: "content.file.uploaded", metadata: { courseId, lessonId, size: file.size, mimeType: safeUpload.contentType, fileId: inserted.data.id } }, user);
+  return { ok: true, url: downloadUrl, name: file.name, fileId: inserted.data.id };
 }
 
 export async function addContentLink(formData: FormData) {

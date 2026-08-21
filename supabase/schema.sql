@@ -281,6 +281,7 @@ create table homework_submissions (
   homework_id uuid not null references homework(id) on delete cascade,
   student_id uuid not null references students(id) on delete cascade,
   content text,
+  file_id uuid,
   file_url text,
   status homework_status not null default 'PENDING',
   submitted_at timestamptz,
@@ -323,6 +324,10 @@ create table files (
   mime_type text,
   created_at timestamptz not null default now()
 );
+
+alter table homework_submissions
+  add constraint homework_submissions_file_id_fkey
+  foreign key (file_id) references files(id) on delete set null;
 
 -- ---------------------------------------------------------------------
 -- updated_at triggers

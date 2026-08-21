@@ -26,6 +26,11 @@ export const HOMEWORK_UPLOAD_EXTENSIONS = ["pdf", "png", "jpg", "jpeg", "webp"] 
 
 export type UploadBucket = "content" | "homework";
 
+export function isWithinUploadLimit(size: number, bucket: UploadBucket): boolean {
+  const maxBytes = bucket === "content" ? MAX_CONTENT_UPLOAD_BYTES : MAX_HOMEWORK_UPLOAD_BYTES;
+  return Number.isSafeInteger(size) && size > 0 && size <= maxBytes;
+}
+
 export function hasAllowedExtension(fileName: string, bucket: UploadBucket): boolean {
   const extension = fileName.split(".").pop()?.toLowerCase();
   if (!extension) return false;

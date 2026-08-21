@@ -10,6 +10,7 @@ import {
   MAX_HOMEWORK_UPLOAD_BYTES,
   CONTENT_UPLOAD_EXTENSIONS,
   HOMEWORK_UPLOAD_EXTENSIONS,
+  isWithinUploadLimit,
 } from "@/lib/upload-policy";
 import {
   performanceLevel,
@@ -55,6 +56,20 @@ describe("Upload policy", () => {
     expect(CONTENT_UPLOAD_EXTENSIONS).toContain("mp4");
     expect(HOMEWORK_UPLOAD_EXTENSIONS).not.toContain("docx");
     expect(HOMEWORK_UPLOAD_EXTENSIONS).not.toContain("mp4");
+  });
+
+  it("allows content through exactly 500 MiB and denies above it", () => {
+    expect(isWithinUploadLimit(MAX_CONTENT_UPLOAD_BYTES - 1, "content")).toBe(true);
+    expect(isWithinUploadLimit(MAX_CONTENT_UPLOAD_BYTES, "content")).toBe(true);
+    expect(isWithinUploadLimit(MAX_CONTENT_UPLOAD_BYTES + 1, "content")).toBe(false);
+  });
+
+  it("allows homework through exactly 10 MiB and denies above it", () => {
+    expect(isWithinUploadLimit(MAX_HOMEWORK_UPLOAD_BYTES - 1, "homework")).toBe(true);
+    expect(isWithinUploadLimit(MAX_HOMEWORK_UPLOAD_BYTES, "homework")).toBe(true);
+    expect(isWithinUploadLimit(MAX_HOMEWORK_UPLOAD_BYTES + 1, "homework")).toBe(false);
+    expect(isWithinUploadLimit(0, "homework")).toBe(false);
+    expect(isWithinUploadLimit(Number.POSITIVE_INFINITY, "homework")).toBe(false);
   });
 });
 

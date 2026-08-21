@@ -25,7 +25,7 @@ async function homeworkUploadContext(formData: FormData) {
   if (!homework || !group) return { ok: false as const, error: "Homework not found." };
   const studentId = user.role === "STUDENT" ? resolveStudent(user)?.id ?? null : typeof requestedStudentId === "string" && requestedStudentId ? requestedStudentId : null;
   const student = studentId ? studentRows.find((item) => item.id === studentId && item.academy_id === user.academy_id) : null;
-  const enrolledStudentIds = await fetchGroupStudentIds(homework.group_id);
+  const enrolledStudentIds = await fetchGroupStudentIds(homework.group_id, user.academy_id);
   const enrolled = Boolean(student && enrolledStudentIds.includes(student.id));
   if (!student || !enrolled) return { ok: false as const, error: "Student is not enrolled in this homework group." };
   if (user.role === "STUDENT" && student.email?.toLowerCase() !== user.email.toLowerCase()) return { ok: false as const, error: "You can only upload for your own account." };

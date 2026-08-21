@@ -92,16 +92,31 @@ export async function fetchStudentGroupIds(studentId: string, academyId: string)
   }
 }
 
-export async function fetchGroupStudentIds(groupId: string): Promise<string[]> {
+export async function fetchGroupStudentIds(groupId: string, academyId?: string): Promise<string[]> {
   const cached = collections().groupStudents.filter((row) => row.group_id === groupId).map((row) => row.student_id);
   if (!isSupabaseConfigured()) return cached;
   try {
     let client: any = await createServerSupabaseClient();
     let result = await client.from("group_students").select("student_id").eq("group_id", groupId).limit(1000);
-    if (result.error) {
+    const shouldUseValidatedAdminFallback = Boolean(academyId) && !result.error && (result.data ?? []).length === 0;
+    if (result.error || shouldUseValidatedAdminFallback) {
       const admin = nodeSupabaseClient();
-      if (!admin) throw result.error;
-      result = await admin.from("group_students").select("student_id").eq("group_id", groupId).limit(1000);
+      if (!admin) {
+        if (result.error) throw result.error;
+        return (result.data ?? []).map((row: any) => row.student_id).filter(Boolean);
+      }
+      if (academyId) {
+        const groupCheck = await admin
+          .from("groups")
+          .select("id")
+          .eq("id", groupId)
+          .eq("academy_id", academyId)
+          .maybeSingle();
+        if (groupCheck.error) throw groupCheck.error;
+        if (!groupCheck.data) return [];
+      }
+      client = admin;
+      result = await client.from("group_students").select("student_id").eq("group_id", groupId).limit(1000);
     }
     if (result.error) throw result.error;
     return (result.data ?? []).map((row: any) => row.student_id).filter(Boolean);

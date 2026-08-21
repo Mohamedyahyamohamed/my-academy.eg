@@ -39,3 +39,15 @@ An authenticated student upload and submission is still required to verify the c
 [2026-08-21 14:01 UTC] Local verification after explicit-auth context fix: TypeScript passed; Vitest 11 files / 115 tests passed; production build passed.
 
 [2026-08-21 14:01 UTC] Vercel runtime error diagnosis: the prior create attempt failed with `You are not allowed to create homework.` because the service re-read `getCurrentUser()` after an awaited server-action boundary; the corrective code passes the authenticated `SessionUser` explicitly.
+
+
+## 2026-08-21 14:35 UTC — Student-side retry after upload-scope fix
+
+- Production deployment for commit `397aaaf` reached Vercel `READY`.
+- Authenticated Student 1 session loaded `/student/homework` under academy `MYAcademy Production Audit`.
+- The new synthetic assignment `Private File Upload Test — Homework 02` is visible with status `Pending`, due Aug 28, 2026; the older `QA Homework 01 — Fractions` remains `Reviewed`/`Submitted`.
+- The student submission dialog is open and exposes `Attach a file (PDF, image, WEBP) up to 10 MB`.
+- No private file was created or submitted in this step; upload control interaction remains pending.
+
+Source URL: https://my-academy-eg.vercel.app/student/homework
+Evidence capture: `/home/ubuntu/upload/my-academy-eg.vercel.app_student_homework_1787323021612.html`.

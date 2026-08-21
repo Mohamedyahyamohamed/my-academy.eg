@@ -3,7 +3,7 @@
 import { audit } from "@/services/audit";
 import { requireScopedRole, resolveStudent } from "@/services";
 import { collections } from "@/services/data/store";
-import { fetchTableRLS } from "@/services/_shared";
+import { fetchGroupStudentIds, fetchTableRLS } from "@/services/_shared";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { measureTenantStorageUsage } from "@/lib/storage-quota";
@@ -15,18 +15,18 @@ async function homeworkUploadContext(formData: FormData) {
   const user = await requireScopedRole("STUDENT", "ADMIN", "TEACHER");
   const homeworkId = String(formData.get("homeworkId") ?? "");
   const requestedStudentId = formData.get("studentId");
-  const [homeworkRows, groupRows, studentRows, membershipRows] = await Promise.all([
+  const [homeworkRows, groupRows, studentRows] = await Promise.all([
     fetchTableRLS<{ id: string; academy_id: string | null; group_id: string }>("homework", user.academy_id),
     fetchTableRLS<{ id: string; academy_id: string | null }>("groups", user.academy_id),
     fetchTableRLS<{ id: string; academy_id: string | null; email?: string | null }>("students", user.academy_id),
-    fetchTableRLS<{ group_id: string; student_id: string }>("group_students", user.academy_id),
   ]);
   const homework = homeworkRows.find((item) => item.id === homeworkId && item.academy_id === user.academy_id);
   const group = homework ? groupRows.find((item) => item.id === homework.group_id && item.academy_id === user.academy_id) : null;
   if (!homework || !group) return { ok: false as const, error: "Homework not found." };
   const studentId = user.role === "STUDENT" ? resolveStudent(user)?.id ?? null : typeof requestedStudentId === "string" && requestedStudentId ? requestedStudentId : null;
   const student = studentId ? studentRows.find((item) => item.id === studentId && item.academy_id === user.academy_id) : null;
-  const enrolled = Boolean(student && membershipRows.some((item) => item.group_id === homework.group_id && item.student_id === student.id));
+  const enrolledStudentIds = await fetchGroupStudentIds(homework.group_id);
+  const enrolled = Boolean(student && enrolledStudentIds.includes(student.id));
   if (!student || !enrolled) return { ok: false as const, error: "Student is not enrolled in this homework group." };
   if (user.role === "STUDENT" && student.email?.toLowerCase() !== user.email.toLowerCase()) return { ok: false as const, error: "You can only upload for your own account." };
   return { ok: true as const, user, homeworkId, studentId: student.id, groupId: homework.group_id };

@@ -347,6 +347,8 @@ export interface HomeworkSubmission {
   /** Stable registry id; file_url is retained for backward compatibility. */
   file_id?: UUID | null;
   file_url: string | null;
+  /** Registry identifier used by the authenticated homework download route. */
+  file_id?: UUID | null;
   status: HomeworkStatus;
   submitted_at: ISODate | null;
   reviewed_at: ISODate | null;

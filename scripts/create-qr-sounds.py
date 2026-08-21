@@ -43,9 +43,13 @@ def write_wav(
         audio.writeframes(b"".join(struct.pack("<h", sample) for sample in samples))
 
 
-# Two clearly rising notes: a short "ding-ding" confirmation/chime,
-# intended to resemble the familiar checkmark sound after a successful payment.
-write_wav(OUT / "qr-success.wav", [(0.0, 659.25), (0.105, 987.77)])
+# Two very short, nearly identical beeps: the requested "tin-tin" confirmation sound.
+write_wav(
+    OUT / "qr-success.wav",
+    [(0.0, 880.0), (0.085, 880.0)],
+    duration=0.19,
+    note_duration=0.055,
+)
 
 # Two descending notes remain reserved for rejected, duplicate, or invalid scans.
 write_wav(OUT / "qr-error.wav", [(0.0, 260.0), (0.105, 180.0)])

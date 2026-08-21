@@ -142,6 +142,14 @@ describe("Route-Level Cross-Tenant — authenticated local runtime", () => {
     expect([401, 403, 404]).toContain(response.status);
   });
 
+  it("export: Academy B export includes its own student", async () => {
+    const response = await fetchWith(cookieB, "/api/export");
+    expect(response.status).toBe(200);
+    const data = await responseJson(response);
+    const bStudents = (data?.students ?? []).filter((student: any) => student.id === B_STUDENT_ID);
+    expect(bStudents).toHaveLength(1);
+  });
+
   it("auth: logged-out access is redirected and wrong login is rejected", async () => {
     const loggedOut = await fetch(`${BASE}/students`, { redirect: "manual" });
     expect([307, 308]).toContain(loggedOut.status);

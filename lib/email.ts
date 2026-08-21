@@ -43,8 +43,11 @@ async function sendDetailed(
   html: string,
   attachments?: Array<{ filename: string; content: Buffer }>,
 ): Promise<InviteEmailResult> {
-  if (!resend) {
-    console.log(`[email] (no Resend key) would send to ${to}: ${subject}`);
+  // Outbound email is post-launch and opt-in only. This keeps production
+  // audits, seeded fixtures, and local verification side-effect free even when
+  // a provider key is present. Enable deliberately with EMAIL_MODE=live.
+  if (!resend || process.env.EMAIL_MODE !== "live") {
+    console.log(`[email] (outbound disabled) would send to ${to}: ${subject}`);
     return { sent: false, errorCode: "not_configured" };
   }
   try {

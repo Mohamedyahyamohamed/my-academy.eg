@@ -83,7 +83,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "You already checked in for this lesson." }, { status: 409 });
   }
 
-  // Record.
-  await AttendanceService.recordCheckin(lessonId, student.id, "PRESENT");
-  return NextResponse.json({ ok: true });
+  // Record. The database has a unique (lesson_id, student_id) constraint;
+  // map a concurrent replay conflict to the same explicit denial as the
+  // preflight check instead of returning an unhandled 500.
+  try {
+    await AttendanceService.recordCheckin(lessonId, student.id, "PRESENT");
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/duplicate|already exists|unique|23505/i.test(message)) {
+      return NextResponse.json({ ok: false, error: "You already checked in for this lesson." }, { status: 409 });
+    }
+    console.error("QR check-in failed", error);
+    return NextResponse.json({ ok: false, error: "Could not record attendance." }, { status: 500 });
+  }
 }

@@ -10,29 +10,9 @@ import { getPlan } from "@/services/saas";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { can } from "@/lib/permissions";
 import { hasAllowedExtension, MAX_CONTENT_UPLOAD_BYTES, MAX_CONTENT_UPLOAD_MB } from "@/lib/upload-policy";
+import { detectUpload } from "@/lib/upload-validation";
 
 const MAX_CONTENT_FILE_SIZE = MAX_CONTENT_UPLOAD_BYTES;
-
-type SafeContentUpload = { contentType: string; extension: string };
-
-function detectContentUpload(bytes: Uint8Array, fileName: string, declaredType: string): SafeContentUpload | null {
-  const lowerName = fileName.toLowerCase();
-  const startsWith = (signature: number[]) => signature.every((value, index) => bytes[index] === value);
-  const isPdf = startsWith([0x25, 0x50, 0x44, 0x46]);
-  const isPng = startsWith([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-  const isJpeg = startsWith([0xff, 0xd8, 0xff]);
-  const isWebp = startsWith([0x52, 0x49, 0x46, 0x46]) && bytes.length >= 12 && String.fromCharCode(...bytes.slice(8, 12)) === "WEBP";
-  const isZip = startsWith([0x50, 0x4b, 0x03, 0x04]);
-  const isMp4 = bytes.length >= 12 && String.fromCharCode(...bytes.slice(4, 8)) === "ftyp";
-
-  if (isPdf && lowerName.endsWith(".pdf") && declaredType === "application/pdf") return { contentType: "application/pdf", extension: "pdf" };
-  if (isPng && lowerName.endsWith(".png") && declaredType === "image/png") return { contentType: "image/png", extension: "png" };
-  if (isJpeg && /\.(jpe?g)$/.test(lowerName) && ["image/jpeg", "image/jpg"].includes(declaredType)) return { contentType: "image/jpeg", extension: "jpg" };
-  if (isWebp && lowerName.endsWith(".webp") && declaredType === "image/webp") return { contentType: "image/webp", extension: "webp" };
-  if (isZip && lowerName.endsWith(".docx") && declaredType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") return { contentType: declaredType, extension: "docx" };
-  if (isMp4 && lowerName.endsWith(".mp4") && ["video/mp4", "application/mp4"].includes(declaredType)) return { contentType: "video/mp4", extension: "mp4" };
-  return null;
-}
 
 function contentPaths(courseId: string) {
   return ["/teacher/content", `/teacher/content/${courseId}`, `/student/content`, `/student/content/${courseId}`];
@@ -145,7 +125,7 @@ export async function finalizeContentUpload(formData: FormData) {
   const client = nodeSupabaseClient();
   if (!client) return { ok: false, error: "Storage is not configured." };
   const head = await readStorageHead(client, "content", path);
-  const safeUpload = head ? detectContentUpload(head, fileName, contentType) : null;
+  const safeUpload = head ? detectUpload(head, fileName, contentType, "content") : null;
   if (!safeUpload) {
     await client.storage.from("content").remove([path]);
     return { ok: false, error: "Uploaded object failed file validation." };
@@ -185,7 +165,7 @@ export async function uploadContentFile(formData: FormData) {
   if (lessonId && !course.lessons?.some((lesson) => lesson.id === lessonId)) return { ok: false, error: "Lesson not found or outside your course." };
 
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const safeUpload = detectContentUpload(bytes, file.name, file.type);
+  const safeUpload = detectUpload(bytes, file.name, file.type, "content");
   if (!safeUpload) return { ok: false, error: "Unsupported or invalid file. Upload PDF, PNG, JPEG, WEBP, DOCX, or MP4." };
 
   const client = nodeSupabaseClient();

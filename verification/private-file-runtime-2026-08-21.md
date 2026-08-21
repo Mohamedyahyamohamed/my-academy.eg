@@ -58,3 +58,9 @@ Evidence capture: `/home/ubuntu/upload/my-academy-eg.vercel.app_student_homework
 - Attachment selection: **PASS**. The UI displayed `File attached` and showed `MYAcademy-homework-submission-test.pdf` inside the submission dialog.
 - Submission attempt: Submit was clicked after explicit user confirmation. The modal remained visible and the subsequent snapshot still showed the assignment as `Pending`; no success toast or submitted state was observed. The complete chain therefore remains unverified pending runtime/database inspection.
 - No real email, WhatsApp, or non-synthetic production data was used.
+
+## 2026-08-21 — Corrective release retry state
+
+Commit `36fe83d` reached Vercel `READY` as deployment `dpl_BCwu2Qi8PM9xGEX95A3jqGdqKfmu`, and the authenticated Student 1 homework page was reloaded on the new production version. The Homework 02 dialog opened successfully. The browser harness rejected two attempts to target the hidden file input because its element index became stale after the dialog update; this is a harness interaction issue, not an observed application error. The saved HTML confirms the dialog contains one file input accepting `.pdf,.png,.jpg,.jpeg,.webp`.
+
+After the user confirmed the operation, the production Submit button entered a loading state but the dialog remained open in the subsequent snapshot; no success or error toast was visible. Database and runtime-log checks are required to distinguish a completed backend mutation from a still-running or failed Server Action.

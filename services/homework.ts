@@ -119,11 +119,15 @@ function hid() {
   return crypto.randomUUID();
 }
 
-function homeworkInCurrentAcademy(homeworkId: string, academyIdOverride?: string): Homework {
-  const homework = collections().homework.find((item) => item.id === homeworkId);
+async function homeworkInCurrentAcademy(homeworkId: string, academyIdOverride?: string): Promise<Homework> {
   const academyId = academyIdOverride ?? currentAcademyId();
-  const group = homework ? collections().groups.find((item) => item.id === homework.group_id) : null;
-  if (!homework || !group || homework.academy_id !== academyId || group.academy_id !== academyId) {
+  const [homeworkRows, groupRows] = await Promise.all([
+    fetchTableRLS<Homework>("homework", academyId),
+    fetchTableRLS<Group>("groups", academyId),
+  ]);
+  const homework = homeworkRows.find((item) => item.id === homeworkId && item.academy_id === academyId);
+  const group = homework ? groupRows.find((item) => item.id === homework.group_id && item.academy_id === academyId) : null;
+  if (!homework || !group) {
     throw new Error("Homework is outside the authenticated academy.");
   }
   return homework;
@@ -138,13 +142,17 @@ function assertHomeworkManager(homework: Homework) {
   return user;
 }
 
-function assertStudentSubmissionScope(homework: Homework, studentId: string, authenticatedUser?: SessionUser) {
+async function assertStudentSubmissionScope(homework: Homework, studentId: string, authenticatedUser?: SessionUser) {
   const user = authenticatedUser ?? getCurrentUser();
   if (!user || user.role !== "STUDENT" || !can(user, "homework.submit")) {
     throw new Error("Only the enrolled student can submit homework.");
   }
-  const student = collections().students.find((item) => item.id === studentId && item.academy_id === homework.academy_id);
-  const enrolled = collections().groupStudents.some((item) => item.group_id === homework.group_id && item.student_id === studentId);
+  const [studentRows, enrolledStudentIds] = await Promise.all([
+    fetchTableRLS<Student>("students", homework.academy_id),
+    fetchGroupStudentIds(homework.group_id, homework.academy_id),
+  ]);
+  const student = studentRows.find((item) => item.id === studentId && item.academy_id === homework.academy_id);
+  const enrolled = enrolledStudentIds.includes(studentId);
   if (!student || !enrolled || student.email?.toLowerCase() !== user.email.toLowerCase()) {
     throw new Error("You can only submit homework assigned to your own account.");
   }
@@ -228,7 +236,7 @@ export async function createHomework(input: HomeworkInput, authenticatedUser?: S
 }
 
 export async function deleteHomework(id: string): Promise<boolean> {
-  const homework = homeworkInCurrentAcademy(id);
+  const homework = await homeworkInCurrentAcademy(id);
   assertHomeworkManager(homework);
   const before = collections().homework.length;
   // Delete child rows first to preserve the production FK ordering, then the
@@ -361,8 +369,8 @@ export async function submitHomework(
   fileId?: string,
   authenticatedUser?: SessionUser,
 ): Promise<HomeworkSubmission | null> {
-  const homework = homeworkInCurrentAcademy(homeworkId, authenticatedUser?.academy_id);
-  assertStudentSubmissionScope(homework, studentId, authenticatedUser);
+  const homework = await homeworkInCurrentAcademy(homeworkId, authenticatedUser?.academy_id);
+  await assertStudentSubmissionScope(homework, studentId, authenticatedUser);
   if (new Date(homework.deadline).getTime() < Date.now()) throw new Error("Homework deadline has passed.");
 
   const attachment = fileId ? await validateHomeworkAttachment(fileId, fileUrl, homework, studentId, authenticatedUser) : null;
@@ -406,7 +414,7 @@ export async function reviewSubmission(
 ): Promise<HomeworkSubmission | null> {
   const s = collections().submissions.find((x) => x.id === submissionId);
   if (!s) return null;
-  const homework = homeworkInCurrentAcademy(s.homework_id);
+  const homework = await homeworkInCurrentAcademy(s.homework_id);
   assertHomeworkManager(homework);
   const enrolled = collections().groupStudents.some((item) => item.group_id === homework.group_id && item.student_id === s.student_id);
   if (!enrolled) throw new Error("Submission student is not enrolled in the homework group.");

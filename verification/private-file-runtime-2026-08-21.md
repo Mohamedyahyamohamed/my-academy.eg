@@ -91,3 +91,19 @@ After the Haneen Academy B student successfully signed in, production received `
 ## 2026-08-21 — Academy A to Academy B cross-tenant denial
 
 The authenticated Academy A student `2202893@student.eelu.edu.eg` attempted to download the Academy B private file `8d2a80cf-41f7-4499-857f-48ebaf1845ed`. Production runtime logs for deployment `dpl_DCkqgE79yQfzemTQVABdTG11CkYs` show `GET /api/homework/files/8d2a80cf-41f7-4499-857f-48ebaf1845ed` at `16:32:05 UTC` returned HTTP 404. The response body was `{"error":"File not found"}`, confirming that the application correctly denies cross-tenant access and does not leak the existence of the file or its storage metadata to unauthorized tenants. This completes the bidirectional runtime isolation verification.
+
+### 2026-08-21 — same-academy ownership boundary
+
+Using the authenticated Academy A Student 2 session, a request for Student 1’s private homework file `a8a53aff-0d4e-4b8f-bbf1-096f49f05fd5` returned `{"error":"File not found"}`. Vercel runtime log for deployment `dpl_GR1KzjvfusoNP6gK7MhJ81MUgwKD` recorded `GET /api/homework/files/a8a53aff-0d4e-4b8f-bbf1-096f49f05fd5 404` at `2026-08-21T16:52:58Z`. This confirms same-academy student-to-student ownership denial without metadata disclosure.
+
+### 2026-08-21 — same-academy teacher scope
+
+Using the authenticated Academy A teacher session `mohamedworkout687@gmail.com`, `GET /api/homework/files/a8a53aff-0d4e-4b8f-bbf1-096f49f05fd5` returned HTTP 200 at `2026-08-21T16:55:03Z` on deployment `dpl_GR1KzjvfusoNP6gK7MhJ81MUgwKD`. This verifies that a teacher with the linked group scope can retrieve the private attachment. The prior Student 2 request for the same file returned HTTP 404 at `16:52:58Z`, confirming the distinction between teacher scope and student ownership.
+
+### 2026-08-21 — production size-limit boundary (>10 MB)
+
+In the authenticated Student 1 production session, the synthetic pending assignment `Private Upload Limit Boundary — Synthetic` was opened at `/student/homework`. The file `/home/ubuntu/MYAcademy-homework-oversize-10mb.pdf` was selected through the real attachment control; its measured size was exactly **10,485,761 bytes** (10 MiB + 1 byte). The production UI immediately rejected it and displayed the toast **“File size must be 10 MB or less.”** No submission was made and no Storage upload was attempted by the client-side boundary check.
+
+Post-test production Supabase verification at `2026-08-21T17:05:26Z` for submission `b3f42fd1-3c72-4b65-9b36-0b3d34c00a12` returned `status=PENDING`, `file_id=null`, `file_url=null`, and `submitted_at=null`. This is evidence that the rejected file did not persist or mutate the submission.
+
+**Result: PASS — the production homework upload path enforces the configured 10 MB limit at the UI boundary and leaves no persisted attachment after rejection.**

@@ -32,7 +32,7 @@ def write_wav(
                 release = max(0.0, 1.0 - max(0.0, local - note_duration + 0.026) / 0.026)
                 envelope = attack * release
                 phase = math.sin(2 * math.pi * frequency * local)
-                tone = 1.0 if phase >= 0 else -1.0 if waveform == "square" else phase
+                tone = (1.0 if phase >= 0 else -1.0) if waveform == "square" else phase
                 value += tone * envelope
         value = max(-1.0, min(1.0, value * amplitude))
         samples.append(int(value * 32767))
@@ -44,14 +44,14 @@ def write_wav(
         audio.writeframes(b"".join(struct.pack("<h", sample) for sample in samples))
 
 
-# Classic QR/barcode scanner confirmation: one bright electronic square-wave beep.
+# Reference-matched QR/barcode scanner confirmation: one clean electronic sine beep.
 write_wav(
     OUT / "qr-success.wav",
-    [(0.0, 1200.0)],
+    [(0.0, 1760.0)],
     duration=0.15,
     note_duration=0.12,
-    amplitude=0.34,
-    waveform="square",
+    amplitude=0.46,
+    waveform="sine",
 )
 
 # Two descending notes remain reserved for rejected, duplicate, or invalid scans.

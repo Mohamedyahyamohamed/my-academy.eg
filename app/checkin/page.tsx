@@ -8,6 +8,7 @@ import { Logo } from "@/components/shared/logo";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useClientLang } from "@/lib/i18n-client";
+import { attendanceErrorMessage } from "@/lib/attendance-errors";
 
 type QuickGroup = {
   id: string;
@@ -45,13 +46,10 @@ function CheckInInner() {
       });
       const result = await response.json();
       if (!response.ok || !result.ok) {
-        const errorText = result.error === "NO_ACTIVE_LESSON"
-          ? (en ? "There is no active lesson for this group right now." : "لا يوجد درس جارٍ لهذه المجموعة الآن.")
-          : result.error === "STUDENT_NOT_ENROLLED"
-            ? (en ? "This student is not enrolled in the selected group." : "هذا الطالب غير مسجل في المجموعة المختارة.")
-            : result.error === "TEACHER_LOGIN_REQUIRED"
-              ? (en ? "Log in once on this phone as a teacher or assistant, then scan again." : "سجّل الدخول مرة واحدة على هذا الهاتف كمدرس أو مساعد ثم امسح الكود مرة أخرى.")
-              : (result.error || (en ? "Unable to record attendance." : "تعذّر تسجيل الحضور."));
+        const errorCode = result.errorCode || result.error;
+        const errorText = errorCode === "TEACHER_LOGIN_REQUIRED"
+          ? (en ? "Log in once on this phone as a teacher or assistant, then scan again." : "سجّل الدخول مرة واحدة على هذا الهاتف كمدرس أو مساعد ثم امسح الكود مرة أخرى.")
+          : attendanceErrorMessage(errorCode, en);
         if (result.error === "NO_ACTIVE_LESSON" && groups.length > 0) {
           setState("choose_group");
           setMsg(en ? "No lesson is active for this group. Choose the group for the current lesson." : "لا يوجد درس نشط لهذه المجموعة. اختر مجموعة الدرس الحالي.");
@@ -123,7 +121,14 @@ function CheckInInner() {
           body: JSON.stringify({ token, lessonId: lessonIdParam }),
         }).then((r) => r.json());
         if (res.ok) setState("ok");
-        else { setState("err"); setMsg(res.error || (en ? "Unable to record attendance." : "تعذّر تسجيل الحضور.")); }
+        else {
+          setState("err");
+          const code = res.errorCode;
+          const fallback = code === "QR_INVALID"
+            ? (en ? "This QR code is invalid or expired. Ask for a new QR code." : "رمز QR غير صالح أو منتهي. اطلب رمزاً جديداً.")
+            : attendanceErrorMessage(code || res.error, en);
+          setMsg(fallback);
+        }
       } catch {
         setState("err"); setMsg(en ? "Network error. Please try again." : "حدث خطأ في الاتصال. حاول مرة أخرى.");
       }

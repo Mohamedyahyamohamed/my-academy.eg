@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAttendanceTeacher, requireScopedRole, AttendanceService } from "@/services";
 import type { AttendanceStatus } from "@/types";
 import { audit } from "@/services/audit";
+import { attendanceErrorCode } from "@/lib/attendance-errors";
 
 export async function checkinAction(lessonId: string) {
   const user = await requireScopedRole("STUDENT");
@@ -46,8 +47,8 @@ export async function scanCheckinAction(lessonId: string | null | undefined, stu
     await AttendanceService.recordCheckin(lesson.id, studentId, "PRESENT");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to record attendance.";
-    const errorCode = message.includes("not enrolled") ? "STUDENT_NOT_ENROLLED" as const : "CHECKIN_FAILED" as const;
-    return { ok: false, errorCode, error: message, lesson: { id: lesson.id, topic: lesson.topic, groupId: lesson.group_id } };
+    const errorCode = attendanceErrorCode(message);
+    return { ok: false, errorCode, error: errorCode, lesson: { id: lesson.id, topic: lesson.topic, groupId: lesson.group_id } };
   }
 
   void audit({ action: "attendance.scan" }, user);

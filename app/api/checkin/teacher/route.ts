@@ -5,6 +5,7 @@ import { collections, ensureStoreLoaded } from "@/services/data/store";
 import { setRequestContext } from "@/services/request-context";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { requestIpKey } from "@/lib/request-identity";
+import { attendanceErrorCode, isDuplicateAttendanceError } from "@/lib/attendance-errors";
 import { isLessonActive, lessonWallClockMinute } from "@/services/lessons";
 
 const GROUP_CONTEXT_COOKIE = "teacher_checkin_group";
@@ -106,6 +107,9 @@ export async function POST(req: NextRequest) {
 
   const groups = await scopedOptions();
   setRequestContext(user);
+  if (requestedGroupId && !groups.some((item) => item.id === requestedGroupId)) {
+    return jsonError("GROUP_NOT_ASSIGNED", 403);
+  }
   const cookieGroupId = req.cookies.get(GROUP_CONTEXT_COOKIE)?.value ?? "";
   const activeGroup = groups.find((group) => group.lesson);
   const group = groups.find((item) => item.id === requestedGroupId)
@@ -125,7 +129,9 @@ export async function POST(req: NextRequest) {
     await AttendanceService.recordCheckin(lesson.id, studentId, "PRESENT");
   } catch (error) {
     const message = error instanceof Error ? error.message : "CHECKIN_FAILED";
-    return jsonError(message.includes("not enrolled") || message.includes("enrolled") ? "STUDENT_NOT_ENROLLED" : message, 403);
+    if (isDuplicateAttendanceError(message)) return jsonError("ATTENDANCE_ALREADY_RECORDED", 409);
+    const code = attendanceErrorCode(message);
+    return jsonError(code, code === "STUDENT_NOT_ENROLLED" ? 403 : 500);
   }
 
   const response = NextResponse.json({

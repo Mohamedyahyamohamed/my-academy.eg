@@ -41,6 +41,19 @@ export function createQrSession(
   return { token: `${data}.${sign(data)}`, expiresAt: payload.exp };
 }
 
+/** Return true only when a verified token is for the authenticated tenant and requested lesson. */
+export function qrSessionMatchesRequest(
+  session: { academyId: string; lessonId: string } | null,
+  academyId: string,
+  requestedLessonId?: string,
+): boolean {
+  return Boolean(
+    session &&
+    session.academyId === academyId &&
+    (!requestedLessonId || session.lessonId === requestedLessonId),
+  );
+}
+
 /** Verify a QR session token and return its tenant-scoped claims. */
 export function verifyQrSession(
   token: string,

@@ -35,22 +35,27 @@ export function ScanWorkshop({
 
   const startCamera = async () => {
     setError("");
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setError(en ? "Scanning is unavailable offline. Reconnect to the internet and try again." : "المسح غير متاح بدون اتصال بالإنترنت. أعد الاتصال ثم حاول مرة أخرى.");
+      return;
+    }
     setScanning(true);
-    const { Html5Qrcode } = await import("html5-qrcode");
-    await new Promise((r) => setTimeout(r, 100));
-    const html5 = new Html5Qrcode("qr-reader");
-    scannerRef.current = html5;
-    html5
-      .start(
+    try {
+      const { Html5Qrcode } = await import("html5-qrcode");
+      await new Promise((r) => setTimeout(r, 100));
+      const html5 = new Html5Qrcode("qr-reader");
+      scannerRef.current = html5;
+      await html5.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 240, height: 240 } },
-        (text) => handleScan(text),
+        (text) => { void handleScan(text); },
         () => {},
-      )
-      .catch(() => {
-        setError(en ? "Could not start the camera. Check camera permission and make sure you are using HTTPS." : "تعذّر تشغيل الكاميرا. تأكّد من الإذن ومن أنك على HTTPS.");
-        setScanning(false);
-      });
+      );
+    } catch {
+      scannerRef.current = null;
+      setError(en ? "Could not start the camera. Allow camera access, use HTTPS, and try again." : "تعذّر تشغيل الكاميرا. اسمح باستخدام الكاميرا وتأكد من HTTPS ثم حاول مرة أخرى.");
+      setScanning(false);
+    }
   };
 
   const stopCamera = async () => {
@@ -66,6 +71,10 @@ export function ScanWorkshop({
 
   const handleScan = async (text: string) => {
     setError("");
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setError(en ? "Scan received, but attendance is unavailable offline. Reconnect and scan again." : "تمت قراءة الكود، لكن تسجيل الحضور غير متاح بدون إنترنت. أعد الاتصال وامسح الكود مرة أخرى.");
+      return;
+    }
     const studentId = studentIdFromQrValue(text);
     const now = Date.now();
     if (lastScan.current.id === studentId && now - lastScan.current.t < 4000) return;
@@ -83,8 +92,8 @@ export function ScanWorkshop({
       const status = res.ok
         ? (en ? `Attendance recorded ✓${res.lesson?.topic ? ` · ${res.lesson.topic}` : ""}` : `تم تسجيل الحضور ✓${res.lesson?.topic ? ` · ${res.lesson.topic}` : ""}`)
         : (en
-          ? (res.errorCode === "NO_ACTIVE_LESSON" ? "No active lesson" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "Student is not in this lesson" : "Failed")
-          : (res.errorCode === "NO_ACTIVE_LESSON" ? "لا يوجد درس جارٍ الآن" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "الطالب غير مسجل في المجموعة" : "فشل تسجيل الحضور"));
+          ? (res.errorCode === "NO_ACTIVE_LESSON" ? "No active lesson" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "Student is not in this lesson" : res.errorCode === "ATTENDANCE_ALREADY_RECORDED" ? "Already recorded" : "Failed")
+          : (res.errorCode === "NO_ACTIVE_LESSON" ? "لا يوجد درس جارٍ الآن" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "الطالب غير مسجل في المجموعة" : res.errorCode === "ATTENDANCE_ALREADY_RECORDED" ? "تم تسجيل الحضور من قبل" : "فشل تسجيل الحضور"));
       setLog((l) => [{ name: fullName(student), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") }, ...l]);
     } catch {
       const status = en ? "Network error — retry the scan" : "خطأ في الشبكة — أعد المسح";

@@ -43,12 +43,13 @@ def write_wav(
         audio.writeframes(b"".join(struct.pack("<h", sample) for sample in samples))
 
 
-# Two very short, nearly identical beeps: the requested "tin-tin" confirmation sound.
+# A crisp, short rising confirmation chime: lower note followed by a
+# brighter higher note, approximating a familiar checkmark sound.
 write_wav(
     OUT / "qr-success.wav",
-    [(0.0, 880.0), (0.085, 880.0)],
-    duration=0.19,
-    note_duration=0.055,
+    [(0.0, 620.0), (0.095, 1040.0)],
+    duration=0.26,
+    note_duration=0.095,
 )
 
 # Two descending notes remain reserved for rejected, duplicate, or invalid scans.

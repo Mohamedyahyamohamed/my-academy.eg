@@ -1,0 +1,4 @@
+{
+  "project_id": "fpcdaiyktnoiwaulbhcn",
+  "query": "SELECT c.id AS course_id, c.academy_id AS course_academy_id, c.group_id, c.title, g.academy_id AS group_academy_id, g.name AS group_name, l.id AS lesson_id, l.academy_id AS lesson_academy_id FROM content_courses c LEFT JOIN groups g ON g.id = c.group_id LEFT JOIN content_lessons l ON l.course_id = c.id WHERE c.id = '0ea00000-0000-4000-0000-000000000021' LIMIT 10"
+}

@@ -160,6 +160,10 @@ export async function createGroup(input: GroupInput): Promise<Group> {
   if (input.academy_id && input.academy_id !== academyId) {
     throw new Error("The requested academy is outside the authenticated scope.");
   }
+  const course = collections().courses.find((item) => item.id === input.course_id && item.academy_id === academyId);
+  if (!course) throw new Error("The selected course is outside the authenticated academy.");
+  const teacher = collections().teachers.find((item) => item.id === input.teacher_id && item.academy_id === academyId);
+  if (!teacher) throw new Error("The selected teacher is outside the authenticated academy.");
   const check = canCreate("groups", academyId);
   if (!check.allowed) {
     throw new Error(`Limit reached: ${check.current}/${check.limit} groups. Upgrade your plan.`);

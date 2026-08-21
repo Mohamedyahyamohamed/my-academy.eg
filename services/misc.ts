@@ -75,12 +75,17 @@ export async function listParents(academyId?: string): Promise<Parent[]> {
   return items.slice().sort((a, b) => fullName(a).localeCompare(fullName(b)));
 }
 
-export async function createParent(input: Omit<Parent, "id" | "academy_id" | "created_at" | "updated_at">): Promise<Parent> {
+export async function createParent(input: Omit<Parent, "id" | "academy_id" | "created_at" | "updated_at"> & { academy_id?: string }): Promise<Parent> {
+  const academyId = currentAcademyId();
+  if (!academyId) throw new Error("An authenticated academy scope is required.");
+  if (input.academy_id && input.academy_id !== academyId) {
+    throw new Error("The requested academy is outside the authenticated scope.");
+  }
   const now = new Date().toISOString();
   const p: Parent = {
     ...input,
     id: crypto.randomUUID(),
-    academy_id: currentAcademyId(),
+    academy_id: academyId,
     created_at: now,
     updated_at: now,
   };

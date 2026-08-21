@@ -509,6 +509,11 @@ export async function createStudent(
   // Server Actions can cross an async boundary where AsyncLocalStorage context is lost.
   // Prefer the academy resolved by requireScopedRole; keep the fallback for existing callers.
   const academyId = authenticatedAcademyId ?? currentAcademyId();
+  const requestedAcademyId = (input as StudentInput & { academy_id?: string }).academy_id;
+  if (!academyId) throw new Error("An authenticated academy scope is required.");
+  if (requestedAcademyId && requestedAcademyId !== academyId) {
+    throw new Error("The requested academy is outside the authenticated scope.");
+  }
   const groupIdsForAuthorization = input.groupIds ?? [];
   assertRequestedGroupScope(groupIdsForAuthorization, academyId);
   if (input.parent_id) {

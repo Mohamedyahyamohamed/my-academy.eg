@@ -1,0 +1,4 @@
+{
+  "project_id": "fpcdaiyktnoiwaulbhcn",
+  "query": "SELECT id, course_id, title, academy_id FROM content_lessons WHERE course_id = '2c7f2c4f-7f6f-4c3a-b5e2-0e4d9e5a1f01' AND academy_id = '155a078b-df83-43f7-8646-0c3a0156f5b8' ORDER BY created_at ASC LIMIT 20"
+}

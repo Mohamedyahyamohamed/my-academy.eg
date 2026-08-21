@@ -1,0 +1,4 @@
+{
+  "project_id": "fpcdaiyktnoiwaulbhcn",
+  "query": "SELECT id, academy_id, course_id, title FROM content_lessons WHERE id = '0ea00000-0000-4000-8000-000000000021' LIMIT 5"
+}

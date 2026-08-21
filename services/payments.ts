@@ -46,7 +46,12 @@ export async function listPayments(
     pageSize = 10,
   } = filters;
 
-  let items = (await fetchTableRLS<Payment>("payments", academyId)).filter((p: any) => !p.deleted_at).map(derivePayment);
+  const authenticatedAcademyId = currentAcademyId();
+  const requestedAcademyId = academyId ?? authenticatedAcademyId;
+  if (!authenticatedAcademyId || requestedAcademyId !== authenticatedAcademyId) {
+    return { items: [], pagination: { page, pageSize, total: 0, totalPages: 1 } };
+  }
+  let items = (await fetchTableRLS<Payment>("payments", authenticatedAcademyId)).filter((p: any) => !p.deleted_at).map(derivePayment);
 
   if (status !== "ALL") items = items.filter((p) => p.status === status);
   if (month !== "ALL") items = items.filter((p) => p.month === month);
@@ -79,7 +84,12 @@ export async function listPayments(
 }
 
 export function getPayment(id: string, academyId?: string): Payment | null {
-  const p = collections().payments.find((x) => x.id === id && (!academyId || x.academy_id === academyId));
+  const authenticatedAcademyId = currentAcademyId();
+  const requestedAcademyId = academyId ?? authenticatedAcademyId;
+  // A caller may provide an explicit scope for filtering, but it can never
+  // widen the authenticated tenant. Fail closed on missing or mismatched scope.
+  if (!authenticatedAcademyId || requestedAcademyId !== authenticatedAcademyId) return null;
+  const p = collections().payments.find((x) => x.id === id && x.academy_id === authenticatedAcademyId);
   return p ? attach(p) : null;
 }
 
@@ -110,8 +120,12 @@ export async function createPayment(input: CreatePaymentInput, academyIdOverride
 }> {
   // Capture the tenant before any await. Next Server Actions can lose the
   // AsyncLocalStorage request context across multiple awaited reads.
-  const academyId = academyIdOverride ?? currentAcademyId();
-  if (!(await validStudent(input.student_id, academyId)))
+  const authenticatedAcademyId = currentAcademyId();
+  const academyId = academyIdOverride ?? authenticatedAcademyId;
+  if (!authenticatedAcademyId || academyId !== authenticatedAcademyId) {
+    return { ok: false, error: "Payment academy scope mismatch." };
+  }
+  if (!(await validStudent(input.student_id, authenticatedAcademyId)))
     return { ok: false, error: "Invalid student." };
   if (input.amount_due < 0 || (input.amount_paid ?? 0) < 0)
     return { ok: false, error: "Amounts cannot be negative." };
@@ -164,7 +178,9 @@ export async function recordPayment(
   note?: string,
   academyId?: string,
 ): Promise<{ ok: boolean; error?: string; payment?: Payment }> {
-  const p = collections().payments.find((x) => x.id === paymentId && (!academyId || x.academy_id === academyId));
+  const authenticatedAcademyId = currentAcademyId();
+  if (!authenticatedAcademyId || (academyId && academyId !== authenticatedAcademyId)) return { ok: false, error: "Payment academy scope mismatch." };
+  const p = collections().payments.find((x) => x.id === paymentId && x.academy_id === authenticatedAcademyId);
   if (!p) return { ok: false, error: "Payment not found." };
   if (amount <= 0) return { ok: false, error: "Amount must be positive." };
   const newPaid = p.amount_paid + amount;
@@ -196,7 +212,9 @@ export async function recordPayment(
 
 export async function deletePayment(id: string, academyId?: string): Promise<boolean> {
   // Soft delete — never hard-delete financial records.
-  const p = collections().payments.find((x) => x.id === id && (!academyId || x.academy_id === academyId));
+  const authenticatedAcademyId = currentAcademyId();
+  if (!authenticatedAcademyId || (academyId && academyId !== authenticatedAcademyId)) return false;
+  const p = collections().payments.find((x) => x.id === id && x.academy_id === authenticatedAcademyId);
   if (!p) return false;
   p.deleted_at = new Date().toISOString();
   await persistUpdate("payments", id, { deleted_at: p.deleted_at });

@@ -178,10 +178,18 @@ export function studentAttendanceSummary(
   studentId: string,
   academyId?: string,
 ): AttendanceSummary & { byLesson: AttendanceRecord[] } {
-  // Attendance rows are scoped by the resolved student id; the student itself is academy-scoped.
-  const recs = collections().attendance.filter(
-    (a) => a.student_id === studentId,
-  );
+  const authenticatedAcademyId = currentAcademyId();
+  const requestedAcademyId = academyId ?? authenticatedAcademyId;
+  if (!authenticatedAcademyId || requestedAcademyId !== authenticatedAcademyId) {
+    return { ...summarize([]), byLesson: [] };
+  }
+  const student = collections().students.find((item) => item.id === studentId && item.academy_id === authenticatedAcademyId);
+  if (!student) return { ...summarize([]), byLesson: [] };
+  const recs = collections().attendance.filter((a) => {
+    if (a.student_id !== studentId) return false;
+    const lesson = collections().lessons.find((item) => item.id === a.lesson_id);
+    return Boolean(lesson && lesson.academy_id === authenticatedAcademyId);
+  });
   return { ...summarize(recs), byLesson: recs };
 }
 

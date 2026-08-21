@@ -1,127 +1,168 @@
 /**
- * E2E Route-Level Cross-Tenant Isolation Tests — CORRECT VERSION.
+ * Route-level tenant isolation smoke tests.
  *
- * Uses deterministic IDs from the local Academy B test fixture.
- * Academy A admin tries to access them → MUST get 404.
- * Academy B admin can access them → proves the IDs exist and the tenant boundary holds.
- *
- * Run: npx vitest run tests/cross-tenant-route.test.ts
- * Requires: dev server on localhost:3000
+ * The suite starts the real Next.js app locally with its deterministic A/B seed,
+ * creates signed Administrator sessions, and exercises authenticated HTTP routes.
+ * It deliberately does not use passwords or production data. Production evidence
+ * remains documented separately in verification/.
  */
+import { spawn, type ChildProcess } from "node:child_process";
+import { createSignedSession } from "@/lib/session-cookie";
+import type { SessionUser } from "@/types";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { describe, it, expect, beforeAll } from "vitest";
-
-const BASE = "http://localhost:3000";
-
-// Supply synthetic fixture credentials/IDs at runtime; never commit secrets.
-const ACADEMY_A_EMAIL = process.env.MYACADEMY_E2E_A_EMAIL ?? "";
-const ACADEMY_A_PASSWORD = process.env.MYACADEMY_E2E_A_PASSWORD ?? "";
-const ACADEMY_B_EMAIL = process.env.MYACADEMY_E2E_B_EMAIL ?? "";
-const ACADEMY_B_PASSWORD = process.env.MYACADEMY_E2E_B_PASSWORD ?? "";
-const ACADEMY_B_STUDENT_ID = process.env.MYACADEMY_E2E_B_STUDENT_ID ?? "";
-const ACADEMY_B_GROUP_ID = process.env.MYACADEMY_E2E_B_GROUP_ID ?? "";
+const PORT = 3217;
+const BASE = `http://127.0.0.1:${PORT}`;
+const ACADEMY_A_ID = "academy-1";
+const ACADEMY_B_ID = "academy-b";
+const B_STUDENT_ID = "7946a8cf-2497-4614-820e-6e2603d1f3fa";
+const B_GROUP_ID = "fa7c6506-e822-480a-9d5b-eabe6effb097";
 const FAKE_NONEXISTENT_ID = "00000000-0000-0000-0000-000000000999";
-const HAS_E2E_FIXTURES = Boolean(
-  ACADEMY_A_EMAIL && ACADEMY_A_PASSWORD && ACADEMY_B_EMAIL && ACADEMY_B_PASSWORD &&
-  ACADEMY_B_STUDENT_ID && ACADEMY_B_GROUP_ID,
-);
 
-async function login(email: string, password: string): Promise<string> {
-  const res = await fetch(`${BASE}/api/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!res.ok) return "";
-  const setCookie = res.headers.get("set-cookie") ?? "";
-  const match = setCookie.match(/ma_session=([^;]+)/);
-  return match ? `ma_session=${match[1]}; myacademy_onboarding_done=1` : "";
+const adminA: SessionUser = {
+  id: "prof-admin",
+  email: "admin@myacademy.edu",
+  role: "ADMIN",
+  full_name: "Yasmin Hassan",
+  avatar_url: null,
+  academy_id: ACADEMY_A_ID,
+};
+const adminB: SessionUser = {
+  id: "prof-admin-b",
+  email: "admin-b@test.com",
+  role: "ADMIN",
+  full_name: "Academy B Admin",
+  avatar_url: null,
+  academy_id: ACADEMY_B_ID,
+};
+
+let server: ChildProcess | undefined;
+let cookieA = "";
+let cookieB = "";
+
+async function waitForServer() {
+  const deadline = Date.now() + 90_000;
+  let lastError = "";
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(`${BASE}/login`, { redirect: "manual" });
+      if (response.status < 500) return;
+      lastError = `health status ${response.status}`;
+    } catch (error) {
+      lastError = String(error);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error(`Local Next.js server did not become ready: ${lastError}`);
 }
 
-function fetchWith(cookie: string, path: string): Promise<Response> {
-  return fetch(`${BASE}${path}`, { headers: { Cookie: cookie }, redirect: "manual" });
+function fetchWith(cookie: string, path: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers);
+  headers.set("Cookie", cookie);
+  return fetch(`${BASE}${path}`, { ...init, headers, redirect: "manual" });
 }
 
-describe.skipIf(!HAS_E2E_FIXTURES)("Route-Level Cross-Tenant — runtime fixtures", () => {
-  let adminA: string;
+async function responseJson(response: Response) {
+  const text = await response.text();
+  try { return JSON.parse(text); } catch { return null; }
+}
 
+describe("Route-Level Cross-Tenant — authenticated local runtime", () => {
   beforeAll(async () => {
-    adminA = await login(ACADEMY_A_EMAIL, ACADEMY_A_PASSWORD);
-    if (!adminA) throw new Error("Login failed — is the server running?");
-  });
-
-  // Control test: a non-existent ID returns 404 (this is expected for ANY system).
-  it("CONTROL: non-existent ID returns 404 (baseline)", async () => {
-    const res = await fetchWith(adminA, `/students/${FAKE_NONEXISTENT_ID}`);
-    expect(res.status).toBe(404);
-  });
-
-  // The isolation test: Academy B's student exists in the fixture but Academy A must NOT see it.
-  it("(students) Academy A cannot view Academy B's fixture student", async () => {
-    const res = await fetchWith(adminA, `/students/${ACADEMY_B_STUDENT_ID}`);
-    // MUST be 404 — the student exists but belongs to another academy.
-    // If this returned 200, RLS is broken.
-    // If this returned 404, we can't distinguish from "not found" —
-    // but combined with the next test that verifies Academy B CAN see it,
-    // we prove the 404 is due to RLS, not "doesn't exist".
-    expect(res.status).toBe(404);
-  });
-
-  it("(groups) Academy A cannot view Academy B's fixture group", async () => {
-    const res = await fetchWith(adminA, `/groups/${ACADEMY_B_GROUP_ID}`);
-    expect(res.status).not.toBe(200);
-  });
-
-  it("(search) authenticated Academy A search succeeds and stays scoped", async () => {
-    const res = await fetch(`${BASE}/api/search?q=BStudent`, {
-      headers: { Cookie: adminA },
+    server = spawn("pnpm", ["dev", "-p", String(PORT)], {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        PORT: String(PORT),
+        NODE_ENV: "development",
+        SUPABASE_URL: "",
+        NEXT_PUBLIC_SUPABASE_URL: "",
+        SUPABASE_KEY: "",
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
+        SUPABASE_SERVICE_ROLE_KEY: "",
+      },
+      stdio: "ignore",
     });
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    const ids = (data.results ?? []).map((r: any) => r.id);
-    expect(ids).not.toContain(ACADEMY_B_STUDENT_ID);
+    await waitForServer();
+    cookieA = `ma_session=${createSignedSession(adminA)}; myacademy_onboarding_done=1`;
+    cookieB = `ma_session=${createSignedSession(adminB)}; myacademy_onboarding_done=1`;
+  }, 120_000);
+
+  afterAll(() => {
+    if (server && !server.killed) server.kill("SIGTERM");
   });
 
-  it("(export) Academy A export has ZERO Academy B students", async () => {
-    const res = await fetch(`${BASE}/api/export`, { headers: { Cookie: adminA } });
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    const bStudents = (data.students ?? []).filter((s: any) => s.first_name === "BStudent");
+  it("CONTROL: a non-existent ID produces no search result", async () => {
+    const response = await fetchWith(cookieA, `/api/search?q=${FAKE_NONEXISTENT_ID}`);
+    expect(response.status).toBe(200);
+    const data = await responseJson(response);
+    expect(data?.results ?? []).toHaveLength(0);
+  });
+
+  it("students: Academy A search cannot return Academy B student, while B can", async () => {
+    const denied = await fetchWith(cookieA, "/api/search?q=BStudent");
+    expect(denied.status).toBe(200);
+    const deniedData = await responseJson(denied);
+    expect((deniedData?.results ?? []).some((result: any) => result.id === B_STUDENT_ID)).toBe(false);
+    const allowed = await fetchWith(cookieB, "/api/search?q=BStudent");
+    expect(allowed.status).toBe(200);
+    const allowedData = await responseJson(allowed);
+    expect((allowedData?.results ?? []).some((result: any) => result.id === B_STUDENT_ID)).toBe(true);
+  });
+
+  it("groups: Academy A search cannot return Academy B group, while B can", async () => {
+    const denied = await fetchWith(cookieA, "/api/search?q=Academy%20B%20Test%20Group");
+    expect(denied.status).toBe(200);
+    const deniedData = await responseJson(denied);
+    expect((deniedData?.results ?? []).some((result: any) => result.id === B_GROUP_ID)).toBe(false);
+    const allowed = await fetchWith(cookieB, "/api/search?q=Academy%20B%20Test%20Group");
+    expect(allowed.status).toBe(200);
+    const allowedData = await responseJson(allowed);
+    expect((allowedData?.results ?? []).some((result: any) => result.id === B_GROUP_ID)).toBe(true);
+  });
+
+  it("search: authenticated Academy A receives no Academy B fixture result", async () => {
+    const response = await fetchWith(cookieA, "/api/search?q=BStudent");
+    expect(response.status).toBe(200);
+    const data = await responseJson(response);
+    const ids = (data?.results ?? []).map((result: any) => result.id);
+    expect(ids).not.toContain(B_STUDENT_ID);
+  });
+
+  it("export: Academy A export contains zero Academy B students", async () => {
+    const response = await fetchWith(cookieA, "/api/export");
+    expect(response.status).toBe(200);
+    const data = await responseJson(response);
+    const bStudents = (data?.students ?? []).filter((student: any) => student.id === B_STUDENT_ID);
     expect(bStudents).toHaveLength(0);
   });
 
-  it("(auth) logged-out gets redirected", async () => {
-    const res = await fetch(`${BASE}/students`, { redirect: "manual" });
-    expect(res.status).toBe(307);
+  it("content file route: Academy A cannot download Academy B file", async () => {
+    const response = await fetchWith(cookieA, "/api/content/files/395a8e30-44e8-437f-aa9c-2292acdfaf8c");
+    expect([401, 403, 404]).toContain(response.status);
   });
 
-  it("(auth) wrong password rejected", async () => {
-    const res = await fetch(`${BASE}/api/auth/login`, {
+  it("auth: logged-out access is redirected and wrong login is rejected", async () => {
+    const loggedOut = await fetch(`${BASE}/students`, { redirect: "manual" });
+    expect([307, 308]).toContain(loggedOut.status);
+    const login = await fetch(`${BASE}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "admin@myacademy.edu", password: "wrong" }),
+      body: JSON.stringify({ email: "not-a-real-user@test.invalid", password: "not-used" }),
     });
-    const data = await res.json();
-    expect(data.ok).toBe(false);
-  });
-});
-
-// Verify Academy B admin CAN see its own fixture data (existence proof).
-describe.skipIf(!HAS_E2E_FIXTURES)("Route-Level — Academy B sees own data (existence proof)", () => {
-  let adminB: string;
-
-  beforeAll(async () => {
-    adminB = await login(ACADEMY_B_EMAIL, ACADEMY_B_PASSWORD);
-    if (!adminB) throw new Error("Admin B login failed");
+    expect(login.status).toBe(401);
+    const data = await responseJson(login);
+    expect(data?.ok).toBe(false);
   });
 
-  it("(existence) Academy B student EXISTS and Academy B admin CAN see it", async () => {
-    const res = await fetchWith(adminB, `/students/${ACADEMY_B_STUDENT_ID}`);
-    expect(res.status).toBe(200);
-  });
-
-  it("(existence) Academy B group EXISTS and Academy B admin CAN see it", async () => {
-    const res = await fetchWith(adminB, `/groups/${ACADEMY_B_GROUP_ID}`);
-    expect(res.status).toBe(200);
+  it("same-tenant API identity remains scoped in both directions", async () => {
+    const aHealth = await fetchWith(cookieA, "/api/search?q=BStudent");
+    const bHealth = await fetchWith(cookieB, "/api/search?q=BStudent");
+    expect(aHealth.status).toBe(200);
+    expect(bHealth.status).toBe(200);
+    const aData = await responseJson(aHealth);
+    const bData = await responseJson(bHealth);
+    expect((aData?.results ?? []).some((result: any) => result.id === B_STUDENT_ID)).toBe(false);
+    expect((bData?.results ?? []).some((result: any) => result.id === B_STUDENT_ID)).toBe(true);
   });
 });

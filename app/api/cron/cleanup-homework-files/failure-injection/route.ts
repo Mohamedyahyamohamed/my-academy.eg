@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { cleanupOrphanHomeworkFiles } from "@/services/homework-file-cleanup";
+import { isHomeworkStoragePath } from "@/services/homework-files";
 
 export const runtime = "nodejs";
 
@@ -53,8 +54,21 @@ export async function POST(request: Request) {
   if (fileError) return NextResponse.json({ error: "Could not inspect fixture file" }, { status: 500 });
 
   const fixture = (files?.[0] ?? null) as { id?: string; academy_id?: string; url?: string } | null;
-  if (!fixture || fixture.id !== fileId || fixture.academy_id !== academyId || !fixture.url?.includes("failure-injection")) {
-    return NextResponse.json({ error: "Only a failure-injection fixture is accepted" }, { status: 403 });
+  if (!fixture || fixture.id !== fileId || fixture.academy_id !== academyId || !fixture.url || !isHomeworkStoragePath(fixture.url, academyId)) {
+    return NextResponse.json({ error: "Only a valid failure-injection fixture is accepted" }, { status: 403 });
+  }
+
+  const pathSegments = fixture.url.split("/");
+  const { data: homework, error: homeworkError } = await client
+    .from("homework")
+    .select("id, academy_id, title")
+    .eq("id", pathSegments[1])
+    .eq("academy_id", academyId)
+    .limit(1);
+  if (homeworkError) return NextResponse.json({ error: "Could not inspect fixture homework" }, { status: 500 });
+  const fixtureHomework = (homework?.[0] ?? null) as { id?: string; academy_id?: string; title?: string } | null;
+  if (!fixtureHomework || fixtureHomework.id !== pathSegments[1] || !fixtureHomework.title?.toLowerCase().includes("failure injection")) {
+    return NextResponse.json({ error: "Only a homework titled Failure Injection may be tested" }, { status: 403 });
   }
 
   const { data: links, error: linkError } = await client

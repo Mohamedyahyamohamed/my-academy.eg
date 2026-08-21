@@ -40,7 +40,6 @@ An authenticated student upload and submission is still required to verify the c
 
 [2026-08-21 14:01 UTC] Vercel runtime error diagnosis: the prior create attempt failed with `You are not allowed to create homework.` because the service re-read `getCurrentUser()` after an awaited server-action boundary; the corrective code passes the authenticated `SessionUser` explicitly.
 
-
 ## 2026-08-21 14:35 UTC — Student-side retry after upload-scope fix
 
 - Production deployment for commit `397aaaf` reached Vercel `READY`.
@@ -64,3 +63,8 @@ Evidence capture: `/home/ubuntu/upload/my-academy-eg.vercel.app_student_homework
 Commit `36fe83d` reached Vercel `READY` as deployment `dpl_BCwu2Qi8PM9xGEX95A3jqGdqKfmu`, and the authenticated Student 1 homework page was reloaded on the new production version. The Homework 02 dialog opened successfully. The browser harness rejected two attempts to target the hidden file input because its element index became stale after the dialog update; this is a harness interaction issue, not an observed application error. The saved HTML confirms the dialog contains one file input accepting `.pdf,.png,.jpg,.jpeg,.webp`.
 
 After the user confirmed the operation, the production Submit button entered a loading state but the dialog remained open in the subsequent snapshot; no success or error toast was visible. Database and runtime-log checks are required to distinguish a completed backend mutation from a still-running or failed Server Action.
+
+The follow-up release `9e15785` reached Vercel `READY` as deployment `dpl_7YTohSPntfeYLZZT5hktA9WUdNGF` and is aliased to `my-academy-eg.vercel.app`. On a fresh Student 1 session, selecting the synthetic PDF again left the dialog in `Uploading…` after the subsequent page snapshot; no `File attached` confirmation appeared. The production upload path is therefore still not operationally closed and requires backend diagnosis.
+After the latest release, the private PDF upload completed and displayed as attached. Following explicit user confirmation, the Submit action now surfaces an application error instead of hanging: `Could not submit homework: Minified React error #441`. The dialog remains open and the Homework 02 card remains `Pending`; this is a runtime submission failure requiring a Server Action boundary diagnosis, not evidence of a successful submission.
+
+The file registry contains a newly created private row for this attempt (`MYAcademy-homework-submission-test.pdf`, 2,042 bytes) under the Academy A / Homework 02 / Student 1 path, while the submission row remains pending. No cross-tenant or external notification action was performed.

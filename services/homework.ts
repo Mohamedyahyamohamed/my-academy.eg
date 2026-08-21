@@ -374,7 +374,13 @@ export async function submitHomework(
   if (new Date(homework.deadline).getTime() < Date.now()) throw new Error("Homework deadline has passed.");
 
   const attachment = fileId ? await validateHomeworkAttachment(fileId, fileUrl, homework, studentId, authenticatedUser) : null;
-  let s = collections().submissions.find(
+  // The request-local submission snapshot may not contain the pending row that
+  // production created when the homework was assigned. Read it through the
+  // tenant-scoped live path before deciding between UPDATE and INSERT; otherwise
+  // the unique (homework_id, student_id) constraint turns a valid resubmission
+  // into a duplicate-key failure.
+  const submissionRows = await fetchTableRLS<HomeworkSubmission>("homework_submissions", homework.academy_id);
+  let s = submissionRows.find(
     (x) => x.homework_id === homeworkId && x.student_id === studentId,
   );
   const now = new Date().toISOString();

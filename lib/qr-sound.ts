@@ -127,6 +127,16 @@ function playWebAudioFallback(kind: QrSoundKind): void {
   if (context.state === "running") scheduleTone(context, kind);
 }
 
+function vibrateQrSuccess(): void {
+  if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
+  try {
+    // Keep the haptic pulse short so it feels like a scanner confirmation.
+    navigator.vibrate(45);
+  } catch {
+    // Vibration is optional and must never interrupt attendance.
+  }
+}
+
 /** Play a short, non-blocking result tone for QR attendance. */
 export function playQrResultSound(kind: QrSoundKind): void {
   const audio = getHtmlAudio(kind);
@@ -136,11 +146,13 @@ export function playQrResultSound(kind: QrSoundKind): void {
       audio.muted = false;
       audio.volume = 0.85;
       const playback = audio.play();
+      if (kind === "success") vibrateQrSuccess();
       void playback.catch(() => playWebAudioFallback(kind));
       return;
     } catch {
       // Fall through to the Web Audio fallback.
     }
   }
+  if (kind === "success") vibrateQrSuccess();
   playWebAudioFallback(kind);
 }

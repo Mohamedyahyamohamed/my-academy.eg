@@ -19,6 +19,9 @@ describe("QR attendance sound feedback", () => {
     expect(sound).toContain("primeHtmlAudio(\"success\")");
     expect(sound).toContain("primeHtmlAudio(\"error\")");
     expect(sound).toContain("playWebAudioFallback(kind)");
+    expect(sound).toContain("navigator.vibrate(45)");
+    expect(sound).toContain('if (kind === "success") vibrateQrSuccess();');
+    expect(sound).toContain('if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;');
 
     for (const file of ["public/sounds/qr-success.wav", "public/sounds/qr-error.wav"]) {
       const path = resolve(root, file);

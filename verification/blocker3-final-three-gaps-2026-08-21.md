@@ -4,7 +4,7 @@
 
 **Production project:** `prj_OAJ78KzRhDjdNah4p3TMbLvPQsKH`
 
-**Production deployment:** `dpl_2oJG5svg7gAhuqga7FNs6rV36Ba6`, status `READY`
+**Production deployment:** `dpl_3xNrtbCSBtJ25NLVDERnjrs8azbV`, status `READY`
 
 ## Gap 1 — Real 10MiB+1 upload
 
@@ -16,7 +16,7 @@ Production Supabase verification at `2026-08-21T17:05:26Z` showed the synthetic 
 
 The production code now contains `/api/cron/cleanup-homework-files`, protected by `Authorization: Bearer $CRON_SECRET`, and `vercel.json` schedules it daily at `03:30 UTC`. The cleanup implementation uses a 24-hour grace period, checks exact tenant/homework/student storage paths, skips files linked by `homework_submissions.file_id`, deletes Storage first, and deletes the registry row only after Storage succeeds.
 
-The latest production deployment is `READY`, but a Vercel runtime-log query scoped to that deployment, production environment, the last 24 hours, and `/api/cron/cleanup-homework-files` returned **No logs found**. Therefore there is currently no evidence that the official scheduler has executed the route. This gap remains **OPEN / OWNER ACTION REQUIRED** until a real scheduler execution log records start, evaluation, counts, errors, and completion.
+The latest production deployment is `READY` (`dpl_3xNrtbCSBtJ25NLVDERnjrs8azbV`), but a Vercel runtime-log query scoped to the production cleanup route during the last 24 hours returned **No logs found**. Therefore there is currently no evidence that the official scheduler has executed the route. This gap remains **OPEN / OWNER ACTION REQUIRED** until a real scheduler execution log records start, evaluation, counts, errors, and completion.
 
 ## Gap 3 — Live Storage failure behavior
 

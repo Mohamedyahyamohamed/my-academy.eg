@@ -2,6 +2,7 @@ import { isHomeworkStoragePath } from "@/services/homework-files";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
 type SupabaseAdminClient = NonNullable<ReturnType<typeof nodeSupabaseClient>>;
+type StorageRemove = (path: string) => Promise<{ error?: unknown | null }>;
 
 type FileCandidate = {
   id: string;
@@ -15,6 +16,11 @@ export type HomeworkFileCleanupResult = {
   failed: number;
 };
 
+type CleanupOptions = {
+  candidateFileId?: string;
+  storageRemove?: StorageRemove;
+};
+
 /**
  * Remove abandoned private homework objects after a grace period.
  *
@@ -23,11 +29,16 @@ export type HomeworkFileCleanupResult = {
  * homework_submission.file_id link. Storage is deleted first; the registry
  * row is deleted only after Storage confirms success, so a transient Storage
  * failure cannot turn a recoverable record into an invisible object.
+ *
+ * `options` is intentionally optional and is used only by a tightly guarded
+ * synthetic failure-injection route and unit tests. Normal production cleanup
+ * always uses the real Storage remover.
  */
 export async function cleanupOrphanHomeworkFiles(
   client: SupabaseAdminClient,
   academyId: string,
   gracePeriodMs = 24 * 60 * 60 * 1000,
+  options: CleanupOptions = {},
 ): Promise<HomeworkFileCleanupResult> {
   const result: HomeworkFileCleanupResult = {
     scanned: 0,
@@ -50,7 +61,8 @@ export async function cleanupOrphanHomeworkFiles(
     .filter((row): row is FileCandidate =>
       typeof row.id === "string" &&
       typeof row.url === "string" &&
-      isHomeworkStoragePath(row.url, academyId),
+      isHomeworkStoragePath(row.url, academyId) &&
+      (!options.candidateFileId || row.id === options.candidateFileId),
     );
   result.scanned = candidates.length;
   if (!candidates.length) return result;
@@ -74,9 +86,15 @@ export async function cleanupOrphanHomeworkFiles(
       continue;
     }
 
-    const { error: storageError } = await client.storage
-      .from("homework")
-      .remove([candidate.url]);
+    let storageError: unknown = null;
+    try {
+      const remove = options.storageRemove ?? (async (path: string) =>
+        client.storage.from("homework").remove([path]));
+      const response = await remove(candidate.url);
+      storageError = response?.error ?? null;
+    } catch (error) {
+      storageError = error;
+    }
     if (storageError) {
       result.failed += 1;
       continue;

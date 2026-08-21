@@ -28,35 +28,43 @@ export async function checkinAction(lessonId: string) {
 export async function scanCheckinAction(lessonId: string | null | undefined, studentId: string) {
   const user = await requireAttendanceTeacher();
 
-  // Rate limit QR scans.
-  const { rateLimit, LIMITS } = await import("@/lib/rate-limit-redis");
-  const rl = await rateLimit(`scan:${user.id}`, LIMITS.checkin.max, LIMITS.checkin.window);
-  if (!rl.allowed) return { ok: false, errorCode: "RATE_LIMITED" as const, error: "Too many scans. Please slow down." };
-
-  const { LessonsService } = await import("@/services");
-  const lesson = lessonId ? await LessonsService.getLesson(lessonId) : LessonsService.getActiveLessonForTeacher();
-  if (!lesson) {
-    return {
-      ok: false,
-      errorCode: lessonId ? "LESSON_NOT_FOUND" as const : "NO_ACTIVE_LESSON" as const,
-      error: lessonId ? "Lesson not found." : "No active lesson was found for this teacher.",
-    };
-  }
-
+  // Keep redirects/authentication outside the boundary, but make every remaining
+  // QR operation return a stable result. A thrown Server Action becomes a generic
+  // client "Network error" and hides whether the scan was actually persisted.
   try {
-    await AttendanceService.recordCheckin(lesson.id, studentId, "PRESENT");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to record attendance.";
-    const errorCode = attendanceErrorCode(message);
-    return { ok: false, errorCode, error: errorCode, lesson: { id: lesson.id, topic: lesson.topic, groupId: lesson.group_id } };
-  }
+    // Rate limit QR scans.
+    const { rateLimit, LIMITS } = await import("@/lib/rate-limit-redis");
+    const rl = await rateLimit(`scan:${user.id}`, LIMITS.checkin.max, LIMITS.checkin.window);
+    if (!rl.allowed) return { ok: false, errorCode: "RATE_LIMITED" as const, error: "Too many scans. Please slow down." };
 
-  void audit({ action: "attendance.scan" }, user);
-  revalidatePath(`/lessons/${lesson.id}`);
-  return {
-    ok: true,
-    lesson: { id: lesson.id, topic: lesson.topic, groupId: lesson.group_id },
-  };
+    const { LessonsService } = await import("@/services");
+    const lesson = lessonId ? await LessonsService.getLesson(lessonId) : LessonsService.getActiveLessonForTeacher();
+    if (!lesson) {
+      return {
+        ok: false,
+        errorCode: lessonId ? "LESSON_NOT_FOUND" as const : "NO_ACTIVE_LESSON" as const,
+        error: lessonId ? "Lesson not found." : "No active lesson was found for this teacher.",
+      };
+    }
+
+    try {
+      await AttendanceService.recordCheckin(lesson.id, studentId, "PRESENT");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to record attendance.";
+      const errorCode = attendanceErrorCode(message);
+      return { ok: false, errorCode, error: errorCode, lesson: { id: lesson.id, topic: lesson.topic, groupId: lesson.group_id } };
+    }
+
+    void audit({ action: "attendance.scan" }, user);
+    revalidatePath(`/lessons/${lesson.id}`);
+    return {
+      ok: true,
+      lesson: { id: lesson.id, topic: lesson.topic, groupId: lesson.group_id },
+    };
+  } catch (error) {
+    console.error("[attendance] QR scan request failed:", error instanceof Error ? error.message : error);
+    return { ok: false, errorCode: "REQUEST_FAILED" as const, error: "Unable to process this scan right now. Please retry." };
+  }
 }
 
 export type AttendanceSaveResult =

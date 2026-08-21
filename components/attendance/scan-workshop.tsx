@@ -27,7 +27,17 @@ export function ScanWorkshop({
   const [log, setLog] = React.useState<{ name: string; status: string; at: string }[]>([]);
   const [error, setError] = React.useState("");
   const lastScan = React.useRef<{ id: string; t: number }>({ id: "", t: 0 });
+  const pendingScans = React.useRef(new Set<string>());
+  const recentLog = React.useRef(new Map<string, number>());
   const scannerRef = React.useRef<any>(null);
+
+  const addLog = React.useCallback((key: string, entry: { name: string; status: string; at: string }) => {
+    const now = Date.now();
+    const previous = recentLog.current.get(key);
+    if (previous && now - previous < 5000) return;
+    recentLog.current.set(key, now);
+    setLog((entries) => [{ ...entry }, ...entries]);
+  }, []);
 
   const groupLessons = lessons
     .filter((l) => l.group_id === groupId)
@@ -82,9 +92,11 @@ export function ScanWorkshop({
 
     const student = students.find((s) => s.id === studentId);
     if (!student) {
-      setLog((l) => [{ name: en ? "Unknown code" : "كود غير معروف", status: en ? "Unknown" : "غير معروف", at: formatTime(new Date(), en ? "en-US" : "ar-EG") }, ...l]);
+      addLog(`unknown:${studentId}`, { name: en ? "Unknown code" : "كود غير معروف", status: en ? "Unknown" : "غير معروف", at: formatTime(new Date(), en ? "en-US" : "ar-EG") });
       return;
     }
+    if (pendingScans.current.has(studentId)) return;
+    pendingScans.current.add(studentId);
 
     try {
       const res = await scanCheckinAction(mode === "manual" ? lessonId : null, studentId);
@@ -92,13 +104,16 @@ export function ScanWorkshop({
       const status = res.ok
         ? (en ? `Attendance recorded ✓${res.lesson?.topic ? ` · ${res.lesson.topic}` : ""}` : `تم تسجيل الحضور ✓${res.lesson?.topic ? ` · ${res.lesson.topic}` : ""}`)
         : (en
-          ? (res.errorCode === "NO_ACTIVE_LESSON" ? "No active lesson" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "Student is not in this lesson" : res.errorCode === "ATTENDANCE_ALREADY_RECORDED" ? "Already recorded" : "Failed")
-          : (res.errorCode === "NO_ACTIVE_LESSON" ? "لا يوجد درس جارٍ الآن" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "الطالب غير مسجل في المجموعة" : res.errorCode === "ATTENDANCE_ALREADY_RECORDED" ? "تم تسجيل الحضور من قبل" : "فشل تسجيل الحضور"));
-      setLog((l) => [{ name: fullName(student), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") }, ...l]);
+          ? (res.errorCode === "NO_ACTIVE_LESSON" ? "No active lesson" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "Student is not in this lesson" : res.errorCode === "ATTENDANCE_ALREADY_RECORDED" ? "Already recorded" : res.errorCode === "REQUEST_FAILED" ? "Unable to process — retry the scan" : "Failed")
+          : (res.errorCode === "NO_ACTIVE_LESSON" ? "لا يوجد درس جارٍ الآن" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "الطالب غير مسجل في المجموعة" : res.errorCode === "ATTENDANCE_ALREADY_RECORDED" ? "تم تسجيل الحضور من قبل" : res.errorCode === "REQUEST_FAILED" ? "تعذر معالجة المسح — أعد المحاولة" : "فشل تسجيل الحضور"));
+      addLog(`${studentId}:${res.ok ? "success" : res.errorCode}`, { name: fullName(student), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") });
+      if (!res.ok && res.errorCode === "REQUEST_FAILED") setError(status);
     } catch {
       const status = en ? "Network error — retry the scan" : "خطأ في الشبكة — أعد المسح";
       setError(status);
-      setLog((l) => [{ name: fullName(student), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") }, ...l]);
+      addLog(`${studentId}:network`, { name: fullName(student), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") });
+    } finally {
+      pendingScans.current.delete(studentId);
     }
   };
 

@@ -98,12 +98,11 @@ export function ScanWorkshop({
     }
     lastScan.current = { id: studentId, t: now };
 
+    // The server is authoritative for tenant scope and enrollment. Do not reject
+    // a valid QR merely because the initial browser roster is stale or incomplete.
+    // This is especially important after a mobile refresh or when the teacher's
+    // roster snapshot was loaded before a student enrollment became visible.
     const student = students.find((s) => s.id === studentId);
-    if (!student) {
-      playQrResultSound("error");
-      addLog(`unknown:${studentId}`, { name: en ? "Unknown code" : "كود غير معروف", status: en ? "Unknown" : "غير معروف", at: formatTime(new Date(), en ? "en-US" : "ar-EG") });
-      return;
-    }
     if (pendingScans.current.has(studentId)) return;
     pendingScans.current.add(studentId);
 
@@ -117,13 +116,13 @@ export function ScanWorkshop({
         : (en
           ? (res.errorCode === "NO_ACTIVE_LESSON" ? "No active lesson" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "Student is not in this lesson" : res.errorCode === "ATTENDANCE_ALREADY_RECORDED" ? "Already recorded" : res.errorCode === "REQUEST_FAILED" ? "Unable to process — retry the scan" : "Failed")
           : (res.errorCode === "NO_ACTIVE_LESSON" ? "لا يوجد درس جارٍ الآن" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "الطالب غير مسجل في المجموعة" : res.errorCode === "ATTENDANCE_ALREADY_RECORDED" ? "تم تسجيل الحضور من قبل" : res.errorCode === "REQUEST_FAILED" ? "تعذر معالجة المسح — أعد المحاولة" : "فشل تسجيل الحضور"));
-      addLog(`${studentId}:${res.ok ? "success" : res.errorCode}`, { name: fullName(student), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") });
+      addLog(`${studentId}:${res.ok ? "success" : res.errorCode}`, { name: student ? fullName(student) : (en ? "Student QR" : "QR الطالب"), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") });
       if (!res.ok && res.errorCode === "REQUEST_FAILED") setError(status);
     } catch {
       playQrResultSound("error");
       const status = en ? "Network error — retry the scan" : "خطأ في الشبكة — أعد المسح";
       setError(status);
-      addLog(`${studentId}:network`, { name: fullName(student), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") });
+      addLog(`${studentId}:network`, { name: student ? fullName(student) : (en ? "Student QR" : "QR الطالب"), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") });
     } finally {
       pendingScans.current.delete(studentId);
       // Keep the last detection timestamp aligned with the completed request so

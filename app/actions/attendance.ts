@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAttendanceTeacher, requireScopedRole, AttendanceService } from "@/services";
+import { requireAttendanceTeacher, requireScopedRole, AttendanceService, StudentsService } from "@/services";
 import type { AttendanceStatus } from "@/types";
 import { audit } from "@/services/audit";
 import { attendanceErrorCode } from "@/lib/attendance-errors";
 import { setRequestContext } from "@/services/request-context";
+import { fullName } from "@/lib/utils";
 
 export async function checkinAction(lessonId: string) {
   const user = await requireScopedRole("STUDENT");
@@ -52,12 +53,18 @@ export async function scanCheckinAction(lessonId: string | null | undefined, stu
       };
     }
 
+    // Resolve the display name server-side so the scanner does not depend on
+    // a possibly stale or incomplete browser roster. StudentsService applies
+    // the authenticated academy/teacher scope before returning the record.
+    const scannedStudent = await StudentsService.getStudent(studentId);
+    const student = scannedStudent ? { id: scannedStudent.id, name: fullName(scannedStudent) } : null;
+
     try {
       await AttendanceService.recordCheckin(lesson.id, studentId, "PRESENT");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to record attendance.";
       const errorCode = attendanceErrorCode(message);
-      return { ok: false, errorCode, error: errorCode, lesson: { id: lesson.id, topic: lesson.topic, groupId: lesson.group_id } };
+      return { ok: false, errorCode, error: errorCode, lesson: { id: lesson.id, topic: lesson.topic, groupId: lesson.group_id }, student };
     }
 
     void audit({ action: "attendance.scan" }, user);
@@ -72,6 +79,7 @@ export async function scanCheckinAction(lessonId: string | null | undefined, stu
     return {
       ok: true,
       lesson: { id: lesson.id, topic: lesson.topic, groupId: lesson.group_id },
+      student,
     };
   } catch (error) {
     console.error("[attendance] QR scan request failed:", error instanceof Error ? error.message : error);

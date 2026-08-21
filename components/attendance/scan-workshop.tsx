@@ -108,6 +108,7 @@ export function ScanWorkshop({
 
     try {
       const res = await scanCheckinAction(mode === "manual" ? lessonId : null, studentId);
+      const serverStudentName = "student" in res && res.student ? res.student.name : null;
       if (res.lesson) setActiveLesson({ id: res.lesson.id, topic: res.lesson.topic });
       if (res.ok) playQrResultSound("success");
       else playQrResultSound("error");
@@ -116,13 +117,13 @@ export function ScanWorkshop({
         : (en
           ? (res.errorCode === "NO_ACTIVE_LESSON" ? "No active lesson" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "Student is not in this lesson" : res.errorCode === "ATTENDANCE_ALREADY_RECORDED" ? "Already recorded" : res.errorCode === "REQUEST_FAILED" ? "Unable to process — retry the scan" : "Failed")
           : (res.errorCode === "NO_ACTIVE_LESSON" ? "لا يوجد درس جارٍ الآن" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "الطالب غير مسجل في المجموعة" : res.errorCode === "ATTENDANCE_ALREADY_RECORDED" ? "تم تسجيل الحضور من قبل" : res.errorCode === "REQUEST_FAILED" ? "تعذر معالجة المسح — أعد المحاولة" : "فشل تسجيل الحضور"));
-      addLog(`${studentId}:${res.ok ? "success" : res.errorCode}`, { name: student ? fullName(student) : (en ? "Student QR" : "QR الطالب"), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") });
+      addLog(`${studentId}:${res.ok ? "success" : res.errorCode}`, { name: serverStudentName ?? (student ? fullName(student) : (en ? "Student" : "الطالب")), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") });
       if (!res.ok && res.errorCode === "REQUEST_FAILED") setError(status);
     } catch {
       playQrResultSound("error");
       const status = en ? "Network error — retry the scan" : "خطأ في الشبكة — أعد المسح";
       setError(status);
-      addLog(`${studentId}:network`, { name: student ? fullName(student) : (en ? "Student QR" : "QR الطالب"), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") });
+      addLog(`${studentId}:network`, { name: student ? fullName(student) : (en ? "Student" : "الطالب"), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") });
     } finally {
       pendingScans.current.delete(studentId);
       // Keep the last detection timestamp aligned with the completed request so

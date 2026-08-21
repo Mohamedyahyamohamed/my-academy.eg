@@ -43,13 +43,13 @@ def write_wav(
         audio.writeframes(b"".join(struct.pack("<h", sample) for sample in samples))
 
 
-# A high, sustained notification chime: one bright note with a short tail,
-# approximating the user's requested "tinnn" sound.
+# A soft, bright two-note confirmation chime: the second note rises clearly
+# like a checkmark/payment confirmation without sounding harsh on phones.
 write_wav(
     OUT / "qr-success.wav",
-    [(0.0, 1180.0)],
-    duration=0.35,
-    note_duration=0.30,
+    [(0.0, 880.0), (0.095, 1320.0)],
+    duration=0.34,
+    note_duration=0.20,
 )
 
 # Two descending notes remain reserved for rejected, duplicate, or invalid scans.

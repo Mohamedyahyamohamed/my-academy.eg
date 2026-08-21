@@ -27,11 +27,17 @@ describe("QR attendance sound feedback", () => {
     }
   });
 
-  it("plays result feedback in the camera scanner", () => {
+  it("plays result feedback in the camera scanner and shows the server-resolved student name", () => {
     const scanner = readProjectFile("components/attendance/scan-workshop.tsx");
+    const action = readProjectFile("app/actions/attendance.ts");
     expect(scanner).toContain("primeQrSound();");
     expect(scanner).toContain('playQrResultSound("success")');
     expect(scanner).toContain('playQrResultSound("error")');
+    expect(scanner).toContain("serverStudentName");
+    expect(scanner).toContain('(en ? "Student" : "الطالب")');
+    expect(scanner).not.toContain('en ? "Student QR" : "QR الطالب"');
+    expect(action).toContain("const scannedStudent = await StudentsService.getStudent(studentId);");
+    expect(action).toContain("student,");
   });
 
   it("plays result feedback in quick check-in links", () => {

@@ -32,6 +32,7 @@ function CheckInInner() {
   const [groups, setGroups] = React.useState<QuickGroup[]>([]);
   const [selectedGroupId, setSelectedGroupId] = React.useState("");
   const [lessonLabel, setLessonLabel] = React.useState("");
+  const [studentLabel, setStudentLabel] = React.useState("");
   const autoStarted = React.useRef(false);
   const selectedGroup = groups.find((group) => group.id === selectedGroupId);
   const hasActiveLesson = Boolean(selectedGroup?.lesson);
@@ -69,6 +70,7 @@ function CheckInInner() {
         return;
       }
       playQrResultSound("success");
+      setStudentLabel(result.student?.name || "");
       setLessonLabel(`${result.lesson.groupName} — ${result.lesson.topic}`);
       setState("ok");
     } catch {
@@ -166,6 +168,7 @@ function CheckInInner() {
           <>
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><CheckCircle2 className="h-8 w-8" /></div>
             <h1 className="text-lg font-semibold">{en ? "Attendance recorded successfully" : "تم تسجيل الحضور بنجاح"}</h1>
+            {studentLabel && <p className="text-base font-medium">{studentLabel}</p>}
             <p className="text-sm text-muted-foreground">{lessonLabel || (en ? "The student has been marked present." : "تم تسجيل الطالب كحاضر.")}</p>
             <p className="text-xs text-muted-foreground">{en ? "The selected group will remain active for 30 minutes." : "ستظل المجموعة المختارة مفعلة لمدة 30 دقيقة."}</p>
           </>

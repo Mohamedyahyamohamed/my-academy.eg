@@ -7,6 +7,7 @@ import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { requestIpKey } from "@/lib/request-identity";
 import { attendanceErrorCode, isDuplicateAttendanceError } from "@/lib/attendance-errors";
 import { isLessonActive, lessonWallClockMinute } from "@/services/lessons";
+import { fullName } from "@/lib/utils";
 
 const GROUP_CONTEXT_COOKIE = "teacher_checkin_group";
 const GROUP_CONTEXT_TTL = 30 * 60;
@@ -125,6 +126,11 @@ export async function POST(req: NextRequest) {
   );
   if (duplicate) return jsonError("ATTENDANCE_ALREADY_RECORDED", 409);
 
+  const scannedStudent = collections().students.find(
+    (student) => student.id === studentId && student.academy_id === user.academy_id,
+  );
+  const student = scannedStudent ? { id: scannedStudent.id, name: fullName(scannedStudent) } : null;
+
   try {
     await AttendanceService.recordCheckin(lesson.id, studentId, "PRESENT");
   } catch (error) {
@@ -137,6 +143,7 @@ export async function POST(req: NextRequest) {
   const response = NextResponse.json({
     ok: true,
     studentId,
+    student,
     lesson: { id: lesson.id, topic: lesson.topic, groupId: group.id, groupName: group.name },
   });
   response.cookies.set(GROUP_CONTEXT_COOKIE, group.id, {

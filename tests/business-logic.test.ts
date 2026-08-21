@@ -18,6 +18,7 @@ import {
   PAYMENT_STATUS,
 } from "@/lib/constants";
 import { hasPermission, permissions } from "@/lib/permissions";
+import { isHomeworkStoragePath } from "@/services/homework-files";
 
 describe("Role permission matrix", () => {
   it("keeps platform control exclusive to SUPER_ADMIN semantics", () => {
@@ -39,6 +40,31 @@ describe("Role permission matrix", () => {
 
   it("exposes a complete matrix for every persisted role", () => {
     expect(Object.keys(permissions).sort()).toEqual(["ADMIN", "PARENT", "STUDENT", "SUPER_ADMIN", "TEACHER"]);
+  });
+});
+
+describe("Private homework file path policy", () => {
+  const academyA = "d8ed9fbe-890f-43c3-ab60-b6ad3565686a";
+  const homeworkA = "4c9d5e16-3b33-44bf-bf0b-a7dbcf395903";
+  const studentA = "c9b17035-b58a-4ea5-8892-2a573470a9cb";
+  const fileName = "a8a53aff-0d4e-4b8f-bbf1-096f49f05fd5.pdf";
+
+  it("accepts only the exact tenant/homework/student/UUID extension layout", () => {
+    expect(isHomeworkStoragePath(`${academyA}/${homeworkA}/${studentA}/${fileName}`, academyA, homeworkA, studentA)).toBe(true);
+    expect(isHomeworkStoragePath(`${academyA}/${homeworkA}/${studentA}/not-a-uuid.pdf`, academyA, homeworkA, studentA)).toBe(false);
+  });
+
+  it("blocks cross-tenant and cross-resource ID substitution", () => {
+    expect(isHomeworkStoragePath(`academy-b/${homeworkA}/${studentA}/${fileName}`, academyA, homeworkA, studentA)).toBe(false);
+    expect(isHomeworkStoragePath(`${academyA}/other-homework/${studentA}/${fileName}`, academyA, homeworkA, studentA)).toBe(false);
+    expect(isHomeworkStoragePath(`${academyA}/${homeworkA}/other-student/${fileName}`, academyA, homeworkA, studentA)).toBe(false);
+  });
+
+  it("rejects traversal, extra path segments, and unsupported extensions", () => {
+    expect(isHomeworkStoragePath(`${academyA}/${homeworkA}/${studentA}/../secret.pdf`, academyA)).toBe(false);
+    expect(isHomeworkStoragePath(`${academyA}/${homeworkA}/${studentA}/x/y.pdf`, academyA)).toBe(false);
+    expect(isHomeworkStoragePath(`${academyA}/${homeworkA}/${studentA}/a8a53aff-0d4e-4b8f-bbf1-096f49f05fd5.docx`, academyA)).toBe(false);
+    expect(isHomeworkStoragePath("not-a-uuid", academyA)).toBe(false);
   });
 });
 

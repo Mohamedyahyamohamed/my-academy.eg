@@ -10,7 +10,7 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { submitHomeworkAction } from "@/app/actions/homework";
-import { createHomeworkUploadIntent, finalizeHomeworkUpload } from "@/app/actions/upload";
+import { createHomeworkUploadIntent, finalizeHomeworkUpload, discardHomeworkUpload } from "@/app/actions/upload";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { MAX_HOMEWORK_UPLOAD_BYTES, MAX_HOMEWORK_UPLOAD_MB, HOMEWORK_UPLOAD_ACCEPT } from "@/lib/upload-policy";
 import { useClientLang } from "@/lib/i18n-client";
@@ -29,6 +29,7 @@ export function SubmitHomework({
   const [content, setContent] = React.useState("");
   const [fileUrl, setFileUrl] = React.useState<string | null>(null);
   const [fileId, setFileId] = React.useState<string | null>(null);
+  const [filePath, setFilePath] = React.useState<string | null>(null);
   const [fileName, setFileName] = React.useState<string | null>(null);
   const [uploading, setUploading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -40,6 +41,7 @@ export function SubmitHomework({
       return;
     }
     setUploading(true);
+    let uploadPath: string | null = null;
     try {
       const intentData = new FormData();
       intentData.set("homeworkId", homeworkId);
@@ -49,7 +51,7 @@ export function SubmitHomework({
       intentData.set("contentType", file.type);
       const intent = await createHomeworkUploadIntent(intentData);
       if (!intent.ok) throw new Error(intent.error);
-      const uploadPath = intent.path;
+      uploadPath = intent.path ?? null;
       const uploadToken = intent.token;
       const uploadType = intent.contentType;
       if (!uploadPath || !uploadToken || !uploadType) throw new Error("Upload intent is incomplete.");
@@ -67,13 +69,39 @@ export function SubmitHomework({
       if (!result.ok) throw new Error(result.error);
       setFileUrl(result.url ?? `/api/homework/files/${result.fileId}`);
       setFileId(result.fileId ?? null);
+      setFilePath(uploadPath);
       setFileName(result.name ?? file.name);
       toast.success(en ? "File attached." : "تم إرفاق الملف.");
     } catch (e) {
+      if (uploadPath) {
+        const cleanupData = new FormData();
+        cleanupData.set("homeworkId", homeworkId);
+        cleanupData.set("studentId", studentId);
+        cleanupData.set("path", uploadPath);
+        await discardHomeworkUpload(cleanupData).catch(() => undefined);
+      }
       toast.error((en ? "Could not upload file: " : "تعذّر رفع الملف: ") + (e as Error).message);
     } finally {
       setUploading(false);
     }
+  };
+
+  const detach = async () => {
+    if (!filePath) return;
+    const cleanupData = new FormData();
+    cleanupData.set("homeworkId", homeworkId);
+    cleanupData.set("studentId", studentId);
+    cleanupData.set("path", filePath);
+    if (fileId) cleanupData.set("fileId", fileId);
+    const result = await discardHomeworkUpload(cleanupData);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    setFileUrl(null);
+    setFileId(null);
+    setFilePath(null);
+    setFileName(null);
   };
 
   const submit = async () => {
@@ -89,6 +117,7 @@ export function SubmitHomework({
       setContent("");
       setFileUrl(null);
       setFileId(null);
+      setFilePath(null);
       setFileName(null);
       router.refresh();
     } catch (e) {
@@ -120,7 +149,7 @@ export function SubmitHomework({
                 <Paperclip className="h-4 w-4 shrink-0 text-primary" />
                 <span className="truncate">{fileName}</span>
               </span>
-              <Button variant="ghost" size="icon-sm" onClick={() => { setFileUrl(null); setFileId(null); setFileName(null); }}>
+              <Button variant="ghost" size="icon-sm" onClick={detach} disabled={saving}>
                 <X className="h-4 w-4" />
               </Button>
             </div>

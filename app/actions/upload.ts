@@ -10,6 +10,7 @@ import { measureTenantStorageUsage } from "@/lib/storage-quota";
 import { getPlan } from "@/services/saas";
 import { hasAllowedExtension, isWithinUploadLimit, MAX_HOMEWORK_UPLOAD_MB } from "@/lib/upload-policy";
 import { detectUpload } from "@/lib/upload-validation";
+import { isHomeworkStoragePath } from "@/services/homework-files";
 
 async function homeworkUploadContext(formData: FormData) {
   const user = await requireScopedRole("STUDENT", "ADMIN", "TEACHER");
@@ -77,8 +78,7 @@ export async function finalizeHomeworkUpload(formData: FormData) {
   const fileName = String(formData.get("fileName") ?? "").trim();
   const fileSize = Number(formData.get("fileSize") ?? 0);
   const declaredType = String(formData.get("contentType") ?? "");
-  const prefix = `${context.user.academy_id}/${context.homeworkId}/${context.studentId}/`;
-  if (!path.startsWith(prefix) || path.includes("..") || !fileName || !isWithinUploadLimit(fileSize, "homework")) return { ok: false, error: "Invalid upload metadata." };
+  if (!isHomeworkStoragePath(path, context.user.academy_id, context.homeworkId, context.studentId) || !fileName || !isWithinUploadLimit(fileSize, "homework")) return { ok: false, error: "Invalid upload metadata." };
   const contentType = declaredHomeworkMime(fileName, declaredType);
   if (!contentType) return { ok: false, error: "Unsupported or invalid file." };
   const client = nodeSupabaseClient();
@@ -184,4 +184,60 @@ export async function uploadHomeworkFile(formData: FormData) {
     user,
   );
   return { ok: true, url: `/api/homework/files/${fileId}`, fileId, name: file.name };
+}
+
+/**
+ * Remove an upload that was interrupted before finalization or explicitly
+ * detached from the submission dialog. The path, tenant, homework, student,
+ * and registry owner are all revalidated server-side before deletion.
+ */
+export async function discardHomeworkUpload(formData: FormData) {
+  const context = await homeworkUploadContext(formData);
+  if (!context.ok) return context;
+  const path = String(formData.get("path") ?? "");
+  const fileId = String(formData.get("fileId") ?? "").trim();
+  if (!isHomeworkStoragePath(path, context.user.academy_id, context.homeworkId, context.studentId)) {
+    return { ok: false as const, error: "Invalid upload path." };
+  }
+
+  const client = nodeSupabaseClient();
+  if (!client) return { ok: false as const, error: "Storage not configured." };
+
+  const fileQuery = client
+    .from("files")
+    .select("id, url, owner_id")
+    .eq("academy_id", context.user.academy_id)
+    .eq("owner_id", context.user.id)
+    .eq("url", path);
+  const { data: file, error: fileError } = fileId
+    ? await fileQuery.eq("id", fileId).maybeSingle()
+    : await fileQuery.maybeSingle();
+  if (fileError) return { ok: false as const, error: "Could not verify attachment state." };
+  if (file && file.url !== path) return { ok: false as const, error: "Attachment not found." };
+
+  if (file) {
+    const { data: linkedSubmission, error: submissionError } = await client
+      .from("homework_submissions")
+      .select("id")
+      .eq("file_id", file.id)
+      .limit(1)
+      .maybeSingle();
+    if (submissionError) return { ok: false as const, error: "Could not verify attachment state." };
+    if (linkedSubmission) return { ok: false as const, error: "Submitted attachments cannot be detached." };
+
+    const { error: deleteFileError } = await client
+      .from("files")
+      .delete()
+      .eq("id", file.id)
+      .eq("academy_id", context.user.academy_id)
+      .eq("owner_id", context.user.id);
+    if (deleteFileError) return { ok: false as const, error: "Could not remove the file record." };
+  } else if (fileId) {
+    return { ok: false as const, error: "Attachment not found." };
+  }
+
+  const { error: storageError } = await client.storage.from("homework").remove([path]);
+  if (storageError) return { ok: false as const, error: "Could not remove the uploaded object." };
+  void audit({ action: "upload.discarded", metadata: { userId: context.user.id, academyId: context.user.academy_id, homeworkId: context.homeworkId, fileId: fileId || null } }, context.user);
+  return { ok: true as const };
 }

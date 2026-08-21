@@ -17,6 +17,25 @@ export type AuthorizedHomeworkFile = {
 };
 
 /**
+ * New private homework objects use exactly this tenant/homework/student/uuid.ext
+ * layout. Keeping the complete relationship in the path prevents a valid file
+ * registry ID from being substituted for another student's or homework's file.
+ */
+export function isHomeworkStoragePath(
+  path: string,
+  academyId: string,
+  homeworkId?: string,
+  studentId?: string,
+): boolean {
+  if (!path || !academyId || path.includes("..")) return false;
+  const segments = path.split("/");
+  if (segments.length !== 4 || segments[0] !== academyId) return false;
+  if (homeworkId && segments[1] !== homeworkId) return false;
+  if (studentId && segments[2] !== studentId) return false;
+  return /^[0-9a-f-]{36}\.(pdf|png|jpg|webp)$/i.test(segments[3]);
+}
+
+/**
  * Resolve a homework attachment only after re-checking every relationship in
  * the authenticated academy. No client-supplied academy, homework, student, or
  * storage path is trusted by the download route.
@@ -33,7 +52,7 @@ export async function getAuthorizedHomeworkFile(fileId: string, user: SessionUse
     .eq("academy_id", user.academy_id)
     .maybeSingle();
   if (fileError || !file || typeof file.url !== "string") return null;
-  if (!file.url.startsWith(`${user.academy_id}/`)) return null;
+  if (!isHomeworkStoragePath(file.url, user.academy_id)) return null;
 
   const { data: submission, error: submissionError } = await client
     .from("homework_submissions")
@@ -48,6 +67,7 @@ export async function getAuthorizedHomeworkFile(fileId: string, user: SessionUse
     client.from("students").select("id, academy_id, parent_id, email").eq("id", submission.student_id).eq("academy_id", user.academy_id).maybeSingle(),
   ]);
   if (!homework || !student || homework.academy_id !== file.academy_id) return null;
+  if (!isHomeworkStoragePath(file.url, user.academy_id, homework.id, student.id)) return null;
 
   let allowed = hasAcademyWideScope(user.role);
   if (!allowed && user.role === "STUDENT") {

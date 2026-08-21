@@ -19,6 +19,8 @@ import { can, hasAcademyWideScope } from "@/lib/permissions";
 import { resolveTeacherForGroups } from "./groups";
 import { isSupabaseConfigured } from "./supabase/config";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
+import { isHomeworkStoragePath } from "@/services/homework-files";
+import { audit } from "@/services/audit";
 
 function attachHw(h: Homework): Homework {
   return { ...h, group: getGroup(h.group_id), lesson: getLesson(h.lesson_id) };
@@ -237,8 +239,55 @@ export async function createHomework(input: HomeworkInput, authenticatedUser?: S
 
 export async function deleteHomework(id: string): Promise<boolean> {
   const homework = await homeworkInCurrentAcademy(id);
-  assertHomeworkManager(homework);
+  const user = assertHomeworkManager(homework);
   const before = collections().homework.length;
+
+  // Private attachments must be removed before their submission rows. Resolve
+  // the links live and require the complete tenant/homework/student path before
+  // touching Storage; an invalid link fails closed rather than deleting an
+  // unrelated object.
+  const client = nodeSupabaseClient();
+  if (client) {
+    const { data: linkedSubmissions, error: submissionReadError } = await client
+      .from("homework_submissions")
+      .select("file_id, student_id")
+      .eq("homework_id", id);
+    if (submissionReadError) throw new Error("Could not inspect homework attachments.");
+
+    const studentByFileId = new Map<string, string>();
+    for (const submission of linkedSubmissions ?? []) {
+      if (submission.file_id) studentByFileId.set(submission.file_id, submission.student_id);
+    }
+    const fileIds = [...studentByFileId.keys()];
+    if (fileIds.length > 0) {
+      const { data: fileRows, error: fileReadError } = await client
+        .from("files")
+        .select("id, url")
+        .eq("academy_id", homework.academy_id)
+        .in("id", fileIds);
+      if (fileReadError) throw new Error("Could not inspect homework file records.");
+      const files = (fileRows ?? []) as Array<{ id: string; url: string | null }>;
+
+      const paths = files.map((file) => {
+        const studentId = studentByFileId.get(file.id);
+        if (!studentId || typeof file.url !== "string" || !isHomeworkStoragePath(file.url, homework.academy_id, homework.id, studentId)) {
+          throw new Error("Homework attachment path is invalid.");
+        }
+        return file.url;
+      });
+      if (paths.length !== fileIds.length) throw new Error("Homework attachment registry is incomplete.");
+
+      const { error: storageError } = await client.storage.from("homework").remove(paths);
+      if (storageError) throw new Error("Could not remove homework attachments.");
+      const { error: fileDeleteError } = await client
+        .from("files")
+        .delete()
+        .eq("academy_id", homework.academy_id)
+        .in("id", fileIds);
+      if (fileDeleteError) throw new Error("Could not remove homework file records.");
+    }
+  }
+
   // Delete child rows first to preserve the production FK ordering, then the
   // parent row. Both calls are constrained by the authenticated academy via
   // homeworkInCurrentAcademy/assertHomeworkManager above.
@@ -248,6 +297,7 @@ export async function deleteHomework(id: string): Promise<boolean> {
   collections().submissions = collections().submissions.filter(
     (s) => s.homework_id !== id,
   );
+  void audit({ action: "homework.deleted", metadata: { userId: user.id, academyId: homework.academy_id, homeworkId: id } }, user);
   return collections().homework.length < before;
 }
 

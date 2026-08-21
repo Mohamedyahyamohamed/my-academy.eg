@@ -1,4 +1,4 @@
-const STATIC_CACHE = "my-academy-static-v4";
+const STATIC_CACHE = "my-academy-static-v5";
 const STATIC_ASSETS = [
   "/manifest.webmanifest",
   "/icon.svg",

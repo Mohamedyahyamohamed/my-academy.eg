@@ -119,9 +119,9 @@ function hid() {
   return crypto.randomUUID();
 }
 
-function homeworkInCurrentAcademy(homeworkId: string): Homework {
+function homeworkInCurrentAcademy(homeworkId: string, academyIdOverride?: string): Homework {
   const homework = collections().homework.find((item) => item.id === homeworkId);
-  const academyId = currentAcademyId();
+  const academyId = academyIdOverride ?? currentAcademyId();
   const group = homework ? collections().groups.find((item) => item.id === homework.group_id) : null;
   if (!homework || !group || homework.academy_id !== academyId || group.academy_id !== academyId) {
     throw new Error("Homework is outside the authenticated academy.");
@@ -138,8 +138,8 @@ function assertHomeworkManager(homework: Homework) {
   return user;
 }
 
-function assertStudentSubmissionScope(homework: Homework, studentId: string) {
-  const user = getCurrentUser();
+function assertStudentSubmissionScope(homework: Homework, studentId: string, authenticatedUser?: SessionUser) {
+  const user = authenticatedUser ?? getCurrentUser();
   if (!user || user.role !== "STUDENT" || !can(user, "homework.submit")) {
     throw new Error("Only the enrolled student can submit homework.");
   }
@@ -333,8 +333,9 @@ async function validateHomeworkAttachment(
   fileUrl: string | undefined,
   homework: Homework,
   studentId: string,
+  authenticatedUser?: SessionUser,
 ): Promise<{ id: string } | null> {
-  const user = getCurrentUser();
+  const user = authenticatedUser ?? getCurrentUser();
   const client = nodeSupabaseClient();
   if (!user || !client) throw new Error("Attachment storage is not configured.");
   const { data: file, error } = await client
@@ -358,12 +359,13 @@ export async function submitHomework(
   content: string,
   fileUrl?: string,
   fileId?: string,
+  authenticatedUser?: SessionUser,
 ): Promise<HomeworkSubmission | null> {
-  const homework = homeworkInCurrentAcademy(homeworkId);
-  assertStudentSubmissionScope(homework, studentId);
+  const homework = homeworkInCurrentAcademy(homeworkId, authenticatedUser?.academy_id);
+  assertStudentSubmissionScope(homework, studentId, authenticatedUser);
   if (new Date(homework.deadline).getTime() < Date.now()) throw new Error("Homework deadline has passed.");
 
-  const attachment = fileId ? await validateHomeworkAttachment(fileId, fileUrl, homework, studentId) : null;
+  const attachment = fileId ? await validateHomeworkAttachment(fileId, fileUrl, homework, studentId, authenticatedUser) : null;
   let s = collections().submissions.find(
     (x) => x.homework_id === homeworkId && x.student_id === studentId,
   );

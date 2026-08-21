@@ -91,6 +91,8 @@ export function SubmitHomework({
       setFileId(null);
       setFileName(null);
       router.refresh();
+    } catch (e) {
+      toast.error((en ? "Could not submit homework: " : "تعذّر تسليم الواجب: ") + (e instanceof Error ? e.message : "Unknown error"));
     } finally {
       setSaving(false);
     }

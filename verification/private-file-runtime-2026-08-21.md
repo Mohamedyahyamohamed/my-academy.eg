@@ -51,3 +51,10 @@ An authenticated student upload and submission is still required to verify the c
 
 Source URL: https://my-academy-eg.vercel.app/student/homework
 Evidence capture: `/home/ubuntu/upload/my-academy-eg.vercel.app_student_homework_1787323021612.html`.
+
+## 2026-08-21 — Attachment upload and submission attempt after identity fix
+
+- Student 1 production session remained on `/student/homework` with `Private File Upload Test — Homework 02` in `Pending` state.
+- Attachment selection: **PASS**. The UI displayed `File attached` and showed `MYAcademy-homework-submission-test.pdf` inside the submission dialog.
+- Submission attempt: Submit was clicked after explicit user confirmation. The modal remained visible and the subsequent snapshot still showed the assignment as `Pending`; no success toast or submitted state was observed. The complete chain therefore remains unverified pending runtime/database inspection.
+- No real email, WhatsApp, or non-synthetic production data was used.

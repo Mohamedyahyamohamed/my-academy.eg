@@ -10,8 +10,9 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { submitHomeworkAction } from "@/app/actions/homework";
-import { uploadHomeworkFile, discardHomeworkUpload } from "@/app/actions/upload";
-import { MAX_HOMEWORK_UPLOAD_MB, HOMEWORK_UPLOAD_ACCEPT } from "@/lib/upload-policy";
+import { createHomeworkUploadIntent, finalizeHomeworkUpload, discardHomeworkUpload } from "@/app/actions/upload";
+import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { MAX_HOMEWORK_UPLOAD_BYTES, MAX_HOMEWORK_UPLOAD_MB, HOMEWORK_UPLOAD_ACCEPT } from "@/lib/upload-policy";
 import { useClientLang } from "@/lib/i18n-client";
 
 export function SubmitHomework({
@@ -35,20 +36,50 @@ export function SubmitHomework({
   const router = useRouter();
 
   const upload = async (file: File) => {
+    if (file.size <= 0 || file.size > MAX_HOMEWORK_UPLOAD_BYTES) {
+      toast.error(en ? `File size must be ${MAX_HOMEWORK_UPLOAD_MB} MB or less.` : `يجب ألا يتجاوز حجم الملف ${MAX_HOMEWORK_UPLOAD_MB} ميجابايت.`);
+      return;
+    }
     setUploading(true);
+    let uploadPath: string | null = null;
     try {
-      const uploadData = new FormData();
-      uploadData.set("homeworkId", homeworkId);
-      uploadData.set("studentId", studentId);
-      uploadData.set("file", file);
-      const result = await uploadHomeworkFile(uploadData);
+      const intentData = new FormData();
+      intentData.set("homeworkId", homeworkId);
+      intentData.set("studentId", studentId);
+      intentData.set("fileName", file.name);
+      intentData.set("fileSize", String(file.size));
+      intentData.set("contentType", file.type);
+      const intent = await createHomeworkUploadIntent(intentData);
+      if (!intent.ok) throw new Error(intent.error);
+      uploadPath = intent.path ?? null;
+      const uploadToken = intent.token;
+      const uploadType = intent.contentType;
+      if (!uploadPath || !uploadToken || !uploadType) throw new Error("Upload intent is incomplete.");
+      const supabase = createBrowserSupabaseClient();
+      const uploaded = await supabase.storage.from("homework").uploadToSignedUrl(uploadPath, uploadToken, file, { contentType: uploadType });
+      if (uploaded.error) throw new Error("Upload failed.");
+      const finalizeData = new FormData();
+      finalizeData.set("homeworkId", homeworkId);
+      finalizeData.set("studentId", studentId);
+      finalizeData.set("path", uploadPath);
+      finalizeData.set("fileName", file.name);
+      finalizeData.set("fileSize", String(file.size));
+      finalizeData.set("contentType", uploadType);
+      const result = await finalizeHomeworkUpload(finalizeData);
       if (!result.ok) throw new Error(result.error);
       setFileUrl(result.url ?? `/api/homework/files/${result.fileId}`);
       setFileId(result.fileId ?? null);
-      setFilePath(result.path ?? null);
+      setFilePath(uploadPath);
       setFileName(result.name ?? file.name);
       toast.success(en ? "File attached." : "تم إرفاق الملف.");
     } catch (e) {
+      if (uploadPath) {
+        const cleanupData = new FormData();
+        cleanupData.set("homeworkId", homeworkId);
+        cleanupData.set("studentId", studentId);
+        cleanupData.set("path", uploadPath);
+        await discardHomeworkUpload(cleanupData).catch(() => undefined);
+      }
       toast.error((en ? "Could not upload file: " : "تعذّر رفع الملف: ") + (e as Error).message);
     } finally {
       setUploading(false);

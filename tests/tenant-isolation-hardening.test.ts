@@ -53,6 +53,15 @@ describe("tenant isolation hardening", () => {
     expect(assertDirectInsertTenantScope("students", { academy_id: ACADEMY_A }, ACADEMY_A)).toBe(ACADEMY_A);
   });
 
+  it("contains database-level same-academy mutation triggers", () => {
+    const sql = readFileSync(resolve(__dirname, "../supabase/20260822_tenant_mutation_integrity.sql"), "utf8");
+    expect(sql).toContain("enforce_same_academy_relationship");
+    expect(sql).toContain("enforce_direct_academy_references");
+    expect(sql).toContain("group_students");
+    expect(sql).toContain("homework_submissions");
+    expect(sql).toContain("before insert or update");
+  });
+
   it("contains RLS guards for all four cross-tenant mutation classes", () => {
     const sql = readFileSync(resolve(__dirname, "../supabase/20260821_tenant_isolation_hardening.sql"), "utf8");
     expect(sql).toContain("group_student_admin_or_group_teacher_insert");
@@ -63,5 +72,14 @@ describe("tenant isolation hardening", () => {
     expect(sql).toContain("homework_submission_admin_or_group_teacher_delete");
     expect(sql).toContain("s.academy_id = g.academy_id");
     expect(sql).toContain("c.academy_id = content_files.academy_id");
+  });
+
+  it("keeps the live mutation probe synthetic-only and non-open", () => {
+    const route = readFileSync(resolve(__dirname, "../app/api/qa/tenant-isolation-mutation-probe/route.ts"), "utf8");
+    expect(route).toContain('const FIXTURE_NAME = "Academy B Test Group"');
+    expect(route).toContain('body?.fixtureName !== FIXTURE_NAME');
+    expect(route).toContain('user.role !== "TEACHER"');
+    expect(route).toContain('mutationApplied: false');
+    expect(route).toContain('status: 403');
   });
 });

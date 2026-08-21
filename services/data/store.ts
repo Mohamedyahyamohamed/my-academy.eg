@@ -283,21 +283,51 @@ function hasValidAcademyId(row: unknown): boolean {
   return typeof academyId !== "string" || UUID_RE.test(academyId);
 }
 
-// These tables carry academy_id directly. Relationship tables such as
-// attendance and homework_submissions are intentionally excluded because they
-// are scoped through their parent ids by the calling service.
+// These tables carry academy_id directly. Relationship tables are checked
+// through their parent rows before any service-role write is allowed.
 const DIRECT_ACADEMY_TABLES = new Set([
   "academies", "profiles", "courses", "teachers", "parents", "students",
   "groups", "lessons", "payments", "exams", "homework", "notifications",
-        "notes", "files", "messages", "subscriptions", "content_courses", "content_lessons",
-      "content_files", "content_progress", "audit_logs", "support_tickets",
-
+  "notes", "files", "messages", "subscriptions", "content_courses", "content_lessons",
+  "content_files", "content_progress", "audit_logs", "support_tickets",
   "invite_tokens",
 ]);
+
+const RELATIONSHIP_TENANT_COLUMNS: Record<string, ReadonlyArray<readonly [string, string]>> = {
+  group_students: [["group_id", "groups"], ["student_id", "students"]],
+  group_assistants: [["group_id", "groups"], ["teacher_id", "teachers"]],
+  attendance: [["lesson_id", "lessons"], ["student_id", "students"]],
+  payment_transactions: [["payment_id", "payments"]],
+  grades: [["exam_id", "exams"], ["student_id", "students"]],
+  homework_submissions: [["homework_id", "homework"], ["student_id", "students"]],
+};
 
 function scopedAcademyId(table: string, academyIdOverride?: string): string | null {
   if (!DIRECT_ACADEMY_TABLES.has(table)) return null;
   return activeAcademyId() ?? academyIdOverride ?? null;
+}
+
+async function assertRelationshipTenantScope(table: string, inputRows: any): Promise<string | null> {
+  const relations = RELATIONSHIP_TENANT_COLUMNS[table];
+  if (!relations) return activeAcademyId();
+  const academyId = activeAcademyId();
+  if (!academyId) {
+    throw new Error(`Database ${table} mutation is missing an authenticated academy scope.`);
+  }
+  const rows = (Array.isArray(inputRows) ? inputRows : [inputRows]).filter(Boolean);
+  for (const [column, parentTable] of relations) {
+    const ids = [...new Set(rows.map((row) => row?.[column]).filter((id): id is string => typeof id === "string" && id.length > 0))];
+    if (!ids.length) continue;
+    const { data, error } = await getAdminClient().from(parentTable).select("id, academy_id").in("id", ids);
+    if (error) throw new Error(`Could not validate ${table} tenant scope: ${error.message}`);
+    const scopes = new Map((data ?? []).map((parent: any) => [parent.id, parent.academy_id]));
+    for (const id of ids) {
+      if (scopes.get(id) !== academyId) {
+        throw new Error(`Database ${table} mutation crosses academy scope via ${column}.`);
+      }
+    }
+  }
+  return academyId;
 }
 
 export function assertDirectInsertTenantScope(
@@ -351,6 +381,7 @@ export async function persistInsert(table: string, row: any, academyIdOverride?:
   // to row.academy_id: that value can originate in client-controlled form data
   // and would allow a caller to choose another tenant for an insert.
   const academyId = assertDirectInsertTenantScope(table, row, academyIdOverride);
+  await assertRelationshipTenantScope(table, row);
   try {
     const result: any = await withWriteTimeout<any>(client.from(table).upsert(row), table);
     const { error } = result;
@@ -380,6 +411,19 @@ export async function persistUpdate(table: string, id: string, patch: any) {
   const academyId = scopedAcademyId(table);
   if (DIRECT_ACADEMY_TABLES.has(table) && !academyId) {
     throw new Error(`Database update is missing an authenticated academy scope for ${table}.`);
+  }
+  if (academyId && patch?.academy_id !== undefined && patch.academy_id !== academyId) {
+    throw new Error(`Database update academy scope mismatch for ${table}.`);
+  }
+  if (RELATIONSHIP_TENANT_COLUMNS[table]) {
+    const { data: existing, error: lookupError } = await client
+      .from(table)
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (lookupError) throw new Error(`Could not validate ${table} update target: ${lookupError.message}`);
+    if (!existing) throw new Error(`Could not update ${table}: target is outside the authenticated academy.`);
+    await assertRelationshipTenantScope(table, { ...existing, ...patch });
   }
   try {
     let query = client.from(table).update(patch).eq("id", id);
@@ -413,6 +457,13 @@ export async function persistDelete(
   const academyId = scopedAcademyId(table);
   if (DIRECT_ACADEMY_TABLES.has(table) && !academyId) {
     throw new Error(`Database delete is missing an authenticated academy scope for ${table}.`);
+  }
+  if (RELATIONSHIP_TENANT_COLUMNS[table]) {
+    let lookup = client.from(table).select("*");
+    for (const [column, value] of Object.entries(filters)) lookup = lookup.eq(column, value);
+    const { data: targets, error: lookupError } = await lookup;
+    if (lookupError) throw new Error(`Could not validate ${table} delete target: ${lookupError.message}`);
+    await assertRelationshipTenantScope(table, targets ?? []);
   }
   try {
     let query = client.from(table).delete();

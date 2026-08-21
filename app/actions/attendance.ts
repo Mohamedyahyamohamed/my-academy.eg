@@ -43,24 +43,9 @@ export async function scanCheckinAction(lessonId: string | null | undefined, stu
     setRequestContext(user);
     if (!rl.allowed) return { ok: false, errorCode: "RATE_LIMITED" as const, error: "Too many scans. Please slow down." };
 
-    const { LessonsService } = await import("@/services");
-    const lesson = lessonId ? await LessonsService.getLesson(lessonId) : LessonsService.getActiveLessonForTeacher();
-    if (!lesson) {
-      return {
-        ok: false,
-        errorCode: lessonId ? "LESSON_NOT_FOUND" as const : "NO_ACTIVE_LESSON" as const,
-        error: lessonId ? "Lesson not found." : "No active lesson was found for this teacher.",
-      };
-    }
-
-    // Resolve the display name server-side so the scanner does not depend on
-    // a possibly stale or incomplete browser roster. StudentsService applies
-    // the authenticated academy/teacher scope before returning the record.
+    // Resolve the scanned student's display name before lesson lookup so rejected scans
+    // (for example, no active lesson) still show the real student name in the log.
     const scannedStudent = await StudentsService.getStudent(studentId);
-    // AttendanceService already verifies academy scope and lesson enrollment. Resolve
-    // the display name directly inside the authenticated academy as well, because a
-    // teacher-scoped StudentsService lookup can be empty after an async boundary even
-    // when the attendance write itself succeeds.
     let directStudent: { id: string; first_name: string; last_name: string } | null = null;
     try {
       const { createServerSupabaseClient } = await import("@/lib/supabase/server");
@@ -75,14 +60,23 @@ export async function scanCheckinAction(lessonId: string | null | undefined, stu
     } catch (error) {
       console.warn("[attendance] direct student-name lookup skipped:", error instanceof Error ? error.message : error);
     }
-    // Final fallback remains limited to the authenticated academy; never cross the
-    // tenant boundary merely to render a name in the scan log.
     const { collections } = await import("@/services/data/store");
     const snapshotStudent = collections().students.find(
       (candidate) => candidate.id === studentId && candidate.academy_id === user.academy_id,
     ) ?? null;
     const resolvedStudent = directStudent ?? scannedStudent ?? snapshotStudent;
     const student = resolvedStudent ? { id: resolvedStudent.id, name: fullName(resolvedStudent) } : null;
+
+    const { LessonsService } = await import("@/services");
+    const lesson = lessonId ? await LessonsService.getLesson(lessonId) : LessonsService.getActiveLessonForTeacher();
+    if (!lesson) {
+      return {
+        ok: false,
+        errorCode: lessonId ? "LESSON_NOT_FOUND" as const : "NO_ACTIVE_LESSON" as const,
+        error: lessonId ? "Lesson not found." : "No active lesson was found for this teacher.",
+        student,
+      };
+    }
 
     try {
       await AttendanceService.recordCheckin(lesson.id, studentId, "PRESENT");

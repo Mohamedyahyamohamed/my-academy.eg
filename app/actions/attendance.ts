@@ -5,6 +5,7 @@ import { requireAttendanceTeacher, requireScopedRole, AttendanceService } from "
 import type { AttendanceStatus } from "@/types";
 import { audit } from "@/services/audit";
 import { attendanceErrorCode } from "@/lib/attendance-errors";
+import { setRequestContext } from "@/services/request-context";
 
 export async function checkinAction(lessonId: string) {
   const user = await requireScopedRole("STUDENT");
@@ -35,6 +36,10 @@ export async function scanCheckinAction(lessonId: string | null | undefined, stu
     // Rate limit QR scans.
     const { rateLimit, LIMITS } = await import("@/lib/rate-limit-redis");
     const rl = await rateLimit(`scan:${user.id}`, LIMITS.checkin.max, LIMITS.checkin.window);
+    // Async provider work can detach AsyncLocalStorage in some server-action
+    // render paths. Rebind the authenticated tenant/user context before any
+    // scoped lesson or attendance lookup.
+    setRequestContext(user);
     if (!rl.allowed) return { ok: false, errorCode: "RATE_LIMITED" as const, error: "Too many scans. Please slow down." };
 
     const { LessonsService } = await import("@/services");
@@ -56,7 +61,14 @@ export async function scanCheckinAction(lessonId: string | null | undefined, stu
     }
 
     void audit({ action: "attendance.scan" }, user);
-    revalidatePath(`/lessons/${lesson.id}`);
+    // Cache refresh is non-critical to the scanner response. Never turn a
+    // persisted attendance record into a retryable failure if revalidation is
+    // unavailable in the current runtime.
+    try {
+      revalidatePath(`/lessons/${lesson.id}`);
+    } catch (error) {
+      console.warn("[attendance] QR cache refresh skipped:", error instanceof Error ? error.message : error);
+    }
     return {
       ok: true,
       lesson: { id: lesson.id, topic: lesson.topic, groupId: lesson.group_id },

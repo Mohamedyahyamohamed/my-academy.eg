@@ -87,7 +87,10 @@ export function ScanWorkshop({
     }
     const studentId = studentIdFromQrValue(text);
     const now = Date.now();
-    if (lastScan.current.id === studentId && now - lastScan.current.t < 4000) return;
+    // Keep a student on cooldown longer than the camera's repeat-detection
+    // interval. The code may remain in frame after a transient response, and
+    // retry rows must not accumulate until the operator deliberately rescans.
+    if (lastScan.current.id === studentId && now - lastScan.current.t < 10000) return;
     lastScan.current = { id: studentId, t: now };
 
     const student = students.find((s) => s.id === studentId);
@@ -114,6 +117,9 @@ export function ScanWorkshop({
       addLog(`${studentId}:network`, { name: fullName(student), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") });
     } finally {
       pendingScans.current.delete(studentId);
+      // Keep the last detection timestamp aligned with the completed request so
+      // a code held in frame cannot immediately submit a second mutation.
+      lastScan.current = { id: studentId, t: Date.now() };
     }
   };
 

@@ -43,13 +43,13 @@ def write_wav(
         audio.writeframes(b"".join(struct.pack("<h", sample) for sample in samples))
 
 
-# A soft, bright two-note confirmation chime: the second note rises clearly
-# like a checkmark/payment confirmation without sounding harsh on phones.
+# A short, soft two-note confirmation chime: distinct "ding-ding"
+# pulses with a gentle rise, designed to sound like a completed action.
 write_wav(
     OUT / "qr-success.wav",
-    [(0.0, 880.0), (0.095, 1320.0)],
-    duration=0.34,
-    note_duration=0.20,
+    [(0.0, 620.0), (0.115, 930.0)],
+    duration=0.27,
+    note_duration=0.105,
 )
 
 # Two descending notes remain reserved for rejected, duplicate, or invalid scans.

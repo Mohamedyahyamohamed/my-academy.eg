@@ -39,8 +39,18 @@ describe("tenant isolation hardening", () => {
   it("does not use row.academy_id as an authorization fallback", () => {
     const source = readFileSync(resolve(__dirname, "../services/data/store.ts"), "utf8");
     expect(source).toContain("Never fall back");
-    expect(source).toContain("const academyId = assertDirectInsertTenantScope(table, row);");
+    expect(source).toContain("const academyId = assertDirectInsertTenantScope(table, row, academyIdOverride);");
     expect(source).not.toContain("scopedAcademyId(table) ?? rowAcademyId");
+  });
+
+  it("allows an explicit authenticated scope only when it matches the active context", () => {
+    setRequestContext(contextFor(ACADEMY_A));
+
+    expect(assertDirectInsertTenantScope("students", { academy_id: ACADEMY_A }, ACADEMY_A)).toBe(ACADEMY_A);
+    expect(() => assertDirectInsertTenantScope("students", { academy_id: ACADEMY_B }, ACADEMY_A))
+      .toThrow("academy scope mismatch");
+    setRequestContext(null);
+    expect(assertDirectInsertTenantScope("students", { academy_id: ACADEMY_A }, ACADEMY_A)).toBe(ACADEMY_A);
   });
 
   it("contains RLS guards for all four cross-tenant mutation classes", () => {

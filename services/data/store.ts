@@ -295,13 +295,21 @@ const DIRECT_ACADEMY_TABLES = new Set([
   "invite_tokens",
 ]);
 
-function scopedAcademyId(table: string): string | null {
+function scopedAcademyId(table: string, academyIdOverride?: string): string | null {
   if (!DIRECT_ACADEMY_TABLES.has(table)) return null;
-  return activeAcademyId();
+  return activeAcademyId() ?? academyIdOverride ?? null;
 }
 
-export function assertDirectInsertTenantScope(table: string, row: any): string | null {
-  const academyId = scopedAcademyId(table);
+export function assertDirectInsertTenantScope(
+  table: string,
+  row: any,
+  academyIdOverride?: string,
+): string | null {
+  const activeId = activeAcademyId();
+  if (activeId && academyIdOverride && activeId !== academyIdOverride) {
+    throw new Error(`Database write academy scope mismatch for ${table}.`);
+  }
+  const academyId = scopedAcademyId(table, academyIdOverride);
   if (DIRECT_ACADEMY_TABLES.has(table) && !academyId) {
     throw new Error(`Database write is missing an authenticated academy scope for ${table}.`);
   }
@@ -327,7 +335,7 @@ async function withWriteTimeout<T>(operation: Promise<T>, table: string): Promis
   }
 }
 
-export async function persistInsert(table: string, row: any) {
+export async function persistInsert(table: string, row: any, academyIdOverride?: string) {
   const client = getAdminClient();
   if (!client) {
     if (isSupabaseConfigured()) {
@@ -342,7 +350,7 @@ export async function persistInsert(table: string, row: any) {
   // Production writes must use the authenticated request scope. Never fall back
   // to row.academy_id: that value can originate in client-controlled form data
   // and would allow a caller to choose another tenant for an insert.
-  const academyId = assertDirectInsertTenantScope(table, row);
+  const academyId = assertDirectInsertTenantScope(table, row, academyIdOverride);
   try {
     const result: any = await withWriteTimeout<any>(client.from(table).upsert(row), table);
     const { error } = result;

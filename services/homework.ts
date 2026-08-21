@@ -198,7 +198,7 @@ export async function createHomework(input: HomeworkInput, authenticatedUser?: S
   };
   collections().homework.push(h);
   // Await homework before submissions (FK ordering).
-  await persistInsert("homework", h);
+  await persistInsert("homework", h, academyId);
   // Auto-create pending submissions for each group member. Use tenant-scoped
   // reads here as well; a cold server action must not create a homework with a
   // missing roster merely because its in-memory snapshot was empty.

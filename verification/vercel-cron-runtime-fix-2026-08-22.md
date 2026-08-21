@@ -84,3 +84,18 @@ Status: GAP 2 remains OPEN pending the next scheduled execution; no customer dat
 Source deployment metadata: Vercel `dpl_AqtK6ZZhctFVT34BFpGSrDhQ7dv1`; source commit `beb65cc`.
 
 Instruction compliance: no Cron implementation rewrite was performed in this round, and no secret, token, password, or customer data was requested or exposed.
+
+## Owner screenshot — Last hour filter
+
+The owner set Vercel Logs to **Last hour** and searched for `cleanup-homework-files`. The screenshot shows:
+
+| Time (displayed by Vercel) | Method | Status | Request | Message |
+|---|---:|---:|---|---|
+| Aug 22 01:24:28.51 | POST | 405 | `/api/cron/cleanup-homework-files` | Method not allowed; the route intentionally supports GET only. |
+| Aug 22 01:24:27.29 | GET | 401 | `/api/cron/cleanup-homework-files` | `CRON_UNAUTHORIZED { method: 'GET', hasScheduleHeader: false }`. |
+| Aug 22 00:59:19.21 | POST | 401 | `/api/cron/cleanup-homework-files/...` | Unauthorized manual request. |
+| Aug 22 00:58:26.60 | GET | 401 | `/api/cron/cleanup-homework-files` | Unauthorized manual request. |
+
+Interpretation: `hasScheduleHeader: false` confirms the visible GET was not identified as a Vercel Scheduler request. These entries are protection evidence only and do not prove Cron execution. The acceptance evidence remains an official scheduled GET 200 with `hasScheduleHeader: true` and/or the safe runtime markers `CRON_START`, `CRON_AUTHORIZED`, and `CRON_COMPLETE`.
+
+No secret, token, password, or customer data was exposed or changed.

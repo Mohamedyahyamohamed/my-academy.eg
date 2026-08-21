@@ -67,3 +67,20 @@ The remaining acceptance evidence is an authorized scheduled GET followed by `CR
 - The latest Production deployment after the documentation push is `dpl_48BpBxBZDvHejefXsKASL9ggLGH3`, state `READY`; the code fix is from `1feb5b1` and is also present in that deployment lineage.
 - Unauthenticated production checks remain protected: GET returned HTTP 401; POST returned HTTP 405 because the route intentionally supports GET only. These checks are security evidence, not scheduler evidence.
 - At `2026-08-21T22:24:41Z`, the next scheduled time is `2026-08-22T03:30:00Z`. No official scheduler execution can be claimed before a Vercel log shows the scheduled request.
+
+## Final verification round — 2026-08-21T22:30Z
+
+- Current production deployment: `dpl_AqtK6ZZhctFVT34BFpGSrDhQ7dv1`, READY, production, GitHub SHA `beb65cc77ef4387968487e2b4fd383f513e58970`, branch `main`.
+- `vercel.json` still contains `/api/cron/cleanup-homework-files` with schedule `30 3 * * *`; no implementation rewrite was made in this round.
+- Current UTC time at verification: `2026-08-21T22:30:17Z`.
+- Previous scheduled window: `2026-08-21T03:30:00Z` = Cairo `2026-08-21T06:30:00+03:00`.
+- Next scheduled window: `2026-08-22T03:30:00Z` = Cairo `2026-08-22T06:30:00+03:00`.
+- A 7-day Vercel runtime-log query on the current deployment returned no logs because the project is on Hobby retention; the provider reports a 1-hour runtime-log retention window. This is not treated as PASS or FAIL for the upcoming window.
+- Official Scheduler execution is not yet proven because the next window had not occurred at the time of this check. Required evidence remains a Scheduler-originated request with safe `CRON_START`, `CRON_AUTHORIZED`, `CRON_COMPLETE`, and cleanup counters.
+- Earlier manual GET/POST 401 entries remain unauthorized manual requests and are not scheduled-Cron evidence.
+
+Status: GAP 2 remains OPEN pending the next scheduled execution; no customer data was modified.
+
+Source deployment metadata: Vercel `dpl_AqtK6ZZhctFVT34BFpGSrDhQ7dv1`; source commit `beb65cc`.
+
+Instruction compliance: no Cron implementation rewrite was performed in this round, and no secret, token, password, or customer data was requested or exposed.

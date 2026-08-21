@@ -1,7 +1,7 @@
 "use server";
 
 import { audit } from "@/services/audit";
-import { requireScopedRole, resolveStudent } from "@/services";
+import { requireScopedRole, resolveStudentForDashboard } from "@/services";
 import { collections } from "@/services/data/store";
 import { fetchGroupStudentIds, fetchTableRLS } from "@/services/_shared";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
@@ -23,7 +23,8 @@ async function homeworkUploadContext(formData: FormData) {
   const homework = homeworkRows.find((item) => item.id === homeworkId && item.academy_id === user.academy_id);
   const group = homework ? groupRows.find((item) => item.id === homework.group_id && item.academy_id === user.academy_id) : null;
   if (!homework || !group) return { ok: false as const, error: "Homework not found." };
-  const studentId = user.role === "STUDENT" ? resolveStudent(user)?.id ?? null : typeof requestedStudentId === "string" && requestedStudentId ? requestedStudentId : null;
+  const resolvedStudent = user.role === "STUDENT" ? await resolveStudentForDashboard(user) : null;
+  const studentId = user.role === "STUDENT" ? resolvedStudent?.id ?? null : typeof requestedStudentId === "string" && requestedStudentId ? requestedStudentId : null;
   const student = studentId ? studentRows.find((item) => item.id === studentId && item.academy_id === user.academy_id) : null;
   const enrolledStudentIds = await fetchGroupStudentIds(homework.group_id, user.academy_id);
   const enrolled = Boolean(student && enrolledStudentIds.includes(student.id));

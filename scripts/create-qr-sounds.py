@@ -1,28 +1,38 @@
 from pathlib import Path
 import math
-import wave
 import struct
+import wave
 
 OUT = Path(__file__).resolve().parents[1] / "public" / "sounds"
 OUT.mkdir(parents=True, exist_ok=True)
 
 
-def write_wav(path: Path, notes: list[tuple[float, float]], duration: float = 0.22) -> None:
+def write_wav(
+    path: Path,
+    notes: list[tuple[float, float]],
+    duration: float = 0.28,
+    note_duration: float = 0.13,
+) -> None:
     sample_rate = 44100
     channels = 1
-    amplitude = 0.42
+    amplitude = 0.38
     frames = int(sample_rate * duration)
     samples: list[int] = []
+
     for i in range(frames):
         t = i / sample_rate
         value = 0.0
         for start, frequency in notes:
             local = t - start
-            if 0 <= local < 0.12:
+            if 0 <= local < note_duration:
                 attack = min(1.0, local / 0.012)
-                release = max(0.0, 1.0 - max(0.0, local - 0.08) / 0.04)
+                release = max(0.0, 1.0 - max(0.0, local - note_duration + 0.035) / 0.035)
                 envelope = attack * release
-                value += math.sin(2 * math.pi * frequency * local) * envelope
+                # A quiet second harmonic makes the confirmation chime clearer
+                # on small phone speakers without making it harsh.
+                fundamental = math.sin(2 * math.pi * frequency * local)
+                harmonic = 0.16 * math.sin(2 * math.pi * frequency * 2 * local)
+                value += (fundamental + harmonic) * envelope
         value = max(-1.0, min(1.0, value * amplitude))
         samples.append(int(value * 32767))
 
@@ -33,6 +43,11 @@ def write_wav(path: Path, notes: list[tuple[float, float]], duration: float = 0.
         audio.writeframes(b"".join(struct.pack("<h", sample) for sample in samples))
 
 
-write_wav(OUT / "qr-success.wav", [(0.0, 880.0), (0.09, 1320.0)])
-write_wav(OUT / "qr-error.wav", [(0.0, 260.0), (0.09, 180.0)])
+# Two clearly rising notes: a short "ding-ding" confirmation/chime,
+# intended to resemble the familiar checkmark sound after a successful payment.
+write_wav(OUT / "qr-success.wav", [(0.0, 659.25), (0.105, 987.77)])
+
+# Two descending notes remain reserved for rejected, duplicate, or invalid scans.
+write_wav(OUT / "qr-error.wav", [(0.0, 260.0), (0.105, 180.0)])
+
 print(f"Created {OUT / 'qr-success.wav'} and {OUT / 'qr-error.wav'}")

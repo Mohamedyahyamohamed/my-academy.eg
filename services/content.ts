@@ -238,14 +238,25 @@ export async function listContentFiles(courseId: string, user: SessionUser, less
   if (!course || !scope?.has(course.group_id)) return [];
   const files = await contentRows<ContentFile>("content_files", user.academy_id);
   const filtered = files.filter((file) => file.course_id === courseId && (lessonId === undefined ? true : file.lesson_id === lessonId));
-  const client = nodeSupabaseClient();
-  if (!client) return filtered;
   const withUrls: ContentFile[] = [];
   for (const file of filtered) {
-    const signed = await client.storage.from("content").createSignedUrl(file.storage_path, 3600);
-    withUrls.push({ ...file, download_url: signed.data?.signedUrl ?? undefined });
+    // Never expose a raw Storage signed URL to the browser. The authenticated
+    // download route re-checks the current tenant and group scope on every use.
+    withUrls.push({ ...file, download_url: `/api/content/files/${file.id}` });
   }
   return withUrls;
+}
+
+export async function getContentFile(id: string, user: SessionUser): Promise<ContentFile | null> {
+  assertContentPermission(user, "read");
+  const files = await contentRows<ContentFile>("content_files", user.academy_id);
+  const file = files.find((item) => item.id === id);
+  if (!file) return null;
+  const courses = await contentRows<ContentCourse>("content_courses", user.academy_id);
+  const course = courses.find((item) => item.id === file.course_id);
+  if (!course) return null;
+  await assertGroupAccess(user, course.group_id);
+  return file;
 }
 
 export async function listContentLinks(courseId: string, user: SessionUser, lessonId?: string): Promise<ContentLink[]> {

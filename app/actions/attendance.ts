@@ -57,14 +57,31 @@ export async function scanCheckinAction(lessonId: string | null | undefined, stu
     // a possibly stale or incomplete browser roster. StudentsService applies
     // the authenticated academy/teacher scope before returning the record.
     const scannedStudent = await StudentsService.getStudent(studentId);
-    // AttendanceService already verifies academy scope and lesson enrollment. If the
-    // separate RLS/name lookup is temporarily stale, use only the same-academy
-    // hydrated snapshot as a display fallback; never cross the tenant boundary.
+    // AttendanceService already verifies academy scope and lesson enrollment. Resolve
+    // the display name directly inside the authenticated academy as well, because a
+    // teacher-scoped StudentsService lookup can be empty after an async boundary even
+    // when the attendance write itself succeeds.
+    let directStudent: { id: string; first_name: string; last_name: string } | null = null;
+    try {
+      const { createServerSupabaseClient } = await import("@/lib/supabase/server");
+      const client = await createServerSupabaseClient();
+      const { data } = await client
+        .from("students")
+        .select("id,first_name,last_name")
+        .eq("id", studentId)
+        .eq("academy_id", user.academy_id)
+        .maybeSingle();
+      directStudent = data as typeof directStudent;
+    } catch (error) {
+      console.warn("[attendance] direct student-name lookup skipped:", error instanceof Error ? error.message : error);
+    }
+    // Final fallback remains limited to the authenticated academy; never cross the
+    // tenant boundary merely to render a name in the scan log.
     const { collections } = await import("@/services/data/store");
     const snapshotStudent = collections().students.find(
       (candidate) => candidate.id === studentId && candidate.academy_id === user.academy_id,
     ) ?? null;
-    const resolvedStudent = scannedStudent ?? snapshotStudent;
+    const resolvedStudent = directStudent ?? scannedStudent ?? snapshotStudent;
     const student = resolvedStudent ? { id: resolvedStudent.id, name: fullName(resolvedStudent) } : null;
 
     try {

@@ -38,7 +38,9 @@ describe("QR attendance sound feedback", () => {
     expect(action).toContain("const scannedStudent = await StudentsService.getStudent(studentId);");
     expect(action).toContain("const snapshotStudent = collections().students.find(");
     expect(action).toContain("candidate.academy_id === user.academy_id");
-    expect(action).toContain("const resolvedStudent = scannedStudent ?? snapshotStudent;");
+    expect(action).toContain("let directStudent: { id: string; first_name: string; last_name: string } | null = null;");
+    expect(action).toContain("const resolvedStudent = directStudent ?? scannedStudent ?? snapshotStudent;");
+    expect(action).toContain("student = resolvedStudent ? { id: resolvedStudent.id, name: fullName(resolvedStudent) } : null;");
     expect(action).toContain("student,");
   });
 

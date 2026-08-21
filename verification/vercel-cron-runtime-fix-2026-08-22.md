@@ -61,3 +61,9 @@ The source fix is ready for a Production deployment. A real scheduled execution 
 Commit `1feb5b1` produced Vercel Production deployment `dpl_8v2AXpRHbGiVUHbXPoSTJTbP4sCS`, state `READY`, with the expected commit message and SHA. A read-only Vercel runtime-log query scoped to that deployment, Production, the last 30 minutes, and `CRON` returned **no logs**. This is expected before the next scheduled window and is not treated as a Cron PASS.
 
 The remaining acceptance evidence is an authorized scheduled GET followed by `CRON_START`, `CRON_AUTHORIZED`, and `CRON_COMPLETE` (or an equivalent Vercel request log with HTTP 200).
+## Final verification round
+
+- `vercel.json` registers `/api/cron/cleanup-homework-files` with schedule `30 3 * * *` (03:30 UTC daily) on the production `main` deployment.
+- The latest Production deployment after the documentation push is `dpl_48BpBxBZDvHejefXsKASL9ggLGH3`, state `READY`; the code fix is from `1feb5b1` and is also present in that deployment lineage.
+- Unauthenticated production checks remain protected: GET returned HTTP 401; POST returned HTTP 405 because the route intentionally supports GET only. These checks are security evidence, not scheduler evidence.
+- At `2026-08-21T22:24:41Z`, the next scheduled time is `2026-08-22T03:30:00Z`. No official scheduler execution can be claimed before a Vercel log shows the scheduled request.

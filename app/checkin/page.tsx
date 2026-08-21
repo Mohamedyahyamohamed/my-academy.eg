@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useClientLang } from "@/lib/i18n-client";
 import { attendanceErrorMessage } from "@/lib/attendance-errors";
-import { playQrResultSound } from "@/lib/qr-sound";
+import { playQrResultSound, primeQrSound } from "@/lib/qr-sound";
 
 type QuickGroup = {
   id: string;
@@ -36,7 +36,14 @@ function CheckInInner() {
   const selectedGroup = groups.find((group) => group.id === selectedGroupId);
   const hasActiveLesson = Boolean(selectedGroup?.lesson);
 
+  React.useEffect(() => {
+    const primeFromTouch = () => primeQrSound();
+    window.addEventListener("pointerdown", primeFromTouch, { once: true, passive: true });
+    return () => window.removeEventListener("pointerdown", primeFromTouch);
+  }, []);
+
   const recordForGroup = React.useCallback(async (groupId?: string) => {
+    primeQrSound();
     setState("recording");
     setMsg("");
     try {
@@ -117,6 +124,7 @@ function CheckInInner() {
     }
 
     const doStudentCheckin = async () => {
+      primeQrSound();
       try {
         const res = await fetch("/api/checkin", {
           method: "POST",

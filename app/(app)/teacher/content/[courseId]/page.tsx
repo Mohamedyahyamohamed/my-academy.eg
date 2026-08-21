@@ -12,13 +12,14 @@ import { AddContentLinkForm, CreateLessonForm, UploadContentFileForm } from "@/c
 
 export const dynamic = "force-dynamic";
 
-type PageProps = { params: { courseId: string } };
+type PageProps = { params: Promise<{ courseId: string }> };
 
 export default async function TeacherCoursePage({ params }: PageProps) {
   const user = await requireScopedRole("TEACHER");
+  const { courseId } = await params;
   const lang = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value);
   const en = lang === "en";
-  const course = await ContentService.getCourse(params.courseId, user);
+  const course = await ContentService.getCourse(courseId, user);
   if (!course) return <div dir={en ? "ltr" : "rtl"} className="rounded-xl border p-8 text-center">{en ? "Course not found or outside your scope." : "الدورة غير موجودة أو خارج نطاقك."}</div>;
 
   return (

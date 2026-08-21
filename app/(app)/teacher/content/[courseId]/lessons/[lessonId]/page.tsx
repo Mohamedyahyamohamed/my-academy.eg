@@ -11,14 +11,15 @@ import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
-type PageProps = { params: { courseId: string; lessonId: string } };
+type PageProps = { params: Promise<{ courseId: string; lessonId: string }> };
 
 export default async function TeacherLessonPage({ params }: PageProps) {
   const user = await requireScopedRole("TEACHER");
+  const { courseId, lessonId } = await params;
   const lang = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value);
   const en = lang === "en";
-  const course = await ContentService.getCourse(params.courseId, user);
-  const lesson = course?.lessons?.find((item) => item.id === params.lessonId);
+  const course = await ContentService.getCourse(courseId, user);
+  const lesson = course?.lessons?.find((item) => item.id === lessonId);
   if (!course || !lesson) return <div dir={en ? "ltr" : "rtl"} className="rounded-xl border p-8 text-center">{en ? "Lesson not found." : "الدرس غير موجود."}</div>;
   const files = await ContentService.listContentFiles(course.id, user, lesson.id);
   const links = await ContentService.listContentLinks(course.id, user, lesson.id);

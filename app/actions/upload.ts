@@ -11,6 +11,7 @@ import { getPlan } from "@/services/saas";
 import { hasAllowedExtension, isWithinUploadLimit, MAX_HOMEWORK_UPLOAD_MB } from "@/lib/upload-policy";
 import { detectUpload } from "@/lib/upload-validation";
 import { isHomeworkStoragePath } from "@/services/homework-files";
+import { resolveTeacherForGroups } from "@/services/groups";
 
 async function homeworkUploadContext(formData: FormData) {
   const user = await requireScopedRole("STUDENT", "ADMIN", "TEACHER");
@@ -18,12 +19,21 @@ async function homeworkUploadContext(formData: FormData) {
   const requestedStudentId = formData.get("studentId");
   const [homeworkRows, groupRows, studentRows] = await Promise.all([
     fetchTableRLS<{ id: string; academy_id: string | null; group_id: string }>("homework", user.academy_id),
-    fetchTableRLS<{ id: string; academy_id: string | null }>("groups", user.academy_id),
+    fetchTableRLS<{ id: string; academy_id: string | null; teacher_id: string | null }>("groups", user.academy_id),
     fetchTableRLS<{ id: string; academy_id: string | null; email?: string | null }>("students", user.academy_id),
   ]);
   const homework = homeworkRows.find((item) => item.id === homeworkId && item.academy_id === user.academy_id);
   const group = homework ? groupRows.find((item) => item.id === homework.group_id && item.academy_id === user.academy_id) : null;
   if (!homework || !group) return { ok: false as const, error: "Homework not found." };
+  if (user.role === "TEACHER") {
+    const teacher = await resolveTeacherForGroups(user.academy_id, user.id, user.email);
+    const assistantLinks = await fetchTableRLS<{ teacher_id: string; group_id: string }>("group_assistants", user.academy_id);
+    const assigned = Boolean(teacher && (
+      group.teacher_id === teacher.id ||
+      assistantLinks.some((link) => link.teacher_id === teacher.id && link.group_id === group.id)
+    ));
+    if (!assigned) return { ok: false as const, error: "You can only upload within an assigned group." };
+  }
   const resolvedStudent = user.role === "STUDENT" ? await resolveStudentForDashboard(user) : null;
   const studentId = user.role === "STUDENT" ? resolvedStudent?.id ?? null : typeof requestedStudentId === "string" && requestedStudentId ? requestedStudentId : null;
   const student = studentId ? studentRows.find((item) => item.id === studentId && item.academy_id === user.academy_id) : null;
@@ -46,7 +56,12 @@ async function readHomeworkStorageHead(client: ReturnType<typeof nodeSupabaseCli
   if (signed.error || !signed.data?.signedUrl) return null;
   const response = await fetch(signed.data.signedUrl, { headers: { Range: "bytes=0-63" }, cache: "no-store" });
   if (!response.ok) return null;
-  return new Uint8Array(await response.arrayBuffer());
+  const contentRange = response.headers.get("content-range");
+  const rangedTotal = contentRange?.match(/\/(\d+)$/)?.[1];
+  const contentLength = response.headers.get("content-length");
+  const size = Number(rangedTotal ?? contentLength ?? 0);
+  if (!Number.isSafeInteger(size) || size <= 0) return null;
+  return { bytes: new Uint8Array(await response.arrayBuffer()), size };
 }
 
 export async function createHomeworkUploadIntent(formData: FormData) {
@@ -84,7 +99,9 @@ export async function finalizeHomeworkUpload(formData: FormData) {
   const client = nodeSupabaseClient();
   if (!client) return { ok: false, error: "Storage not configured." };
   const head = await readHomeworkStorageHead(client, path);
-  const safeUpload = head ? detectUpload(head, fileName, contentType, "homework") : null;
+  const safeUpload = head && head.size === fileSize && isWithinUploadLimit(head.size, "homework")
+    ? detectUpload(head.bytes, fileName, contentType, "homework")
+    : null;
   if (!safeUpload) { await client.storage.from("homework").remove([path]); return { ok: false, error: "Uploaded object failed file validation." }; }
   const inserted = await client.from("files").insert({ academy_id: context.user.academy_id, owner_id: context.user.id, name: fileName, url: path, size: fileSize, mime_type: safeUpload.contentType }).select("id").single();
   if (inserted.error) { await client.storage.from("homework").remove([path]); return { ok: false, error: "Could not record the uploaded file." }; }
@@ -224,7 +241,17 @@ export async function discardHomeworkUpload(formData: FormData) {
       .maybeSingle();
     if (submissionError) return { ok: false as const, error: "Could not verify attachment state." };
     if (linkedSubmission) return { ok: false as const, error: "Submitted attachments cannot be detached." };
+  } else if (fileId) {
+    return { ok: false as const, error: "Attachment not found." };
+  }
 
+  // Delete Storage first. If Storage rejects the operation, keep the registry
+  // row so a retry can still find and remove the object; never orphan an object
+  // by deleting its registry record before the Storage operation succeeds.
+  const { error: storageError } = await client.storage.from("homework").remove([path]);
+  if (storageError) return { ok: false as const, error: "Could not remove the uploaded object." };
+
+  if (file) {
     const { error: deleteFileError } = await client
       .from("files")
       .delete()
@@ -232,12 +259,7 @@ export async function discardHomeworkUpload(formData: FormData) {
       .eq("academy_id", context.user.academy_id)
       .eq("owner_id", context.user.id);
     if (deleteFileError) return { ok: false as const, error: "Could not remove the file record." };
-  } else if (fileId) {
-    return { ok: false as const, error: "Attachment not found." };
   }
-
-  const { error: storageError } = await client.storage.from("homework").remove([path]);
-  if (storageError) return { ok: false as const, error: "Could not remove the uploaded object." };
   void audit({ action: "upload.discarded", metadata: { userId: context.user.id, academyId: context.user.academy_id, homeworkId: context.homeworkId, fileId: fileId || null } }, context.user);
   return { ok: true as const };
 }

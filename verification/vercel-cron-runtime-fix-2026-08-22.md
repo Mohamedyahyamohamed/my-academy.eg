@@ -99,3 +99,11 @@ The owner set Vercel Logs to **Last hour** and searched for `cleanup-homework-fi
 Interpretation: `hasScheduleHeader: false` confirms the visible GET was not identified as a Vercel Scheduler request. These entries are protection evidence only and do not prove Cron execution. The acceptance evidence remains an official scheduled GET 200 with `hasScheduleHeader: true` and/or the safe runtime markers `CRON_START`, `CRON_AUTHORIZED`, and `CRON_COMPLETE`.
 
 No secret, token, password, or customer data was exposed or changed.
+
+## Pre-window verification from FINAL CRON SCHEDULED EXECUTION instructions
+
+At the time of this check, UTC was `2026-08-21T23:02:59Z` and Cairo was `2026-08-22T02:02:59+03:00`. The scheduled execution window `2026-08-22T03:30:00Z` is `2026-08-22T06:30:00+03:00` in Cairo and had not yet occurred.
+
+The production project remains `my-academy-eg`; the latest production deployment returned by Vercel was `dpl_CTbT8zByjEg7xH3FeHkjAmU4PUka`, target `production`, state `READY`, URL `my-academy-jxvomtvv1-mohamed-yahya.vercel.app`. The repository configuration still registers `/api/cron/cleanup-homework-files` at `30 3 * * *`.
+
+No Cron implementation was changed during this verification. Official Scheduler evidence cannot be collected before the scheduled window. The accepted evidence remains an official GET 200 with `hasScheduleHeader: true` and safe markers/counters; previous manual 401/405 requests remain non-evidence.

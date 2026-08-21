@@ -148,8 +148,10 @@ function assertStudentSubmissionScope(homework: Homework, studentId: string) {
   }
 }
 
-export async function createHomework(input: HomeworkInput): Promise<Homework> {
-  const user = getCurrentUser();
+export async function createHomework(input: HomeworkInput, authenticatedUser?: SessionUser): Promise<Homework> {
+  // Server Actions may lose AsyncLocalStorage context across an awaited boundary;
+  // prefer the user already authenticated by requireScopedRole when supplied.
+  const user = authenticatedUser ?? getCurrentUser();
   if (!user || !can(user, "homework.manage")) throw new Error("You are not allowed to create homework.");
   const academyId = currentAcademyId();
   if (input.academy_id && input.academy_id !== academyId) {

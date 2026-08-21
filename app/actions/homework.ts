@@ -13,7 +13,7 @@ export async function createHomeworkAction(input: HomeworkInput) {
     academy_id: user.academy_id,
     teacher_profile_id: user.id,
     teacher_email: user.email,
-  });
+  }, user);
   // Keep parent updates in-app; outbound email remains disabled post-launch.
   if (h) {
     const { collections } = await import("@/services/data/store");

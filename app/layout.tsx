@@ -1,11 +1,18 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { Toaster } from "sonner";
 import { APP_CONFIG } from "@/lib/constants";
 import { getLangFromCookie, isRTL } from "@/lib/i18n";
+import { PwaRegister } from "@/components/layout/pwa-register";
 import "./globals.css";
 
 // خط النظام بدل next/font/google — عشان يشتغل أوفلاين ومن غير إنترنت لـ Google.
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#7c5cfc",
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
@@ -37,6 +44,18 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
     },
     robots: { index: true, follow: true },
+    appleWebApp: {
+      capable: true,
+      title: APP_CONFIG.name,
+      statusBarStyle: "default",
+    },
+    icons: {
+      icon: [
+        { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+        { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      ],
+      apple: "/icons/icon-192.png",
+    },
   };
 }
 
@@ -52,6 +71,7 @@ export default async function RootLayout({
   return (
     <html lang={lang} dir={dir} suppressHydrationWarning>
       <body className="font-sans">
+        <PwaRegister />
         {children}
         <Toaster
           position={dir === "rtl" ? "top-left" : "top-right"}

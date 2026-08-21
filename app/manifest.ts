@@ -10,13 +10,27 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     description: en
       ? "Manage academies, students, parents, attendance, grades, and payments in one place."
       : "منصة إدارة الأكاديميات والطلاب وأولياء الأمور في مكان واحد.",
+    id: "/",
     start_url: "/",
+    scope: "/",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#7c5cfc",
     dir: en ? "ltr" : "rtl",
     lang: en ? "en" : "ar",
     icons: [
+      {
+        src: "/icons/icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "maskable",
+      },
+      {
+        src: "/icons/icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
+      },
       {
         src: "/icon.svg",
         sizes: "any",

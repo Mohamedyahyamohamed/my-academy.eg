@@ -49,7 +49,7 @@ export function InstallApp() {
   if (installed || !deferredPrompt) return null;
 
   return (
-    <div className="hidden items-center gap-1 sm:flex" aria-label={en ? "Install MY Academy app" : "تثبيت تطبيق MY Academy"}>
+    <div className="flex items-center gap-1" aria-label={en ? "Install MY Academy app" : "تثبيت تطبيق MY Academy"}>
       <Button variant="ghost" size="sm" onClick={install} title={en ? "Install app" : "تثبيت التطبيق"}>
         <Download className="h-4 w-4" />
         <span className="sr-only">{en ? "Install app" : "تثبيت التطبيق"}</span>

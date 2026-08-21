@@ -83,14 +83,15 @@ export async function POST(request: Request) {
 
   const injectedStorageError = new Error("Injected Storage failure for BLOCKER 3 proof");
   const failureClient = {
-    ...client,
+    // SupabaseClient methods rely on their receiver; preserve the binding while
+    // replacing only Storage.remove for the injected homework bucket failure.
+    from: client.from.bind(client),
     storage: {
-      ...client.storage,
       from: (bucket: string) => bucket === "homework"
         ? { remove: async (_paths: string[]) => ({ error: injectedStorageError }) }
         : client.storage.from(bucket),
     },
-  } as typeof client;
+  } as unknown as typeof client;
 
   const cleanup = await cleanupOrphanHomeworkFiles(failureClient, academyId, 0);
   const { data: remaining, error: verifyError } = await client

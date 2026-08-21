@@ -3,6 +3,7 @@
 import { audit } from "@/services/audit";
 import { requireScopedRole, resolveStudent } from "@/services";
 import { collections } from "@/services/data/store";
+import { fetchTableRLS } from "@/services/_shared";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { measureTenantStorageUsage } from "@/lib/storage-quota";
@@ -14,12 +15,18 @@ async function homeworkUploadContext(formData: FormData) {
   const user = await requireScopedRole("STUDENT", "ADMIN", "TEACHER");
   const homeworkId = String(formData.get("homeworkId") ?? "");
   const requestedStudentId = formData.get("studentId");
-  const homework = collections().homework.find((item) => item.id === homeworkId && item.academy_id === user.academy_id);
-  const group = homework ? collections().groups.find((item) => item.id === homework.group_id && item.academy_id === user.academy_id) : null;
+  const [homeworkRows, groupRows, studentRows, membershipRows] = await Promise.all([
+    fetchTableRLS<{ id: string; academy_id: string | null; group_id: string }>("homework", user.academy_id),
+    fetchTableRLS<{ id: string; academy_id: string | null }>("groups", user.academy_id),
+    fetchTableRLS<{ id: string; academy_id: string | null; email?: string | null }>("students", user.academy_id),
+    fetchTableRLS<{ group_id: string; student_id: string }>("group_students", user.academy_id),
+  ]);
+  const homework = homeworkRows.find((item) => item.id === homeworkId && item.academy_id === user.academy_id);
+  const group = homework ? groupRows.find((item) => item.id === homework.group_id && item.academy_id === user.academy_id) : null;
   if (!homework || !group) return { ok: false as const, error: "Homework not found." };
   const studentId = user.role === "STUDENT" ? resolveStudent(user)?.id ?? null : typeof requestedStudentId === "string" && requestedStudentId ? requestedStudentId : null;
-  const student = studentId ? collections().students.find((item) => item.id === studentId && item.academy_id === user.academy_id) : null;
-  const enrolled = Boolean(student && collections().groupStudents.some((item) => item.group_id === homework.group_id && item.student_id === student.id));
+  const student = studentId ? studentRows.find((item) => item.id === studentId && item.academy_id === user.academy_id) : null;
+  const enrolled = Boolean(student && membershipRows.some((item) => item.group_id === homework.group_id && item.student_id === student.id));
   if (!student || !enrolled) return { ok: false as const, error: "Student is not enrolled in this homework group." };
   if (user.role === "STUDENT" && student.email?.toLowerCase() !== user.email.toLowerCase()) return { ok: false as const, error: "You can only upload for your own account." };
   return { ok: true as const, user, homeworkId, studentId: student.id, groupId: homework.group_id };
@@ -87,44 +94,22 @@ export async function finalizeHomeworkUpload(formData: FormData) {
 
 /** Upload a homework attachment using tenant-validated private storage. */
 export async function uploadHomeworkFile(formData: FormData) {
-  const user = await requireScopedRole("STUDENT", "ADMIN", "TEACHER");
-  const rl = await rateLimit(`upload:${user.id}`, LIMITS.upload.max, LIMITS.upload.window);
+  const rateLimitUser = await requireScopedRole("STUDENT", "ADMIN", "TEACHER");
+  const rl = await rateLimit(`upload:${rateLimitUser.id}`, LIMITS.upload.max, LIMITS.upload.window);
   if (!rl.allowed) return { ok: false, error: "Too many uploads. Please slow down." };
 
   const file = formData.get("file");
-  const homeworkId = formData.get("homeworkId");
-  if (!(file instanceof File) || typeof homeworkId !== "string" || !homeworkId) {
+  const requestedHomeworkId = formData.get("homeworkId");
+  if (!(file instanceof File) || typeof requestedHomeworkId !== "string" || !requestedHomeworkId) {
     return { ok: false, error: "A file and homework are required." };
   }
   if (!isWithinUploadLimit(file.size, "homework")) {
     return { ok: false, error: `File too large or empty (max ${MAX_HOMEWORK_UPLOAD_MB}MB).` };
   }
 
-  const homework = collections().homework.find(
-    (item) => item.id === homeworkId && item.academy_id === user.academy_id,
-  );
-  const group = homework
-    ? collections().groups.find((item) => item.id === homework.group_id && item.academy_id === user.academy_id)
-    : null;
-  if (!homework || !group) return { ok: false, error: "Homework not found." };
-
-  let studentId: string | null = null;
-  if (user.role === "STUDENT") {
-    studentId = resolveStudent(user)?.id ?? null;
-  } else {
-    const requestedStudentId = formData.get("studentId");
-    studentId = typeof requestedStudentId === "string" && requestedStudentId ? requestedStudentId : null;
-  }
-  const student = studentId
-    ? collections().students.find((item) => item.id === studentId && item.academy_id === user.academy_id)
-    : null;
-  const enrolled = Boolean(student && collections().groupStudents.some(
-    (item) => item.group_id === homework.group_id && item.student_id === student.id,
-  ));
-  if (!student || !enrolled) return { ok: false, error: "Student is not enrolled in this homework group." };
-  if (user.role === "STUDENT" && student.email?.toLowerCase() !== user.email.toLowerCase()) {
-    return { ok: false, error: "You can only upload for your own account." };
-  }
+  const context = await homeworkUploadContext(formData);
+  if (!context.ok) return context;
+  const { user, homeworkId, studentId } = context;
 
   const bytes = new Uint8Array(await file.arrayBuffer());
   const safeUpload = detectUpload(bytes, file.name, file.type, "homework");
@@ -163,7 +148,7 @@ export async function uploadHomeworkFile(formData: FormData) {
     );
   }
 
-  const path = `${user.academy_id}/${homeworkId}/${student.id}/${crypto.randomUUID()}.${safeUpload.extension}`;
+  const path = `${user.academy_id}/${homeworkId}/${studentId}/${crypto.randomUUID()}.${safeUpload.extension}`;
   void audit(
     { action: "upload.attempt", metadata: { userId: user.id, academyId: user.academy_id } },
     user,

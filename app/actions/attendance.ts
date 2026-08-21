@@ -57,7 +57,15 @@ export async function scanCheckinAction(lessonId: string | null | undefined, stu
     // a possibly stale or incomplete browser roster. StudentsService applies
     // the authenticated academy/teacher scope before returning the record.
     const scannedStudent = await StudentsService.getStudent(studentId);
-    const student = scannedStudent ? { id: scannedStudent.id, name: fullName(scannedStudent) } : null;
+    // AttendanceService already verifies academy scope and lesson enrollment. If the
+    // separate RLS/name lookup is temporarily stale, use only the same-academy
+    // hydrated snapshot as a display fallback; never cross the tenant boundary.
+    const { collections } = await import("@/services/data/store");
+    const snapshotStudent = collections().students.find(
+      (candidate) => candidate.id === studentId && candidate.academy_id === user.academy_id,
+    ) ?? null;
+    const resolvedStudent = scannedStudent ?? snapshotStudent;
+    const student = resolvedStudent ? { id: resolvedStudent.id, name: fullName(resolvedStudent) } : null;
 
     try {
       await AttendanceService.recordCheckin(lesson.id, studentId, "PRESENT");

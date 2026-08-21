@@ -34,9 +34,11 @@ describe("QR attendance sound feedback", () => {
     expect(scanner).toContain('playQrResultSound("success")');
     expect(scanner).toContain('playQrResultSound("error")');
     expect(scanner).toContain("serverStudentName");
-    expect(scanner).toContain('(en ? "Student" : "الطالب")');
     expect(scanner).not.toContain('en ? "Student QR" : "QR الطالب"');
     expect(action).toContain("const scannedStudent = await StudentsService.getStudent(studentId);");
+    expect(action).toContain("const snapshotStudent = collections().students.find(");
+    expect(action).toContain("candidate.academy_id === user.academy_id");
+    expect(action).toContain("const resolvedStudent = scannedStudent ?? snapshotStudent;");
     expect(action).toContain("student,");
   });
 

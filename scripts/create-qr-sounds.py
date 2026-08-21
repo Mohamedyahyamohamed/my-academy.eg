@@ -13,7 +13,7 @@ def write_wav(
     duration: float,
     note_duration: float,
     amplitude: float = 0.38,
-    harmonic_level: float = 0.16,
+    waveform: str = "sine",
 ) -> None:
     sample_rate = 44100
     channels = 1
@@ -26,14 +26,14 @@ def write_wav(
         for start, frequency in notes:
             local = t - start
             if 0 <= local < note_duration:
-                # A fast attack and short release keep the scanner beep crisp
-                # without producing a click on phone speakers.
+                # Short attack/release avoids clicks while keeping the scanner
+                # confirmation crisp and immediately recognizable.
                 attack = min(1.0, local / 0.004)
-                release = max(0.0, 1.0 - max(0.0, local - note_duration + 0.022) / 0.022)
+                release = max(0.0, 1.0 - max(0.0, local - note_duration + 0.026) / 0.026)
                 envelope = attack * release
-                fundamental = math.sin(2 * math.pi * frequency * local)
-                harmonic = harmonic_level * math.sin(2 * math.pi * frequency * 2 * local)
-                value += (fundamental + harmonic) * envelope
+                phase = math.sin(2 * math.pi * frequency * local)
+                tone = 1.0 if phase >= 0 else -1.0 if waveform == "square" else phase
+                value += tone * envelope
         value = max(-1.0, min(1.0, value * amplitude))
         samples.append(int(value * 32767))
 
@@ -44,14 +44,14 @@ def write_wav(
         audio.writeframes(b"".join(struct.pack("<h", sample) for sample in samples))
 
 
-# Classic QR/barcode scanner confirmation: one short, bright beep.
+# Classic QR/barcode scanner confirmation: one bright electronic square-wave beep.
 write_wav(
     OUT / "qr-success.wav",
-    [(0.0, 2400.0)],
-    duration=0.12,
-    note_duration=0.09,
-    amplitude=0.30,
-    harmonic_level=0.08,
+    [(0.0, 1200.0)],
+    duration=0.15,
+    note_duration=0.12,
+    amplitude=0.34,
+    waveform="square",
 )
 
 # Two descending notes remain reserved for rejected, duplicate, or invalid scans.
@@ -60,6 +60,10 @@ write_wav(
     [(0.0, 260.0), (0.105, 180.0)],
     duration=0.28,
     note_duration=0.13,
+    amplitude=0.38,
+    waveform="sine",
 )
 
 print(f"Created {OUT / 'qr-success.wav'} and {OUT / 'qr-error.wav'}")
+
+  

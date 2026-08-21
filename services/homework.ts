@@ -3,6 +3,8 @@
  */
 import type {
   Homework,
+  Group,
+  Student,
   SessionUser,
   HomeworkSubmission,
   HomeworkStatus,
@@ -157,7 +159,11 @@ export async function createHomework(input: HomeworkInput, authenticatedUser?: S
   if (input.academy_id && input.academy_id !== academyId) {
     throw new Error("Homework academy scope mismatch.");
   }
-  const group = collections().groups.find((item) => item.id === input.group_id && item.academy_id === academyId);
+  // The homework page can obtain groups through the live tenant-scoped fallback
+  // while this mutation request may have an empty/stale snapshot. Resolve the
+  // selected group through the same scoped reader instead of trusting collections().
+  const scopedGroups = await fetchTableRLS<Group>("groups", academyId);
+  const group = scopedGroups.find((item) => item.id === input.group_id && item.academy_id === academyId);
   if (!group) throw new Error("Homework group is outside the authenticated academy.");
   if (!hasAcademyWideScope(user.role)) {
     const teacher = await resolveTeacherForGroups(
@@ -165,9 +171,10 @@ export async function createHomework(input: HomeworkInput, authenticatedUser?: S
       input.teacher_profile_id ?? user.id,
       input.teacher_email ?? user.email,
     );
+    const scopedAssistants = await fetchTableRLS<{ teacher_id: string; group_id: string }>("group_assistants", academyId);
     const assigned = teacher && (
       group.teacher_id === teacher.id ||
-      collections().groupAssistants.some((assistant) => assistant.teacher_id === teacher.id && assistant.group_id === group.id)
+      scopedAssistants.some((assistant) => assistant.teacher_id === teacher.id && assistant.group_id === group.id)
     );
     if (!assigned) throw new Error("You can only create homework for an assigned group.");
   }
@@ -192,8 +199,14 @@ export async function createHomework(input: HomeworkInput, authenticatedUser?: S
   collections().homework.push(h);
   // Await homework before submissions (FK ordering).
   await persistInsert("homework", h);
-  // Auto-create pending submissions for each group member
-  const roster = studentsInGroup(input.group_id);
+  // Auto-create pending submissions for each group member. Use tenant-scoped
+  // reads here as well; a cold server action must not create a homework with a
+  // missing roster merely because its in-memory snapshot was empty.
+  const memberships = await fetchTableRLS<{ group_id: string; student_id: string }>("group_students", academyId);
+  const studentIds = new Set(
+    memberships.filter((row) => row.group_id === input.group_id).map((row) => row.student_id),
+  );
+  const roster = (await fetchTableRLS<Student>("students", academyId)).filter((student) => studentIds.has(student.id));
   for (const s of roster) {
     const sub = {
       id: crypto.randomUUID(),

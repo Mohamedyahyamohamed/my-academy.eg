@@ -8,7 +8,7 @@ import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { measureTenantStorageUsage } from "@/lib/storage-quota";
 import { getPlan } from "@/services/saas";
-import { hasAllowedExtension, isWithinUploadLimit, MAX_HOMEWORK_UPLOAD_MB } from "@/lib/upload-policy";
+import { hasAllowedExtension, isWithinUploadLimit, MAX_HOMEWORK_UPLOAD_BYTES, MAX_HOMEWORK_UPLOAD_MB } from "@/lib/upload-policy";
 import { detectUpload } from "@/lib/upload-validation";
 import { isHomeworkStoragePath } from "@/services/homework-files";
 import { resolveTeacherForGroups } from "@/services/groups";
@@ -121,8 +121,11 @@ export async function uploadHomeworkFile(formData: FormData) {
   if (!(file instanceof File) || typeof requestedHomeworkId !== "string" || !requestedHomeworkId) {
     return { ok: false, error: "A file and homework are required." };
   }
-  if (!isWithinUploadLimit(file.size, "homework")) {
-    return { ok: false, error: `File too large or empty (max ${MAX_HOMEWORK_UPLOAD_MB}MB).` };
+  if (file.size <= 0) {
+    return { ok: false, error: "File is empty." };
+  }
+  if (file.size > MAX_HOMEWORK_UPLOAD_BYTES) {
+    return { ok: false, error: `File size must be ${MAX_HOMEWORK_UPLOAD_MB} MB or less.` };
   }
 
   const context = await homeworkUploadContext(formData);
@@ -200,7 +203,7 @@ export async function uploadHomeworkFile(formData: FormData) {
     { action: "upload.completed", metadata: { userId: user.id, academyId: user.academy_id, fileId } },
     user,
   );
-  return { ok: true, url: `/api/homework/files/${fileId}`, fileId, name: file.name };
+  return { ok: true, url: `/api/homework/files/${fileId}`, fileId, path, name: file.name };
 }
 
 /**

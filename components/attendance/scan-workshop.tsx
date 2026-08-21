@@ -10,6 +10,7 @@ import { formatTime, fullName } from "@/lib/utils";
 import type { Group, Lesson, Student } from "@/types";
 import { useClientLang } from "@/lib/i18n-client";
 import { studentIdFromQrValue } from "@/lib/student-qr";
+import { playQrResultSound, primeQrSound } from "@/lib/qr-sound";
 
 export function ScanWorkshop({
   groups, lessons, students,
@@ -45,6 +46,7 @@ export function ScanWorkshop({
 
   const startCamera = async () => {
     setError("");
+    primeQrSound();
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       setError(en ? "Scanning is unavailable offline. Reconnect to the internet and try again." : "المسح غير متاح بدون اتصال بالإنترنت. أعد الاتصال ثم حاول مرة أخرى.");
       return;
@@ -90,11 +92,15 @@ export function ScanWorkshop({
     // Keep a student on cooldown longer than the camera's repeat-detection
     // interval. The code may remain in frame after a transient response, and
     // retry rows must not accumulate until the operator deliberately rescans.
-    if (lastScan.current.id === studentId && now - lastScan.current.t < 10000) return;
+    if (lastScan.current.id === studentId && now - lastScan.current.t < 10000) {
+      playQrResultSound("error");
+      return;
+    }
     lastScan.current = { id: studentId, t: now };
 
     const student = students.find((s) => s.id === studentId);
     if (!student) {
+      playQrResultSound("error");
       addLog(`unknown:${studentId}`, { name: en ? "Unknown code" : "كود غير معروف", status: en ? "Unknown" : "غير معروف", at: formatTime(new Date(), en ? "en-US" : "ar-EG") });
       return;
     }
@@ -104,6 +110,8 @@ export function ScanWorkshop({
     try {
       const res = await scanCheckinAction(mode === "manual" ? lessonId : null, studentId);
       if (res.lesson) setActiveLesson({ id: res.lesson.id, topic: res.lesson.topic });
+      if (res.ok) playQrResultSound("success");
+      else playQrResultSound("error");
       const status = res.ok
         ? (en ? `Attendance recorded ✓${res.lesson?.topic ? ` · ${res.lesson.topic}` : ""}` : `تم تسجيل الحضور ✓${res.lesson?.topic ? ` · ${res.lesson.topic}` : ""}`)
         : (en
@@ -112,6 +120,7 @@ export function ScanWorkshop({
       addLog(`${studentId}:${res.ok ? "success" : res.errorCode}`, { name: fullName(student), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") });
       if (!res.ok && res.errorCode === "REQUEST_FAILED") setError(status);
     } catch {
+      playQrResultSound("error");
       const status = en ? "Network error — retry the scan" : "خطأ في الشبكة — أعد المسح";
       setError(status);
       addLog(`${studentId}:network`, { name: fullName(student), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") });

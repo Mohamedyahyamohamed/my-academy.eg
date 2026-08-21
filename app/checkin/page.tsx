@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useClientLang } from "@/lib/i18n-client";
 import { attendanceErrorMessage } from "@/lib/attendance-errors";
+import { playQrResultSound } from "@/lib/qr-sound";
 
 type QuickGroup = {
   id: string;
@@ -46,6 +47,7 @@ function CheckInInner() {
       });
       const result = await response.json();
       if (!response.ok || !result.ok) {
+        playQrResultSound("error");
         const errorCode = result.errorCode || result.error;
         const errorText = errorCode === "TEACHER_LOGIN_REQUIRED"
           ? (en ? "Log in once on this phone as a teacher or assistant, then scan again." : "سجّل الدخول مرة واحدة على هذا الهاتف كمدرس أو مساعد ثم امسح الكود مرة أخرى.")
@@ -59,6 +61,7 @@ function CheckInInner() {
         setMsg(errorText);
         return;
       }
+      playQrResultSound("success");
       setLessonLabel(`${result.lesson.groupName} — ${result.lesson.topic}`);
       setState("ok");
     } catch {
@@ -120,8 +123,11 @@ function CheckInInner() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token, lessonId: lessonIdParam }),
         }).then((r) => r.json());
-        if (res.ok) setState("ok");
-        else {
+        if (res.ok) {
+          playQrResultSound("success");
+          setState("ok");
+        } else {
+          playQrResultSound("error");
           setState("err");
           const code = res.errorCode;
           const fallback = code === "QR_INVALID"
@@ -130,6 +136,7 @@ function CheckInInner() {
           setMsg(fallback);
         }
       } catch {
+        playQrResultSound("error");
         setState("err"); setMsg(en ? "Network error. Please try again." : "حدث خطأ في الاتصال. حاول مرة أخرى.");
       }
     };

@@ -300,6 +300,17 @@ function scopedAcademyId(table: string): string | null {
   return activeAcademyId();
 }
 
+export function assertDirectInsertTenantScope(table: string, row: any): string | null {
+  const academyId = scopedAcademyId(table);
+  if (DIRECT_ACADEMY_TABLES.has(table) && !academyId) {
+    throw new Error(`Database write is missing an authenticated academy scope for ${table}.`);
+  }
+  if (DIRECT_ACADEMY_TABLES.has(table) && row && !Array.isArray(row) && row.academy_id !== academyId) {
+    throw new Error(`Database write academy scope mismatch for ${table}.`);
+  }
+  return academyId;
+}
+
 const WRITE_TIMEOUT_MS = 15_000;
 
 async function withWriteTimeout<T>(operation: Promise<T>, table: string): Promise<T> {
@@ -328,20 +339,10 @@ export async function persistInsert(table: string, row: any) {
     console.warn(`persistInsert ${table} skipped: non-production academy id.`);
     return;
   }
-  // Server actions already validate the tenant and include academy_id on the row.
-  // Prefer the request-scoped academy when available, but do not silently skip a
-  // valid write just because the legacy active-academy cookie is absent.
-  const rowAcademyId = row && !Array.isArray(row) && typeof row.academy_id === "string"
-    ? row.academy_id
-    : null;
-  const academyId = scopedAcademyId(table) ?? rowAcademyId;
-  if (DIRECT_ACADEMY_TABLES.has(table) && !academyId) {
-    throw new Error(`Database write is missing an authenticated academy scope for ${table}.`);
-  }
-  if (academyId && row && !Array.isArray(row) && row.academy_id !== academyId) {
-    console.warn(`persistInsert ${table} skipped: academy scope mismatch.`);
-    return;
-  }
+  // Production writes must use the authenticated request scope. Never fall back
+  // to row.academy_id: that value can originate in client-controlled form data
+  // and would allow a caller to choose another tenant for an insert.
+  const academyId = assertDirectInsertTenantScope(table, row);
   try {
     const result: any = await withWriteTimeout<any>(client.from(table).upsert(row), table);
     const { error } = result;

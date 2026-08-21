@@ -9,7 +9,7 @@ import type {
   PaginatedResult,
 } from "@/types";
 import { collections } from "./data/store";
-import { persistInsert, persistUpdate } from "./data/store";
+import { persistInsert, persistUpdate, persistDelete } from "./data/store";
 import { getGroup, getLesson, studentsInGroup, byAcademy, teacherGroupScope, fetchTableRLS, fetchStudentGroupIds, fetchGroupStudentIds } from "./_shared";
 import { fullName } from "./_shared";
 import { currentAcademyId, getCurrentUser } from "./session";
@@ -151,7 +151,10 @@ function assertStudentSubmissionScope(homework: Homework, studentId: string) {
 export async function createHomework(input: HomeworkInput): Promise<Homework> {
   const user = getCurrentUser();
   if (!user || !can(user, "homework.manage")) throw new Error("You are not allowed to create homework.");
-  const academyId = input.academy_id ?? currentAcademyId();
+  const academyId = currentAcademyId();
+  if (input.academy_id && input.academy_id !== academyId) {
+    throw new Error("Homework academy scope mismatch.");
+  }
   const group = collections().groups.find((item) => item.id === input.group_id && item.academy_id === academyId);
   if (!group) throw new Error("Homework group is outside the authenticated academy.");
   if (!hasAcademyWideScope(user.role)) {
@@ -212,6 +215,11 @@ export async function deleteHomework(id: string): Promise<boolean> {
   const homework = homeworkInCurrentAcademy(id);
   assertHomeworkManager(homework);
   const before = collections().homework.length;
+  // Delete child rows first to preserve the production FK ordering, then the
+  // parent row. Both calls are constrained by the authenticated academy via
+  // homeworkInCurrentAcademy/assertHomeworkManager above.
+  await persistDelete("homework_submissions", { homework_id: id });
+  await persistDelete("homework", { id });
   collections().homework = collections().homework.filter((h) => h.id !== id);
   collections().submissions = collections().submissions.filter(
     (s) => s.homework_id !== id,

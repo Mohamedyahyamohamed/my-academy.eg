@@ -155,7 +155,11 @@ function gid() {
 }
 
 export async function createGroup(input: GroupInput): Promise<Group> {
-  const academyId = input.academy_id ?? currentAcademyId();
+  const academyId = currentAcademyId();
+  if (!academyId) throw new Error("An authenticated academy scope is required.");
+  if (input.academy_id && input.academy_id !== academyId) {
+    throw new Error("The requested academy is outside the authenticated scope.");
+  }
   const check = canCreate("groups", academyId);
   if (!check.allowed) {
     throw new Error(`Limit reached: ${check.current}/${check.limit} groups. Upgrade your plan.`);
@@ -182,23 +186,40 @@ export async function createGroup(input: GroupInput): Promise<Group> {
 export async function updateGroup(id: string, input: Partial<GroupInput>): Promise<Group | null> {
   const g = collections().groups.find((x) => x.id === id);
   if (!g) return null;
-  Object.assign(g, {
+  const academyId = currentAcademyId();
+  if (!academyId || g.academy_id !== academyId) {
+    throw new Error("Group is outside the authenticated academy.");
+  }
+  if (input.academy_id && input.academy_id !== academyId) {
+    throw new Error("The requested academy is outside the authenticated scope.");
+  }
+  const updatedAt = new Date().toISOString();
+  const next = {
     ...input,
+    academy_id: academyId,
     monthly_fee:
       input.monthly_fee !== undefined ? Math.max(0, input.monthly_fee) : g.monthly_fee,
-    updated_at: new Date().toISOString(),
-  });
-  await persistUpdate("groups", id, { ...input, updated_at: new Date().toISOString() });
+    updated_at: updatedAt,
+  };
+  const { academy_id: _academyId, ...patch } = next;
+  await persistUpdate("groups", id, patch);
+  Object.assign(g, next);
   return attach(g);
 }
 
 export async function deleteGroup(id: string): Promise<boolean> {
+  const academyId = currentAcademyId();
+  const group = collections().groups.find((g) => g.id === id);
+  if (!group) return false;
+  if (!academyId || group.academy_id !== academyId) {
+    throw new Error("Group is outside the authenticated academy.");
+  }
+  await persistDelete("groups", { id });
   const before = collections().groups.length;
   collections().groups = collections().groups.filter((g) => g.id !== id);
   collections().groupStudents = collections().groupStudents.filter(
     (gs) => gs.group_id !== id,
   );
-  await persistDelete("groups", { id });
   return collections().groups.length < before;
 }
 

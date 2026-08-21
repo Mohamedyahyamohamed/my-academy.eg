@@ -10,7 +10,7 @@ import type {
   Profile,
 } from "@/types";
 import { collections } from "./data/store";
-import { persistInsert, persistDelete } from "./data/store";
+import { persistInsert, persistUpdate, persistDelete } from "./data/store";
 import { fullName, groupsForStudent, byAcademy, fetchTableRLS } from "./_shared";
 import { currentAcademyId } from "./session";
 import { APP_CONFIG } from "@/lib/constants";
@@ -26,9 +26,13 @@ export async function listCourses(academyId?: string): Promise<Course[]> {
 
 export async function createCourse(input: { academy_id?: string; name: string; description?: string | null; color?: string | null }): Promise<Course> {
   const now = new Date().toISOString();
+  const academyId = currentAcademyId();
+  if (input.academy_id && input.academy_id !== academyId) {
+    throw new Error("Course academy scope mismatch.");
+  }
   const c: Course = {
     id: crypto.randomUUID(),
-    academy_id: input.academy_id ?? currentAcademyId(),
+    academy_id: academyId,
     name: input.name,
     description: input.description ?? null,
     color: input.color ?? "#7c5cfc",
@@ -41,16 +45,26 @@ export async function createCourse(input: { academy_id?: string; name: string; d
 }
 
 export async function updateCourse(id: string, input: Partial<Course>): Promise<Course | null> {
-  const c = collections().courses.find((x) => x.id === id);
+  const academyId = currentAcademyId();
+  const c = collections().courses.find((x) => x.id === id && x.academy_id === academyId);
   if (!c) return null;
-  Object.assign(c, { ...input, updated_at: new Date().toISOString() });
+  if (input.academy_id && input.academy_id !== academyId) {
+    throw new Error("Course academy scope mismatch.");
+  }
+  const patch = { ...input } as Partial<Course>;
+  delete patch.academy_id;
+  Object.assign(c, { ...patch, updated_at: new Date().toISOString() });
+  await persistUpdate("courses", id, { ...patch, updated_at: c.updated_at });
   return c;
 }
 
 export async function deleteCourse(id: string): Promise<boolean> {
-  const before = collections().courses.length;
-  collections().courses = collections().courses.filter((c) => c.id !== id);
+  const academyId = currentAcademyId();
+  const target = collections().courses.find((c) => c.id === id && c.academy_id === academyId);
+  if (!target) return false;
   await persistDelete("courses", { id });
+  const before = collections().courses.length;
+  collections().courses = collections().courses.filter((c) => c.id !== id || c.academy_id !== academyId);
   return collections().courses.length < before;
 }
 

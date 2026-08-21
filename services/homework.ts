@@ -153,7 +153,7 @@ export async function createHomework(input: HomeworkInput, authenticatedUser?: S
   // prefer the user already authenticated by requireScopedRole when supplied.
   const user = authenticatedUser ?? getCurrentUser();
   if (!user || !can(user, "homework.manage")) throw new Error("You are not allowed to create homework.");
-  const academyId = currentAcademyId();
+  const academyId = authenticatedUser?.academy_id ?? currentAcademyId();
   if (input.academy_id && input.academy_id !== academyId) {
     throw new Error("Homework academy scope mismatch.");
   }

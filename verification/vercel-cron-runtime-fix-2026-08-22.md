@@ -56,3 +56,8 @@ Updated `app/api/cron/cleanup-homework-files/route.ts` to add `dynamic = "force-
 ## Runtime status
 
 The source fix is ready for a Production deployment. A real scheduled execution still cannot be claimed until Vercel deploys this commit to Production and Logs show an authorized GET with the safe runtime markers. The previously observed GET/POST 401 entries remain unauthorized manual requests and are not Cron proof.
+## Production deployment check
+
+Commit `1feb5b1` produced Vercel Production deployment `dpl_8v2AXpRHbGiVUHbXPoSTJTbP4sCS`, state `READY`, with the expected commit message and SHA. A read-only Vercel runtime-log query scoped to that deployment, Production, the last 30 minutes, and `CRON` returned **no logs**. This is expected before the next scheduled window and is not treated as a Cron PASS.
+
+The remaining acceptance evidence is an authorized scheduled GET followed by `CRON_START`, `CRON_AUTHORIZED`, and `CRON_COMPLETE` (or an equivalent Vercel request log with HTTP 200).

@@ -6,9 +6,11 @@ type AudioWindow = Window & {
   webkitAudioContext?: AudioContextConstructor;
 };
 
+// Versioned URLs prevent iOS/Safari and installed PWAs from reusing an older
+// cached WAV after the confirmation sound is refined.
 const SOUND_URLS: Record<QrSoundKind, string> = {
-  success: "/sounds/qr-success.wav",
-  error: "/sounds/qr-error.wav",
+  success: "/sounds/qr-success.wav?v=20260821-iphone-chime-2",
+  error: "/sounds/qr-error.wav?v=20260821-iphone-chime-2",
 };
 
 let successAudio: HTMLAudioElement | null = null;
@@ -90,19 +92,19 @@ export function primeQrSound(): void {
 }
 
 function scheduleTone(context: AudioContext, kind: QrSoundKind): void {
-  const frequencies = kind === "success" ? [880, 1320] : [260, 180];
+  const frequencies = kind === "success" ? [1180] : [260, 180];
   const start = context.currentTime;
 
   frequencies.forEach((frequency, index) => {
     const oscillator = context.createOscillator();
     const gain = context.createGain();
     const toneStart = start + index * 0.09;
-    const toneEnd = toneStart + 0.12;
+    const toneEnd = toneStart + (kind === "success" ? 0.3 : 0.12);
 
     oscillator.type = kind === "success" ? "sine" : "square";
     oscillator.frequency.setValueAtTime(frequency, toneStart);
     gain.gain.setValueAtTime(0.0001, toneStart);
-    gain.gain.exponentialRampToValueAtTime(kind === "success" ? 0.3 : 0.24, toneStart + 0.015);
+    gain.gain.exponentialRampToValueAtTime(kind === "success" ? 0.34 : 0.24, toneStart + 0.015);
     gain.gain.exponentialRampToValueAtTime(0.0001, toneEnd);
 
     oscillator.connect(gain);

@@ -12,8 +12,8 @@ describe("QR attendance sound feedback", () => {
   it("ships distinct local WAV tones and uses HTML Audio first", () => {
     const sound = readProjectFile("lib/qr-sound.ts");
     expect(sound).toContain('QrSoundKind = "success" | "error"');
-    expect(sound).toContain('success: "/sounds/qr-success.wav"');
-    expect(sound).toContain('error: "/sounds/qr-error.wav"');
+    expect(sound).toMatch(/success: "\/sounds\/qr-success\.wav\?v=/);
+    expect(sound).toMatch(/error: "\/sounds\/qr-error\.wav\?v=/);
     expect(sound).toContain("new Audio(SOUND_URLS[kind])");
     expect(sound).toContain("audio.preload = \"auto\"");
     expect(sound).toContain("primeHtmlAudio(\"success\")");

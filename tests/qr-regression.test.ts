@@ -61,6 +61,18 @@ describe("QR negative and recovery regression coverage", () => {
     expect(scanner).toContain("navigator.onLine");
     expect(scanner).toContain("Scanning is unavailable offline");
     expect(scanner).toContain("تعذّر تشغيل الكاميرا");
-    expect(scanner).toContain("try again");
+    expect(scanner).toContain("Retry last scan");
+    expect(scanner).toContain("window.addEventListener(\"online\"");
+    expect(scanner).toContain("lastFailedScan");
+  });
+
+  it("keeps negative QR outcomes explicit and localized", () => {
+    const errors = readFileSync(resolve(process.cwd(), "lib/attendance-errors.ts"), "utf8");
+    const scanner = readFileSync(resolve(process.cwd(), "components/attendance/scan-workshop.tsx"), "utf8");
+    expect(errors).toContain("GROUP_NOT_ASSIGNED");
+    expect(errors).toContain("TOO_MANY_SCANS");
+    expect(scanner).toContain("STUDENT_NOT_ENROLLED");
+    expect(scanner).toContain("ATTENDANCE_ALREADY_RECORDED");
+    expect(scanner).toContain("GROUP_NOT_ASSIGNED");
   });
 });

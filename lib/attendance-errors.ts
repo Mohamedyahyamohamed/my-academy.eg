@@ -5,7 +5,10 @@ export type AttendanceErrorCode =
   | "LESSON_NOT_FOUND"
   | "TEACHER_LOGIN_REQUIRED"
   | "NO_ASSIGNED_GROUP"
+  | "GROUP_NOT_ASSIGNED"
+  | "TOO_MANY_SCANS"
   | "RATE_LIMITED"
+  | "REQUEST_FAILED"
   | "CHECKIN_FAILED";
 
 /** Identify durable uniqueness conflicts without exposing database details. */
@@ -19,6 +22,9 @@ export function attendanceErrorCode(message: string): AttendanceErrorCode {
   if (/not enrolled|enrolled/i.test(message)) return "STUDENT_NOT_ENROLLED";
   if (/no active lesson/i.test(message)) return "NO_ACTIVE_LESSON";
   if (/lesson not found/i.test(message)) return "LESSON_NOT_FOUND";
+  if (/group not assigned|assigned group/i.test(message)) return "GROUP_NOT_ASSIGNED";
+  if (/too many scans|rate limit/i.test(message)) return "TOO_MANY_SCANS";
+  if (/request failed|unable to process/i.test(message)) return "REQUEST_FAILED";
   return "CHECKIN_FAILED";
 }
 
@@ -30,7 +36,10 @@ export function attendanceErrorMessage(code: string, en: boolean): string {
     LESSON_NOT_FOUND: ["The selected lesson could not be found.", "تعذّر العثور على الحصة المختارة."],
     TEACHER_LOGIN_REQUIRED: ["Log in as a teacher or assistant to record attendance.", "سجّل الدخول كمدرس أو مساعد لتسجيل الحضور."],
     NO_ASSIGNED_GROUP: ["You do not have an assigned attendance group.", "لا توجد مجموعة حضور مسندة إليك."],
+    GROUP_NOT_ASSIGNED: ["This group is not assigned to your account.", "هذه المجموعة غير مسندة إلى حسابك."],
+    TOO_MANY_SCANS: ["Too many scan attempts. Please wait and try again.", "عدد محاولات المسح كبير. انتظر قليلًا ثم حاول مرة أخرى."],
     RATE_LIMITED: ["Too many scan attempts. Please wait and try again.", "عدد محاولات المسح كبير. انتظر قليلًا ثم حاول مرة أخرى."],
+    REQUEST_FAILED: ["The scan could not be processed. Reconnect and retry.", "تعذّرت معالجة المسح. أعد الاتصال ثم حاول مرة أخرى."],
     CHECKIN_FAILED: ["Attendance could not be recorded. Please try again.", "تعذّر تسجيل الحضور. حاول مرة أخرى."],
   };
   return messages[code]?.[en ? 0 : 1] ?? messages.CHECKIN_FAILED[en ? 0 : 1];

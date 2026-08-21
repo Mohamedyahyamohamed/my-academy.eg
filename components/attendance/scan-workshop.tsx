@@ -25,8 +25,10 @@ export function ScanWorkshop({
   const [lessonId, setLessonId] = React.useState("");
   const [activeLesson, setActiveLesson] = React.useState<{ id: string; topic: string } | null>(null);
   const [scanning, setScanning] = React.useState(false);
+  const [isOnline, setIsOnline] = React.useState(true);
   const [log, setLog] = React.useState<{ name: string; status: string; at: string }[]>([]);
   const [error, setError] = React.useState("");
+  const [lastFailedScan, setLastFailedScan] = React.useState<{ text: string; studentId: string } | null>(null);
   const lastScan = React.useRef<{ id: string; t: number }>({ id: "", t: 0 });
   const pendingScans = React.useRef(new Set<string>());
   const recentLog = React.useRef(new Map<string, number>());
@@ -79,15 +81,33 @@ export function ScanWorkshop({
     setScanning(false);
   };
 
+  React.useEffect(() => {
+    const updateOnlineState = () => {
+      const online = navigator.onLine;
+      setIsOnline(online);
+      if (online) {
+        setError((current) => /offline|network|اتصال|الإنترنت|الشبكة/i.test(current) ? "" : current);
+      }
+    };
+    updateOnlineState();
+    window.addEventListener("online", updateOnlineState);
+    window.addEventListener("offline", updateOnlineState);
+    return () => {
+      window.removeEventListener("online", updateOnlineState);
+      window.removeEventListener("offline", updateOnlineState);
+    };
+  }, []);
+
   React.useEffect(() => () => { void stopCamera(); }, []);
 
   const handleScan = async (text: string) => {
     setError("");
+    const studentId = studentIdFromQrValue(text);
     if (typeof navigator !== "undefined" && !navigator.onLine) {
-      setError(en ? "Scan received, but attendance is unavailable offline. Reconnect and scan again." : "تمت قراءة الكود، لكن تسجيل الحضور غير متاح بدون إنترنت. أعد الاتصال وامسح الكود مرة أخرى.");
+      setLastFailedScan({ text, studentId });
+      setError(en ? "Scan received, but attendance is unavailable offline. Reconnect, then retry this scan." : "تمت قراءة الكود، لكن تسجيل الحضور غير متاح بدون إنترنت. أعد الاتصال ثم أعد محاولة هذا المسح.");
       return;
     }
-    const studentId = studentIdFromQrValue(text);
     const now = Date.now();
     // Keep a student on cooldown longer than the camera's repeat-detection
     // interval. The code may remain in frame after a transient response, and
@@ -112,18 +132,24 @@ export function ScanWorkshop({
       const localStudentName = student ? fullName(student).trim() : null;
       const displayName = serverStudentName ?? localStudentName ?? (en ? "Student name unavailable" : "اسم الطالب غير متاح");
       if (res.lesson) setActiveLesson({ id: res.lesson.id, topic: res.lesson.topic });
-      if (res.ok) playQrResultSound("success");
-      else playQrResultSound("error");
+      if (res.ok) {
+        setLastFailedScan(null);
+        playQrResultSound("success");
+      } else playQrResultSound("error");
       const status = res.ok
         ? (en ? `Attendance recorded ✓${res.lesson?.topic ? ` · ${res.lesson.topic}` : ""}` : `تم تسجيل الحضور ✓${res.lesson?.topic ? ` · ${res.lesson.topic}` : ""}`)
         : (en
-          ? (res.errorCode === "NO_ACTIVE_LESSON" ? "No active lesson" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "Student is not in this lesson" : res.errorCode === "ATTENDANCE_ALREADY_RECORDED" ? "Already recorded" : res.errorCode === "REQUEST_FAILED" ? "Unable to process — retry the scan" : "Failed")
-          : (res.errorCode === "NO_ACTIVE_LESSON" ? "لا يوجد درس جارٍ الآن" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "الطالب غير مسجل في المجموعة" : res.errorCode === "ATTENDANCE_ALREADY_RECORDED" ? "تم تسجيل الحضور من قبل" : res.errorCode === "REQUEST_FAILED" ? "تعذر معالجة المسح — أعد المحاولة" : "فشل تسجيل الحضور"));
+          ? (res.errorCode === "NO_ACTIVE_LESSON" ? "No active lesson" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "Student is not in this lesson" : res.errorCode === "GROUP_NOT_ASSIGNED" ? "This group is not assigned to you" : res.errorCode === "ATTENDANCE_ALREADY_RECORDED" ? "Already recorded" : res.errorCode === "TOO_MANY_SCANS" || res.errorCode === "RATE_LIMITED" ? "Too many scans — wait and retry" : res.errorCode === "REQUEST_FAILED" ? "Unable to process — retry the scan" : "Failed")
+          : (res.errorCode === "NO_ACTIVE_LESSON" ? "لا يوجد درس جارٍ الآن" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "الطالب غير مسجل في المجموعة" : res.errorCode === "GROUP_NOT_ASSIGNED" ? "هذه المجموعة غير مسندة إليك" : res.errorCode === "ATTENDANCE_ALREADY_RECORDED" ? "تم تسجيل الحضور من قبل" : res.errorCode === "TOO_MANY_SCANS" || res.errorCode === "RATE_LIMITED" ? "عدد محاولات المسح كبير — انتظر ثم أعد المحاولة" : res.errorCode === "REQUEST_FAILED" ? "تعذر معالجة المسح — أعد المحاولة" : "فشل تسجيل الحضور"));
       addLog(`${studentId}:${res.ok ? "success" : res.errorCode}`, { name: displayName, status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") });
-      if (!res.ok && res.errorCode === "REQUEST_FAILED") setError(status);
+      if (!res.ok && res.errorCode === "REQUEST_FAILED") {
+        setLastFailedScan({ text, studentId });
+        setError(status);
+      }
     } catch {
       playQrResultSound("error");
       const status = en ? "Network error — retry the scan" : "خطأ في الشبكة — أعد المسح";
+      setLastFailedScan({ text, studentId });
       setError(status);
       addLog(`${studentId}:network`, { name: student ? fullName(student) : (en ? "Student" : "الطالب"), status, at: formatTime(new Date(), en ? "en-US" : "ar-EG") });
     } finally {
@@ -193,6 +219,12 @@ export function ScanWorkshop({
                 </div>
               )}
               {error && <p className="mt-2 text-center text-sm text-destructive">{error}</p>}
+              {!isOnline && <p className="mt-2 text-center text-xs text-amber-700">{en ? "Offline: scanning is paused until the connection returns." : "أنت غير متصل: تم إيقاف المسح حتى عودة الاتصال."}</p>}
+              {lastFailedScan && isOnline && (
+                <Button type="button" variant="outline" className="mt-2 w-full" onClick={() => { lastScan.current = { id: "", t: 0 }; void handleScan(lastFailedScan.text); }}>
+                  {en ? "Retry last scan" : "إعادة محاولة آخر مسح"}
+                </Button>
+              )}
               <p className="mt-2 flex items-center justify-center gap-1 text-center text-xs text-muted-foreground">
                 <ScanLine className="h-3.5 w-3.5" /> {en ? "Point the camera at the student's code" : "وجّه الكاميرا لكود الطالب"}
               </p>

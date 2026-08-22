@@ -52,7 +52,7 @@ export async function updateStudentAction(id: string, input: Partial<StudentInpu
   try {
     const user = await requireScopedRole("ADMIN", "TEACHER");
     if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage students.");
-    const student = await StudentsService.updateStudent(id, input, user.academy_id);
+    const student = await StudentsService.updateStudent(id, input, user.academy_id, user.id, user.email);
     if (student) {
       await import("@/services/audit").then((m) => m.audit(
         { action: "student.update", entity_type: "student", entity_id: id, new_data: input },

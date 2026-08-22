@@ -122,10 +122,18 @@ function assertRequestedGroupScope(groupIds: string[], academyId: string) {
   }
 }
 
-async function resolveStudentMutationScope(studentId: string, authenticatedAcademyId?: string): Promise<Student> {
+async function resolveStudentMutationScope(
+  studentId: string,
+  authenticatedAcademyId?: string,
+  authenticatedUserId?: string,
+  authenticatedUserEmail?: string,
+): Promise<Student> {
   const academyId = authenticatedAcademyId ?? currentAcademyId();
   if (!academyId) throw new Error("Missing authenticated academy context.");
   const user = assertStudentManager();
+  const scopedUser = authenticatedUserId
+    ? { ...user, id: authenticatedUserId, email: authenticatedUserEmail ?? user.email }
+    : user;
 
   // The tenant snapshot may not contain every row shown by the live paginated
   // query. Resolve the mutation target from Supabase first in production.
@@ -146,21 +154,21 @@ async function resolveStudentMutationScope(studentId: string, authenticatedAcade
         .select("workspace_type")
         .eq("id", academyId)
         .maybeSingle();
-      if (user.role === "TEACHER" && academy?.workspace_type === "TEACHER") {
+      if (scopedUser.role === "TEACHER" && academy?.workspace_type === "TEACHER") {
         const { data: teacherByProfile } = await client
           .from("teachers")
           .select("id")
           .eq("academy_id", academyId)
-          .eq("profile_id", user.id)
+          .eq("profile_id", scopedUser.id)
           .maybeSingle();
-        const teacher = teacherByProfile ?? (user.email
-          ? (await client.from("teachers").select("id").eq("academy_id", academyId).eq("email", user.email).maybeSingle()).data
+        const teacher = teacherByProfile ?? (scopedUser.email
+          ? (await client.from("teachers").select("id").eq("academy_id", academyId).eq("email", scopedUser.email).maybeSingle()).data
           : null);
         if (!teacher || liveStudent.owner_teacher_id !== teacher.id) {
           throw new Error("Teachers can only manage students in assigned groups.");
         }
       } else {
-        const liveScope = await liveTeacherStudentScope(client, academyId, user);
+        const liveScope = await liveTeacherStudentScope(client, academyId, scopedUser);
         if (liveScope && !liveScope.has(studentId)) {
           throw new Error("Teachers can only manage students in assigned groups.");
         }
@@ -751,10 +759,12 @@ export async function updateStudent(
   id: string,
   input: Partial<StudentInput>,
   authenticatedAcademyId?: string,
+  authenticatedUserId?: string,
+  authenticatedUserEmail?: string,
 ): Promise<Student | null> {
   const academyId = authenticatedAcademyId ?? currentAcademyId();
   if (!academyId) throw new Error("Missing authenticated academy context.");
-  const s = await resolveStudentMutationScope(id, academyId);
+  const s = await resolveStudentMutationScope(id, academyId, authenticatedUserId, authenticatedUserEmail);
   if (input.parent_id) {
     const parent = collections().parents.find((item) => item.id === input.parent_id && item.academy_id === academyId);
     if (!parent) throw new Error("Parent is outside the authenticated academy.");

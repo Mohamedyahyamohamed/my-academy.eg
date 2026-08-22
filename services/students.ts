@@ -122,12 +122,35 @@ function assertRequestedGroupScope(groupIds: string[], academyId: string) {
   }
 }
 
-function assertStudentMutationScope(studentId: string, authenticatedAcademyId?: string): Student {
+async function resolveStudentMutationScope(studentId: string, authenticatedAcademyId?: string): Promise<Student> {
   const academyId = authenticatedAcademyId ?? currentAcademyId();
   if (!academyId) throw new Error("Missing authenticated academy context.");
+  const user = assertStudentManager();
+
+  // The tenant snapshot may not contain every row shown by the live paginated
+  // query. Resolve the mutation target from Supabase first in production.
+  if (isSupabaseConfigured()) {
+    const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
+    const client = nodeSupabaseClient();
+    if (client) {
+      const { data: liveStudent, error } = await client
+        .from("students")
+        .select("*")
+        .eq("id", studentId)
+        .eq("academy_id", academyId)
+        .maybeSingle();
+      if (error) throw new Error(`Could not validate student update target: ${error.message}`);
+      if (!liveStudent) throw new Error("Student is outside the authenticated academy.");
+      const liveScope = await liveTeacherStudentScope(client, academyId);
+      if (liveScope && !liveScope.has(studentId)) {
+        throw new Error("Teachers can only manage students in assigned groups.");
+      }
+      return liveStudent as Student;
+    }
+  }
+
   const student = collections().students.find((item) => item.id === studentId && item.academy_id === academyId);
   if (!student) throw new Error("Student is outside the authenticated academy.");
-  const user = assertStudentManager();
   if (!hasAcademyWideScope(user.role) && !teacherStudentScope()?.has(studentId)) {
     throw new Error("Teachers can only manage students in assigned groups.");
   }
@@ -711,7 +734,7 @@ export async function updateStudent(
 ): Promise<Student | null> {
   const academyId = authenticatedAcademyId ?? currentAcademyId();
   if (!academyId) throw new Error("Missing authenticated academy context.");
-  const s = assertStudentMutationScope(id, academyId);
+  const s = await resolveStudentMutationScope(id, academyId);
   if (input.parent_id) {
     const parent = collections().parents.find((item) => item.id === input.parent_id && item.academy_id === academyId);
     if (!parent) throw new Error("Parent is outside the authenticated academy.");

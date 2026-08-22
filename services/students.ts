@@ -785,7 +785,7 @@ export async function updateStudent(
   if (input.parent_id) {
     await assertParentMutationScope(input.parent_id, academyId);
   }
-  if (input.groupIds) assertRequestedGroupScope(input.groupIds, academyId, authenticatedUser);
+  if (input.groupIds?.length) assertRequestedGroupScope(input.groupIds, academyId, authenticatedUser);
   Object.assign(s, {
     ...input,
     updated_at: new Date().toISOString(),
@@ -795,7 +795,7 @@ export async function updateStudent(
   // حوّل التاريخ الفاضي ("") لـ null عشان الداتابيز يقبلّه
   if (patch.date_of_birth === "") patch.date_of_birth = null;
   await persistUpdate("students", id, { ...patch, updated_at: new Date().toISOString() });
-  if (input.groupIds) {
+  if (input.groupIds?.length) {
     collections().groupStudents = collections().groupStudents.filter(
       (gs) => gs.student_id !== id,
     );

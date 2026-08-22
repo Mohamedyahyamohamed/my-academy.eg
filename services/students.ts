@@ -9,6 +9,7 @@ import type {
   StudentDetail,
   StudentFilters,
   StudentStats,
+  SessionUser,
 } from "@/types";
 import { collections } from "./data/store";
 import { currentAcademyId, currentTeacherId, getCurrentUser } from "./session";
@@ -104,8 +105,8 @@ async function liveTeacherStudentScope(client: any, academyId: string, scopedUse
   ]);
 }
 
-function assertStudentManager() {
-  const user = getCurrentUser();
+function assertStudentManager(userOverride?: SessionUser) {
+  const user = userOverride ?? getCurrentUser();
   if (!user || !can(user, "students.manage")) throw new Error("You are not allowed to manage students.");
   return user;
 }
@@ -145,15 +146,12 @@ async function assertParentMutationScope(parentId: string, academyId: string): P
 async function resolveStudentMutationScope(
   studentId: string,
   authenticatedAcademyId?: string,
-  authenticatedUserId?: string,
-  authenticatedUserEmail?: string,
+  authenticatedUser?: SessionUser,
 ): Promise<Student> {
   const academyId = authenticatedAcademyId ?? currentAcademyId();
   if (!academyId) throw new Error("Missing authenticated academy context.");
-  const user = assertStudentManager();
-  const scopedUser = authenticatedUserId
-    ? { ...user, id: authenticatedUserId, email: authenticatedUserEmail ?? user.email }
-    : user;
+  const user = assertStudentManager(authenticatedUser);
+  const scopedUser = user;
 
   // The tenant snapshot may not contain every row shown by the live paginated
   // query. Resolve the mutation target from Supabase first in production.
@@ -779,12 +777,11 @@ export async function updateStudent(
   id: string,
   input: Partial<StudentInput>,
   authenticatedAcademyId?: string,
-  authenticatedUserId?: string,
-  authenticatedUserEmail?: string,
+  authenticatedUser?: SessionUser,
 ): Promise<Student | null> {
   const academyId = authenticatedAcademyId ?? currentAcademyId();
   if (!academyId) throw new Error("Missing authenticated academy context.");
-  const s = await resolveStudentMutationScope(id, academyId, authenticatedUserId, authenticatedUserEmail);
+  const s = await resolveStudentMutationScope(id, academyId, authenticatedUser);
   if (input.parent_id) {
     await assertParentMutationScope(input.parent_id, academyId);
   }

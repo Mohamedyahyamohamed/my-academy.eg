@@ -43,7 +43,13 @@ async function liveTeacherStudentScope(client: any, academyId: string): Promise<
   const user = getCurrentUser();
   if (!user || hasAcademyWideScope(user.role)) return null;
 
-  const teacherId = currentTeacherId();
+  const { data: teacher, error: teacherLookupError } = await client
+    .from("teachers")
+    .select("id")
+    .eq("academy_id", academyId)
+    .or(`profile_id.eq.${user.id},email.eq.${user.email}`)
+    .maybeSingle();
+  const teacherId = teacher?.id ?? currentTeacherId();
   if (!teacherId) return new Set();
 
   const [{ data: academy, error: academyError }, { data: ownedStudents, error: ownedStudentsError }, { data: ownedGroups, error: ownedError }, { data: assistantLinks, error: assistantError }] = await Promise.all([
@@ -52,8 +58,8 @@ async function liveTeacherStudentScope(client: any, academyId: string): Promise<
     client.from("groups").select("id").eq("academy_id", academyId).eq("teacher_id", teacherId).limit(1000),
     client.from("group_assistants").select("group_id").eq("teacher_id", teacherId).limit(1000),
   ]);
-  if (academyError || ownedStudentsError) {
-    console.error("liveTeacherStudentScope personal workspace lookup failed", academyError?.message ?? ownedStudentsError?.message);
+  if (teacherLookupError || academyError || ownedStudentsError) {
+    console.error("liveTeacherStudentScope personal workspace lookup failed", teacherLookupError?.message ?? academyError?.message ?? ownedStudentsError?.message);
     return new Set();
   }
   const personalStudentIds = academy?.workspace_type === "TEACHER"

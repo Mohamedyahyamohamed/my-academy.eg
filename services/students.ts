@@ -122,6 +122,26 @@ function assertRequestedGroupScope(groupIds: string[], academyId: string) {
   }
 }
 
+async function assertParentMutationScope(parentId: string, academyId: string): Promise<void> {
+  if (isSupabaseConfigured()) {
+    const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
+    const client = nodeSupabaseClient();
+    if (client) {
+      const { data: parent, error } = await client
+        .from("parents")
+        .select("id")
+        .eq("id", parentId)
+        .eq("academy_id", academyId)
+        .maybeSingle();
+      if (error) throw new Error(`Could not validate parent update target: ${error.message}`);
+      if (!parent) throw new Error("Parent is outside the authenticated academy.");
+      return;
+    }
+  }
+  const parent = collections().parents.find((item) => item.id === parentId && item.academy_id === academyId);
+  if (!parent) throw new Error("Parent is outside the authenticated academy.");
+}
+
 async function resolveStudentMutationScope(
   studentId: string,
   authenticatedAcademyId?: string,
@@ -766,8 +786,7 @@ export async function updateStudent(
   if (!academyId) throw new Error("Missing authenticated academy context.");
   const s = await resolveStudentMutationScope(id, academyId, authenticatedUserId, authenticatedUserEmail);
   if (input.parent_id) {
-    const parent = collections().parents.find((item) => item.id === input.parent_id && item.academy_id === academyId);
-    if (!parent) throw new Error("Parent is outside the authenticated academy.");
+    await assertParentMutationScope(input.parent_id, academyId);
   }
   if (input.groupIds) assertRequestedGroupScope(input.groupIds, academyId);
   Object.assign(s, {

@@ -122,8 +122,9 @@ function assertRequestedGroupScope(groupIds: string[], academyId: string) {
   }
 }
 
-function assertStudentMutationScope(studentId: string): Student {
-  const academyId = currentAcademyId();
+function assertStudentMutationScope(studentId: string, authenticatedAcademyId?: string): Student {
+  const academyId = authenticatedAcademyId ?? currentAcademyId();
+  if (!academyId) throw new Error("Missing authenticated academy context.");
   const student = collections().students.find((item) => item.id === studentId && item.academy_id === academyId);
   if (!student) throw new Error("Student is outside the authenticated academy.");
   const user = assertStudentManager();
@@ -706,9 +707,11 @@ export async function createStudent(
 export async function updateStudent(
   id: string,
   input: Partial<StudentInput>,
+  authenticatedAcademyId?: string,
 ): Promise<Student | null> {
-  const s = assertStudentMutationScope(id);
-  const academyId = currentAcademyId();
+  const academyId = authenticatedAcademyId ?? currentAcademyId();
+  if (!academyId) throw new Error("Missing authenticated academy context.");
+  const s = assertStudentMutationScope(id, academyId);
   if (input.parent_id) {
     const parent = collections().parents.find((item) => item.id === input.parent_id && item.academy_id === academyId);
     if (!parent) throw new Error("Parent is outside the authenticated academy.");
@@ -742,6 +745,7 @@ export async function updateStudent(
 export async function setStudentStatus(
   id: string,
   status: Student["status"],
+  authenticatedAcademyId?: string,
 ): Promise<Student | null> {
-  return updateStudent(id, { status });
+  return updateStudent(id, { status }, authenticatedAcademyId);
 }

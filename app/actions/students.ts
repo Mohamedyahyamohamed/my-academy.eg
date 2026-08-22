@@ -52,7 +52,7 @@ export async function updateStudentAction(id: string, input: Partial<StudentInpu
   try {
     const user = await requireScopedRole("ADMIN", "TEACHER");
     if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage students.");
-    const student = await StudentsService.updateStudent(id, input);
+    const student = await StudentsService.updateStudent(id, input, user.academy_id);
     if (student) {
       await import("@/services/audit").then((m) => m.audit(
         { action: "student.update", entity_type: "student", entity_id: id, new_data: input },
@@ -72,7 +72,7 @@ export async function updateStudentAction(id: string, input: Partial<StudentInpu
 export async function archiveStudentAction(id: string) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
   if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage students.");
-  await StudentsService.setStudentStatus(id, "ARCHIVED");
+  await StudentsService.setStudentStatus(id, "ARCHIVED", user.academy_id);
   await import("@/services/audit").then((m) => m.audit(
     { action: "student.archive", entity_type: "student", entity_id: id },
     user,
@@ -88,11 +88,11 @@ export async function restoreStudentAction(id: string) {
   // consent event. Restoring an archived row must not fabricate consent.
   const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
   const client = nodeSupabaseClient();
-  const aid = currentAcademyId();
+  const aid = user.academy_id ?? currentAcademyId();
   const { data: student } = client && aid
     ? await client.from("students").select("consent_given").eq("id", id).eq("academy_id", aid).maybeSingle()
     : { data: null };
-  await StudentsService.setStudentStatus(id, student?.consent_given === true ? "ACTIVE" : "INACTIVE");
+  await StudentsService.setStudentStatus(id, student?.consent_given === true ? "ACTIVE" : "INACTIVE", user.academy_id);
   revalidatePath("/students");
   revalidatePath(`/students/${id}`);
 }

@@ -297,6 +297,7 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
   let allGroupStudents = snapshot.groupStudents ?? snapshot.group_students ?? [];
   let allGroupAssistants = snapshot.groupAssistants ?? snapshot.group_assistants ?? [];
   let allTeachers = snapshot.teachers ?? [];
+  let workspaceType = (snapshot.academies ?? []).find((a: any) => a.id === user.academy_id)?.workspace_type as string | undefined;
 
   // Use the server-side tenant-scoped client as the authoritative source for
   // teacher dashboards. A browser Supabase session can be valid for auth but
@@ -305,7 +306,7 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
   if (isSupabaseConfigured()) {
     const admin = nodeSupabaseClient();
     if (admin) {
-      const [groupsRes, lessonsRes, attendanceRes, homeworkRes, submissionsRes, studentsRes, coursesRes, assistantsRes, teachersRes] = await Promise.all([
+      const [groupsRes, lessonsRes, attendanceRes, homeworkRes, submissionsRes, studentsRes, coursesRes, assistantsRes, teachersRes, academyRes] = await Promise.all([
         admin.from("groups").select("*").eq("academy_id", user.academy_id),
         admin.from("lessons").select("*").eq("academy_id", user.academy_id),
         admin.from("attendance").select("*").eq("academy_id", user.academy_id),
@@ -315,6 +316,7 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
         admin.from("courses").select("*").eq("academy_id", user.academy_id),
         admin.from("group_assistants").select("*"),
         admin.from("teachers").select("*").eq("academy_id", user.academy_id),
+        admin.from("academies").select("workspace_type").eq("id", user.academy_id).maybeSingle(),
       ]);
       if (!groupsRes.error) allGroups = groupsRes.data ?? [];
       if (!lessonsRes.error) allLessons = lessonsRes.data ?? [];
@@ -325,6 +327,7 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
       if (!coursesRes.error) allCourses = coursesRes.data ?? [];
       if (!assistantsRes.error) allGroupAssistants = assistantsRes.data ?? [];
       if (!teachersRes.error) allTeachers = teachersRes.data ?? [];
+      if (!academyRes.error) workspaceType = academyRes.data?.workspace_type ?? workspaceType;
       const groupIds = allGroups.map((g: any) => g.id);
       if (groupIds.length) {
         const groupStudentsRes = await admin.from("group_students").select("*").in("group_id", groupIds);
@@ -346,6 +349,10 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
   const enrolledIds = new Set(
     groupStudentRows.filter((gs: any) => groupIds.has(gs.group_id)).map((gs: any) => gs.student_id)
   );
+  const personalStudentIds = workspaceType === "TEACHER"
+    ? allStudents.filter((s: any) => s.owner_teacher_id === teacher.id).map((s: any) => s.id)
+    : [];
+  for (const studentId of personalStudentIds) enrolledIds.add(studentId);
   const myLessons = allLessons.filter((l: any) => groupIds.has(l.group_id))
     .sort((a: any, b: any) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time));
   const currentWallClock = wallClockMinute(new Date());

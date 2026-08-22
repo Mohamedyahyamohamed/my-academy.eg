@@ -46,6 +46,7 @@ export function GroupForm({
   const router = useRouter();
   const en = useClientLang() === "en";
   const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
   const existingCourse = group ? courses.find((c) => c.id === group.course_id) : undefined;
   const [courseName, setCourseName] = React.useState(existingCourse?.name ?? "");
   const [courseColor, setCourseColor] = React.useState(existingCourse?.color ?? COLORS[0]);
@@ -73,6 +74,7 @@ export function GroupForm({
     if (selectedDays.length === 0) return toast.error(en ? "Choose at least one day." : "اختر يومًا واحدًا على الأقل.");
     if (startTime === endTime) return toast.error(en ? "Start and end time cannot be the same." : "وقت البداية والنهاية لا يمكن أن يكونا متساويين.");
 
+    setError(null);
     setSaving(true);
     try {
       // Resolve the course: use existing (by name) or create a new one.
@@ -106,13 +108,25 @@ export function GroupForm({
       onDone?.();
       router.refresh();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "";
-      const duplicate = /already exists|duplicate|unique/i.test(message);
-      toast.error(
-        duplicate
-          ? (en ? "A group with these details already exists." : "توجد مجموعة بهذه البيانات بالفعل.")
-          : (en ? "Could not save the group. Check the information and try again." : "تعذّر حفظ المجموعة. راجع البيانات وحاول مرة أخرى."),
-      );
+      const message = err instanceof Error ? err.message : "تعذر تحديد سبب الخطأ من الخادم.";
+      const lower = message.toLowerCase();
+      const field = lower.includes("course") || lower.includes("مادة") ? (en ? "Course" : "المادة")
+        : lower.includes("teacher") || lower.includes("معلّم") ? (en ? "Teacher" : "المعلّم")
+          : lower.includes("academy") || lower.includes("authenticated") ? (en ? "Academy session" : "جلسة الأكاديمية")
+            : lower.includes("group") ? (en ? "Group" : "المجموعة")
+              : (en ? "Save operation" : "عملية الحفظ");
+      const reason = /already exists|duplicate|unique/i.test(message)
+        ? (en ? "A group with these details already exists." : "توجد مجموعة بهذه البيانات بالفعل.")
+        : /limit reached/i.test(message)
+          ? (en ? "The group limit for the current plan has been reached." : "تم الوصول إلى الحد الأقصى للمجموعات في الخطة الحالية.")
+          : /outside|scope/i.test(message)
+            ? (en ? "The selected value is outside the authenticated academy." : "القيمة المحددة خارج نطاق الأكاديمية الحالية.")
+            : message;
+      const detailed = en
+        ? `The group could not be saved. Field: ${field}. Reason: ${reason} Details: ${message}`
+        : `تعذر حفظ المجموعة. المكان: ${field}. السبب: ${reason} التفاصيل: ${message}`;
+      setError(detailed);
+      toast.error(detailed);
     } finally {
       setSaving(false);
     }
@@ -216,6 +230,11 @@ export function GroupForm({
         </div>
         {group?.schedule && !parsedSchedule && <p className="text-xs text-amber-600">{en ? "This group uses an older free-text schedule. Choose the days and times to standardize it." : "هذه المجموعة تستخدم موعدًا قديمًا مكتوبًا يدويًا. اختر الأيام والأوقات لتوحيده."}</p>}
       </div>
+      {error && (
+        <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm leading-6 text-destructive">
+          {error}
+        </div>
+      )}
       <div className="flex justify-end gap-2 pt-2">
         {onDone && <Button type="button" variant="outline" onClick={onDone}>{en ? "Cancel" : "إلغاء"}</Button>}
         <Button type="submit" disabled={saving}>

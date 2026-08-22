@@ -67,7 +67,15 @@ export default async function GroupsPage() {
           icon={UsersRound}
           title={en ? "No groups yet" : "لا توجد مجموعات بعد"}
           description={en ? "Create your first group to start scheduling lessons and tracking attendance." : "أنشئ أول مجموعة لبدء جدولة الحصص ومتابعة الحضور."}
-          action={<AddGroupDialog courses={courses} teachers={teachers} disabled={groupCreationBlocked} />}
+          action={
+            <AddGroupDialog
+              courses={courses}
+              teachers={teachers}
+              defaultTeacherId={tid}
+              lockedTeacher={isTeacher}
+              disabled={groupCreationBlocked}
+            />
+          }
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

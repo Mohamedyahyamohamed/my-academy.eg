@@ -154,8 +154,8 @@ function gid() {
   return crypto.randomUUID();
 }
 
-export async function createGroup(input: GroupInput): Promise<Group> {
-  const academyId = currentAcademyId();
+export async function createGroup(input: GroupInput, academyIdOverride?: string): Promise<Group> {
+  const academyId = academyIdOverride ?? currentAcademyId();
   if (!academyId) throw new Error("An authenticated academy scope is required.");
   if (input.academy_id && input.academy_id !== academyId) {
     throw new Error("The requested academy is outside the authenticated scope.");

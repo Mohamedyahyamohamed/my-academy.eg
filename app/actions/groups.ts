@@ -8,7 +8,7 @@ import { audit } from "@/services/audit";
 export async function createGroupAction(input: GroupInput) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
   if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot create groups.");
-  const g = await GroupsService.createGroup({ ...input, academy_id: user.academy_id });
+  const g = await GroupsService.createGroup({ ...input, academy_id: user.academy_id }, user.academy_id);
   if (g) {
     try {
       await LessonsService.createRecurringLessonsForGroup(g, user.academy_id);

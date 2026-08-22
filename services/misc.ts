@@ -24,9 +24,9 @@ export async function listCourses(academyId?: string): Promise<Course[]> {
   return fetchTableRLS<Course>("courses", academyId);
 }
 
-export async function createCourse(input: { academy_id?: string; name: string; description?: string | null; color?: string | null }): Promise<Course> {
+export async function createCourse(input: { academy_id?: string; name: string; description?: string | null; color?: string | null }, academyIdOverride?: string): Promise<Course> {
   const now = new Date().toISOString();
-  const academyId = currentAcademyId();
+  const academyId = academyIdOverride ?? currentAcademyId();
   if (input.academy_id && input.academy_id !== academyId) {
     throw new Error("Course academy scope mismatch.");
   }

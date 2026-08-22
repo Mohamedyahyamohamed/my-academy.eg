@@ -21,6 +21,7 @@ import {
 import { studentSchema, type StudentValues } from "@/schemas";
 import {
   createStudentAction,
+  findStudentDuplicatesAction,
   updateStudentAction,
 } from "@/app/actions/students";
 import { STUDENT_DEFAULT_PASSWORD } from "@/lib/auth";
@@ -58,6 +59,10 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
     student ? "existing" : "new",
   );
   const [newParent, setNewParent] = React.useState({ first_name: "", last_name: "", phone: "" });
+  const [duplicatePrompt, setDuplicatePrompt] = React.useState<{
+    values: StudentValues;
+    candidates: Array<{ id: string; first_name: string; last_name: string; phone?: string | null; email?: string | null }>;
+  } | null>(null);
 
   const {
     register,
@@ -83,55 +88,83 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
     },
   });
 
+  const saveStudent = async (values: StudentValues, duplicateChoice?: { mode: "update" | "create"; studentId?: string }) => {
+    let parentId = values.parent_id ?? null;
+
+    // لا ننشئ ولي الأمر الجديد إلا بعد انتهاء فحص التكرار، حتى لا نترك سجلاً يتيمًا.
+    if (parentMode === "new") {
+      const fn = newParent.first_name.trim();
+      if (!fn) {
+        toast.error(en ? "Parent first name is required." : "الاسم الأول لولي الأمر مطلوب.");
+        return;
+      }
+      const { createParentAction } = await import("@/app/actions/parents");
+      const res = await createParentAction({
+        first_name: fn,
+        last_name: newParent.last_name.trim() || fn,
+        phone: newParent.phone.trim() || undefined,
+      });
+      if (!res.ok) {
+        toast.error(res.error ?? (en ? "Could not add the parent." : "تعذّر إضافة ولي الأمر."));
+        return;
+      }
+      parentId = res.parent!.id;
+    } else if (!parentId) {
+      toast.error(en ? "Choose a parent or add a new one." : "اختر ولي أمر أو أضف ولي أمر جديدًا.");
+      return;
+    }
+
+    const payload = { ...values, parent_id: parentId };
+    if (student || duplicateChoice?.mode === "update") {
+      await updateStudentAction(student?.id ?? duplicateChoice?.studentId ?? "", payload);
+      toast.success(en ? "Student details updated." : "تم تحديث بيانات الطالب.");
+    } else {
+      const result = await createStudentAction(payload, { allowDuplicate: duplicateChoice?.mode === "create" });
+      if ("duplicate" in result && result.duplicate) {
+        setDuplicatePrompt({ values, candidates: result.candidates });
+        return;
+      }
+      if (!("id" in result)) return;
+      toast.success(
+        en ? `Student ${result.first_name} added ✅ — Login: ${result.email} | Password: ${STUDENT_DEFAULT_PASSWORD}` : `تم إضافة ${result.first_name} ✅ — حساب الدخول: ${result.email} | الباسورد: ${STUDENT_DEFAULT_PASSWORD}`,
+        { duration: 10000 },
+      );
+    }
+    setDuplicatePrompt(null);
+    onDone?.();
+    router.refresh();
+  };
+
   const onSubmit = async (values: StudentValues) => {
     setSaving(true);
     try {
-      let parentId = values.parent_id ?? null;
-
-      // وضع "ولي أمر جديد": أنشئه أولًا واربطه بالطالب وقت الحفظ
-      if (parentMode === "new") {
-        const fn = newParent.first_name.trim();
-        if (!fn) {
-          toast.error(en ? "Parent first name is required." : "الاسم الأول لولي الأمر مطلوب.");
+      if (!student) {
+        const candidates = await findStudentDuplicatesAction({ ...values, parent_id: values.parent_id ?? null });
+        if (candidates.length > 0) {
+          setDuplicatePrompt({ values, candidates });
           return;
         }
-        const { createParentAction } = await import("@/app/actions/parents");
-        const res = await createParentAction({
-          first_name: fn,
-          last_name: newParent.last_name.trim() || fn,
-          phone: newParent.phone.trim() || undefined,
-        });
-        if (!res.ok) {
-          toast.error(res.error ?? (en ? "Could not add the parent." : "تعذّر إضافة ولي الأمر."));
-          return;
-        }
-        parentId = res.parent!.id;
-      } else if (!parentId) {
-        toast.error(en ? "Choose a parent or add a new one." : "اختر ولي أمر أو أضف ولي أمر جديدًا.");
-        return;
       }
-
-      const payload = { ...values, parent_id: parentId };
-      if (student) {
-        await updateStudentAction(student.id, payload);
-        toast.success(en ? "Student details updated." : "تم تحديث بيانات الطالب.");
-      } else {
-        const s = await createStudentAction(payload);
-        toast.success(
-          en ? `Student ${s.first_name} added ✅ — Login: ${s.email} | Password: ${STUDENT_DEFAULT_PASSWORD}` : `تم إضافة ${s.first_name} ✅ — حساب الدخول: ${s.email} | الباسورد: ${STUDENT_DEFAULT_PASSWORD}`,
-          { duration: 10000 },
-        );
-      }
-      onDone?.();
-      router.refresh();
+      await saveStudent(values);
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
-      const duplicate = /already exists|duplicate|unique/i.test(message);
       toast.error(
-        duplicate
-          ? (en ? "A student with these details already exists." : "يوجد طالب مسجل بهذه البيانات بالفعل.")
+        /already exists|duplicate|unique/i.test(message)
+          ? (en ? "A matching student was found. Choose update or new record." : "تم العثور على طالب مطابق. اختر التحديث أو سجل جديد.")
           : (en ? "Could not save the student. Check the information and try again." : "تعذّر حفظ بيانات الطالب. راجع البيانات وحاول مرة أخرى."),
       );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resolveDuplicate = async (mode: "update" | "create", studentId?: string) => {
+    if (!duplicatePrompt) return;
+    setSaving(true);
+    try {
+      await saveStudent(duplicatePrompt.values, { mode, studentId });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (en ? "Could not resolve the matching student." : "تعذّر إتمام معالجة الطالب المطابق."));
     } finally {
       setSaving(false);
     }
@@ -306,6 +339,35 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
           )}
         />
       </Field>
+
+      {duplicatePrompt && (
+        <div className="space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950" role="alert">
+          <div>
+            <p className="font-semibold">{en ? "A matching student already exists" : "يوجد طالب مطابق بالفعل"}</p>
+            <p className="mt-1 text-xs text-amber-900">
+              {en ? "Choose whether this row updates an existing student or is intentionally added as a new record." : "اختار هل البيانات دي تحديث لطالب موجود، ولا طالب جديد بقصد واضح. لن يتم إنشاء سجل تلقائيًا."}
+            </p>
+          </div>
+          <div className="space-y-2">
+            {duplicatePrompt.candidates.map((candidate) => (
+              <div key={candidate.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-white p-2">
+                <span>{candidate.first_name} {candidate.last_name}{candidate.phone ? ` — ${candidate.phone}` : ""}</span>
+                <Button type="button" size="sm" onClick={() => resolveDuplicate("update", candidate.id)} disabled={saving}>
+                  {en ? "Update this record" : "تحديث السجل الموجود"}
+                </Button>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => resolveDuplicate("create")} disabled={saving}>
+              {en ? "Add as a new student" : "إضافته كطالب جديد"}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setDuplicatePrompt(null)} disabled={saving}>
+              {en ? "Cancel" : "إلغاء"}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Field label={en ? "Notes" : "ملاحظات"} error={errors.notes?.message}>
         <Textarea {...register("notes")} placeholder={en ? "Internal notes about the student…" : "ملاحظات داخلية عن الطالب…"} />

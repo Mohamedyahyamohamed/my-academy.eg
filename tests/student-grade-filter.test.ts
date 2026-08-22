@@ -2,7 +2,14 @@ import { beforeEach, describe, expect, it, afterEach } from "vitest";
 import { db } from "@/services/data/store";
 import { createSeedData } from "@/services/data/seed";
 import { setRequestContext } from "@/services/request-context";
-import { listStudentGrades, listStudents, updateStudent } from "@/services/students";
+import {
+  createStudent,
+  DuplicateStudentError,
+  listStudentGrades,
+  listStudents,
+  studentIdentityMatches,
+  updateStudent,
+} from "@/services/students";
 
 const ACADEMY_ID = "academy-1";
 
@@ -90,5 +97,47 @@ describe("student grade filtering", () => {
     expect(grades).toContain("الصف الأول الإعدادي");
     expect(grades).toContain("الصف الثاني الإعدادي");
     expect(grades).not.toContain("");
+  });
+
+  it("matches duplicate identity using normalized email, phone, or name", () => {
+    const candidate = {
+      id: "duplicate-candidate",
+      first_name: "  أحمد ",
+      last_name: "محمود",
+      phone: "010 123 4567",
+      email: "ahmed@example.com",
+    };
+
+    expect(studentIdentityMatches({ first_name: "أحمد", last_name: "محمود", phone: "01099999999" }, candidate)).toBe(false);
+    expect(studentIdentityMatches({ first_name: "أحمد", last_name: "محمود", phone: "010 123 4567" }, candidate)).toBe(true);
+    expect(studentIdentityMatches({ first_name: "أيمن", last_name: "علي", email: " AHMED@EXAMPLE.COM " }, candidate)).toBe(true);
+  });
+
+  it("blocks a duplicate individual student before any insert", async () => {
+    const existing = {
+      ...db.data.students[0]!,
+      id: "duplicate-existing",
+      first_name: "No Duplicate",
+      last_name: "Student",
+      phone: "01012345678",
+      email: "no-duplicate@test.invalid",
+      academy_id: ACADEMY_ID,
+    };
+    db.data.students.push(existing);
+    const before = db.data.students.length;
+
+    await expect(createStudent(
+      {
+        first_name: "No Duplicate",
+        last_name: "Student",
+        phone: "01012345678",
+        consent_given: true,
+      },
+      ACADEMY_ID,
+      "prof-admin",
+      { id: "prof-admin", email: "admin@myacademy.edu", role: "ADMIN", academy_id: ACADEMY_ID } as any,
+    )).rejects.toBeInstanceOf(DuplicateStudentError);
+
+    expect(db.data.students).toHaveLength(before);
   });
 });

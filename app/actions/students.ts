@@ -2,14 +2,20 @@
 
 import { revalidatePath } from "next/cache";
 import { requireScopedRole, StudentsService, currentAcademyId, isLimitedAssistant } from "@/services";
-import type { StudentInput } from "@/services/students";
+import { DuplicateStudentError, findStudentDuplicates, type StudentInput } from "@/services/students";
 import { STUDENT_DEFAULT_PASSWORD } from "@/lib/auth";
 
-export async function createStudentAction(input: StudentInput) {
+export async function findStudentDuplicatesAction(input: StudentInput) {
+  const user = await requireScopedRole("ADMIN", "TEACHER");
+  if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage students.");
+  return findStudentDuplicates(input, user.academy_id, user);
+}
+
+export async function createStudentAction(input: StudentInput, options: { allowDuplicate?: boolean } = {}) {
   try {
     const user = await requireScopedRole("ADMIN", "TEACHER");
     if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage students.");
-    const student = await StudentsService.createStudent(input, user.academy_id, user.id, user);
+    const student = await StudentsService.createStudent(input, user.academy_id, user.id, user, options);
     // WhatsApp هو القناة الافتراضية بعد تفعيل الدفع في Meta.
     // يمكن استخدام البريد مؤقتًا عبر WHATSAPP_QR_CHANNEL=email.
     try {
@@ -43,6 +49,9 @@ export async function createStudentAction(input: StudentInput) {
     revalidatePath("/dashboard");
     return student;
   } catch (e) {
+    if (e instanceof DuplicateStudentError) {
+      return { ok: false as const, duplicate: true as const, candidates: e.candidates };
+    }
     console.error("[createStudentAction] FAILED:", (e as Error)?.message);
     throw e;
   }

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { importStudentsAction, type ImportRow } from "@/app/actions/import";
+import { importStudentsAction, type ImportDuplicateMode, type ImportRow } from "@/app/actions/import";
 import { useClientLang } from "@/lib/i18n-client";
 
 const HEADER =
@@ -66,7 +66,8 @@ export function ImportStudents({ academies = [], isPlatformOwner = false }: { ac
   const [text, setText] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [academyId, setAcademyId] = React.useState(academies[0]?.id ?? "");
-  const [result, setResult] = React.useState<null | { created: number; skippedDup: number; errors: string[] }>(null);
+  const [result, setResult] = React.useState<null | { created: number; updated: number; skippedDup: number; errors: string[] }>(null);
+  const [conflicts, setConflicts] = React.useState<null | Array<{ rowNumber: number; row: ImportRow; candidates: Array<{ id: string; first_name: string; last_name: string; phone?: string | null }> }>>(null);
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -85,7 +86,7 @@ export function ImportStudents({ academies = [], isPlatformOwner = false }: { ac
     URL.revokeObjectURL(url);
   };
 
-  const doImport = async () => {
+  const doImport = async (duplicateMode: ImportDuplicateMode = "ask") => {
     const rows = parseCSV(text);
     if (isPlatformOwner && !academyId) {
       toast.error(en ? "Select the target academy first." : "اختر الأكاديمية المستهدفة أولًا.");
@@ -98,12 +99,20 @@ export function ImportStudents({ academies = [], isPlatformOwner = false }: { ac
     setLoading(true);
     setResult(null);
     try {
-      const res = await importStudentsAction(rows, isPlatformOwner ? academyId : undefined);
-      if (res.ok === false) {
-        toast.error(res.error ?? (en ? "Import failed." : "فشل الاستيراد"));
+      const res = await importStudentsAction(rows, isPlatformOwner ? academyId : undefined, { duplicateMode });
+      if (res.ok === false && "requiresResolution" in res && res.requiresResolution) {
+        setConflicts(res.conflicts);
+        toast.warning(en ? "Matching students were found. Choose how to resolve them." : "تم العثور على طلاب مطابقين. اختر طريقة المعالجة.");
+      } else if (res.ok === false) {
+        const message = "error" in res ? res.error : (en ? "Import failed." : "فشل الاستيراد");
+        toast.error(message);
       } else {
-        setResult({ created: res.created ?? 0, skippedDup: res.skippedDup ?? 0, errors: res.errors ?? [] });
-        toast.success(en ? `${res.created} student(s) imported.` : `تم استيراد ${res.created} طالب 🎉`);
+        setConflicts(null);
+        setResult({ created: res.created ?? 0, updated: res.updated ?? 0, skippedDup: res.skippedDup ?? 0, errors: res.errors ?? [] });
+        const summary = en
+          ? `${res.created} added, ${res.updated} updated.`
+          : `تمت إضافة ${res.created} وتحديث ${res.updated} طالب.`;
+        toast.success(summary);
         router.refresh();
       }
     } catch {
@@ -175,7 +184,7 @@ export function ImportStudents({ academies = [], isPlatformOwner = false }: { ac
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={doImport} disabled={loading}>
+            <Button onClick={() => doImport("ask")} disabled={loading}>
               {loading ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : null}
               {en ? "Import students" : "استيراد الطلاب"}
             </Button>
@@ -186,10 +195,47 @@ export function ImportStudents({ academies = [], isPlatformOwner = false }: { ac
         </CardContent>
       </Card>
 
+      {conflicts && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="space-y-3 p-5 text-sm text-amber-950">
+            <div>
+              <p className="font-semibold">{en ? `${conflicts.length} matching row(s) found` : `تم العثور على ${conflicts.length} صف مطابق`}</p>
+              <p className="mt-1 text-xs">{en ? "Nothing was written yet. Choose one action for all matching rows." : "لم يتم حفظ أي تغيير حتى الآن. اختر إجراءً للصفوف المطابقة."}</p>
+            </div>
+            <div className="max-h-48 space-y-2 overflow-auto text-xs">
+              {conflicts.map((conflict) => (
+                <div key={conflict.rowNumber} className="rounded-lg border border-amber-200 bg-white p-2">
+                  <span className="font-medium">{en ? `Row ${conflict.rowNumber}` : `الصف ${conflict.rowNumber}`}:</span>{" "}
+                  {conflict.row.first_name} {conflict.row.last_name}
+                  {conflict.candidates.length > 0 && <span className="text-muted-foreground"> — {conflict.candidates.map((candidate) => `${candidate.first_name} ${candidate.last_name}`).join(", ")}</span>}
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" onClick={() => doImport("update")} disabled={loading}>
+                {en ? "Update matching records" : "تحديث السجلات المطابقة"}
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => doImport("skip")} disabled={loading}>
+                {en ? "Skip matching rows" : "تخطي الصفوف المطابقة"}
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => doImport("create")} disabled={loading}>
+                {en ? "Add matching rows as new" : "إضافة الصفوف المطابقة كطلاب جدد"}
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setConflicts(null)} disabled={loading}>
+                {en ? "Cancel" : "إلغاء"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {result && (
         <Card>
           <CardContent className="p-5 text-sm">
             <p className="font-semibold text-emerald-600">✅ {en ? `${result.created} student(s) imported` : `تم استيراد ${result.created} طالب`}</p>
+            {result.updated > 0 && (
+              <p className="mt-1 text-xs text-muted-foreground">{en ? `${result.updated} existing record(s) updated.` : `تم تحديث ${result.updated} سجلاً موجوداً.`}</p>
+            )}
             {result.skippedDup > 0 && (
               <p className="mt-1 text-xs text-muted-foreground">{en ? `${result.skippedDup} duplicate row(s) skipped.` : `تم تخطي ${result.skippedDup} صفوف مكررة.`}</p>
             )}

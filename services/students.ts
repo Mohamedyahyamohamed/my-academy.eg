@@ -40,7 +40,7 @@ function attachRelations(s: Student): Student {
   };
 }
 
-async function liveTeacherStudentScope(client: any, academyId: string, scopedUser = getCurrentUser()): Promise<Set<string> | null> {
+export async function liveTeacherStudentScope(client: any, academyId: string, scopedUser = getCurrentUser()): Promise<Set<string> | null> {
   const user = scopedUser;
   if (!user || hasAcademyWideScope(user.role)) return null;
 
@@ -630,11 +630,92 @@ function uid() {
   return crypto.randomUUID();
 }
 
+export type StudentDuplicateCandidate = Pick<Student, "id" | "first_name" | "last_name" | "phone" | "email">;
+
+export class DuplicateStudentError extends Error {
+  readonly candidates: StudentDuplicateCandidate[];
+
+  constructor(candidates: StudentDuplicateCandidate[]) {
+    super("A matching student already exists in this academy.");
+    this.name = "DuplicateStudentError";
+    this.candidates = candidates;
+  }
+}
+
+const normalizeIdentity = (value?: string | null) => (value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+const normalizePhone = (value?: string | null) => normalizeIdentity(value).replace(/\D/g, "");
+
+export function studentIdentityMatches(input: Pick<StudentInput, "first_name" | "last_name" | "phone" | "email">, student: StudentDuplicateCandidate) {
+  const sameName = normalizeIdentity(input.first_name) === normalizeIdentity(student.first_name)
+    && normalizeIdentity(input.last_name) === normalizeIdentity(student.last_name);
+  const inputPhone = normalizePhone(input.phone);
+  const studentPhone = normalizePhone(student.phone);
+  const samePhone = Boolean(inputPhone && studentPhone && inputPhone === studentPhone);
+  const inputEmail = normalizeIdentity(input.email);
+  const studentEmail = normalizeIdentity(student.email);
+  const sameEmail = Boolean(inputEmail && studentEmail && inputEmail === studentEmail);
+  // Email or name+phone is a reliable identity match. If both records have no
+  // phone, same name is surfaced for confirmation; same names with different
+  // phones remain separate students.
+  return sameEmail || (sameName && (samePhone || (!inputPhone && !studentPhone)));
+}
+
+/**
+ * Find matching students without mutating data. The caller must still run the
+ * check again in createStudent to close the race between preview and save.
+ */
+export async function findStudentDuplicates(
+  input: StudentInput,
+  authenticatedAcademyId?: string,
+  authenticatedUser?: SessionUser,
+): Promise<StudentDuplicateCandidate[]> {
+  const academyId = authenticatedAcademyId ?? currentAcademyId();
+  if (!academyId) throw new Error("An authenticated academy scope is required.");
+  const user = authenticatedUser ?? getCurrentUser();
+
+  if (!isSupabaseConfigured()) {
+    const scope = teacherStudentScope();
+    return collections().students
+      .filter((student) => student.academy_id === academyId && (!scope || scope.has(student.id)))
+      .filter((student) => studentIdentityMatches(input, student))
+      .map(({ id, first_name, last_name, phone, email }) => ({ id, first_name, last_name, phone, email }));
+  }
+
+  const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
+  const client = nodeSupabaseClient();
+  if (!client) return [];
+  const { data: rows, error } = await client
+    .from("students")
+    .select("id,first_name,last_name,phone,email,owner_teacher_id")
+    .eq("academy_id", academyId)
+    .limit(5000);
+  if (error) throw new Error(`Could not check for duplicate students: ${error.message}`);
+
+  let candidates = (rows ?? []) as StudentDuplicateCandidate[];
+  if (user?.role === "TEACHER") {
+    const { data: academy } = await client.from("academies").select("workspace_type").eq("id", academyId).maybeSingle();
+    if (academy?.workspace_type === "TEACHER") {
+      const { data: teacher } = await client
+        .from("teachers")
+        .select("id")
+        .eq("academy_id", academyId)
+        .or(`profile_id.eq.${user.id},email.eq.${user.email}`)
+        .maybeSingle();
+      candidates = candidates.filter((student: any) => student.owner_teacher_id === teacher?.id);
+    } else {
+      const scopedIds = await liveTeacherStudentScope(client, academyId, user);
+      candidates = candidates.filter((student) => scopedIds?.has(student.id));
+    }
+  }
+  return candidates.filter((student) => studentIdentityMatches(input, student));
+}
+
 export async function createStudent(
   input: StudentInput,
   authenticatedAcademyId?: string,
   consentActorId?: string,
   authenticatedUser?: SessionUser,
+  options: { allowDuplicate?: boolean } = {},
 ): Promise<Student> {
   // Server Actions can cross an async boundary where AsyncLocalStorage context is lost.
   // Prefer the academy resolved by requireScopedRole; keep the fallback for existing callers.
@@ -656,29 +737,10 @@ export async function createStudent(
     throw new Error(`Limit reached: ${check.current}/${check.limit} students. Upgrade your plan.`);
   }
 
-  // منع التكرار: نفس الاسم + الموبايل في نفس الأكاديمية
   const aid = academyId;
-  try {
-    const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
-    const admin = nodeSupabaseClient();
-    if (admin && aid) {
-      const norm = (s?: string | null) => (s ?? "").trim().toLowerCase();
-      const { data: dups } = await admin
-        .from("students")
-        .select("first_name,last_name,phone")
-        .eq("academy_id", aid)
-        .ilike("first_name", input.first_name.trim())
-        .ilike("last_name", input.last_name.trim());
-      const dup = (dups ?? []).find(
-        (s: any) => norm(s.phone) === norm(input.phone),
-      );
-      if (dup) {
-        throw new Error("طالب موجود بالفعل بنفس الاسم والموبايل في الأكاديمية.");
-      }
-    }
-  } catch (e) {
-    // لو الخطأ هو رسالة التكرار نطلّعها، غير كده نكمّل (best-effort)
-    if ((e as Error)?.message?.includes("موجود بالفعل")) throw e;
+  if (!options.allowDuplicate) {
+    const duplicates = await findStudentDuplicates(input, academyId, authenticatedUser);
+    if (duplicates.length > 0) throw new DuplicateStudentError(duplicates);
   }
 
   const { groupIds = [], ...rest } = input;

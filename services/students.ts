@@ -141,9 +141,29 @@ async function resolveStudentMutationScope(studentId: string, authenticatedAcade
         .maybeSingle();
       if (error) throw new Error(`Could not validate student update target: ${error.message}`);
       if (!liveStudent) throw new Error("Student is outside the authenticated academy.");
-      const liveScope = await liveTeacherStudentScope(client, academyId, user);
-      if (liveScope && !liveScope.has(studentId)) {
-        throw new Error("Teachers can only manage students in assigned groups.");
+      const { data: academy } = await client
+        .from("academies")
+        .select("workspace_type")
+        .eq("id", academyId)
+        .maybeSingle();
+      if (user.role === "TEACHER" && academy?.workspace_type === "TEACHER") {
+        const { data: teacherByProfile } = await client
+          .from("teachers")
+          .select("id")
+          .eq("academy_id", academyId)
+          .eq("profile_id", user.id)
+          .maybeSingle();
+        const teacher = teacherByProfile ?? (user.email
+          ? (await client.from("teachers").select("id").eq("academy_id", academyId).eq("email", user.email).maybeSingle()).data
+          : null);
+        if (!teacher || liveStudent.owner_teacher_id !== teacher.id) {
+          throw new Error("Teachers can only manage students in assigned groups.");
+        }
+      } else {
+        const liveScope = await liveTeacherStudentScope(client, academyId, user);
+        if (liveScope && !liveScope.has(studentId)) {
+          throw new Error("Teachers can only manage students in assigned groups.");
+        }
       }
       return liveStudent as Student;
     }

@@ -12,3 +12,5 @@
 في إعادة الاختبار على deployment `dpl_7DmnGxXwKsSdLZRq3cDqDcgVjJGo`، فُتح نموذج تعديل الطالب نفسه، وبعد PageDown ظهر زر `حفظ التعديلات`، مع بقاء القيم الحالية والموافقة محددة. هذه هي النقطة السابقة مباشرة لتنفيذ الإرسال المؤكد.
 
 بعد إعادة الاختبار على أحدث deployment، الضغط على `حفظ التعديلات` ما زال يعرض الرسالة العامة. سجلات Vercel الجديدة حدّدت السبب هذه المرة: `Student is outside the authenticated academy`، وليس `Missing authenticated academy context`. هذا يعني أن الوصول إلى السجل الحي تم، لكن فحص نطاق المدرس المستقل لا يتعرف على الطالب المعروض ويمنع التحديث. يجب مراجعة liveTeacherStudentScope وowner_teacher_id/teacher resolution قبل محاولة أخرى من المتصفح.
+
+تم فتح نموذج تعديل الطالب من أحدث deployment `dpl_5DcMxcZxjnRCdxKEG8jJcMnVYWq6`، وظهرت القيم الأصلية دون تعديل. سيُستخدم نفس إجراء PageDown ثم حفظ التعديلات للتحقق النهائي.

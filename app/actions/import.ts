@@ -225,12 +225,14 @@ export async function importStudentsAction(rows: ImportRow[], requestedAcademyId
         school: item.row.school?.trim() || null,
         grade: item.row.grade?.trim() || null,
         notes: null,
-        // Imported students remain inactive until a parent approves consent.
-        status: "INACTIVE",
-        consent_given: false,
-        consent_at: null,
-        consent_by: null,
-        consent_version: null,
+        // Per the owner's explicit setting, importing by a teacher is treated as
+        // an attestation that guardian consent already exists. Keep an audit trail
+        // without claiming that the guardian clicked a live link.
+        status: "ACTIVE",
+        consent_given: true,
+        consent_at: now,
+        consent_by: user.id,
+        consent_version: "teacher-import-attestation-v1",
         enrolled_at: now,
         created_at: now,
         updated_at: now,

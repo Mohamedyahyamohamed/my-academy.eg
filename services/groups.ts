@@ -160,10 +160,24 @@ export async function createGroup(input: GroupInput, academyIdOverride?: string)
   if (input.academy_id && input.academy_id !== academyId) {
     throw new Error("The requested academy is outside the authenticated scope.");
   }
-  const course = collections().courses.find((item) => item.id === input.course_id && item.academy_id === academyId);
-  if (!course) throw new Error("The selected course is outside the authenticated academy.");
-  const teacher = collections().teachers.find((item) => item.id === input.teacher_id && item.academy_id === academyId);
-  if (!teacher) throw new Error("The selected teacher is outside the authenticated academy.");
+  let course = collections().courses.find((item) => item.id === input.course_id && item.academy_id === academyId);
+  let teacher = collections().teachers.find((item) => item.id === input.teacher_id && item.academy_id === academyId);
+  // Server Actions run in separate requests. A course created immediately
+  // before the group action may be durable in Supabase while the in-memory
+  // tenant snapshot is still stale, so validate the IDs live before rejecting.
+  const client = isSupabaseConfigured() ? nodeSupabaseClient() : null;
+  if ((!course || !teacher) && client) {
+    const [{ data: liveCourse, error: courseError }, { data: liveTeacher, error: teacherError }] = await Promise.all([
+      client.from("courses").select("id, academy_id, name, description, color, created_at, updated_at").eq("id", input.course_id).eq("academy_id", academyId).maybeSingle(),
+      client.from("teachers").select("id, academy_id, profile_id, email, first_name, last_name, phone, bio, specialization, created_at, updated_at").eq("id", input.teacher_id).eq("academy_id", academyId).maybeSingle(),
+    ]);
+    if (courseError) throw new Error(`Could not validate the selected course: ${courseError.message}`);
+    if (teacherError) throw new Error(`Could not validate the selected teacher: ${teacherError.message}`);
+    if (!course && liveCourse) course = liveCourse as any;
+    if (!teacher && liveTeacher) teacher = liveTeacher as any;
+  }
+  if (!course) throw new Error("The selected course was not found inside the authenticated academy.");
+  if (!teacher) throw new Error("The selected teacher was not found inside the authenticated academy.");
   const check = canCreate("groups", academyId);
   if (!check.allowed) {
     throw new Error(`Limit reached: ${check.current}/${check.limit} groups. Upgrade your plan.`);

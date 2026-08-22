@@ -634,6 +634,7 @@ export async function createStudent(
   input: StudentInput,
   authenticatedAcademyId?: string,
   consentActorId?: string,
+  authenticatedUser?: SessionUser,
 ): Promise<Student> {
   // Server Actions can cross an async boundary where AsyncLocalStorage context is lost.
   // Prefer the academy resolved by requireScopedRole; keep the fallback for existing callers.
@@ -644,7 +645,7 @@ export async function createStudent(
     throw new Error("The requested academy is outside the authenticated scope.");
   }
   const groupIdsForAuthorization = input.groupIds ?? [];
-  assertRequestedGroupScope(groupIdsForAuthorization, academyId);
+  assertRequestedGroupScope(groupIdsForAuthorization, academyId, authenticatedUser);
   if (input.parent_id) {
     const parent = collections().parents.find((item) => item.id === input.parent_id && item.academy_id === academyId);
     if (!parent) throw new Error("Parent is outside the authenticated academy.");
@@ -683,11 +684,41 @@ export async function createStudent(
   const { groupIds = [], ...rest } = input;
   const now = new Date().toISOString();
   const consentGiven = rest.consent_given === true;
-  const currentUser = getCurrentUser();
+  const currentUser = authenticatedUser ?? getCurrentUser();
   const workspace = collections().academies.find((academy: any) => academy.id === academyId) as any;
-  const ownerTeacherId = currentUser?.role === "TEACHER" && workspace?.workspace_type === "TEACHER"
+  let workspaceType = workspace?.workspace_type as string | undefined;
+  if (!workspaceType && isSupabaseConfigured()) {
+    try {
+      const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
+      const client = nodeSupabaseClient();
+      if (client) {
+        const { data: academy } = await client.from("academies").select("workspace_type").eq("id", academyId).maybeSingle();
+        workspaceType = academy?.workspace_type;
+      }
+    } catch (error) {
+      console.error("createStudent workspace lookup failed:", (error as Error)?.message);
+    }
+  }
+  let ownerTeacherId = currentUser?.role === "TEACHER" && workspaceType === "TEACHER"
     ? currentTeacherId()
     : null;
+  if (currentUser?.role === "TEACHER" && workspaceType === "TEACHER" && !ownerTeacherId && isSupabaseConfigured()) {
+    try {
+      const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
+      const client = nodeSupabaseClient();
+      if (client) {
+        const { data: teacher } = await client
+          .from("teachers")
+          .select("id")
+          .eq("academy_id", academyId)
+          .or(`profile_id.eq.${currentUser.id},email.eq.${currentUser.email}`)
+          .maybeSingle();
+        ownerTeacherId = teacher?.id ?? null;
+      }
+    } catch (error) {
+      console.error("createStudent owner teacher lookup failed:", (error as Error)?.message);
+    }
+  }
   const student: Student = {
     id: uid(),
     academy_id: academyId,

@@ -111,8 +111,8 @@ function assertStudentManager(userOverride?: SessionUser) {
   return user;
 }
 
-function assertRequestedGroupScope(groupIds: string[], academyId: string) {
-  const user = assertStudentManager();
+function assertRequestedGroupScope(groupIds: string[], academyId: string, authenticatedUser?: SessionUser) {
+  const user = assertStudentManager(authenticatedUser);
   const groups = groupIds.map((id) => collections().groups.find((group) => group.id === id && group.academy_id === academyId));
   if (groups.some((group) => !group)) throw new Error("A selected group is outside the authenticated academy.");
   if (!hasAcademyWideScope(user.role)) {
@@ -785,7 +785,7 @@ export async function updateStudent(
   if (input.parent_id) {
     await assertParentMutationScope(input.parent_id, academyId);
   }
-  if (input.groupIds) assertRequestedGroupScope(input.groupIds, academyId);
+  if (input.groupIds) assertRequestedGroupScope(input.groupIds, academyId, authenticatedUser);
   Object.assign(s, {
     ...input,
     updated_at: new Date().toISOString(),

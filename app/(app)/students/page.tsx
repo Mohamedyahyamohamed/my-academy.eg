@@ -36,7 +36,9 @@ export default async function StudentsPage(
   const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
   const en = lang === "en";
   const user = await requireScopedRole("ADMIN", "TEACHER");
-  const canManageStudents = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+  // A regular teacher may manage the students they create/teach; account provisioning remains admin-only.
+  const canManageStudents = user.role === "ADMIN" || user.role === "SUPER_ADMIN" || user.role === "TEACHER";
+  const canManageStudentAccounts = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
 
@@ -76,7 +78,7 @@ export default async function StudentsPage(
               <Button asChild variant="outline">
                 <Link href="/students/import">{en ? "Import CSV" : "استيراد CSV"}</Link>
               </Button>
-              <CreateAccountsButton />
+              {canManageStudentAccounts && <CreateAccountsButton />}
               <AddStudentDialog parents={parents} groups={groups} />
             </>
           )}

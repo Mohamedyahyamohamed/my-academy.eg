@@ -47,6 +47,7 @@ export default async function StudentsPage(
     status: (sp("status") as StudentFilters["status"]) ?? "ALL",
     groupId: sp("group") ?? "ALL",
     grade: sp("grade") ?? "ALL",
+    gender: (sp("gender") as StudentFilters["gender"]) ?? "ALL",
     page: sp("page") ? Number(sp("page")) : 1,
     pageSize: 8,
     sortBy: "name",
@@ -102,6 +103,11 @@ export default async function StudentsPage(
           ]} />
           <ToolbarSelect paramKey="group" label={en ? "Filter by group" : "تصفية بمجموعة"} options={groupOptions} />
           <ToolbarSelect paramKey="grade" label={en ? "Filter by grade" : "تصفية بالصف الدراسي"} options={gradeOptions} />
+          <ToolbarSelect paramKey="gender" label={en ? "Filter by gender" : "تصفية بالنوع"} options={[
+            { value: "ALL", label: en ? "All genders" : "الكل" },
+            { value: "male", label: en ? "Male" : "ذكر" },
+            { value: "female", label: en ? "Female" : "أنثى" },
+          ]} />
         </ToolbarRoot>
       </div>
 

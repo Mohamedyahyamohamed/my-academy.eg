@@ -17,6 +17,7 @@ beforeEach(() => {
       last_name: "First Prep",
       email: "grade-first-prep@test.invalid",
       grade: "الصف الأول الإعدادي",
+      gender: "male",
       status: "ACTIVE",
     },
     {
@@ -26,6 +27,7 @@ beforeEach(() => {
       last_name: "Second Prep",
       email: "grade-second-prep@test.invalid",
       grade: "الصف الثاني الإعدادي",
+      gender: "female",
       status: "INACTIVE",
     },
   );
@@ -54,6 +56,23 @@ describe("student grade filtering", () => {
     expect(result.items).toHaveLength(1);
     expect(result.items[0]?.id).toBe("grade-filter-first-prep");
     expect(result.items.every((student) => student.grade === "الصف الأول الإعدادي")).toBe(true);
+  });
+
+  it("filters students by gender and composes with grade/status", async () => {
+    const result = await listStudents(
+      {
+        gender: "female",
+        grade: "الصف الثاني الإعدادي",
+        status: "INACTIVE",
+        page: 1,
+        pageSize: 100,
+      },
+      ACADEMY_ID,
+    );
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]?.id).toBe("grade-filter-second-prep");
+    expect(result.items[0]?.gender).toBe("female");
   });
 
   it("updates a student when the authenticated academy is passed explicitly", async () => {

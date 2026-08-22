@@ -214,6 +214,7 @@ function listStudentsFromCache(
     status = "ALL",
     groupId = "ALL",
     grade = "ALL",
+    gender = "ALL",
     page = 1,
     pageSize = 10,
     sortBy = "name",
@@ -241,6 +242,7 @@ function listStudentsFromCache(
 
   if (status !== "ALL") items = items.filter((s) => s.status === status);
   if (grade !== "ALL") items = items.filter((s) => (s.grade ?? "").trim() === grade);
+  if (gender !== "ALL") items = items.filter((s) => s.gender === gender);
 
   if (groupId !== "ALL") {
     const ids = collections()
@@ -343,6 +345,7 @@ export async function listStudents(
     status = "ALL",
     groupId = "ALL",
     grade = "ALL",
+    gender = "ALL",
     page = 1,
     pageSize = 10,
     sortBy = "name",
@@ -365,6 +368,7 @@ export async function listStudents(
 
   if (status !== "ALL") query = query.eq("status", status);
   if (grade !== "ALL") query = query.eq("grade", grade);
+  if (gender !== "ALL") query = query.eq("gender", gender);
 
   if (search.trim()) {
     const s = search.trim();

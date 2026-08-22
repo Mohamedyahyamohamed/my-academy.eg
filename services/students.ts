@@ -46,20 +46,29 @@ async function liveTeacherStudentScope(client: any, academyId: string): Promise<
   const teacherId = currentTeacherId();
   if (!teacherId) return new Set();
 
-  const [{ data: ownedGroups, error: ownedError }, { data: assistantLinks, error: assistantError }] = await Promise.all([
+  const [{ data: academy, error: academyError }, { data: ownedStudents, error: ownedStudentsError }, { data: ownedGroups, error: ownedError }, { data: assistantLinks, error: assistantError }] = await Promise.all([
+    client.from("academies").select("workspace_type").eq("id", academyId).maybeSingle(),
+    client.from("students").select("id").eq("academy_id", academyId).eq("owner_teacher_id", teacherId).limit(5000),
     client.from("groups").select("id").eq("academy_id", academyId).eq("teacher_id", teacherId).limit(1000),
     client.from("group_assistants").select("group_id").eq("teacher_id", teacherId).limit(1000),
   ]);
+  if (academyError || ownedStudentsError) {
+    console.error("liveTeacherStudentScope personal workspace lookup failed", academyError?.message ?? ownedStudentsError?.message);
+    return new Set();
+  }
+  const personalStudentIds = academy?.workspace_type === "TEACHER"
+    ? (ownedStudents ?? []).map((row: any) => row.id).filter(Boolean)
+    : [];
   if (ownedError || assistantError) {
     console.error("liveTeacherStudentScope group lookup failed", ownedError?.message ?? assistantError?.message);
-    return new Set();
+    return new Set(personalStudentIds);
   }
 
   const candidateGroupIds = [...new Set([
     ...(ownedGroups ?? []).map((row: any) => row.id),
     ...(assistantLinks ?? []).map((row: any) => row.group_id),
   ].filter(Boolean))];
-  if (!candidateGroupIds.length) return new Set();
+  if (!candidateGroupIds.length) return new Set(personalStudentIds);
 
   const { data: scopedGroups, error: scopedGroupsError } = await client
     .from("groups")
@@ -69,11 +78,11 @@ async function liveTeacherStudentScope(client: any, academyId: string): Promise<
     .limit(1000);
   if (scopedGroupsError) {
     console.error("liveTeacherStudentScope academy group lookup failed", scopedGroupsError.message);
-    return new Set();
+    return new Set(personalStudentIds);
   }
 
   const groupIds = (scopedGroups ?? []).map((row: any) => row.id).filter(Boolean);
-  if (!groupIds.length) return new Set();
+  if (!groupIds.length) return new Set(personalStudentIds);
   const { data: memberships, error: membershipsError } = await client
     .from("group_students")
     .select("student_id")
@@ -81,9 +90,12 @@ async function liveTeacherStudentScope(client: any, academyId: string): Promise<
     .limit(5000);
   if (membershipsError) {
     console.error("liveTeacherStudentScope membership lookup failed", membershipsError.message);
-    return new Set();
+    return new Set(personalStudentIds);
   }
-  return new Set((memberships ?? []).map((row: any) => row.student_id).filter(Boolean));
+  return new Set([
+    ...personalStudentIds,
+    ...(memberships ?? []).map((row: any) => row.student_id).filter(Boolean),
+  ]);
 }
 
 function assertStudentManager() {
@@ -554,9 +566,15 @@ export async function createStudent(
   const { groupIds = [], ...rest } = input;
   const now = new Date().toISOString();
   const consentGiven = rest.consent_given === true;
+  const currentUser = getCurrentUser();
+  const workspace = collections().academies.find((academy: any) => academy.id === academyId) as any;
+  const ownerTeacherId = currentUser?.role === "TEACHER" && workspace?.workspace_type === "TEACHER"
+    ? currentTeacherId()
+    : null;
   const student: Student = {
     id: uid(),
     academy_id: academyId,
+    owner_teacher_id: ownerTeacherId,
     first_name: rest.first_name,
     last_name: rest.last_name,
     phone: rest.phone ?? null,
@@ -631,11 +649,13 @@ export async function createStudent(
   }
 
   for (const gid of groupIds) {
-    collections().groupStudents.push({
+    const membership = {
       group_id: gid,
       student_id: student.id,
       joined_at: now,
-    });
+    };
+    collections().groupStudents.push(membership);
+    await persistInsert("group_students", membership);
   }
   return attachRelations(student);
 }

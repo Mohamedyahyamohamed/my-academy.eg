@@ -184,6 +184,8 @@ export type StudentStatus = "ACTIVE" | "INACTIVE" | "ARCHIVED";
 export interface Student {
   id: UUID;
   academy_id: UUID;
+  /** Personal-workspace owner; null for academy-managed students. */
+  owner_teacher_id?: UUID | null;
   first_name: string;
   last_name: string;
   date_of_birth: ISODate | null;

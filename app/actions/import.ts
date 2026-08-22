@@ -5,6 +5,7 @@ import { requireScopedRole, isLimitedAssistant } from "@/services";
 import { collections, invalidateStore } from "@/services/data/store";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { audit } from "@/services/audit";
+import { currentTeacherId } from "@/services/session";
 
 export interface ImportRow {
   first_name: string;
@@ -58,6 +59,16 @@ export async function importStudentsAction(rows: ImportRow[], requestedAcademyId
   } else {
     aid = user.academy_id ?? "";
     if (!aid) return { ok: false, error: "لا يوجد سياق أكاديمية صالح لحسابك." };
+  }
+
+  let ownerTeacherId: string | null = null;
+  if (user.role === "TEACHER") {
+    const { data: workspace } = await client
+      .from("academies")
+      .select("workspace_type")
+      .eq("id", aid)
+      .maybeSingle();
+    if (workspace?.workspace_type === "TEACHER") ownerTeacherId = currentTeacherId();
   }
 
   if (!rows || rows.length === 0) return { ok: false, error: "مفيش بيانات للاستيراد." };
@@ -203,6 +214,7 @@ export async function importStudentsAction(rows: ImportRow[], requestedAcademyId
       record: {
         id,
         academy_id: aid,
+        owner_teacher_id: ownerTeacherId,
         first_name: item.row.first_name.trim(),
         last_name: item.row.last_name.trim(),
         phone: item.row.phone?.trim() || null,

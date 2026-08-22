@@ -3,7 +3,7 @@
  * (Server-only. The Supabase adapter replaces these in production.)
  */
 import { collections } from "./data/store";
-import { currentAcademyId, currentTeacherId } from "./session";
+import { currentAcademyId, currentTeacherId, getCurrentUser } from "./session";
 import { getRequestAcademyId } from "./request-context";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -240,15 +240,27 @@ export function teacherGroupScope(): Set<string> | null {
   return new Set([...owned, ...assisted]);
 }
 
-/** Student ids enrolled in the teacher's scoped groups (null if not a teacher). */
+/**
+ * Student ids visible to the current teacher. In an academy workspace this is
+ * derived from assigned groups; in a personal TEACHER workspace, students
+ * explicitly owned by the teacher are also visible before group assignment.
+ */
 export function teacherStudentScope(): Set<string> | null {
   const scope = teacherGroupScope();
   if (!scope) return null;
-  return new Set(
+  const ids = new Set(
     collections()
       .groupStudents.filter((gs) => scope.has(gs.group_id))
       .map((gs) => gs.student_id),
   );
+  const user = getCurrentUser();
+  const academy = collections().academies.find((item: any) => item.id === currentAcademyId()) as any;
+  if (user?.role === "TEACHER" && academy?.workspace_type === "TEACHER") {
+    for (const student of byAcademy(collections().students)) {
+      if (student.owner_teacher_id === currentTeacherId()) ids.add(student.id);
+    }
+  }
+  return ids;
 }
 
 /** Restrict an array of groups to the teacher's scope (no-op for non-teachers). */

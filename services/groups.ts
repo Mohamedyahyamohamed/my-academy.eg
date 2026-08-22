@@ -169,7 +169,7 @@ export async function createGroup(input: GroupInput, academyIdOverride?: string)
   if ((!course || !teacher) && client) {
     const [{ data: liveCourse, error: courseError }, { data: liveTeacher, error: teacherError }] = await Promise.all([
       client.from("courses").select("id, academy_id, name, description, color, created_at, updated_at").eq("id", input.course_id).eq("academy_id", academyId).maybeSingle(),
-      client.from("teachers").select("id, academy_id, profile_id, email, first_name, last_name, phone, bio, specialization, created_at, updated_at").eq("id", input.teacher_id).eq("academy_id", academyId).maybeSingle(),
+      client.from("teachers").select("id, academy_id, profile_id, email, first_name, last_name").eq("id", input.teacher_id).eq("academy_id", academyId).maybeSingle(),
     ]);
     if (courseError) throw new Error(`Could not validate the selected course: ${courseError.message}`);
     if (teacherError) throw new Error(`Could not validate the selected teacher: ${teacherError.message}`);

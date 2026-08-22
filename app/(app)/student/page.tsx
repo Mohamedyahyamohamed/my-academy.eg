@@ -26,7 +26,7 @@ export default async function StudentDashboard() {
   if (!d) {
     return (
       <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
-        <PageHeader title={en ? "Dashboard" : "لوحة التحكم"} description={`${en ? "Hello" : "أهلاً"}, ${user.full_name}.`} />
+        <PageHeader title={en ? "Dashboard" : "لوحة التحكم"} description={`${en ? "Hello" : "أهلاً"}, ${user.full_name}.`} showBack={false} />
         <EmptyState icon={BookOpen} title={en ? "Profile not linked" : "الملف غير مرتبط"} description={en ? "Your account is not linked to a student record. Contact the academy." : "حسابك غير مرتبط بسجل طالب. تواصل مع الأكاديمية."} />
       </div>
     );
@@ -42,6 +42,7 @@ export default async function StudentDashboard() {
       <PageHeader
         title={`${en ? "Hello" : "أهلاً"}, ${d.student.first_name} 👋`}
         description={`${gradeLabel} · ${d.groups.map((g) => g.name.split(" — ")[0]).join(", ") || (en ? "No groups" : "لا توجد مجموعات")}`}
+        showBack={false}
       >
         <StudentQrCard
           studentId={d.student.id}

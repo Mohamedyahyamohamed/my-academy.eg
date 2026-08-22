@@ -170,6 +170,7 @@ export default async function PlatformPage(props: { searchParams?: Promise<{ tab
       <PageHeader
         title={en ? "Platform owner dashboard" : "لوحة مالك المنصة"}
         description={en ? "A unified view of growth, activation, revenue, and academies requiring attention." : "صورة تشغيلية موحدة للنمو، التفعيل، الإيراد، والأكاديميات التي تحتاج متابعة."}
+        showBack={false}
       />
 
       <nav className="flex flex-wrap gap-2 border-b pb-3" aria-label={en ? "Platform sections" : "أقسام المنصة"}>

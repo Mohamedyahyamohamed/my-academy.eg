@@ -6,6 +6,7 @@ import { formatCurrency, formatDate, fullName } from "@/lib/utils";
 import { performanceLevel, performanceLabel } from "@/lib/constants";
 import { PrintReportButton } from "@/components/shared/print-report-button";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
+import { BackButton } from "@/components/shared/back-button";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,7 @@ export default async function ParentStudentReportPage(props: { params: Promise<{
 
   return (
     <main dir={en ? "ltr" : "rtl"} className="mx-auto max-w-4xl bg-white p-6 text-black print:p-0 sm:p-8">
+      <div className="mb-4 print:hidden"><BackButton fallback="/parent/children" /></div>
       <header className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-gray-900 pb-5">
         <div>
           <p className="text-sm font-medium text-violet-700">MY Academy</p>

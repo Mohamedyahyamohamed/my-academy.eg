@@ -31,7 +31,7 @@ export default async function TeacherDashboard() {
   if (!d) {
     return (
       <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>
-        <PageHeader title={t.dashboard} description={`${t.welcome}، ${displayName}.`} />
+        <PageHeader title={t.dashboard} description={`${t.welcome}، ${displayName}.`} showBack={false} />
         <EmptyState icon={UsersRound} title={t.noTeacher} description={t.noTeacherDesc} />
       </div>
     );
@@ -39,7 +39,7 @@ export default async function TeacherDashboard() {
 
   return (
     <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>
-      <PageHeader title={`${t.welcome}، ${(d.teacherName || displayName).split(/\s+/)[0]} 👋`} description={t.overview} />
+      <PageHeader title={`${t.welcome}، ${(d.teacherName || displayName).split(/\s+/)[0]} 👋`} description={t.overview} showBack={false} />
 
       {d.assistantFor.length > 0 && (
         <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm">

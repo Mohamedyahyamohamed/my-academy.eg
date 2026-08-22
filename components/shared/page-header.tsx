@@ -1,6 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/shared/breadcrumb";
+import { BackButton } from "@/components/shared/back-button";
 
 interface PageHeaderProps {
   title: string;
@@ -8,6 +9,7 @@ interface PageHeaderProps {
   children?: React.ReactNode;
   breadcrumbs?: { label: string; href?: string }[];
   className?: string;
+  showBack?: boolean;
 }
 
 /**
@@ -20,6 +22,7 @@ export function PageHeader({
   children,
   breadcrumbs,
   className,
+  showBack = true,
 }: PageHeaderProps) {
   return (
     <div className={cn("flex flex-col gap-4 md:flex-row md:items-center md:justify-between", className)}>
@@ -49,8 +52,11 @@ export function PageHeader({
           <p className="text-sm text-muted-foreground max-w-2xl">{description}</p>
         )}
       </div>
-      {children && (
-        <div className="flex flex-wrap items-center gap-2">{children}</div>
+      {(showBack || children) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {showBack && <BackButton />}
+          {children}
+        </div>
       )}
     </div>
   );

@@ -7,6 +7,7 @@ import { requireUser } from "@/services/session";
 import { listSupportTickets, type SupportTicket } from "@/services/support";
 import { isSupabaseConfigured } from "@/services/supabase/config";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
+import { BackButton } from "@/components/shared/back-button";
 
 export default async function SupportPage() {
   const user = requireUser();
@@ -22,6 +23,7 @@ export default async function SupportPage() {
 
   return (
     <main className="space-y-6" dir={en ? "ltr" : "rtl"}>
+      <div><BackButton fallback="/help" /></div>
       <section className="rounded-2xl bg-gradient-to-l from-brand-700 to-brand-500 p-6 text-white shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl"><div className="mb-3 flex items-center gap-2 text-brand-100"><LifeBuoy className="h-5 w-5" /><span className="text-sm font-medium">{en ? "MY Academy support" : "الدعم داخل MY Academy"}</span></div><h1 className="text-2xl font-bold">{en ? "How can we help today?" : "كيف نساعدك اليوم؟"}</h1><p className="mt-2 text-sm leading-6 text-brand-50">{en ? "Start with the quick guide for your role, then open a ticket with enough detail for our team to follow up." : "ابدأ بالدليل السريع حسب دورك، ثم افتح طلبًا بمعلومات كافية إذا احتجت متابعة من فريق المنصة."}</p></div>

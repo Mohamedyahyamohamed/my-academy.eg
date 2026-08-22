@@ -23,7 +23,7 @@ export default async function ParentDashboard() {
   if (children.length === 0) {
     return (
       <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
-        <PageHeader title={en ? "Dashboard" : "لوحة التحكم"} description={`${en ? "Hello" : "أهلاً"}, ${displayName}.`} />
+        <PageHeader title={en ? "Dashboard" : "لوحة التحكم"} description={`${en ? "Hello" : "أهلاً"}, ${displayName}.`} showBack={false} />
         <EmptyState
           icon={Users}
           title={en ? "No children linked yet" : "مفيش أبناء مربوطين بعد"}
@@ -50,6 +50,7 @@ export default async function ParentDashboard() {
       <PageHeader
         title={en ? "Dashboard" : "لوحة التحكم"}
         description={`${en ? "Hello" : "أهلاً"}, ${firstName}. ${en ? "Here is the latest about your children." : "إليك آخر أخبار أبنائك."}`}
+        showBack={false}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

@@ -94,6 +94,7 @@ export default async function DashboardPage(
       <PageHeader
         title={en ? "Dashboard" : "لوحة التحكم"}
         description={en ? "A live view of your academy — students, revenue, attendance, and performance." : "نظرة حيّة على أكاديميتك — الطلاب، الإيرادات، الحضور، والأداء."}
+        showBack={false}
       >
         <Button asChild variant="outline">
           <Link href="/reports">{en ? "View reports" : "عرض التقارير"}</Link>

@@ -40,7 +40,7 @@ export async function createCourse(input: { academy_id?: string; name: string; d
     updated_at: now,
   };
   collections().courses.push(c);
-  await persistInsert("courses", c);
+  await persistInsert("courses", c, academyId);
   return c;
 }
 

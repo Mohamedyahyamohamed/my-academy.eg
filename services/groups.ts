@@ -183,7 +183,7 @@ export async function createGroup(input: GroupInput, academyIdOverride?: string)
     updated_at: now,
   };
   collections().groups.push(g);
-  await persistInsert("groups", g);
+  await persistInsert("groups", g, academyId);
   return attach(g);
 }
 

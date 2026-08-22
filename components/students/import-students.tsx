@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { importStudentsAction, type ImportDuplicateMode, type ImportRow } from "@/app/actions/import";
+import { importStudentsAction, type ImportDuplicateMode, type ImportDuplicateResolution, type ImportRow } from "@/app/actions/import";
 import { useClientLang } from "@/lib/i18n-client";
 
 const HEADER =
@@ -68,6 +68,7 @@ export function ImportStudents({ academies = [], isPlatformOwner = false }: { ac
   const [academyId, setAcademyId] = React.useState(academies[0]?.id ?? "");
   const [result, setResult] = React.useState<null | { created: number; updated: number; skippedDup: number; errors: string[] }>(null);
   const [conflicts, setConflicts] = React.useState<null | Array<{ rowNumber: number; row: ImportRow; candidates: Array<{ id: string; first_name: string; last_name: string; phone?: string | null }> }>>(null);
+  const [resolutions, setResolutions] = React.useState<Record<string, ImportDuplicateResolution>>({});
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -86,7 +87,7 @@ export function ImportStudents({ academies = [], isPlatformOwner = false }: { ac
     URL.revokeObjectURL(url);
   };
 
-  const doImport = async (duplicateMode: ImportDuplicateMode = "ask") => {
+  const doImport = async (duplicateMode: ImportDuplicateMode = "ask", rowResolutions?: Record<string, ImportDuplicateResolution>) => {
     const rows = parseCSV(text);
     if (isPlatformOwner && !academyId) {
       toast.error(en ? "Select the target academy first." : "اختر الأكاديمية المستهدفة أولًا.");
@@ -99,15 +100,23 @@ export function ImportStudents({ academies = [], isPlatformOwner = false }: { ac
     setLoading(true);
     setResult(null);
     try {
-      const res = await importStudentsAction(rows, isPlatformOwner ? academyId : undefined, { duplicateMode });
+      const res = await importStudentsAction(rows, isPlatformOwner ? academyId : undefined, { duplicateMode, resolutions: rowResolutions });
       if (res.ok === false && "requiresResolution" in res && res.requiresResolution) {
         setConflicts(res.conflicts);
-        toast.warning(en ? "Matching students were found. Choose how to resolve them." : "تم العثور على طلاب مطابقين. اختر طريقة المعالجة.");
+        setResolutions((current) => {
+          const next = { ...current };
+          for (const conflict of res.conflicts) {
+            if (!next[String(conflict.rowNumber)]) next[String(conflict.rowNumber)] = { mode: "skip" };
+          }
+          return next;
+        });
+        toast.warning(en ? "Choose an action for each matching row." : "اختر إجراءً لكل صف مطابق.");
       } else if (res.ok === false) {
         const message = "error" in res ? res.error : (en ? "Import failed." : "فشل الاستيراد");
         toast.error(message);
       } else {
         setConflicts(null);
+        setResolutions({});
         setResult({ created: res.created ?? 0, updated: res.updated ?? 0, skippedDup: res.skippedDup ?? 0, errors: res.errors ?? [] });
         const summary = en
           ? `${res.created} added, ${res.updated} updated.`
@@ -200,28 +209,50 @@ export function ImportStudents({ academies = [], isPlatformOwner = false }: { ac
           <CardContent className="space-y-3 p-5 text-sm text-amber-950">
             <div>
               <p className="font-semibold">{en ? `${conflicts.length} matching row(s) found` : `تم العثور على ${conflicts.length} صف مطابق`}</p>
-              <p className="mt-1 text-xs">{en ? "Nothing was written yet. Choose one action for all matching rows." : "لم يتم حفظ أي تغيير حتى الآن. اختر إجراءً للصفوف المطابقة."}</p>
+              <p className="mt-1 text-xs">{en ? "Choose an action for each row. Nothing will be written until you apply the decisions." : "اختر إجراءً لكل صف. لن يتم حفظ أي شيء حتى تضغط تنفيذ القرارات."}</p>
             </div>
-            <div className="max-h-48 space-y-2 overflow-auto text-xs">
-              {conflicts.map((conflict) => (
-                <div key={conflict.rowNumber} className="rounded-lg border border-amber-200 bg-white p-2">
-                  <span className="font-medium">{en ? `Row ${conflict.rowNumber}` : `الصف ${conflict.rowNumber}`}:</span>{" "}
-                  {conflict.row.first_name} {conflict.row.last_name}
-                  {conflict.candidates.length > 0 && <span className="text-muted-foreground"> — {conflict.candidates.map((candidate) => `${candidate.first_name} ${candidate.last_name}`).join(", ")}</span>}
-                </div>
-              ))}
+            <div className="max-h-72 space-y-2 overflow-auto">
+              {conflicts.map((conflict) => {
+                const key = String(conflict.rowNumber);
+                const decision = resolutions[key]?.mode ?? "skip";
+                const selectedId = resolutions[key]?.studentId;
+                return (
+                  <div key={conflict.rowNumber} className="space-y-2 rounded-lg border border-amber-200 bg-white p-3">
+                    <p className="text-xs"><span className="font-medium">{en ? `Row ${conflict.rowNumber}` : `الصف ${conflict.rowNumber}`}:</span>{" "}{conflict.row.first_name} {conflict.row.last_name}</p>
+                    <div className="grid gap-2 sm:grid-cols-[1fr_1fr]">
+                      <select
+                        value={decision}
+                        onChange={(event) => setResolutions((current) => ({ ...current, [key]: { mode: event.target.value as "update" | "skip" | "create", studentId: event.target.value === "update" ? selectedId : undefined } }))}
+                        className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+                        aria-label={en ? `Action for row ${conflict.rowNumber}` : `الإجراء للصف ${conflict.rowNumber}`}
+                      >
+                        <option value="skip">{en ? "Skip this row" : "تخطي هذا الصف"}</option>
+                        <option value="update">{en ? "Update existing record" : "تحديث السجل الموجود"}</option>
+                        <option value="create">{en ? "Add as a new student" : "إضافته كطالب جديد"}</option>
+                      </select>
+                      {decision === "update" && conflict.candidates.length > 1 ? (
+                        <select
+                          value={selectedId ?? ""}
+                          onChange={(event) => setResolutions((current) => ({ ...current, [key]: { mode: "update", studentId: event.target.value } }))}
+                          className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+                          aria-label={en ? `Record to update for row ${conflict.rowNumber}` : `السجل المطلوب تحديثه للصف ${conflict.rowNumber}`}
+                        >
+                          <option value="">{en ? "Choose matching record" : "اختر السجل المطابق"}</option>
+                          {conflict.candidates.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.first_name} {candidate.last_name}{candidate.phone ? ` — ${candidate.phone}` : ""}</option>)}
+                        </select>
+                      ) : decision === "update" ? (
+                        <p className="flex items-center text-xs text-muted-foreground">{en ? "The only matching record will be updated." : "سيتم تحديث السجل المطابق الوحيد."}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" size="sm" onClick={() => doImport("update")} disabled={loading}>
-                {en ? "Update matching records" : "تحديث السجلات المطابقة"}
+              <Button type="button" size="sm" onClick={() => doImport("ask", resolutions)} disabled={loading || conflicts.some((conflict) => resolutions[String(conflict.rowNumber)]?.mode === "update" && conflict.candidates.length > 1 && !resolutions[String(conflict.rowNumber)]?.studentId)}>
+                {en ? "Apply decisions" : "تنفيذ القرارات"}
               </Button>
-              <Button type="button" variant="outline" size="sm" onClick={() => doImport("skip")} disabled={loading}>
-                {en ? "Skip matching rows" : "تخطي الصفوف المطابقة"}
-              </Button>
-              <Button type="button" variant="outline" size="sm" onClick={() => doImport("create")} disabled={loading}>
-                {en ? "Add matching rows as new" : "إضافة الصفوف المطابقة كطلاب جدد"}
-              </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setConflicts(null)} disabled={loading}>
+              <Button type="button" variant="ghost" size="sm" onClick={() => { setConflicts(null); setResolutions({}); }} disabled={loading}>
                 {en ? "Cancel" : "إلغاء"}
               </Button>
             </div>

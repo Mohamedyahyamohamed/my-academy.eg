@@ -19,6 +19,7 @@ export interface ImportRow {
 }
 
 export type ImportDuplicateMode = "ask" | "update" | "skip" | "create";
+export type ImportDuplicateResolution = { mode: "update" | "skip" | "create"; studentId?: string };
 
 export interface ImportConflict {
   rowNumber: number;
@@ -50,7 +51,10 @@ function chunks<T>(items: T[], size: number): T[][] {
 export async function importStudentsAction(
   rows: ImportRow[],
   requestedAcademyId?: string,
-  options: { duplicateMode?: ImportDuplicateMode } = {},
+  options: {
+    duplicateMode?: ImportDuplicateMode;
+    resolutions?: Record<string, ImportDuplicateResolution>;
+  } = {},
 ): Promise<ImportResult> {
   const duplicateMode = options.duplicateMode ?? "ask";
   const user = await requireScopedRole("ADMIN", "TEACHER");
@@ -169,25 +173,40 @@ export async function importStudentsAction(
 
     const candidates = visibleExistingStudents
       .filter((student: any) => studentIdentityMatches(row, student)) as StudentDuplicateCandidate[];
-    if (candidates.length > 0 && duplicateMode === "ask") {
+    const selectedResolution = options.resolutions?.[String(rowNumber)]
+      ?? (duplicateMode !== "ask" ? { mode: duplicateMode as "update" | "skip" | "create" } : undefined);
+    if (candidates.length > 0 && !selectedResolution) {
       conflicts.push({ rowNumber, row, candidates });
       continue;
     }
-    if (candidates.length > 0 && duplicateMode === "skip") {
+    if (candidates.length > 0 && selectedResolution?.mode === "skip") {
       skippedDup++;
       continue;
     }
-    if (candidates.length > 1 && duplicateMode === "update") {
-      errors.push(`صف ${rowNumber}: يوجد أكثر من طالب مطابق، لذلك لم يتم تحديث أي سجل.`);
+    if (candidates.length > 0 && selectedResolution?.mode === "update") {
+      const matched = selectedResolution.studentId
+        ? candidates.find((candidate) => candidate.id === selectedResolution.studentId)
+        : candidates.length === 1 ? candidates[0] : undefined;
+      if (!matched) {
+        errors.push(`صف ${rowNumber}: اختر الطالب المطابق الذي تريد تحديثه.`);
+        continue;
+      }
+      accepted.push({
+        row,
+        rowNumber,
+        mode: "update",
+        existingId: matched.id,
+        parentKey: row.parent_name?.trim()
+          ? parentKeyOf(row.parent_name, row.parent_phone).key
+          : undefined,
+      });
       continue;
     }
 
-    const matched = candidates[0];
     accepted.push({
       row,
       rowNumber,
-      mode: matched && duplicateMode === "update" ? "update" : "create",
-      existingId: matched?.id,
+      mode: "create",
       parentKey: row.parent_name?.trim()
         ? parentKeyOf(row.parent_name, row.parent_phone).key
         : undefined,

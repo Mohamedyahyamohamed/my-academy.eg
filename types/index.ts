@@ -475,6 +475,7 @@ export interface StudentFilters {
   search?: string;
   status?: StudentStatus | "ALL";
   groupId?: UUID | "ALL";
+  grade?: string | "ALL";
   course?: UUID | "ALL";
   page?: number;
   pageSize?: number;

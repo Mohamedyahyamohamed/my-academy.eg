@@ -143,6 +143,7 @@ function listStudentsFromCache(
     search = "",
     status = "ALL",
     groupId = "ALL",
+    grade = "ALL",
     page = 1,
     pageSize = 10,
     sortBy = "name",
@@ -169,6 +170,7 @@ function listStudentsFromCache(
   }
 
   if (status !== "ALL") items = items.filter((s) => s.status === status);
+  if (grade !== "ALL") items = items.filter((s) => (s.grade ?? "").trim() === grade);
 
   if (groupId !== "ALL") {
     const ids = collections()
@@ -222,6 +224,39 @@ function getStudentFromCache(id: string): Student | null {
  * List students — RLS-enforced via the user's Supabase session.
  * RLS automatically filters by academy_id. No app-layer filter needed.
  */
+export async function listStudentGrades(academyId?: string): Promise<string[]> {
+  const effectiveAcademyId = academyId ?? currentAcademyId();
+  if (!effectiveAcademyId) return [];
+
+  if (!isSupabaseConfigured()) {
+    const scope = teacherStudentScope();
+    return [...new Set(
+      byAcademy(collections().students, effectiveAcademyId)
+        .filter((student) => !scope || scope.has(student.id))
+        .map((student) => student.grade?.trim() ?? "")
+        .filter(Boolean),
+    )].sort((a, b) => a.localeCompare(b, "ar"));
+  }
+
+  const { createServerSupabaseClient } = await import("@/lib/supabase/server");
+  const client = await createServerSupabaseClient();
+  const scopedStudentIds = await liveTeacherStudentScope(client, effectiveAcademyId);
+  if (scopedStudentIds && scopedStudentIds.size === 0) return [];
+
+  let query = client
+    .from("students")
+    .select("id,grade")
+    .eq("academy_id", effectiveAcademyId)
+    .not("grade", "is", null)
+    .limit(5000);
+  if (scopedStudentIds) query = query.in("id", [...scopedStudentIds]);
+
+  const { data, error } = await query;
+  if (error) return [];
+  return [...new Set((data ?? []).map((row: any) => String(row.grade ?? "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "ar"));
+}
+
 export async function listStudents(
   filters: StudentFilters = {},
   academyId?: string,
@@ -237,6 +272,7 @@ export async function listStudents(
     search = "",
     status = "ALL",
     groupId = "ALL",
+    grade = "ALL",
     page = 1,
     pageSize = 10,
     sortBy = "name",
@@ -258,6 +294,7 @@ export async function listStudents(
   if (scopedStudentIds) query = query.in("id", [...scopedStudentIds]);
 
   if (status !== "ALL") query = query.eq("status", status);
+  if (grade !== "ALL") query = query.eq("grade", grade);
 
   if (search.trim()) {
     const s = search.trim();

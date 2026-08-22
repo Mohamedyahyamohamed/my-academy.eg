@@ -46,6 +46,7 @@ export default async function StudentsPage(
     search: sp("search"),
     status: (sp("status") as StudentFilters["status"]) ?? "ALL",
     groupId: sp("group") ?? "ALL",
+    grade: sp("grade") ?? "ALL",
     page: sp("page") ? Number(sp("page")) : 1,
     pageSize: 8,
     sortBy: "name",
@@ -53,6 +54,7 @@ export default async function StudentsPage(
   };
 
   const result = await StudentsService.listStudents(filters, user.academy_id);
+  const grades = await StudentsService.listStudentGrades(user.academy_id);
   const groups = await GroupsService.listGroups(
     "",
     user.academy_id,
@@ -64,6 +66,10 @@ export default async function StudentsPage(
   const groupOptions = [
     { value: "ALL", label: en ? "All groups" : "كل المجموعات" },
     ...groups.map((g) => ({ value: g.id, label: g.name })),
+  ];
+  const gradeOptions = [
+    { value: "ALL", label: en ? "All grades" : "كل الصفوف" },
+    ...grades.map((grade) => ({ value: grade, label: grade })),
   ];
 
   return (
@@ -95,6 +101,7 @@ export default async function StudentsPage(
             { value: "ARCHIVED", label: en ? "Archived" : "مؤرشف" },
           ]} />
           <ToolbarSelect paramKey="group" label={en ? "Filter by group" : "تصفية بمجموعة"} options={groupOptions} />
+          <ToolbarSelect paramKey="grade" label={en ? "Filter by grade" : "تصفية بالصف الدراسي"} options={gradeOptions} />
         </ToolbarRoot>
       </div>
 

@@ -106,6 +106,30 @@ export async function scanCheckinAction(lessonId: string | null | undefined, stu
   }
 }
 
+export async function updateAttendanceStatusAction(
+  groupId: string,
+  lessonId: string,
+  studentId: string,
+  status: AttendanceStatus,
+) {
+  const user = await requireAttendanceTeacher();
+  const result = await AttendanceService.updateAttendanceStatus(groupId, lessonId, studentId, status);
+  if (result.ok) {
+    void audit({
+      action: "attendance.manual_override",
+      entity_type: "attendance",
+      entity_id: result.attendanceId,
+      old_data: { status: result.previousStatus },
+      new_data: { status: result.status },
+      metadata: { source: "manual_override", lesson_id: lessonId, student_id: studentId },
+    }, user);
+    revalidatePath(`/lessons/${lessonId}`);
+    revalidatePath(`/attendance?group=${groupId}&lesson=${lessonId}`);
+    revalidatePath(`/students/${studentId}`);
+  }
+  return result;
+}
+
 export type AttendanceSaveResult =
   | { ok: true; saved: number }
   | { ok: false; error: string };

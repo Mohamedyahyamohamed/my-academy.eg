@@ -8,7 +8,7 @@ import type {
   Student,
 } from "@/types";
 import { collections } from "./data/store";
-import { persistDelete, persistInsert } from "./data/store";
+import { persistDelete, persistInsert, persistUpdate } from "./data/store";
 import { studentsInGroup, fullName, teacherGroupScope } from "./_shared";
 import { percentage } from "@/lib/utils";
 import { currentAcademyId, getCurrentUser } from "./session";
@@ -115,6 +115,80 @@ export async function saveAttendance(
     collections().attendance.push({ id: `att-${lessonId}-${r.student_id}`, ...r });
   }
   if (rows.length) await persistInsert("attendance", rows);
+}
+
+export type AttendanceStatusUpdateResult =
+  | { ok: true; attendanceId: string; previousStatus: AttendanceStatus | null; status: AttendanceStatus }
+  | { ok: false; code: string; field: string; message: string; details?: string };
+
+/** Update one student's attendance without changing other students or lessons. */
+export async function updateAttendanceStatus(
+  groupId: string,
+  lessonId: string,
+  studentId: string,
+  status: AttendanceStatus,
+): Promise<AttendanceStatusUpdateResult> {
+  try {
+    if (!["PRESENT", "ABSENT", "LATE"].includes(status)) {
+      return {
+        ok: false,
+        code: "INVALID_STATUS",
+        field: "status",
+        message: "حالة الحضور غير صحيحة.",
+        details: "اختر حاضر أو متأخر أو غائب.",
+      };
+    }
+    const { group } = assertAttendanceManager(lessonId);
+    if (group.id !== groupId) {
+      return {
+        ok: false,
+        code: "GROUP_MISMATCH",
+        field: "groupId",
+        message: "المجموعة المحددة لا تطابق مجموعة الحصة.",
+        details: "افتح الحضور من نفس الحصة واختر طالبًا من قائمتها.",
+      };
+    }
+    const { student } = assertStudentEnrolled(lessonId, studentId);
+    const existing = collections().attendance.find(
+      (record) => record.lesson_id === lessonId && record.student_id === student.id,
+    );
+    const previousStatus = existing?.status ?? null;
+    const now = new Date().toISOString();
+    const attendanceId = existing?.id ?? crypto.randomUUID();
+    const row = {
+      id: attendanceId,
+      lesson_id: lessonId,
+      student_id: student.id,
+      status,
+      note: existing?.note ?? null,
+      recorded_at: now,
+    };
+
+    if (existing) {
+      const { id: _id, ...patch } = row;
+      await persistUpdate("attendance", existing.id, patch);
+    } else await persistInsert("attendance", row);
+
+    if (existing) Object.assign(existing, row);
+    else collections().attendance.push(row);
+    return { ok: true, attendanceId, previousStatus, status };
+  } catch (error) {
+    const raw = error instanceof Error ? error.message : "تعذر تعديل الحضور.";
+    const message = raw.includes("not enrolled")
+      ? "الطالب غير مسجل في مجموعة هذه الحصة."
+      : raw.includes("assigned group")
+        ? "لا تملك صلاحية تعديل حضور هذه المجموعة."
+        : raw.includes("outside") || raw.includes("academy")
+          ? "الحصة أو الطالب خارج نطاق الأكاديمية الحالية."
+          : "تعذر حفظ تعديل الحضور في قاعدة البيانات.";
+    return {
+      ok: false,
+      code: "ATTENDANCE_UPDATE_FAILED",
+      field: raw.includes("not enrolled") ? "studentId" : "attendance",
+      message,
+      details: raw,
+    };
+  }
 }
 
 /** Export attendance for a lesson as a { studentId: status } map. */

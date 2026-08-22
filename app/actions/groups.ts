@@ -55,6 +55,28 @@ export async function addStudentToGroupAction(groupId: string, studentId: string
   return res;
 }
 
+export async function transferStudentGroupAction(studentId: string, fromGroupId: string, toGroupId: string) {
+  const user = await requireScopedRole("ADMIN", "TEACHER");
+  if (await isLimitedAssistant(user)) {
+    return { ok: false as const, code: "ASSISTANT_NOT_ALLOWED", field: "transfer", message: "الحساب المساعد لا يملك صلاحية نقل الطلاب بين المجموعات." };
+  }
+  const result = await GroupsService.transferStudentGroup(studentId, fromGroupId, toGroupId);
+  if (result.ok) {
+    void audit({
+      action: "group.transfer_student",
+      entity_type: "student",
+      entity_id: studentId,
+      metadata: { from_group_id: fromGroupId, to_group_id: toGroupId },
+    }, user);
+    revalidatePath(`/students/${studentId}`);
+    revalidatePath(`/groups/${fromGroupId}`);
+    revalidatePath(`/groups/${toGroupId}`);
+    revalidatePath("/students");
+    revalidatePath("/groups");
+  }
+  return result;
+}
+
 export async function removeStudentFromGroupAction(groupId: string, studentId: string) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
   if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage group membership.");

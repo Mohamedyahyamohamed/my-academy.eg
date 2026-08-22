@@ -12,7 +12,6 @@ import {
   Mail,
   School,
   User,
-  ArrowLeft,
   FileText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -27,6 +26,7 @@ import { StudentNotes } from "@/components/students/student-notes";
 import { ParentConsentLink } from "@/components/students/parent-consent-link";
 import { EditStudentDialog } from "@/components/students/student-dialogs";
 import { StudentQrCard } from "@/components/attendance/student-qr-card";
+import { StudentGroupTransfer } from "@/components/students/student-group-transfer";
 import { CreatePaymentDialog, RecordPaymentDialog } from "@/components/payments/payment-dialogs";
 import { TrendArea, LineTrend } from "@/components/charts";
 import {
@@ -122,11 +122,13 @@ export default async function StudentProfilePage(
           { label: `${detail.first_name} ${detail.last_name}` },
         ]}
       >
-        <Button asChild variant="outline">
-          <Link href="/students">
-            <ArrowLeft className="me-2 h-4 w-4" /> {en ? "Back" : "رجوع"}
-          </Link>
-        </Button>
+        {!isPlatformOwner && (
+          <StudentGroupTransfer
+            studentId={detail.id}
+            currentGroups={studentGroups.map((group) => ({ id: group.id, name: group.name }))}
+            targetGroups={groups.filter((group) => !studentGroups.some((current) => current.id === group.id)).map((group) => ({ id: group.id, name: group.name }))}
+          />
+        )}
         <StudentQrCard
           studentId={detail.id}
           name={`${detail.first_name} ${detail.last_name}`}

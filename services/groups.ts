@@ -284,6 +284,87 @@ export async function addStudent(
   return { ok: true };
 }
 
+export type StudentGroupTransferResult =
+  | { ok: true; fromGroupId: string; toGroupId: string }
+  | { ok: false; code: string; field: string; message: string; details?: string };
+
+/** Replace one student-group membership without creating a second student record. */
+export async function transferStudentGroup(
+  studentId: string,
+  fromGroupId: string,
+  toGroupId: string,
+): Promise<StudentGroupTransferResult> {
+  const academyId = currentAcademyId();
+  if (!academyId) {
+    return { ok: false, code: "ACADEMY_CONTEXT_MISSING", field: "academy", message: "لا توجد أكاديمية حالية مرتبطة بالجلسة." };
+  }
+  if (fromGroupId === toGroupId) {
+    return { ok: false, code: "SAME_GROUP", field: "toGroupId", message: "المجموعة الجديدة هي نفس المجموعة الحالية.", details: "اختر مجموعة مختلفة لنقل الطالب." };
+  }
+
+  const student = collections().students.find((item) => item.id === studentId && item.academy_id === academyId);
+  if (!student) {
+    return { ok: false, code: "STUDENT_NOT_FOUND", field: "studentId", message: "الطالب غير موجود داخل الأكاديمية الحالية.", details: "لا يمكن نقل طالب من أكاديمية أخرى." };
+  }
+  const fromGroup = collections().groups.find((item) => item.id === fromGroupId && item.academy_id === academyId);
+  if (!fromGroup) {
+    return { ok: false, code: "SOURCE_GROUP_NOT_FOUND", field: "fromGroupId", message: "المجموعة الحالية غير موجودة داخل الأكاديمية.", details: "حدّث الصفحة واختر المجموعة الحالية من جديد." };
+  }
+  const toGroup = collections().groups.find((item) => item.id === toGroupId && item.academy_id === academyId);
+  if (!toGroup) {
+    return { ok: false, code: "TARGET_GROUP_NOT_FOUND", field: "toGroupId", message: "المجموعة الجديدة غير موجودة داخل الأكاديمية.", details: "اختر مجموعة متاحة من القائمة فقط." };
+  }
+
+  const scope = teacherGroupScope();
+  if (scope && (!scope.has(fromGroup.id) || !scope.has(toGroup.id))) {
+    return { ok: false, code: "GROUP_NOT_ASSIGNED", field: "toGroupId", message: "لا تملك صلاحية النقل إلى إحدى المجموعتين المحددتين.", details: "يجب أن تكون المجموعتان ضمن مجموعاتك المسموح بها." };
+  }
+
+  const currentMembership = collections().groupStudents.find(
+    (membership) => membership.group_id === fromGroup.id && membership.student_id === student.id,
+  );
+  if (!currentMembership) {
+    return { ok: false, code: "SOURCE_MEMBERSHIP_NOT_FOUND", field: "fromGroupId", message: "الطالب غير مسجل في المجموعة الحالية.", details: "راجع عضوية الطالب ثم حاول النقل مرة أخرى." };
+  }
+  const targetMembership = collections().groupStudents.some(
+    (membership) => membership.group_id === toGroup.id && membership.student_id === student.id,
+  );
+  if (targetMembership) {
+    return { ok: false, code: "TARGET_MEMBERSHIP_EXISTS", field: "toGroupId", message: "الطالب مسجل بالفعل في المجموعة الجديدة.", details: "لم يتم إنشاء عضوية مكررة أو حذف المجموعة الحالية." };
+  }
+
+  const nextMembership = { group_id: toGroup.id, student_id: student.id, joined_at: new Date().toISOString() };
+  try {
+    // Add first, then remove the old membership. If removal fails, delete the
+    // new row so a failed transfer cannot leave two memberships behind.
+    await persistInsert("group_students", nextMembership);
+    try {
+      await persistDelete("group_students", { group_id: fromGroup.id, student_id: student.id });
+    } catch (removeError) {
+      try {
+        await persistDelete("group_students", { group_id: toGroup.id, student_id: student.id });
+      } catch (rollbackError) {
+        console.error("student group transfer rollback failed", rollbackError);
+      }
+      throw new Error(`TRANSFER_REMOVE_FAILED: ${(removeError as Error)?.message ?? "تعذر حذف العضوية القديمة."}`);
+    }
+  } catch (error) {
+    const raw = error instanceof Error ? error.message : "تعذر نقل الطالب.";
+    const message = raw.includes("TRANSFER_REMOVE_FAILED")
+      ? "تم إيقاف النقل لأن حذف العضوية القديمة فشل، ولم يتم اعتماد المجموعة الجديدة."
+      : raw.includes("scope") || raw.includes("academy")
+        ? "تم رفض النقل لأن إحدى المجموعتين خارج نطاق الأكاديمية الحالية."
+        : "تعذر حفظ نقل الطالب في قاعدة البيانات.";
+    return { ok: false, code: "GROUP_TRANSFER_FAILED", field: raw.includes("REMOVE") ? "fromGroupId" : "transfer", message, details: raw };
+  }
+
+  collections().groupStudents = collections().groupStudents.filter(
+    (membership) => !(membership.group_id === fromGroup.id && membership.student_id === student.id),
+  );
+  collections().groupStudents.push(nextMembership as any);
+  return { ok: true, fromGroupId: fromGroup.id, toGroupId: toGroup.id };
+}
+
 export async function removeStudent(groupId: string, studentId: string): Promise<boolean> {
   if (!(await verifyGroupStudentScope(groupId, studentId))) return false;
   const before = collections().groupStudents.length;

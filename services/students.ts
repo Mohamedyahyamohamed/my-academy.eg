@@ -794,7 +794,7 @@ export async function updateStudent(
   void _g;
   // حوّل التاريخ الفاضي ("") لـ null عشان الداتابيز يقبلّه
   if (patch.date_of_birth === "") patch.date_of_birth = null;
-  await persistUpdate("students", id, { ...patch, updated_at: new Date().toISOString() });
+  await persistUpdate("students", id, { ...patch, updated_at: new Date().toISOString() }, academyId);
   if (input.groupIds?.length) {
     collections().groupStudents = collections().groupStudents.filter(
       (gs) => gs.student_id !== id,

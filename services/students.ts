@@ -39,8 +39,8 @@ function attachRelations(s: Student): Student {
   };
 }
 
-async function liveTeacherStudentScope(client: any, academyId: string): Promise<Set<string> | null> {
-  const user = getCurrentUser();
+async function liveTeacherStudentScope(client: any, academyId: string, scopedUser = getCurrentUser()): Promise<Set<string> | null> {
+  const user = scopedUser;
   if (!user || hasAcademyWideScope(user.role)) return null;
 
   const { data: teacher, error: teacherLookupError } = await client
@@ -141,7 +141,7 @@ async function resolveStudentMutationScope(studentId: string, authenticatedAcade
         .maybeSingle();
       if (error) throw new Error(`Could not validate student update target: ${error.message}`);
       if (!liveStudent) throw new Error("Student is outside the authenticated academy.");
-      const liveScope = await liveTeacherStudentScope(client, academyId);
+      const liveScope = await liveTeacherStudentScope(client, academyId, user);
       if (liveScope && !liveScope.has(studentId)) {
         throw new Error("Teachers can only manage students in assigned groups.");
       }

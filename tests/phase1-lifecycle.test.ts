@@ -47,23 +47,27 @@ describe("Phase 1 lifecycle rules", () => {
     expect(db.data.students.find((row) => row.id === student.id)).toMatchObject({ status: "ARCHIVED", is_active: false });
   });
 
-  it("hard-deletes an empty group and archives a group with lessons", async () => {
+  it("force-deletes a group with lessons and attendance while preserving students", async () => {
     const source = db.data.groups[0]!;
-    const emptyGroup = { ...source, id: "empty-group", name: "Empty group", is_active: true };
-    db.data.groups.push(emptyGroup);
+    const group = { ...source, id: "cascade-group", name: "Cascade group", is_active: true };
+    const student = { ...db.data.students[0]!, id: "cascade-student", first_name: "Cascade", last_name: "Student" };
+    const lesson = { ...db.data.lessons[0]!, id: "cascade-lesson", group_id: group.id, is_cancelled: false };
+    const attendance = { ...db.data.attendance[0]!, id: "cascade-attendance", lesson_id: lesson.id, student_id: student.id };
 
-    const emptyResult = await deleteGroup(emptyGroup.id, ACADEMY_ID);
-    expect(emptyResult.mode).toBe("hard_deleted");
-    expect(db.data.groups.some((row) => row.id === emptyGroup.id)).toBe(false);
-
-    const historicalGroup = { ...source, id: "historical-group", name: "Historical group", is_active: true };
-    db.data.groups.push(historicalGroup);
-    const lesson = { ...db.data.lessons[0]!, id: "historical-lesson", group_id: historicalGroup.id, is_cancelled: false };
+    db.data.groups.push(group);
+    db.data.students.push(student);
     db.data.lessons.push(lesson);
+    db.data.attendance.push(attendance);
+    db.data.groupStudents.push({ group_id: group.id, student_id: student.id, joined_at: new Date().toISOString() });
 
-    const historicalResult = await deleteGroup(historicalGroup.id, ACADEMY_ID);
-    expect(historicalResult.mode).toBe("archived");
-    expect(db.data.groups.find((row) => row.id === historicalGroup.id)).toMatchObject({ status: "INACTIVE", is_active: false });
+    const result = await deleteGroup(group.id, ACADEMY_ID);
+
+    expect(result.mode).toBe("hard_deleted");
+    expect(db.data.groups.some((row) => row.id === group.id)).toBe(false);
+    expect(db.data.students.some((row) => row.id === student.id)).toBe(true);
+    expect(db.data.groupStudents.some((row) => row.group_id === group.id)).toBe(false);
+    expect(db.data.lessons.some((row) => row.id === lesson.id)).toBe(false);
+    expect(db.data.attendance.some((row) => row.id === attendance.id)).toBe(false);
   });
 
   it("stores a manual attendance note and rejects cancelled lessons", async () => {

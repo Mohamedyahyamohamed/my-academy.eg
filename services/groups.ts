@@ -2,7 +2,7 @@
  * Groups service.
  */
 import type { Group, PaginatedResult } from "@/types";
-import { collections } from "./data/store";
+import { collections, invalidateStore } from "./data/store";
 import { currentAcademyId } from "./session";
 import { persistInsert, persistUpdate, persistDelete } from "./data/store";
 import {
@@ -233,7 +233,14 @@ export type GroupDeleteResult = {
   relationCount: number;
 };
 
-/** Hard-delete an empty group; retain any group with historical relations. */
+/**
+ * Permanently delete a group and every group-owned child row.
+ *
+ * Production uses one SECURITY DEFINER PostgreSQL function so all deletes run
+ * in one transaction. The service still validates the current academy and the
+ * teacher's assigned-group scope before calling it. Students are never deleted;
+ * only group_students membership rows are removed.
+ */
 export async function deleteGroup(
   id: string,
   authenticatedAcademyId?: string,
@@ -245,37 +252,77 @@ export async function deleteGroup(
   const scope = teacherGroupScope();
   if (scope && !scope.has(id)) throw new Error("Teachers can only manage their assigned groups.");
 
-  const [memberships, lessons, payments, exams, homework, assistants, contentCourses] = await Promise.all([
+  const [memberships, lessons, attendance, payments, transactions, exams, grades, homework, submissions, assistants, contentCourses, contentLessons, contentFiles, contentProgress] = await Promise.all([
     fetchTableRLS<any>("group_students", academyId),
     fetchTableRLS<any>("lessons", academyId),
+    fetchTableRLS<any>("attendance", academyId),
     fetchTableRLS<any>("payments", academyId),
+    fetchTableRLS<any>("payment_transactions", academyId),
     fetchTableRLS<any>("exams", academyId),
+    fetchTableRLS<any>("grades", academyId),
     fetchTableRLS<any>("homework", academyId),
+    fetchTableRLS<any>("homework_submissions", academyId),
     fetchTableRLS<any>("group_assistants", academyId),
     fetchTableRLS<any>("content_courses", academyId),
+    fetchTableRLS<any>("content_lessons", academyId),
+    fetchTableRLS<any>("content_files", academyId),
+    fetchTableRLS<any>("content_progress", academyId),
   ]);
+
+  const lessonIds = new Set(lessons.filter((row) => row.group_id === id).map((row) => row.id));
+  const homeworkIds = new Set(homework.filter((row) => row.group_id === id).map((row) => row.id));
+  const examIds = new Set(exams.filter((row) => row.group_id === id).map((row) => row.id));
+  const paymentIds = new Set(payments.filter((row) => row.group_id === id).map((row) => row.id));
+  const contentCourseIds = new Set(contentCourses.filter((row) => row.group_id === id).map((row) => row.id));
+  const contentLessonIds = new Set(contentLessons.filter((row) => contentCourseIds.has(row.course_id)).map((row) => row.id));
   const relationCount = [
     memberships.filter((row) => row.group_id === id).length,
     lessons.filter((row) => row.group_id === id).length,
+    attendance.filter((row) => lessonIds.has(row.lesson_id)).length,
     payments.filter((row) => row.group_id === id).length,
+    transactions.filter((row) => paymentIds.has(row.payment_id)).length,
     exams.filter((row) => row.group_id === id).length,
+    grades.filter((row) => examIds.has(row.exam_id)).length,
     homework.filter((row) => row.group_id === id).length,
+    submissions.filter((row) => homeworkIds.has(row.homework_id)).length,
     assistants.filter((row) => row.group_id === id).length,
     contentCourses.filter((row) => row.group_id === id).length,
+    contentLessons.filter((row) => contentCourseIds.has(row.course_id)).length,
+    contentFiles.filter((row) => contentCourseIds.has(row.course_id) || contentLessonIds.has(row.lesson_id)).length,
+    contentProgress.filter((row) => contentLessonIds.has(row.lesson_id)).length,
   ].reduce((sum, count) => sum + count, 0);
 
-  const updatedAt = new Date().toISOString();
-  if (relationCount > 0) {
-    await persistUpdate("groups", id, { status: "INACTIVE", is_active: false, updated_at: updatedAt }, academyId);
-    Object.assign(group, { status: "INACTIVE", is_active: false, updated_at: updatedAt });
-    return { ok: true, mode: "archived", relationCount };
+  const client = isSupabaseConfigured() ? nodeSupabaseClient() : null;
+  if (client) {
+    const { error } = await client.rpc("delete_group_cascade", {
+      p_group_id: id,
+      p_academy_id: academyId,
+    });
+    if (error) throw new Error(`Could not cascade-delete group: ${error.message}`);
+  } else if (isSupabaseConfigured()) {
+    throw new Error("Database delete is not configured for groups.");
   }
 
-  await persistDelete("groups", { id }, academyId);
-  collections().groups = collections().groups.filter((item) => item.id !== id);
-  collections().groupStudents = collections().groupStudents.filter((row) => row.group_id !== id);
-  collections().groupAssistants = collections().groupAssistants.filter((row) => row.group_id !== id);
-  return { ok: true, mode: "hard_deleted", relationCount: 0 };
+  // Keep the request-local snapshot coherent after the database transaction.
+  const local = collections();
+  local.attendance = local.attendance.filter((row) => !lessonIds.has(row.lesson_id));
+  local.transactions = local.transactions.filter((row) => !paymentIds.has(row.payment_id));
+  local.grades = local.grades.filter((row) => !examIds.has(row.exam_id));
+  local.submissions = local.submissions.filter((row) => !homeworkIds.has(row.homework_id));
+  local.contentProgress = local.contentProgress.filter((row) => !contentLessonIds.has(row.lesson_id));
+  local.contentFiles = local.contentFiles.filter((row) => !contentCourseIds.has(row.course_id) && !contentLessonIds.has(row.lesson_id));
+  local.contentLessons = local.contentLessons.filter((row) => !contentCourseIds.has(row.course_id));
+  local.contentCourses = local.contentCourses.filter((row) => !contentCourseIds.has(row.id));
+  local.homework = local.homework.filter((row) => !homeworkIds.has(row.id));
+  local.exams = local.exams.filter((row) => !examIds.has(row.id));
+  local.payments = local.payments.filter((row) => !paymentIds.has(row.id));
+  local.groupAssistants = local.groupAssistants.filter((row) => row.group_id !== id);
+  local.groupStudents = local.groupStudents.filter((row) => row.group_id !== id);
+  local.lessons = local.lessons.filter((row) => !lessonIds.has(row.id));
+  local.groups = local.groups.filter((row) => row.id !== id);
+  invalidateStore(academyId);
+
+  return { ok: true, mode: "hard_deleted", relationCount };
 }
 
 async function verifyGroupStudentScope(groupId: string, studentId: string): Promise<boolean> {

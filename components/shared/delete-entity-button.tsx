@@ -43,9 +43,13 @@ export function DeleteEntityButton({
 
   const label = entity === "student" ? (en ? "Delete student" : "حذف الطالب") : (en ? "Delete group" : "حذف المجموعة");
   const title = entity === "student" ? (en ? "Delete this student?" : "حذف الطالب؟") : (en ? "Delete this group?" : "حذف المجموعة؟");
-  const description = en
-    ? `Delete ${name}. If related attendance, grades, payments, homework, notes, or memberships exist, the record will be archived instead so history is preserved.`
-    : `سيتم حذف ${name}. إذا كانت هناك سجلات حضور أو درجات أو مدفوعات أو واجبات أو ملاحظات أو عضويات مرتبطة، ستتم أرشفته بدلًا من حذفه للحفاظ على السجل التاريخي.`;
+  const description = entity === "group"
+    ? (en
+      ? `This will permanently delete ${name}, all its generated lessons, and related attendance records. Students will not be deleted but will be unassigned from this group.`
+      : `سيتم حذف ${name} نهائيًا مع جميع الحصص المُنشأة وسجلات الحضور المرتبطة به. لن يتم حذف الطلاب، بل سيتم فك ارتباطهم بهذه المجموعة.`)
+    : (en
+      ? `Delete ${name}. If related attendance, grades, payments, homework, notes, or memberships exist, the record will be archived instead so history is preserved.`
+      : `سيتم حذف ${name}. إذا كانت هناك سجلات حضور أو درجات أو مدفوعات أو واجبات أو ملاحظات أو عضويات مرتبطة، ستتم أرشفته بدلًا من حذفه للحفاظ على السجل التاريخي.`);
 
   return (
     <ConfirmDialog

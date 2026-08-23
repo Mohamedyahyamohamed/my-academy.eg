@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireScopedRole, GroupsService, isLimitedAssistant } from "@/services";
 import type { GroupInput } from "@/services/groups";
 import { audit } from "@/services/audit";
-import { safeAction } from "@/lib/action-result";
+import { safeAction } from "@/lib/server-action-result";
 import { setRequestContext } from "@/services/request-context";
 
 export async function createGroupAction(input: GroupInput) {

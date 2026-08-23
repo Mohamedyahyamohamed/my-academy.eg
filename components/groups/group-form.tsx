@@ -20,6 +20,7 @@ import type { Course, Group, Teacher } from "@/types";
 import type { GroupInput } from "@/services/groups";
 import { useClientLang } from "@/lib/i18n-client";
 import { buildSchedule, formatClockTime, parseSchedule } from "@/lib/utils";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 
 const COLORS = ["#7c5cfc", "#0ea5e9", "#10b981", "#f59e0b", "#f43f5e", "#8b5cf6", "#14b8a6", "#ec4899"];
 const DAYS = [{ key: "sat", ar: "السبت", en: "Saturday" }, { key: "sun", ar: "الأحد", en: "Sunday" }, { key: "mon", ar: "الإثنين", en: "Monday" }, { key: "tue", ar: "الثلاثاء", en: "Tuesday" }, { key: "wed", ar: "الأربعاء", en: "Wednesday" }, { key: "thu", ar: "الخميس", en: "Thursday" }, { key: "fri", ar: "الجمعة", en: "Friday" }];
@@ -112,6 +113,9 @@ export function GroupForm({
       onDone?.();
       router.refresh();
     } catch (err) {
+      // redirect() is implemented as a special thrown error. Let Next.js handle
+      // it instead of showing NEXT_REDIRECT as a user-facing save failure.
+      if (isRedirectError(err)) throw err;
       const message = err instanceof Error ? err.message : "تعذر تحديد سبب الخطأ من الخادم.";
       const lower = message.toLowerCase();
       const field = lower.includes("course") || lower.includes("مادة") ? (en ? "Course" : "المادة")

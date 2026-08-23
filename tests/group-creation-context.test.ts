@@ -5,7 +5,8 @@ import { db, collections } from "@/services/data/store";
 import { createSeedData } from "@/services/data/seed";
 import { setRequestContext } from "@/services/request-context";
 import { createCourse } from "@/services/misc";
-import { createGroup } from "@/services/groups";
+import { createGroup, updateGroup } from "@/services/groups";
+import type { SessionUser } from "@/types";
 
 const ACADEMY = "academy-1";
 
@@ -36,6 +37,35 @@ describe("group creation request-context fallback", () => {
 
     expect(group.academy_id).toBe(ACADEMY);
     expect(collections().groups.some((item) => item.id === group.id && item.academy_id === ACADEMY)).toBe(true);
+  });
+
+  it("lets the authenticated teacher update their own group with an explicit academy scope", async () => {
+    const teacher: SessionUser = {
+      id: "prof-teacher",
+      academy_id: ACADEMY,
+      email: "teacher@myacademy.edu",
+      role: "TEACHER",
+      full_name: "Omar Khaled",
+      avatar_url: null,
+    };
+    setRequestContext(teacher);
+    const group = await updateGroup("group-1", { name: "Updated by owner" }, ACADEMY, teacher);
+    expect(group?.name).toBe("Updated by owner");
+    expect(group?.academy_id).toBe(ACADEMY);
+  });
+
+  it("rejects a teacher from updating a group owned by another teacher", async () => {
+    const teacher: SessionUser = {
+      id: "prof-teacher",
+      academy_id: ACADEMY,
+      email: "teacher@myacademy.edu",
+      role: "TEACHER",
+      full_name: "Omar Khaled",
+      avatar_url: null,
+    };
+    setRequestContext(teacher);
+    await expect(updateGroup("group-4", { name: "Should be rejected" }, ACADEMY, teacher))
+      .rejects.toThrow("only edit groups assigned to you");
   });
 
   it("guards table-specific parent_id access in the production tenant trigger migration", () => {

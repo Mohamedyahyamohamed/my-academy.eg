@@ -24,8 +24,10 @@ export async function createGroupAction(input: GroupInput) {
 }
 
 export async function updateGroupAction(id: string, input: Partial<GroupInput>) {
-  await requireScopedRole("ADMIN");
-  const g = await GroupsService.updateGroup(id, input);
+  const user = await requireScopedRole("ADMIN", "TEACHER");
+  if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot edit group settings.");
+  setRequestContext(user);
+  const g = await GroupsService.updateGroup(id, input, user.academy_id, user);
     void audit({ action: "group.update" });
   revalidatePath("/groups");
   revalidatePath(`/groups/${id}`);

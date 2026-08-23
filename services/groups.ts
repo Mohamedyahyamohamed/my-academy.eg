@@ -19,6 +19,7 @@ import {
 import { percentage } from "@/lib/utils";
 import { attendanceForStudent } from "./_shared";
 import { canCreate } from "./saas";
+import { hasAcademyWideScope } from "@/lib/permissions";
 import { isSupabaseConfigured } from "@/services/supabase/config";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { buildRecurringLessonRows } from "@/lib/lesson-generation";
@@ -287,26 +288,71 @@ export async function createGroupWithLessons(
   return { group: attach(group), lessonCount: lessonRows.length };
 }
 
-export async function updateGroup(id: string, input: Partial<GroupInput>): Promise<Group | null> {
-  const g = collections().groups.find((x) => x.id === id);
-  if (!g) return null;
-  const academyId = currentAcademyId();
-  if (!academyId || g.academy_id !== academyId) {
-    throw new Error("Group is outside the authenticated academy.");
+export async function updateGroup(
+  id: string,
+  input: Partial<GroupInput>,
+  authenticatedAcademyId?: string,
+  authenticatedUser?: SessionUser,
+): Promise<Group | null> {
+  const user = authenticatedUser ?? getCurrentUser();
+  const academyId = authenticatedAcademyId ?? user?.academy_id ?? currentAcademyId();
+  if (!academyId || (user && user.academy_id !== academyId)) {
+    throw new Error("Missing authenticated academy context.");
   }
   if (input.academy_id && input.academy_id !== academyId) {
     throw new Error("The requested academy is outside the authenticated scope.");
   }
+
+  let g = collections().groups.find((x) => x.id === id && x.academy_id === academyId);
+  const client = isSupabaseConfigured() ? nodeSupabaseClient() : null;
+  if (!g && client) {
+    const { data, error } = await client
+      .from("groups")
+      .select("*")
+      .eq("id", id)
+      .eq("academy_id", academyId)
+      .maybeSingle();
+    if (error) throw new Error(`Could not load the group for editing: ${error.message}`);
+    if (data) g = data as Group;
+  }
+  if (!g) return null;
+
+  if (user && !hasAcademyWideScope(user.role)) {
+    const teacher = await resolveTeacherForGroups(academyId, user.id, user.email);
+    if (!teacher || g.teacher_id !== teacher.id) {
+      throw new Error("You can only edit groups assigned to you.");
+    }
+  }
+
+  const nextCourseId = input.course_id ?? g.course_id;
+  const nextTeacherId = input.teacher_id ?? g.teacher_id;
+  let course = collections().courses.find((item) => item.id === nextCourseId && item.academy_id === academyId);
+  let teacher = collections().teachers.find((item) => item.id === nextTeacherId && item.academy_id === academyId);
+  if ((!course || !teacher) && client) {
+    const [{ data: liveCourse, error: courseError }, { data: liveTeacher, error: teacherError }] = await Promise.all([
+      client.from("courses").select("id, academy_id").eq("id", nextCourseId).eq("academy_id", academyId).maybeSingle(),
+      client.from("teachers").select("id, academy_id").eq("id", nextTeacherId).eq("academy_id", academyId).maybeSingle(),
+    ]);
+    if (courseError) throw new Error(`Could not validate the selected course: ${courseError.message}`);
+    if (teacherError) throw new Error(`Could not validate the selected teacher: ${teacherError.message}`);
+    course = course ?? (liveCourse as any);
+    teacher = teacher ?? (liveTeacher as any);
+  }
+  if (!course) throw new Error("The selected course was not found inside the authenticated academy.");
+  if (!teacher) throw new Error("The selected teacher was not found inside the authenticated academy.");
+
   const updatedAt = new Date().toISOString();
   const next = {
     ...input,
+    course_id: nextCourseId,
+    teacher_id: nextTeacherId,
     academy_id: academyId,
     monthly_fee:
       input.monthly_fee !== undefined ? Math.max(0, input.monthly_fee) : g.monthly_fee,
     updated_at: updatedAt,
   };
   const { academy_id: _academyId, ...patch } = next;
-  await persistUpdate("groups", id, patch);
+  await persistUpdate("groups", id, patch, academyId);
   Object.assign(g, next);
   return attach(g);
 }

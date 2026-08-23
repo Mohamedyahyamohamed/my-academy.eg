@@ -32,6 +32,19 @@ describe("force group cascade delete contract", () => {
     expect(migration).toContain("Group is outside the authenticated academy");
   });
 
+  it("allows legacy orphan cleanup only through a service-role RPC with zero students", () => {
+    const service = readFileSync(resolve(process.cwd(), "services/groups.ts"), "utf8");
+    const migration = readFileSync(resolve(process.cwd(), "supabase/migrations/20260823_orphan_group_cleanup.sql"), "utf8");
+    expect(service).toContain("delete_orphan_group_cascade");
+    expect(service).toContain("candidate?.academy_id == null");
+    expect(service).toContain("p_actor_id: user.id");
+    expect(migration).toContain("g.academy_id is null");
+    expect(migration).toContain("Orphan group has students and cannot be force-cleaned");
+    expect(migration).toContain("t.profile_id = p_actor_id");
+    expect(migration).toContain("grant execute on function public.delete_orphan_group_cascade");
+    expect(migration).not.toMatch(/delete\\s+from\\s+public\\.students/i);
+  });
+
   it("shows the permanent group-deletion warning while preserving students", () => {
     const button = readFileSync(resolve(process.cwd(), "components/shared/delete-entity-button.tsx"), "utf8");
     expect(button).toContain("This will permanently delete");

@@ -3,7 +3,7 @@
  */
 import type { Group, PaginatedResult } from "@/types";
 import { collections, invalidateStore } from "./data/store";
-import { currentAcademyId } from "./session";
+import { currentAcademyId, getCurrentUser } from "./session";
 import { persistInsert, persistUpdate, persistDelete } from "./data/store";
 import {
   getCourse,
@@ -241,16 +241,112 @@ export type GroupDeleteResult = {
  * teacher's assigned-group scope before calling it. Students are never deleted;
  * only group_students membership rows are removed.
  */
+function collectLocalGroupRelationIds(id: string) {
+  const local = collections();
+  const lessonIds = new Set(local.lessons.filter((row) => row.group_id === id).map((row) => row.id));
+  const homeworkIds = new Set(local.homework.filter((row) => row.group_id === id).map((row) => row.id));
+  const examIds = new Set(local.exams.filter((row) => row.group_id === id).map((row) => row.id));
+  const paymentIds = new Set(local.payments.filter((row) => row.group_id === id).map((row) => row.id));
+  const contentCourseIds = new Set(local.contentCourses.filter((row) => row.group_id === id).map((row) => row.id));
+  const contentLessonIds = new Set(local.contentLessons.filter((row) => contentCourseIds.has(row.course_id)).map((row) => row.id));
+  return { lessonIds, homeworkIds, examIds, paymentIds, contentCourseIds, contentLessonIds };
+}
+
+function removeLocalGroupCascade(id: string, relationIds: ReturnType<typeof collectLocalGroupRelationIds>) {
+  const local = collections();
+  local.attendance = local.attendance.filter((row) => !relationIds.lessonIds.has(row.lesson_id));
+  local.transactions = local.transactions.filter((row) => !relationIds.paymentIds.has(row.payment_id));
+  local.grades = local.grades.filter((row) => !relationIds.examIds.has(row.exam_id));
+  local.submissions = local.submissions.filter((row) => !relationIds.homeworkIds.has(row.homework_id));
+  local.contentProgress = local.contentProgress.filter((row) => !relationIds.contentLessonIds.has(row.lesson_id));
+  local.contentFiles = local.contentFiles.filter((row) => !relationIds.contentCourseIds.has(row.course_id) && (row.lesson_id == null || !relationIds.contentLessonIds.has(row.lesson_id)));
+  local.contentLessons = local.contentLessons.filter((row) => !relationIds.contentLessonIds.has(row.id));
+  local.contentCourses = local.contentCourses.filter((row) => !relationIds.contentCourseIds.has(row.id));
+  local.homework = local.homework.filter((row) => !relationIds.homeworkIds.has(row.id));
+  local.exams = local.exams.filter((row) => !relationIds.examIds.has(row.id));
+  local.payments = local.payments.filter((row) => !relationIds.paymentIds.has(row.id));
+  local.groupAssistants = local.groupAssistants.filter((row) => row.group_id !== id);
+  local.groupStudents = local.groupStudents.filter((row) => row.group_id !== id);
+  local.lessons = local.lessons.filter((row) => !relationIds.lessonIds.has(row.id));
+  local.groups = local.groups.filter((row) => row.id !== id);
+}
+
 export async function deleteGroup(
   id: string,
   authenticatedAcademyId?: string,
 ): Promise<GroupDeleteResult> {
   const academyId = authenticatedAcademyId ?? currentAcademyId();
-  if (!academyId) throw new Error("Missing authenticated academy context.");
-  const group = collections().groups.find((g) => g.id === id && g.academy_id === academyId);
-  if (!group) throw new Error("Group is outside the authenticated academy.");
+  const user = getCurrentUser();
+  if (!academyId || !user || user.academy_id !== academyId) {
+    throw new Error("Missing authenticated academy context.");
+  }
+
+  const client = isSupabaseConfigured() ? nodeSupabaseClient() : null;
+  let group = collections().groups.find((g) => g.id === id && g.academy_id === academyId);
+  const localOrphan = collections().groups.find((g: any) => g.id === id && g.academy_id == null) as Group | undefined;
+
+  // Legacy cleanup is deliberately narrower than ordinary deletion. We fetch
+  // the candidate by id with the server client, then let the service-role-only
+  // RPC verify: null academy_id, zero memberships, and actor/teacher academy.
+  if (!group && client) {
+    const { data: candidate, error: candidateError } = await client
+      .from("groups")
+      .select("id, academy_id, teacher_id")
+      .eq("id", id)
+      .maybeSingle();
+    if (candidateError) throw new Error(`Could not inspect group: ${candidateError.message}`);
+    if (candidate?.academy_id == null) {
+      const { data, error } = await client.rpc("delete_orphan_group_cascade", {
+        p_group_id: id,
+        p_academy_id: academyId,
+        p_actor_id: user.id,
+      });
+      if (error) throw new Error(`Could not clean up orphan group: ${error.message}`);
+      const result = Array.isArray(data) ? data[0] : data;
+      const relationIds = collectLocalGroupRelationIds(id);
+      removeLocalGroupCascade(id, relationIds);
+      invalidateStore(academyId);
+      return {
+        ok: true,
+        mode: "hard_deleted",
+        relationCount: Number(result?.deleted_attendance ?? 0) + Number(result?.deleted_lessons ?? 0),
+      };
+    }
+    if (candidate && candidate.academy_id !== academyId) {
+      throw new Error("Group is outside the authenticated academy.");
+    }
+    group = candidate as Group | undefined;
+  }
+
+  if (!group && localOrphan && !isSupabaseConfigured()) {
+    if (collections().groupStudents.some((row) => row.group_id === id)) {
+      throw new Error("The orphan group has students and cannot be force-cleaned.");
+    }
+    const owner = collections().teachers.find((teacher) =>
+      teacher.id === localOrphan.teacher_id
+      && teacher.academy_id === academyId
+      && (user.role === "ADMIN" || teacher.profile_id === user.id),
+    );
+    if (!owner) throw new Error("Group is outside the authenticated academy.");
+    const relationIds = collectLocalGroupRelationIds(id);
+    const relationCount = relationIds.lessonIds.size + relationIds.homeworkIds.size + relationIds.examIds.size + relationIds.paymentIds.size;
+    removeLocalGroupCascade(id, relationIds);
+    invalidateStore(academyId);
+    return { ok: true, mode: "hard_deleted", relationCount };
+  }
+
+  if (!group || group.academy_id !== academyId) {
+    throw new Error("Group is outside the authenticated academy.");
+  }
   const scope = teacherGroupScope();
-  if (scope && !scope.has(id)) throw new Error("Teachers can only manage their assigned groups.");
+  if (scope && !scope.has(id)) {
+    const owner = collections().teachers.find((teacher) =>
+      teacher.id === group?.teacher_id
+      && teacher.academy_id === academyId
+      && (user.role === "ADMIN" || teacher.profile_id === user.id),
+    );
+    if (!owner) throw new Error("Teachers can only manage their assigned groups.");
+  }
 
   const [memberships, lessons, attendance, payments, transactions, exams, grades, homework, submissions, assistants, contentCourses, contentLessons, contentFiles, contentProgress] = await Promise.all([
     fetchTableRLS<any>("group_students", academyId),
@@ -292,7 +388,6 @@ export async function deleteGroup(
     contentProgress.filter((row) => contentLessonIds.has(row.lesson_id)).length,
   ].reduce((sum, count) => sum + count, 0);
 
-  const client = isSupabaseConfigured() ? nodeSupabaseClient() : null;
   if (client) {
     const { error } = await client.rpc("delete_group_cascade", {
       p_group_id: id,
@@ -303,23 +398,7 @@ export async function deleteGroup(
     throw new Error("Database delete is not configured for groups.");
   }
 
-  // Keep the request-local snapshot coherent after the database transaction.
-  const local = collections();
-  local.attendance = local.attendance.filter((row) => !lessonIds.has(row.lesson_id));
-  local.transactions = local.transactions.filter((row) => !paymentIds.has(row.payment_id));
-  local.grades = local.grades.filter((row) => !examIds.has(row.exam_id));
-  local.submissions = local.submissions.filter((row) => !homeworkIds.has(row.homework_id));
-  local.contentProgress = local.contentProgress.filter((row) => !contentLessonIds.has(row.lesson_id));
-  local.contentFiles = local.contentFiles.filter((row) => !contentCourseIds.has(row.course_id) && !contentLessonIds.has(row.lesson_id));
-  local.contentLessons = local.contentLessons.filter((row) => !contentCourseIds.has(row.course_id));
-  local.contentCourses = local.contentCourses.filter((row) => !contentCourseIds.has(row.id));
-  local.homework = local.homework.filter((row) => !homeworkIds.has(row.id));
-  local.exams = local.exams.filter((row) => !examIds.has(row.id));
-  local.payments = local.payments.filter((row) => !paymentIds.has(row.id));
-  local.groupAssistants = local.groupAssistants.filter((row) => row.group_id !== id);
-  local.groupStudents = local.groupStudents.filter((row) => row.group_id !== id);
-  local.lessons = local.lessons.filter((row) => !lessonIds.has(row.id));
-  local.groups = local.groups.filter((row) => row.id !== id);
+  removeLocalGroupCascade(id, { lessonIds, homeworkIds, examIds, paymentIds, contentCourseIds, contentLessonIds });
   invalidateStore(academyId);
 
   return { ok: true, mode: "hard_deleted", relationCount };

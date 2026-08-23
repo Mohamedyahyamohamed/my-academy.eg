@@ -11,6 +11,7 @@ import {
   UserMinus,
   CalendarDays,
   Plus,
+  QrCode,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -91,6 +92,9 @@ export default async function GroupDetailPage(
       >
         <Button asChild variant="outline">
           <Link href="/groups"><ArrowLeft className="h-4 w-4" /> {en ? "Back" : "رجوع"}</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href={`/groups/${params.id}/qr-print`}><QrCode className="h-4 w-4" /> {en ? "Print QR cards" : "طباعة بطاقات QR"}</Link>
         </Button>
         <EditGroupDialog
           group={detail}

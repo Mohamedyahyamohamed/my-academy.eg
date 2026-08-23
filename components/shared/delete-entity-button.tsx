@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { deleteStudentAction } from "@/app/actions/students";
 import { deleteGroupAction } from "@/app/actions/groups";
 import { useClientLang } from "@/lib/i18n-client";
+import { isActionFailure } from "@/lib/action-result";
 
 type DeleteResult = { mode: "hard_deleted" | "archived"; relationCount: number };
 
@@ -27,11 +28,13 @@ export function DeleteEntityButton({
   const router = useRouter();
 
   const onConfirm = async () => {
-    const result = (entity === "student" ? await deleteStudentAction(id) : await deleteGroupAction(id)) as DeleteResult;
-    if (result.mode === "archived") {
+    const result = entity === "student" ? await deleteStudentAction(id) : await deleteGroupAction(id);
+    if (isActionFailure(result)) return result;
+    const deleteResult = result as DeleteResult;
+    if (deleteResult.mode === "archived") {
       toast.success(en
-        ? `${entity === "student" ? "Student" : "Group"} archived. ${result.relationCount} related record${result.relationCount === 1 ? "" : "s"} were retained.`
-        : `${entity === "student" ? "تمت أرشفة الطالب" : "تمت أرشفة المجموعة"} مع الاحتفاظ بـ ${result.relationCount} سجل مرتبط.`);
+        ? `${entity === "student" ? "Student" : "Group"} archived. ${deleteResult.relationCount} related record${deleteResult.relationCount === 1 ? "" : "s"} were retained.`
+        : `${entity === "student" ? "تمت أرشفة الطالب" : "تمت أرشفة المجموعة"} مع الاحتفاظ بـ ${deleteResult.relationCount} سجل مرتبط.`);
     } else {
       toast.success(en
         ? `${entity === "student" ? "Student" : "Group"} permanently deleted.`
@@ -39,6 +42,7 @@ export function DeleteEntityButton({
     }
     router.push(redirectTo);
     router.refresh();
+    return deleteResult;
   };
 
   const label = entity === "student" ? (en ? "Delete student" : "حذف الطالب") : (en ? "Delete group" : "حذف المجموعة");

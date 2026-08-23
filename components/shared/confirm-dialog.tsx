@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useClientLang } from "@/lib/i18n-client";
 import { toast } from "sonner";
+import { isActionFailure } from "@/lib/action-result";
 
 interface ConfirmDialogProps {
   trigger: React.ReactNode;
@@ -22,7 +23,7 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   destructive?: boolean;
-  onConfirm: () => Promise<void> | void;
+  onConfirm: () => Promise<unknown> | unknown;
   children?: React.ReactNode;
 }
 
@@ -44,7 +45,11 @@ export function ConfirmDialog({
   const handleConfirm = async () => {
     setLoading(true);
     try {
-      await onConfirm();
+      const result = await onConfirm();
+      if (isActionFailure(result)) {
+        toast.error(result.error);
+        return;
+      }
       setOpen(false);
     } catch (error) {
       console.error("confirmation action failed:", error);

@@ -3,6 +3,7 @@ export type ActionFailure = {
   error: string;
   code?: string;
   field?: string;
+  fieldErrors?: Record<string, string>;
 };
 
 export type ActionSuccess<T> = T;

@@ -26,6 +26,7 @@ import {
 } from "@/app/actions/students";
 import { STUDENT_DEFAULT_PASSWORD } from "@/lib/auth";
 import type { Group, Parent } from "@/types";
+import { isActionFailure } from "@/lib/action-result";
 import { useClientLang } from "@/lib/i18n-client";
 
 interface StudentFormProps {
@@ -54,6 +55,7 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
   const router = useRouter();
   const en = useClientLang() === "en";
   const [saving, setSaving] = React.useState(false);
+  const [serverFieldErrors, setServerFieldErrors] = React.useState<Record<string, string>>({});
   const [parents] = React.useState<Parent[]>(initialParents);
   const [parentMode, setParentMode] = React.useState<"existing" | "new">(
     student ? "existing" : "new",
@@ -116,7 +118,18 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
 
     const payload = { ...values, parent_id: parentId };
     if (student || duplicateChoice?.mode === "update") {
-      await updateStudentAction(student?.id ?? duplicateChoice?.studentId ?? "", payload);
+      const result = await updateStudentAction(student?.id ?? duplicateChoice?.studentId ?? "", payload);
+      if (isActionFailure(result)) {
+        setServerFieldErrors(result.fieldErrors ?? { form: result.error });
+        toast.error(result.error);
+        return;
+      }
+      if (!result) {
+        const message = en ? "Student was not found in the current academy." : "لم يتم العثور على الطالب داخل الأكاديمية الحالية.";
+        setServerFieldErrors({ form: message });
+        toast.error(message);
+        return;
+      }
       toast.success(en ? "Student details updated." : "تم تحديث بيانات الطالب.");
     } else {
       const result = await createStudentAction(payload, { allowDuplicate: duplicateChoice?.mode === "create" });
@@ -136,6 +149,7 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
   };
 
   const onSubmit = async (values: StudentValues) => {
+    setServerFieldErrors({});
     setSaving(true);
     try {
       if (!student) {
@@ -173,22 +187,22 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={en ? "First name" : "الاسم الأول"} error={errors.first_name?.message} required>
+        <Field label={en ? "First name" : "الاسم الأول"} error={errors.first_name?.message ?? serverFieldErrors.first_name} required>
           <Input {...register("first_name")} placeholder="Ahmed" />
         </Field>
-        <Field label={en ? "Last name" : "اسم العائلة"} error={errors.last_name?.message} required>
+        <Field label={en ? "Last name" : "اسم العائلة"} error={errors.last_name?.message ?? serverFieldErrors.last_name} required>
           <Input {...register("last_name")} placeholder="Ali" />
         </Field>
-        <Field label={en ? "Phone" : "الموبايل"} error={errors.phone?.message}>
+        <Field label={en ? "Phone" : "الموبايل"} error={errors.phone?.message ?? serverFieldErrors.phone}>
           <Input {...register("phone")} placeholder="+20 100 000 0000" />
         </Field>
-        <Field label={en ? "Email" : "البريد الإلكتروني"} error={errors.email?.message}>
+        <Field label={en ? "Email" : "البريد الإلكتروني"} error={errors.email?.message ?? serverFieldErrors.email}>
           <Input type="email" {...register("email")} placeholder="student@email.com" />
         </Field>
-        <Field label={en ? "Date of birth" : "تاريخ الميلاد"}>
+        <Field label={en ? "Date of birth" : "تاريخ الميلاد"} error={serverFieldErrors.date_of_birth}>
           <Input type="date" {...register("date_of_birth")} />
         </Field>
-        <Field label={en ? "Gender" : "النوع"}>
+        <Field label={en ? "Gender" : "النوع"} error={errors.gender?.message ?? serverFieldErrors.gender}>
           <Controller
             control={control}
             name="gender"
@@ -209,13 +223,13 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
             )}
           />
         </Field>
-        <Field label={en ? "Grade / level" : "الصف / المستوى"}>
+        <Field label={en ? "Grade / level" : "الصف / المستوى"} error={errors.grade?.message ?? serverFieldErrors.grade}>
           <Input {...register("grade")} placeholder={en ? "e.g. Grade 9" : "مثال: الصف الثالث الإعدادي"} />
         </Field>
-        <Field label={en ? "School" : "المدرسة"}>
+        <Field label={en ? "School" : "المدرسة"} error={errors.school?.message ?? serverFieldErrors.school}>
           <Input {...register("school")} placeholder={en ? "School name" : "اسم المدرسة"} />
         </Field>
-        <Field label={en ? "Parent or guardian" : "ولي الأمر أو الوصي"} required error={errors.parent_id?.message}>
+        <Field label={en ? "Parent or guardian" : "ولي الأمر أو الوصي"} required error={errors.parent_id?.message ?? serverFieldErrors.parent_id}>
           <div className="mb-2 flex gap-1 rounded-lg border border-border p-1">
             <button
               type="button"
@@ -289,7 +303,7 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
             </div>
           )}
         </Field>
-        <Field label={en ? "Status" : "الحالة"}>
+        <Field label={en ? "Status" : "الحالة"} error={serverFieldErrors.status}>
           <Controller
             control={control}
             name="status"
@@ -369,7 +383,7 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
         </div>
       )}
 
-      <Field label={en ? "Notes" : "ملاحظات"} error={errors.notes?.message}>
+      <Field label={en ? "Notes" : "ملاحظات"} error={errors.notes?.message ?? serverFieldErrors.notes}>
         <Textarea {...register("notes")} placeholder={en ? "Internal notes about the student…" : "ملاحظات داخلية عن الطالب…"} />
       </Field>
 
@@ -391,7 +405,9 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
           </p>
         </div>
       </label>
-      {errors.consent_given && <p className="text-xs text-destructive">{errors.consent_given.message}</p>}
+      {(errors.consent_given?.message ?? serverFieldErrors.consent_given) && <p className="text-xs text-destructive">{errors.consent_given?.message ?? serverFieldErrors.consent_given}</p>}
+
+      {serverFieldErrors.form && <p className="rounded-md bg-destructive/10 p-2 text-sm text-destructive" role="alert">{serverFieldErrors.form}</p>}
 
       <div className="flex justify-end gap-2 pt-2">
         {onDone && (

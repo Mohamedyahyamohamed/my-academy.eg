@@ -5,6 +5,8 @@ import { requireScopedRole, StudentsService, currentAcademyId, isLimitedAssistan
 import { DuplicateStudentError, findStudentDuplicates, type StudentInput } from "@/services/students";
 import { STUDENT_DEFAULT_PASSWORD } from "@/lib/auth";
 import { audit } from "@/services/audit";
+import { safeAction } from "@/lib/server-action-result";
+import { studentSchema } from "@/schemas/students";
 
 export async function findStudentDuplicatesAction(input: StudentInput) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
@@ -59,13 +61,28 @@ export async function createStudentAction(input: StudentInput, options: { allowD
 }
 
 export async function updateStudentAction(id: string, input: Partial<StudentInput>) {
-  try {
+  const parsed = studentSchema.partial().safeParse(input);
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const field = String(issue.path[0] ?? "form");
+      if (!fieldErrors[field]) fieldErrors[field] = localizeStudentValidationError(field, issue.message);
+    }
+    return {
+      ok: false as const,
+      error: "راجع الحقول المحددة قبل الحفظ.",
+      code: "VALIDATION_ERROR",
+      fieldErrors,
+    };
+  }
+
+  return safeAction(async () => {
     const user = await requireScopedRole("ADMIN", "TEACHER");
     if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage students.");
-    const student = await StudentsService.updateStudent(id, input, user.academy_id, user);
+    const student = await StudentsService.updateStudent(id, parsed.data, user.academy_id, user);
     if (student) {
       await import("@/services/audit").then((m) => m.audit(
-        { action: "student.update", entity_type: "student", entity_id: id, new_data: input },
+        { action: "student.update", entity_type: "student", entity_id: id, new_data: parsed.data },
         user,
       ));
     }
@@ -73,10 +90,21 @@ export async function updateStudentAction(id: string, input: Partial<StudentInpu
     revalidatePath(`/students/${id}`);
     revalidatePath("/dashboard");
     return student;
-  } catch (e) {
-    console.error("[updateStudentAction] FAILED:", (e as Error)?.message);
-    throw e;
-  }
+  }, "تعذّر حفظ بيانات الطالب. راجع البيانات وحاول مرة أخرى.", "STUDENT_UPDATE_FAILED");
+}
+
+function localizeStudentValidationError(field: string, message: string) {
+  const labels: Record<string, string> = {
+    first_name: "الاسم الأول مطلوب.",
+    last_name: "اسم العائلة مطلوب.",
+    phone: "رقم الهاتف غير صحيح.",
+    email: "البريد الإلكتروني غير صحيح.",
+    school: "اسم المدرسة أطول من المسموح.",
+    grade: "الصف الدراسي أطول من المسموح.",
+    notes: "الملاحظات أطول من المسموح.",
+    consent_given: "موافقة ولي الأمر مطلوبة.",
+  };
+  return labels[field] ?? message;
 }
 
 export async function archiveStudentAction(id: string) {

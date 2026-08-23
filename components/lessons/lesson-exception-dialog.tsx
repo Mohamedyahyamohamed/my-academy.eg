@@ -62,7 +62,7 @@ export function LessonExceptionDialog({ lesson }: { lesson: Lesson }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" disabled={lesson.is_cancelled === true}>
+        <Button variant="outline" disabled={lesson.status === "canceled" || lesson.is_cancelled === true}>
           <CalendarClock className="h-4 w-4" /> {en ? "Exception" : "استثناء الحصة"}
         </Button>
       </DialogTrigger>

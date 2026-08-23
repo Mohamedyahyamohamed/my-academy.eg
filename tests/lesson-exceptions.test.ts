@@ -18,10 +18,12 @@ describe("lesson exception contracts", () => {
     const service = readFileSync(resolve(process.cwd(), "services/lessons.ts"), "utf8");
     const dialog = readFileSync(resolve(process.cwd(), "components/lessons/lesson-exception-dialog.tsx"), "utf8");
     expect(action).toContain("updateLessonAction");
+    expect(action).toContain("setRequestContext(user)");
     expect(service).toContain("if (l.academy_id !== academyId)");
     expect(service).toContain("persistUpdate(\"lessons\", id, patch)");
     expect(dialog).toContain("updateLessonAction(lesson.id, { date, start_time: start, end_time: end })");
     expect(dialog).toContain("دون تغيير جدول المجموعة");
+    expect(dialog).toContain('lesson.status === "canceled" || lesson.is_cancelled === true');
   });
 
   it("stores attendance notes and excludes canceled lessons from aggregates", () => {

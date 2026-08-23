@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { requireAttendanceTeacher, requireScopedRole, AttendanceService, StudentsService } from "@/services";
 import type { AttendanceStatus } from "@/types";
 import { audit } from "@/services/audit";
-import { attendanceErrorCode } from "@/lib/attendance-errors";
 import { setRequestContext } from "@/services/request-context";
+import { attendanceErrorCode } from "@/lib/attendance-errors";
 import { fullName } from "@/lib/utils";
 
 export async function checkinAction(lessonId: string) {
@@ -114,6 +114,7 @@ export async function updateAttendanceStatusAction(
   note?: string | null,
 ) {
   const user = await requireAttendanceTeacher();
+  setRequestContext(user);
   const result = await AttendanceService.updateAttendanceStatus(groupId, lessonId, studentId, status, note);
   if (result.ok) {
     void audit({
@@ -143,6 +144,7 @@ export async function saveAttendanceAction(
   // Keep authentication/authorization redirects outside the error boundary. Next.js
   // implements redirects by throwing a control-flow error that must propagate.
   const user = await requireAttendanceTeacher();
+  setRequestContext(user);
 
   try {
     await AttendanceService.saveAttendance(lessonId, entries);

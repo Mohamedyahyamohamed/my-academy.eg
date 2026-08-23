@@ -20,6 +20,7 @@ import { attendanceForStudent } from "./_shared";
 import { canCreate } from "./saas";
 import { isSupabaseConfigured } from "@/services/supabase/config";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
+import { buildRecurringLessonRows } from "@/lib/lesson-generation";
 
 function studentCount(groupId: string) {
   return studentsInGroup(groupId).length;
@@ -198,9 +199,91 @@ export async function createGroup(input: GroupInput, academyIdOverride?: string)
     created_at: now,
     updated_at: now,
   };
-  collections().groups.push(g);
+  // Persist first. The local snapshot is updated only after the durable write
+  // succeeds, preventing a failed insert from leaving a ghost group in memory.
   await persistInsert("groups", g, academyId);
+  collections().groups.push(g);
   return attach(g);
+}
+
+export async function createGroupWithLessons(
+  input: GroupInput,
+  academyIdOverride: string | undefined,
+  actorId: string,
+  weeks = 12,
+): Promise<{ group: Group; lessonCount: number }> {
+  const academyId = academyIdOverride ?? currentAcademyId();
+  if (!academyId) throw new Error("An authenticated academy scope is required.");
+  if (input.academy_id && input.academy_id !== academyId) {
+    throw new Error("The requested academy is outside the authenticated scope.");
+  }
+
+  let course = collections().courses.find((item) => item.id === input.course_id && item.academy_id === academyId);
+  let teacher = collections().teachers.find((item) => item.id === input.teacher_id && item.academy_id === academyId);
+  const client = isSupabaseConfigured() ? nodeSupabaseClient() : null;
+  if ((!course || !teacher) && client) {
+    const [{ data: liveCourse, error: courseError }, { data: liveTeacher, error: teacherError }] = await Promise.all([
+      client.from("courses").select("id, academy_id, name, description, color, created_at, updated_at").eq("id", input.course_id).eq("academy_id", academyId).maybeSingle(),
+      client.from("teachers").select("id, academy_id, profile_id, email, first_name, last_name").eq("id", input.teacher_id).eq("academy_id", academyId).maybeSingle(),
+    ]);
+    if (courseError) throw new Error(`Could not validate the selected course: ${courseError.message}`);
+    if (teacherError) throw new Error(`Could not validate the selected teacher: ${teacherError.message}`);
+    if (!course && liveCourse) course = liveCourse as any;
+    if (!teacher && liveTeacher) teacher = liveTeacher as any;
+  }
+  if (!course) throw new Error("The selected course was not found inside the authenticated academy.");
+  if (!teacher) throw new Error("The selected teacher was not found inside the authenticated academy.");
+  const check = canCreate("groups", academyId);
+  if (!check.allowed) throw new Error(`Limit reached: ${check.current}/${check.limit} groups. Upgrade your plan.`);
+
+  const now = new Date().toISOString();
+  const group: Group = {
+    id: gid(),
+    academy_id: academyId,
+    name: input.name.trim(),
+    course_id: input.course_id,
+    teacher_id: input.teacher_id,
+    monthly_fee: Math.max(0, input.monthly_fee),
+    schedule: input.schedule,
+    room: input.room ?? null,
+    status: input.status ?? "ACTIVE",
+    is_active: true,
+    created_at: now,
+    updated_at: now,
+  };
+  const lessonRows = buildRecurringLessonRows(group, academyId, weeks);
+
+  if (client) {
+    const { error } = await client.rpc("create_group_with_lessons", {
+      p_group_id: group.id,
+      p_academy_id: academyId,
+      p_actor_id: actorId,
+      p_name: group.name,
+      p_course_id: group.course_id,
+      p_teacher_id: group.teacher_id,
+      p_monthly_fee: group.monthly_fee,
+      p_schedule: group.schedule,
+      p_room: group.room,
+      p_status: group.status,
+      p_lessons: lessonRows,
+    });
+    if (error) throw new Error(`Could not create group and lessons atomically: ${error.message}`);
+  } else if (isSupabaseConfigured()) {
+    throw new Error("Database create is not configured for groups.");
+  } else {
+    await persistInsert("groups", group, academyId);
+    try {
+      if (lessonRows.length) await persistInsert("lessons", lessonRows, academyId);
+    } catch (error) {
+      collections().groups = collections().groups.filter((row) => row.id !== group.id);
+      throw error;
+    }
+  }
+
+  collections().groups.push(group);
+  collections().lessons.push(...lessonRows);
+  invalidateStore(academyId);
+  return { group: attach(group), lessonCount: lessonRows.length };
 }
 
 export async function updateGroup(id: string, input: Partial<GroupInput>): Promise<Group | null> {

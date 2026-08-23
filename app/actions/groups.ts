@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireScopedRole, GroupsService, LessonsService, isLimitedAssistant } from "@/services";
+import { requireScopedRole, GroupsService, isLimitedAssistant } from "@/services";
 import type { GroupInput } from "@/services/groups";
 import { audit } from "@/services/audit";
 import { safeAction } from "@/lib/action-result";
@@ -9,20 +9,12 @@ import { safeAction } from "@/lib/action-result";
 export async function createGroupAction(input: GroupInput) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
   if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot create groups.");
-  const g = await GroupsService.createGroup({ ...input, academy_id: user.academy_id }, user.academy_id);
-  if (g) {
-    try {
-      await LessonsService.createRecurringLessonsForGroup(g, user.academy_id);
-    } catch (lessonError) {
-      // The group is already persisted; do not roll it back or report a false
-      // group-save failure when only recurring lesson generation failed.
-      console.error("Recurring lesson generation failed after group creation", {
-        groupId: g.id,
-        error: lessonError instanceof Error ? lessonError.message : lessonError,
-      });
-    }
-  }
-  void audit({ action: "group.create" });
+  const { group: g, lessonCount } = await GroupsService.createGroupWithLessons(
+    { ...input, academy_id: user.academy_id },
+    user.academy_id,
+    user.id,
+  );
+  void audit({ action: "group.create", metadata: { generated_lessons: lessonCount } });
   revalidatePath("/groups");
   revalidatePath("/lessons");
   revalidatePath("/calendar");

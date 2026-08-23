@@ -509,6 +509,30 @@ export interface StudentPortalAssessment {
   notes: string | null;
 }
 
+export interface StudentPortalMaterial {
+  id: string;
+  name: string;
+  courseTitle: string;
+  downloadUrl: string;
+  size: number;
+  mimeType: string;
+  createdAt: string;
+}
+
+export interface StudentPortalHomework {
+  id: string;
+  title: string;
+  description: string | null;
+  deadline: string;
+  groupName: string;
+  status: string;
+  submissionId: string | null;
+  submittedAt: string | null;
+  feedback: string | null;
+  grade: number | null;
+  fileUrl: string | null;
+}
+
 export interface StudentPortalData {
   student: Pick<Student, "id" | "first_name" | "last_name" | "grade">;
   academyName: string;
@@ -520,12 +544,54 @@ export interface StudentPortalData {
     attendancePercentage: number;
   };
   assessments: StudentPortalAssessment[];
+  materials: StudentPortalMaterial[];
+  homework: StudentPortalHomework[];
   averageGrade: number;
   generatedAt: string;
 }
 
 const validPortalToken = (token: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(token);
+
+function buildPortalLmsData(
+  token: string,
+  student: Student,
+  groups: any[],
+  courses: any[],
+  files: any[],
+  homeworkRows: any[],
+  submissions: any[],
+): { materials: StudentPortalMaterial[]; homework: StudentPortalHomework[] } {
+  const groupIds = new Set(groups.map((group: any) => String(group.id)));
+  const courseById = new Map(courses.filter((course: any) => groupIds.has(String(course.group_id))).map((course: any) => [String(course.id), course]));
+  const materials = files
+    .filter((file: any) => courseById.has(String(file.course_id)))
+    .map((file: any) => {
+      const course = courseById.get(String(file.course_id));
+      return {
+        id: String(file.id), name: String(file.name ?? ""), courseTitle: String(course?.title ?? ""),
+        downloadUrl: `/api/portal/${encodeURIComponent(token)}/content/${file.id}`,
+        size: Number(file.size ?? 0), mimeType: String(file.mime_type ?? "application/octet-stream"), createdAt: String(file.created_at ?? ""),
+      } satisfies StudentPortalMaterial;
+    });
+  const submissionByHomework = new Map(submissions.filter((row: any) => row.student_id === student.id).map((row: any) => [String(row.homework_id), row]));
+  const groupById = new Map(groups.map((group: any) => [String(group.id), group]));
+  const homework = homeworkRows
+    .filter((row: any) => groupIds.has(String(row.group_id)))
+    .map((row: any) => {
+      const submission = submissionByHomework.get(String(row.id));
+      return {
+        id: String(row.id), title: String(row.title ?? ""), description: row.description ?? null,
+        deadline: String(row.deadline ?? ""), groupName: String(groupById.get(String(row.group_id))?.name ?? ""),
+        status: String(submission?.status ?? "PENDING"), submissionId: submission?.id ? String(submission.id) : null,
+        submittedAt: submission?.submitted_at ?? null, feedback: submission?.feedback ?? null,
+        grade: submission?.grade == null ? null : Number(submission.grade),
+        fileUrl: submission?.file_id ? `/api/portal/${encodeURIComponent(token)}/homework-file/${submission.file_id}` : null,
+      } satisfies StudentPortalHomework;
+    })
+    .sort((a, b) => String(a.deadline).localeCompare(String(b.deadline)));
+  return { materials, homework };
+}
 
 function buildStudentPortalData(
   student: Student,
@@ -535,6 +601,8 @@ function buildStudentPortalData(
   attendanceRows: any[],
   exams: any[],
   grades: any[],
+  materials: StudentPortalMaterial[] = [],
+  homework: StudentPortalHomework[] = [],
 ): StudentPortalData {
   const groupIds = new Set(groups.map((group: any) => group.id));
   const eligibleLessons = lessons.filter(
@@ -587,6 +655,8 @@ function buildStudentPortalData(
       attendancePercentage: attendance.length ? round((attendedLessons / attendance.length) * 100, 1) : 0,
     },
     assessments: portalAssessments.sort((a, b) => String(b.date).localeCompare(String(a.date))),
+    materials,
+    homework,
     averageGrade,
     generatedAt: new Date().toISOString(),
   };
@@ -616,7 +686,12 @@ export async function getStudentPortalByToken(token: string): Promise<StudentPor
     const exams = collections().exams.filter((exam) => exam.academy_id === student.academy_id && groupIds.includes(exam.group_id));
     const examIds = exams.map((exam) => exam.id);
     const grades = collections().grades.filter((grade) => grade.student_id === student.id && examIds.includes(grade.exam_id));
-    return buildStudentPortalData(student, academy?.name ?? "MYAcademy", groups, lessons, attendance, exams, grades);
+    const contentCourses = (collections() as any).contentCourses?.filter((course: any) => groupIds.includes(course.group_id) && course.is_published !== false) ?? [];
+    const contentFiles = (collections() as any).contentFiles?.filter((file: any) => contentCourses.some((course: any) => course.id === file.course_id)) ?? [];
+    const homeworkRows = collections().homework.filter((item: any) => groupIds.includes(item.group_id));
+    const submissions = collections().submissions.filter((item: any) => homeworkRows.some((homework: any) => homework.id === item.homework_id) && item.student_id === student.id);
+    const lms = buildPortalLmsData(normalizedToken, student, groups, contentCourses, contentFiles, homeworkRows, submissions);
+    return buildStudentPortalData(student, academy?.name ?? "MYAcademy", groups, lessons, attendance, exams, grades, lms.materials, lms.homework);
   }
 
   const client = nodeSupabaseClient();
@@ -639,18 +714,25 @@ export async function getStudentPortalByToken(token: string): Promise<StudentPor
   const groupIds = [...new Set((memberships ?? []).map((row: any) => row.group_id).filter(Boolean))];
   if (!groupIds.length) return buildStudentPortalData(student, academy?.name ?? "MYAcademy", [], [], [], [], []);
 
-  const [{ data: groups, error: groupsError }, { data: lessons, error: lessonsError }, { data: exams, error: examsError }] = await Promise.all([
+  const [{ data: groups, error: groupsError }, { data: lessons, error: lessonsError }, { data: exams, error: examsError }, { data: contentCourses, error: contentCoursesError }, { data: homeworkRows, error: homeworkError }] = await Promise.all([
     client.from("groups").select("id,academy_id,name,course_id").eq("academy_id", student.academy_id).in("id", groupIds).limit(1000),
     client.from("lessons").select("id,academy_id,group_id,date,status,is_cancelled").eq("academy_id", student.academy_id).in("group_id", groupIds).limit(2000),
     client.from("exams").select("id,academy_id,group_id,name,type,date,max_score").eq("academy_id", student.academy_id).in("group_id", groupIds).order("date", { ascending: false }).limit(1000),
+    client.from("content_courses").select("id,academy_id,group_id,title,is_published").eq("academy_id", student.academy_id).in("group_id", groupIds).eq("is_published", true).limit(1000),
+    client.from("homework").select("id,academy_id,group_id,title,description,deadline").eq("academy_id", student.academy_id).in("group_id", groupIds).order("deadline", { ascending: true }).limit(1000),
   ]);
-  if (groupsError || lessonsError || examsError) return null;
+  if (groupsError || lessonsError || examsError || contentCoursesError || homeworkError) return null;
   const lessonIds = (lessons ?? []).map((lesson: any) => lesson.id).filter(Boolean);
   const examIds = (exams ?? []).map((exam: any) => exam.id).filter(Boolean);
-  const [{ data: attendance, error: attendanceError }, { data: grades, error: gradesError }] = await Promise.all([
+  const contentCourseIds = (contentCourses ?? []).map((course: any) => course.id).filter(Boolean);
+  const homeworkIds = (homeworkRows ?? []).map((homework: any) => homework.id).filter(Boolean);
+  const [{ data: attendance, error: attendanceError }, { data: grades, error: gradesError }, { data: contentFiles, error: contentFilesError }, { data: submissions, error: submissionsError }] = await Promise.all([
     lessonIds.length ? client.from("attendance").select("lesson_id,status").eq("student_id", student.id).in("lesson_id", lessonIds).limit(2000) : Promise.resolve({ data: [], error: null }),
     examIds.length ? client.from("grades").select("exam_id,score,notes").eq("student_id", student.id).in("exam_id", examIds).limit(1000) : Promise.resolve({ data: [], error: null }),
+    contentCourseIds.length ? client.from("content_files").select("id,academy_id,course_id,name,size,mime_type,created_at").eq("academy_id", student.academy_id).in("course_id", contentCourseIds).limit(2000) : Promise.resolve({ data: [], error: null }),
+    homeworkIds.length ? client.from("homework_submissions").select("id,homework_id,student_id,status,submitted_at,feedback,grade,file_id").eq("student_id", student.id).in("homework_id", homeworkIds).limit(1000) : Promise.resolve({ data: [], error: null }),
   ]);
-  if (attendanceError || gradesError) return null;
-  return buildStudentPortalData(student, academy?.name ?? "MYAcademy", groups ?? [], lessons ?? [], attendance ?? [], exams ?? [], grades ?? []);
+  if (attendanceError || gradesError || contentFilesError || submissionsError) return null;
+  const lms = buildPortalLmsData(normalizedToken, student, groups ?? [], contentCourses ?? [], contentFiles ?? [], homeworkRows ?? [], submissions ?? []);
+  return buildStudentPortalData(student, academy?.name ?? "MYAcademy", groups ?? [], lessons ?? [], attendance ?? [], exams ?? [], grades ?? [], lms.materials, lms.homework);
 }

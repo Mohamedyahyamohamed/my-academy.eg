@@ -24,7 +24,9 @@ import { performanceLevel } from "@/lib/constants";
 import { percentage, round } from "@/lib/utils";
 import { currentAcademyId } from "./session";
 import { isLessonUpcoming, lessonWallClockMinute } from "./lessons";
+import { isAcademyHoliday } from "./attendance";
 import { calculateRiskScore } from "./insights";
+import { notifyRiskAlerts } from "./whatsapp";
 
 function monthLabel(key: string) {
   const [y, m] = key.split("-").map(Number);
@@ -129,7 +131,7 @@ export async function getDashboardData(
   const activeAttendance = attendance
     .filter((record: any) => {
       const lesson = lessons.find((item: any) => item.id === record.lesson_id);
-      return Boolean(lesson && activeLesson(lesson));
+      return Boolean(lesson && activeLesson(lesson) && !isAcademyHoliday(lesson.date, academyId ?? currentAcademyId()));
     })
     .map((record: any) => ({
       ...record,
@@ -153,7 +155,7 @@ export async function getDashboardData(
     .filter((payment: any) => paymentMonth(payment) === currentMonth)
     .reduce((sum: number, payment: any) => sum + Math.max(0, Number(payment.amount_paid ?? 0)), 0);
   const currentMonthLessonIds = new Set(lessons
-    .filter((lesson: any) => activeLesson(lesson) && String(lesson.date ?? "").slice(0, 7) === currentMonth)
+    .filter((lesson: any) => activeLesson(lesson) && !isAcademyHoliday(lesson.date, academyId ?? currentAcademyId()) && String(lesson.date ?? "").slice(0, 7) === currentMonth)
     .map((lesson: any) => lesson.id));
   const currentMonthAttendance = attendance.filter((record: any) => currentMonthLessonIds.has(record.lesson_id));
   const currentMonthPresent = currentMonthAttendance.filter((record: any) => record.status !== "ABSENT").length;
@@ -173,12 +175,13 @@ export async function getDashboardData(
     .sort((a, b) => b.expected - a.expected || a.name.localeCompare(b.name));
   const riskStudents = students
     .filter((student: any) => student.status === "ACTIVE" && student.is_active !== false)
-    .map((student: any) => calculateRiskScore({
+    .map((student: any) => ({ studentId: student.id, risk: calculateRiskScore({
       attendance: activeAttendance.filter((record: any) => record.student_id === student.id),
       grades: grades.filter((grade: any) => grade.student_id === student.id),
       exams,
-    }))
-    .filter((risk) => risk.category !== "safe");
+    }) }))
+    .filter((item) => item.risk.category !== "safe");
+  void notifyRiskAlerts(academyId ?? currentAcademyId(), riskStudents.map((item) => item.studentId));
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const mondayOffset = (today.getDay() + 6) % 7;
@@ -191,7 +194,7 @@ export async function getDashboardData(
     endDate.setDate(startDate.getDate() + 7);
     const start = startDate.getTime();
     const end = endDate.getTime();
-    const lessonIds = new Set(lessons.filter((lesson: any) => activeLesson(lesson) && dateInRange(lesson.date, start, end)).map((lesson: any) => lesson.id));
+    const lessonIds = new Set(lessons.filter((lesson: any) => activeLesson(lesson) && !isAcademyHoliday(lesson.date, academyId ?? currentAcademyId()) && dateInRange(lesson.date, start, end)).map((lesson: any) => lesson.id));
     const records = attendance.filter((record: any) => lessonIds.has(record.lesson_id));
     const attended = records.filter((record: any) => record.status !== "ABSENT").length;
     return { week: `الأسبوع ${index + 1}`, rate: records.length ? percentage(attended, records.length) : 0 };

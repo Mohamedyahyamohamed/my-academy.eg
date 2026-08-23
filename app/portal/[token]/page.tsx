@@ -1,5 +1,6 @@
 import { CalendarCheck, GraduationCap, ShieldCheck } from "lucide-react";
 import { PortalPrintButton } from "@/components/portal/portal-print-button";
+import { PortalLms } from "@/components/portal/portal-lms";
 import { getStudentPortalByToken } from "@/services/portals";
 import { formatDate } from "@/lib/utils";
 
@@ -104,6 +105,8 @@ export default async function StudentPortalPage({ params }: { params: Promise<{ 
             </table>
           </div>
         </section>
+
+        <PortalLms token={token} materials={data.materials} homework={data.homework} />
 
         <footer className="mt-6 flex flex-wrap items-center justify-between gap-3 px-1 text-xs text-slate-500 print:mt-4">
           <span className="inline-flex items-center gap-1.5"><GraduationCap className="h-4 w-4" /> تقرير آمن للطالب وولي الأمر</span>

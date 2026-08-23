@@ -15,7 +15,7 @@ import { CreateCourseForm } from "@/components/content/content-forms";
 export const dynamic = "force-dynamic";
 
 export default async function TeacherContentPage() {
-  const user = await requireScopedRole("TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
   const lang = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value);
   const en = lang === "en";
   const [courses, groups] = await Promise.all([

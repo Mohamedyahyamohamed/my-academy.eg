@@ -71,6 +71,11 @@ export interface Academy {
   suspension_reason?: string | null;
   suspended_at?: ISODate | null;
   suspended_by?: UUID | null;
+  academic_year?: string | null;
+  default_lesson_duration_minutes?: number;
+  holidays?: string[];
+  report_signature?: string | null;
+  report_footnote?: string | null;
   created_at: ISODate;
   updated_at: ISODate;
 }

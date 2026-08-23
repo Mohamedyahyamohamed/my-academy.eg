@@ -12,6 +12,11 @@ export const academySchema = z.object({
   currency: z.string().max(10).optional(),
   primary_color: z.string().max(9).optional(),
   logo_url: z.string().max(500).optional(),
+  academic_year: z.string().max(30).optional(),
+  default_lesson_duration_minutes: z.coerce.number().int().min(15).max(480).optional(),
+  holidays: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).max(200).optional(),
+  report_signature: z.string().max(200).optional(),
+  report_footnote: z.string().max(500).optional(),
 });
 export type AcademyValues = z.infer<typeof academySchema>;
 

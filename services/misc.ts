@@ -228,9 +228,17 @@ export async function getAcademyAsync(academyId?: string): Promise<Academy> {
   throw new Error("Academy data is unavailable for the active session.");
 }
 
-export function updateAcademy(input: Partial<Academy>): Academy {
-  const a = getAcademy();
-  Object.assign(a, { ...input, updated_at: new Date().toISOString() });
+export async function updateAcademy(input: Partial<Academy>): Promise<Academy> {
+  const a = await getAcademy();
+  const academyId = currentAcademyId();
+  if (input.id && input.id !== academyId) throw new Error("Academy scope mismatch.");
+  const patch: Partial<Academy> = { ...input, updated_at: new Date().toISOString() };
+  delete patch.id;
+  delete patch.created_at;
+  delete patch.updated_at;
+  delete patch.suspended_by;
+  Object.assign(a, patch, { updated_at: new Date().toISOString() });
+  await persistUpdate("academies", academyId, patch);
   return a;
 }
 

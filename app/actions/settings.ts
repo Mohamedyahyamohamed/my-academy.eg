@@ -8,7 +8,7 @@ import { audit } from "@/services/audit";
 
 export async function updateAcademyAction(input: AcademyValues) {
   await requireScopedRole("ADMIN");
-  MiscService.updateAcademy(input);
+  await MiscService.updateAcademy(input);
     void audit({ action: "settings.update_academy" });
   revalidatePath("/settings");
   revalidatePath("/dashboard");

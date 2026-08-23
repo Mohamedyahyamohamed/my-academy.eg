@@ -25,6 +25,11 @@ export function AcademySettingsForm({ academy }: { academy: Academy }) {
   const router = useRouter();
   const en = useClientLang() === "en";
   const [saving, setSaving] = React.useState(false);
+  const [academicYear, setAcademicYear] = React.useState(academy.academic_year ?? "");
+  const [lessonDuration, setLessonDuration] = React.useState(String(academy.default_lesson_duration_minutes ?? 90));
+  const [holidaysText, setHolidaysText] = React.useState((academy.holidays ?? []).join(", "));
+  const [reportSignature, setReportSignature] = React.useState(academy.report_signature ?? "");
+  const [reportFootnote, setReportFootnote] = React.useState(academy.report_footnote ?? "");
   const { register, handleSubmit, formState: { errors } } = useForm<AcademyValues>({
     resolver: zodResolver(academySchema),
     defaultValues: {
@@ -40,7 +45,15 @@ export function AcademySettingsForm({ academy }: { academy: Academy }) {
   const onSubmit = async (values: AcademyValues) => {
     setSaving(true);
     try {
-      await updateAcademyAction(values);
+      const holidays = holidaysText.split(",").map((value) => value.trim()).filter(Boolean);
+      await updateAcademyAction({
+        ...values,
+        academic_year: academicYear.trim() || undefined,
+        default_lesson_duration_minutes: Number(lessonDuration || 90),
+        holidays,
+        report_signature: reportSignature.trim() || undefined,
+        report_footnote: reportFootnote.trim() || undefined,
+      });
       toast.success(en ? "Academy settings saved." : "تم حفظ إعدادات الأكاديمية.");
       router.refresh();
     } catch (error) {
@@ -71,6 +84,29 @@ export function AcademySettingsForm({ academy }: { academy: Academy }) {
         </Field>
         <Field label={en ? "Address" : "العنوان"}>
           <Input {...register("address")} />
+        </Field>
+      </div>
+      <div className="space-y-4 rounded-xl border border-border bg-muted/20 p-4">
+        <div>
+          <p className="text-sm font-semibold">{en ? "Academic operations" : "الإعدادات التشغيلية"}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{en ? "These defaults apply to new operational views and reports." : "تُستخدم هذه الإعدادات في الشاشات التشغيلية والتقارير الجديدة."}</p>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label={en ? "Academic year" : "العام الدراسي"}>
+            <Input value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} placeholder={en ? "2026/2027" : "2026/2027"} />
+          </Field>
+          <Field label={en ? "Default lesson duration (minutes)" : "مدة الحصة الافتراضية (بالدقائق)"}>
+            <Input type="number" min={15} max={480} value={lessonDuration} onChange={(e) => setLessonDuration(e.target.value)} />
+          </Field>
+          <Field label={en ? "Holidays (comma-separated YYYY-MM-DD)" : "الإجازات (تواريخ مفصولة بفاصلة YYYY-MM-DD)"}>
+            <Input value={holidaysText} onChange={(e) => setHolidaysText(e.target.value)} placeholder="2026-09-23, 2026-10-06" />
+          </Field>
+          <Field label={en ? "Report signature" : "توقيع التقرير"}>
+            <Input value={reportSignature} onChange={(e) => setReportSignature(e.target.value)} placeholder={en ? "Academy administration" : "إدارة الأكاديمية"} />
+          </Field>
+        </div>
+        <Field label={en ? "Report footnote" : "ملاحظة أسفل التقرير"}>
+          <Textarea value={reportFootnote} onChange={(e) => setReportFootnote(e.target.value)} rows={2} placeholder={en ? "Thank you for supporting your student's progress." : "شكرًا لمتابعة تقدم الطالب."} />
         </Field>
       </div>
       <Button type="submit" disabled={saving}>

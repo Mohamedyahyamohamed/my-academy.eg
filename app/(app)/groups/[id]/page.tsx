@@ -12,6 +12,8 @@ import {
   CalendarDays,
   Plus,
   QrCode,
+  FileText,
+  ClipboardList,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -175,6 +177,17 @@ export default async function GroupDetailPage(
         students={activeFinancialStudents}
         payments={groupPayments}
       />
+
+      <Card>
+        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><BookOpen className="h-4 w-4 text-primary" />{en ? "Learning materials & homework" : "المذكرات والواجبات"}</CardTitle></CardHeader>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">{en ? "Upload PDFs and assign homework for this group, then students can access them from their portal." : "ارفع ملفات PDF وحدد واجبات لهذه المجموعة، وسيتمكن الطلاب من الوصول إليها من البوابة."}</p>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline"><Link href={`/teacher/content?group=${params.id}`}><FileText className="h-4 w-4" />{en ? "Materials" : "المذكرات"}</Link></Button>
+            <Button asChild variant="soft"><Link href={`/homework?group=${params.id}`}><ClipboardList className="h-4 w-4" />{en ? "Assign homework" : "تحديد واجب"}</Link></Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Students */}

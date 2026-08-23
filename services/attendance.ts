@@ -264,6 +264,13 @@ export async function recordCheckin(
     });
   }
 }
+/** Return true when the academy configured the lesson date as a holiday. */
+export function isAcademyHoliday(date: string, academyId?: string): boolean {
+  const academy = collections().academies.find((item: any) => item.id === academyId);
+  const holidays = Array.isArray((academy as any)?.holidays) ? (academy as any).holidays : [];
+  return holidays.includes(String(date).slice(0, 10));
+}
+
 /** Attendance summary for a single student. */
 export function studentAttendanceSummary(
   studentId: string,
@@ -279,7 +286,7 @@ export function studentAttendanceSummary(
   const recs = collections().attendance.filter((a) => {
     if (a.student_id !== studentId) return false;
     const lesson = collections().lessons.find((item) => item.id === a.lesson_id);
-    return Boolean(lesson && lesson.academy_id === authenticatedAcademyId && !isLessonCanceled(lesson));
+    return Boolean(lesson && lesson.academy_id === authenticatedAcademyId && !isLessonCanceled(lesson) && !isAcademyHoliday(lesson.date, authenticatedAcademyId));
   });
   return { ...summarize(recs), byLesson: recs };
 }

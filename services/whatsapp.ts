@@ -15,6 +15,7 @@ export type WhatsAppEventType =
   | "GRADE_POSTED"
   | "PAYMENT_RECORDED"
   | "STUDENT_QR"
+  | "RISK_ALERT"
   | "GENERAL";
 
 const TEMPLATE_BY_EVENT: Record<WhatsAppEventType, string> = {
@@ -22,6 +23,7 @@ const TEMPLATE_BY_EVENT: Record<WhatsAppEventType, string> = {
   GRADE_POSTED: "WHATSAPP_GRADE_TEMPLATE",
   PAYMENT_RECORDED: "WHATSAPP_PAYMENT_TEMPLATE",
   STUDENT_QR: "WHATSAPP_STUDENT_QR_TEMPLATE",
+  RISK_ALERT: "WHATSAPP_RISK_TEMPLATE",
   GENERAL: "WHATSAPP_NOTIFICATION_TEMPLATE",
 };
 
@@ -289,6 +291,18 @@ export async function notifyParentWhatsApp(
   } catch {
     // best-effort: لا ينبغي لتنبيه خارجي أن يمنع تسجيل الحضور أو الدرجة أو الدفعة.
   }
+}
+
+/** Dispatch Warning/Critical alerts once per student in a rolling 24-hour window. */
+export async function notifyRiskAlerts(academyId: string, studentIds: string[]): Promise<void> {
+  const client = nodeSupabaseClient();
+  if (!client || !academyId) return;
+  const uniqueIds = Array.from(new Set(studentIds.filter(Boolean))).slice(0, 100);
+  if (!uniqueIds.length) return;
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data: existing } = await client.from("whatsapp_message_logs").select("student_id").eq("academy_id", academyId).eq("event_type", "RISK_ALERT").gte("created_at", since).in("student_id", uniqueIds).limit(200);
+  const alreadySent = new Set((existing ?? []).map((row: any) => row.student_id).filter(Boolean));
+  await notifyParentsWhatsApp(uniqueIds.filter((id) => !alreadySent.has(id)), "تنبيه مستوى الطالب", () => "يرجى مراجعة مستوى الطالب من خلال بوابة MYAcademy.", "RISK_ALERT");
 }
 
 /** إرسال تنبيه محدود السرعة إلى أولياء أمور عدة طلاب. */

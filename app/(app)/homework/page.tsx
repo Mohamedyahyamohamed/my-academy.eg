@@ -19,7 +19,7 @@ export default async function HomeworkPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  const user = await requireScopedRole("TEACHER");
+  const user = await requireScopedRole("ADMIN", "TEACHER");
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
   const result = await HomeworkService.listHomework({

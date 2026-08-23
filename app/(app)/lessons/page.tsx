@@ -35,6 +35,7 @@ export default async function LessonsPage(
     groupId: sp("group") ?? "ALL",
     upcoming: sp("tab") === "upcoming",
     past: sp("tab") === "past",
+    includeCancelled: true,
     page: sp("page") ? Number(sp("page")) : 1,
     pageSize: 10,
   }, user.academy_id, user.id);
@@ -103,7 +104,7 @@ export default async function LessonsPage(
               </TableHeader>
               <TableBody>
                 {result.items.map((l) => (
-                  <TableRow key={l.id}>
+                  <TableRow key={l.id} className={l.status === "canceled" ? "bg-muted/40 text-muted-foreground line-through decoration-muted-foreground/60" : undefined}>
                     <TableCell className="font-medium">
                       <Link href={`/lessons/${l.id}`} className="hover:text-primary">{l.topic}</Link>
                     </TableCell>
@@ -111,8 +112,8 @@ export default async function LessonsPage(
                     <TableCell className="text-sm">{formatDate(l.date, undefined, en ? "en-EG" : "ar-EG")}</TableCell>
                     <TableCell className="text-sm"><span dir="ltr" className="whitespace-nowrap">{formatTimeRange(l.start_time, l.end_time, en ? "en-EG" : "ar-EG")}</span></TableCell>
                     <TableCell>
-                      <Badge variant={l.attendance_taken ? "success" : "outline"}>
-                        {l.attendance_taken ? (en ? "Recorded" : "تم تسجيله") : (en ? "Pending" : "معلّق")}
+                      <Badge variant={l.status === "canceled" ? "destructive" : l.attendance_taken ? "success" : "outline"}>
+                        {l.status === "canceled" ? (en ? "Canceled — excluded" : "ملغاة — مستبعدة") : l.status === "completed" ? (en ? "Completed" : "مكتملة") : l.attendance_taken ? (en ? "Recorded" : "تم تسجيله") : (en ? "Pending" : "معلّق")}
                       </Badge>
                     </TableCell>
                   </TableRow>
@@ -123,11 +124,11 @@ export default async function LessonsPage(
 
           <div className="space-y-3 md:hidden">
             {result.items.map((l) => (
-              <Link key={l.id} href={`/lessons/${l.id}`} className="card-surface block p-4">
+              <Link key={l.id} href={`/lessons/${l.id}`} className={`card-surface block p-4 ${l.status === "canceled" ? "bg-muted/40 text-muted-foreground line-through decoration-muted-foreground/60" : ""}`}>
                 <div className="flex items-center justify-between">
                   <p className="font-medium">{l.topic}</p>
-                  <Badge variant={l.attendance_taken ? "success" : "outline"}>
-                    {l.attendance_taken ? (en ? "Recorded" : "تم تسجيله") : (en ? "Pending" : "معلّق")}
+                  <Badge variant={l.status === "canceled" ? "destructive" : l.attendance_taken ? "success" : "outline"}>
+                    {l.status === "canceled" ? (en ? "Canceled — excluded" : "ملغاة — مستبعدة") : l.status === "completed" ? (en ? "Completed" : "مكتملة") : l.attendance_taken ? (en ? "Recorded" : "تم تسجيله") : (en ? "Pending" : "معلّق")}
                   </Badge>
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{l.group?.name}</p>

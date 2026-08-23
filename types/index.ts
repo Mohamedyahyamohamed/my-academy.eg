@@ -238,6 +238,8 @@ export interface GroupStudent {
   joined_at: ISODate;
 }
 
+export type LessonStatus = "scheduled" | "canceled" | "completed";
+
 export interface Lesson {
   id: UUID;
   academy_id: UUID;
@@ -249,7 +251,9 @@ export interface Lesson {
   topic: string;
   description: string | null;
   notes: string | null;
-  /** A generated lesson can be cancelled without deleting history. */
+  /** Canonical lifecycle status persisted in PostgreSQL. */
+  status?: LessonStatus;
+  /** Legacy cancellation flags remain readable for older rows and clients. */
   is_cancelled?: boolean;
   cancellation_reason?: string | null;
   created_at: ISODate;
@@ -267,7 +271,10 @@ export interface AttendanceRecord {
   lesson_id: UUID;
   student_id: UUID;
   status: AttendanceStatus;
+  /** Legacy singular column retained for compatibility with existing rows. */
   note: string | null;
+  /** Canonical plural notes column for manual attendance explanations. */
+  notes?: string | null;
   recorded_at: ISODate;
   // relations
   student?: Student;

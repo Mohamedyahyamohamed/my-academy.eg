@@ -508,7 +508,7 @@ export async function getPlatformStudentDetail(id: string): Promise<StudentDetai
   const [{ data: parent }, { data: links }, { data: attendanceRows }, { data: paymentRows }, { data: gradeRows }] = await Promise.all([
     student.parent_id ? client.from("parents").select("*").eq("id", student.parent_id).eq("academy_id", student.academy_id).maybeSingle() : Promise.resolve({ data: null }),
     client.from("group_students").select("group_id").eq("student_id", student.id),
-    client.from("attendance").select("status").eq("student_id", student.id),
+    client.from("attendance").select("status,lesson_id").eq("student_id", student.id),
     client.from("payments").select("amount_due,amount_paid").eq("student_id", student.id).eq("academy_id", student.academy_id),
     client.from("grades").select("score,exam_id").eq("student_id", student.id),
   ]);
@@ -522,7 +522,15 @@ export async function getPlatformStudentDetail(id: string): Promise<StudentDetai
     ? await client.from("exams").select("id,max_score").in("id", examIds).eq("academy_id", student.academy_id)
     : { data: [] };
   const examMax = new Map<string, number>((examRows ?? []).map((exam: any) => [String(exam.id), Number(exam.max_score || 0)]));
-  const attendance: Array<{ status: string }> = attendanceRows ?? [];
+  const lessonIds = (attendanceRows ?? []).map((row: any) => row.lesson_id).filter(Boolean);
+  const { data: attendanceLessons } = lessonIds.length
+    ? await client.from("lessons").select("id,status,is_cancelled").in("id", lessonIds).eq("academy_id", student.academy_id)
+    : { data: [] };
+  const canceledLessonIds = new Set((attendanceLessons ?? [])
+    .filter((lesson: any) => lesson.status === "canceled" || lesson.is_cancelled === true)
+    .map((lesson: any) => lesson.id));
+  const attendance: Array<{ status: string; lesson_id?: string }> = (attendanceRows ?? [])
+    .filter((row: any) => !canceledLessonIds.has(row.lesson_id));
   const present = attendance.filter((row) => row.status === "PRESENT").length;
   const late = attendance.filter((row) => row.status === "LATE").length;
   const gradePercentages: number[] = (gradeRows ?? []).map((grade: any) => {
@@ -576,7 +584,10 @@ export async function getStudent(id: string): Promise<Student | null> {
 }
 
 export function computeStudentStats(studentId: string): StudentStats {
-  const att = attendanceForStudent(studentId);
+  const att = attendanceForStudent(studentId).filter((record) => {
+    const lesson = collections().lessons.find((item) => item.id === record.lesson_id);
+    return Boolean(lesson && lesson.status !== "canceled" && lesson.is_cancelled !== true);
+  });
   const present = att.filter((a) => a.status === "PRESENT").length;
   const late = att.filter((a) => a.status === "LATE").length;
   const attendanceRate = att.length ? percentage(present + late, att.length) : 0;

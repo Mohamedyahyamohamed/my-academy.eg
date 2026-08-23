@@ -9,12 +9,23 @@ import { getGroup, getTeacher, byAcademy, teacherGroupScope, fetchTableRLS } fro
 import { resolveTeacherForGroups } from "./groups";
 import { parseSchedule } from "@/lib/utils";
 
+export function lessonStatus(lesson: Pick<Lesson, "status" | "is_cancelled">): "scheduled" | "canceled" | "completed" {
+  if (lesson.status === "canceled" || lesson.is_cancelled === true) return "canceled";
+  if (lesson.status === "completed") return "completed";
+  return "scheduled";
+}
+
+export function isLessonCanceled(lesson: Pick<Lesson, "status" | "is_cancelled">) {
+  return lessonStatus(lesson) === "canceled";
+}
+
 function attach(l: Lesson): Lesson {
   const attendance_taken = collections().attendance.some(
     (a) => a.lesson_id === l.id,
   );
   return {
     ...l,
+    status: lessonStatus(l),
     group: getGroup(l.group_id),
     teacher: getTeacher(l.teacher_id),
     attendance_taken,
@@ -47,7 +58,7 @@ export async function listLessons(
   } = filters;
   const now = Date.now();
   let items = await fetchTableRLS<Lesson>("lessons", academyId);
-  if (!includeCancelled) items = items.filter((lesson) => lesson.is_cancelled !== true);
+  if (!includeCancelled) items = items.filter((lesson) => !isLessonCanceled(lesson));
   // Teachers only see lessons in their groups. Resolve the teacher from the
   // tenant-scoped server data when the request-local snapshot is incomplete.
   const currentUser = getCurrentUser();
@@ -182,7 +193,7 @@ export function getActiveLessonForTeacher(now = new Date()): Lesson | null {
   const scope = teacherId ? teacherGroupScope() : null;
   if (!teacherId || !scope?.size) return null;
   const active = collections().lessons
-    .filter((lesson) => lesson.academy_id === academyId && lesson.is_cancelled !== true && scope.has(lesson.group_id))
+    .filter((lesson) => lesson.academy_id === academyId && !isLessonCanceled(lesson) && scope.has(lesson.group_id))
     .filter((lesson) => isLessonActive(lesson, now))
     .sort((a, b) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time));
   return active[0] ? attach(active[0]) : null;
@@ -242,6 +253,7 @@ export async function createRecurringLessonsForGroup(
     const timestamp = new Date().toISOString();
     const lesson: Lesson = {
       id: lid(),
+      status: "scheduled",
       is_cancelled: false,
       cancellation_reason: null,
       academy_id: resolvedAcademyId,
@@ -291,6 +303,7 @@ export async function createLesson(input: LessonInput): Promise<Lesson> {
   const now = new Date().toISOString();
   const l: Lesson = {
     id: lid(),
+    status: "scheduled",
     is_cancelled: false,
     cancellation_reason: null,
     academy_id: academyId,
@@ -362,8 +375,9 @@ export async function cancelLesson(id: string, reason?: string): Promise<Lesson 
   if (!academyId || l.academy_id !== academyId) throw new Error("Lesson is outside the authenticated academy.");
   const scope = teacherGroupScope();
   if (scope && !scope.has(l.group_id)) throw new Error("You do not have permission to cancel this lesson.");
-  if (l.is_cancelled) return attach(l);
+  if (isLessonCanceled(l)) return attach(l);
   const patch = {
+    status: "canceled" as const,
     is_cancelled: true,
     cancellation_reason: reason?.trim() || null,
     updated_at: new Date().toISOString(),

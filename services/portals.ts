@@ -138,7 +138,11 @@ export async function childSummary(
     fetchTableRLS<any>("exams", academyId),
   ]);
 
-  const att = attendance.filter((a: any) => a.student_id === studentId);
+  const att = attendance.filter((a: any) => {
+    if (a.student_id !== studentId) return false;
+    const lesson = lessons.find((item: any) => item.id === a.lesson_id);
+    return Boolean(lesson && lesson.status !== "canceled" && lesson.is_cancelled !== true);
+  });
   const present = att.filter((a: any) => a.status !== "ABSENT").length;
   const attendanceRate = att.length ? percentage(present, att.length) : 0;
 
@@ -157,7 +161,7 @@ export async function childSummary(
   const groups = knownGroups ?? groupsForStudent(studentId);
   const groupIds = groups.map((g: any) => g.id);
   const upcoming = lessons
-    .filter((l: any) => groupIds.includes(l.group_id) && isLessonUpcoming(l))
+    .filter((l: any) => groupIds.includes(l.group_id) && l.status !== "canceled" && l.is_cancelled !== true && isLessonUpcoming(l))
     .sort((a: any, b: any) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time))[0];
 
   const hw = homework.filter((h: any) => h.student_id === studentId);
@@ -195,7 +199,7 @@ export async function studentLessons(
   }
 
   return lessons
-    .filter((l: any) => groupIds.includes(l.group_id))
+    .filter((l: any) => groupIds.includes(l.group_id) && l.status !== "canceled" && l.is_cancelled !== true)
     .sort((a: any, b: any) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time))
     .map((l: any) => ({ ...l, group: groups.find((g: any) => g.id === l.group_id) }));
 }
@@ -353,7 +357,7 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
     ? allStudents.filter((s: any) => s.owner_teacher_id === teacher.id).map((s: any) => s.id)
     : [];
   for (const studentId of personalStudentIds) enrolledIds.add(studentId);
-  const myLessons = allLessons.filter((l: any) => groupIds.has(l.group_id))
+  const myLessons = allLessons.filter((l: any) => groupIds.has(l.group_id) && l.status !== "canceled" && l.is_cancelled !== true)
     .sort((a: any, b: any) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time));
   const currentWallClock = wallClockMinute(new Date());
   const upcoming = myLessons

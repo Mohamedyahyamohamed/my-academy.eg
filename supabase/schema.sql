@@ -178,6 +178,9 @@ create table lessons (
   topic text not null,
   description text,
   notes text,
+  status text not null default 'scheduled' check (status in ('scheduled', 'canceled', 'completed')),
+  is_cancelled boolean not null default false,
+  cancellation_reason text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -191,6 +194,7 @@ create table attendance (
   student_id uuid not null references students(id) on delete cascade,
   status attendance_status not null,
   note text,
+  notes text,
   recorded_at timestamptz not null default now(),
   unique (lesson_id, student_id)
 );

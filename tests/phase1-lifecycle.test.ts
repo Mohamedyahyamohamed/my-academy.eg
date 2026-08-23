@@ -4,7 +4,7 @@ import { createSeedData } from "@/services/data/seed";
 import { setRequestContext } from "@/services/request-context";
 import { deleteStudent } from "@/services/students";
 import { deleteGroup } from "@/services/groups";
-import { updateAttendanceStatus } from "@/services/attendance";
+import { updateAttendanceStatus, studentAttendanceSummary } from "@/services/attendance";
 import { cancelLesson } from "@/services/lessons";
 
 const ACADEMY_ID = "academy-1";
@@ -51,7 +51,7 @@ describe("Phase 1 lifecycle rules", () => {
     const source = db.data.groups[0]!;
     const group = { ...source, id: "cascade-group", name: "Cascade group", is_active: true };
     const student = { ...db.data.students[0]!, id: "cascade-student", first_name: "Cascade", last_name: "Student" };
-    const lesson = { ...db.data.lessons[0]!, id: "cascade-lesson", group_id: group.id, is_cancelled: false };
+    const lesson = { ...db.data.lessons[0]!, id: "cascade-lesson", group_id: group.id, status: "scheduled" as const, is_cancelled: false };
     const attendance = { ...db.data.attendance[0]!, id: "cascade-attendance", lesson_id: lesson.id, student_id: student.id };
 
     db.data.groups.push(group);
@@ -79,14 +79,17 @@ describe("Phase 1 lifecycle rules", () => {
     } as any);
     const group = db.data.groups[0]!;
     const student = db.data.students[0]!;
-    const lesson = { ...db.data.lessons[0]!, id: "phase1-lesson", group_id: group.id, is_cancelled: false };
+    const lesson = { ...db.data.lessons[0]!, id: "phase1-lesson", group_id: group.id, status: "scheduled" as const, is_cancelled: false };
     db.data.lessons.push(lesson);
     db.data.groupStudents.push({ group_id: group.id, student_id: student.id, joined_at: new Date().toISOString() });
 
     const saved = await updateAttendanceStatus(group.id, lesson.id, student.id, "LATE", "Late 15 mins");
     expect(saved).toMatchObject({ ok: true, note: "Late 15 mins" });
 
+    const beforeCancel = studentAttendanceSummary(student.id, ACADEMY_ID);
     await cancelLesson(lesson.id, "Holiday");
+    expect(db.data.lessons.find((row) => row.id === lesson.id)).toMatchObject({ status: "canceled", is_cancelled: true });
+    expect(studentAttendanceSummary(student.id, ACADEMY_ID).total).toBe(beforeCancel.total - 1);
     const blocked = await updateAttendanceStatus(group.id, lesson.id, student.id, "PRESENT");
     expect(blocked).toMatchObject({ ok: false, code: "LESSON_CANCELLED" });
   });

@@ -345,7 +345,7 @@ export function groupsForStudent(studentId: string): (Group & {
 /** Lessons for a group, newest first. */
 export function lessonsForGroup(groupId: string): Lesson[] {
   return collections()
-    .lessons.filter((l) => l.group_id === groupId && l.is_cancelled !== true)
+    .lessons.filter((l) => l.group_id === groupId && l.is_cancelled !== true && l.status !== "canceled")
     .sort((a, b) => +new Date(b.date) - +new Date(a.date));
 }
 

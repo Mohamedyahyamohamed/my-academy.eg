@@ -36,6 +36,8 @@ export default async function LessonDetailPage(
   const lesson = await LessonsService.getLesson(params.id, user.academy_id);
   if (!lesson) notFound();
 
+  const lessonCanceled = lesson.status === "canceled" || lesson.is_cancelled === true;
+  const lessonCompleted = lesson.status === "completed";
   const sheet = AttendanceService.getAttendanceSheet(lesson.group_id, lesson.id);
   const homework = collections().homework
     .filter((h) => h.lesson_id === lesson.id)
@@ -45,14 +47,16 @@ export default async function LessonDetailPage(
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
 
   return (
-    <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
+    <div className={`space-y-6 ${lessonCanceled ? "opacity-75" : ""}`} dir={en ? "ltr" : "rtl"}>
       <PageHeader
         title={lesson.topic}
         description={lesson.description ?? undefined}
         breadcrumbs={[{ label: en ? "Lessons" : "الحصص", href: "/lessons" }, { label: lesson.topic }]}
       >
-        {lesson.is_cancelled ? (
-          <Badge variant="destructive">{en ? "Cancelled" : "ملغاة"}</Badge>
+        {lessonCanceled ? (
+          <Badge variant="destructive">{en ? "Canceled — excluded" : "ملغاة — مستبعدة"}</Badge>
+        ) : lessonCompleted ? (
+          <Badge variant="success">{en ? "Completed" : "مكتملة"}</Badge>
         ) : (
           <Button asChild variant="soft">
             <Link href={`/attendance?group=${lesson.group_id}&lesson=${lesson.id}`}>
@@ -74,7 +78,7 @@ export default async function LessonDetailPage(
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">{en ? "Attendance" : "الحضور"}</CardTitle>
-            {lesson.is_cancelled ? (
+            {lessonCanceled ? (
               <Badge variant="destructive">{en ? "Excluded from attendance" : "مستبعدة من احتساب الحضور"}</Badge>
             ) : (
             <Badge variant={lesson.attendance_taken ? "success" : "outline"}>
@@ -109,9 +113,9 @@ export default async function LessonDetailPage(
                         {e.status ? (
                           <div className="flex items-center gap-2">
                             <AttendanceBadge status={e.status} />
-                            {collections().attendance.find((record) => record.lesson_id === lesson.id && record.student_id === e.student.id)?.note && (
+                            {(collections().attendance.find((record) => record.lesson_id === lesson.id && record.student_id === e.student.id)?.note ?? collections().attendance.find((record) => record.lesson_id === lesson.id && record.student_id === e.student.id)?.notes) && (
                               <span
-                                title={collections().attendance.find((record) => record.lesson_id === lesson.id && record.student_id === e.student.id)?.note ?? ""}
+                                title={collections().attendance.find((record) => record.lesson_id === lesson.id && record.student_id === e.student.id)?.note ?? collections().attendance.find((record) => record.lesson_id === lesson.id && record.student_id === e.student.id)?.notes ?? ""}
                                 className="cursor-help text-xs text-muted-foreground underline decoration-dotted"
                               >
                                 {en ? "Note" : "ملاحظة"}
@@ -126,8 +130,8 @@ export default async function LessonDetailPage(
                           lessonId={lesson.id}
                           studentId={e.student.id}
                           currentStatus={e.status}
-                          currentNote={collections().attendance.find((record) => record.lesson_id === lesson.id && record.student_id === e.student.id)?.note ?? null}
-                          disabled={lesson.is_cancelled === true}
+                          currentNote={collections().attendance.find((record) => record.lesson_id === lesson.id && record.student_id === e.student.id)?.note ?? collections().attendance.find((record) => record.lesson_id === lesson.id && record.student_id === e.student.id)?.notes ?? null}
+                          disabled={lessonCanceled}
                         />
                       </TableCell>
                     </TableRow>

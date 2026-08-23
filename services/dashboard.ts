@@ -111,7 +111,11 @@ export async function getDashboardData(
     .reduce((s, r) => s + r.collected, 0);
 
   const cutoff = Date.now() - 30 * 86_400_000;
-  const recentAtt = attendance.filter((a: any) => +new Date(a.recorded_at) >= cutoff);
+  const recentAtt = attendance.filter((a: any) => {
+    if (+new Date(a.recorded_at) < cutoff) return false;
+    const lesson = d.lessons.find((item: any) => item.id === a.lesson_id);
+    return Boolean(lesson && lesson.status !== "canceled" && lesson.is_cancelled !== true);
+  });
   const present = recentAtt.filter((a: any) => a.status !== "ABSENT").length;
   const attendanceRate = recentAtt.length ? percentage(present, recentAtt.length) : 0;
 
@@ -130,7 +134,7 @@ export async function getDashboardData(
 
   // attendance trend
   const lessonsSorted = d.lessons
-    .filter((l: any) => d.scopedLessonIds.has(l.id))
+    .filter((l: any) => d.scopedLessonIds.has(l.id) && l.status !== "canceled" && l.is_cancelled !== true)
     .slice().sort((a: any, b: any) => +new Date(a.date) - +new Date(b.date));
   const recentLessons = lessonsSorted.slice(-6);
   const attendanceTrend = recentLessons.map((l: any, i: number) => {
@@ -150,7 +154,7 @@ export async function getDashboardData(
 
   // upcoming lessons
   const upcomingLessons = d.lessons
-    .filter((l: any) => d.scopedLessonIds.has(l.id) && isLessonUpcoming(l))
+    .filter((l: any) => d.scopedLessonIds.has(l.id) && l.status !== "canceled" && l.is_cancelled !== true && isLessonUpcoming(l))
     .sort((a: any, b: any) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time))
     .slice(0, 5)
     .map((l: any) => ({
@@ -236,7 +240,7 @@ export async function getAnalytics(academyId?: string): Promise<AnalyticsData> {
   for (let i = 5; i >= 0; i--) {
     const dt = new Date(); dt.setMonth(dt.getMonth() - i);
     const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
-    const monthLessons = d.lessons.filter((l: any) => d.scopedLessonIds.has(l.id) && l.date.slice(0, 7) === key);
+    const monthLessons = d.lessons.filter((l: any) => d.scopedLessonIds.has(l.id) && l.date.slice(0, 7) === key && l.status !== "canceled" && l.is_cancelled !== true);
     const recs = attendance.filter((a: any) => monthLessons.some((l: any) => l.id === a.lesson_id));
     const p = recs.filter((r: any) => r.status !== "ABSENT").length;
     attTrend.push({ month: monthLabel(key), rate: percentage(p, recs.length) });

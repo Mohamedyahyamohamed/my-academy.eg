@@ -13,6 +13,7 @@ import { studentsInGroup, fullName, teacherGroupScope } from "./_shared";
 import { percentage } from "@/lib/utils";
 import { currentAcademyId, getCurrentUser } from "./session";
 import { can, hasAcademyWideScope } from "@/lib/permissions";
+import { isLessonCanceled } from "./lessons";
 
 export interface AttendanceEntry {
   student: Student;
@@ -35,7 +36,7 @@ function assertAttendanceManager(lessonId: string) {
     throw new Error("You are not allowed to record attendance.");
   }
   const { lesson, group } = lessonInCurrentAcademy(lessonId);
-  if (lesson.is_cancelled) throw new Error("Cannot record attendance for a cancelled lesson.");
+  if (isLessonCanceled(lesson)) throw new Error("Cannot record attendance for a cancelled lesson.");
   if (!hasAcademyWideScope(user.role) && !teacherGroupScope()?.has(group.id)) {
     throw new Error("You can only record attendance for an assigned group.");
   }
@@ -110,6 +111,7 @@ export async function saveAttendance(
     student_id: e.studentId,
     status: e.status,
     note: null,
+    notes: null,
     recorded_at: now,
   }));
   for (const r of rows) {
@@ -141,7 +143,7 @@ export async function updateAttendanceStatus(
       };
     }
     const { lesson, group } = assertAttendanceManager(lessonId);
-    if (lesson.is_cancelled) {
+    if (isLessonCanceled(lesson)) {
       return {
         ok: false,
         code: "LESSON_CANCELLED",
@@ -171,7 +173,8 @@ export async function updateAttendanceStatus(
       lesson_id: lessonId,
       student_id: student.id,
       status,
-      note: note !== undefined ? (note?.trim() || null) : (existing?.note ?? null),
+      note: note !== undefined ? (note?.trim() || null) : (existing?.note ?? existing?.notes ?? null),
+      notes: note !== undefined ? (note?.trim() || null) : (existing?.notes ?? existing?.note ?? null),
       recorded_at: now,
     };
 
@@ -223,7 +226,8 @@ export async function recordCheckin(
 ): Promise<void> {
   const user = getCurrentUser();
   if (!user) throw new Error("Authentication is required.");
-  const { student } = assertStudentEnrolled(lessonId, studentId);
+  const { student, lesson } = assertStudentEnrolled(lessonId, studentId);
+  if (isLessonCanceled(lesson)) throw new Error("Cannot record attendance for a cancelled lesson.");
   if (user.role === "STUDENT") {
     if (student.email?.toLowerCase() !== user.email.toLowerCase()) {
       throw new Error("Students can only check in for themselves.");
@@ -238,10 +242,10 @@ export async function recordCheckin(
     lesson_id: lessonId,
     student_id: studentId,
     status,
-    note: null,
+        note: null,
+    notes: null,
     recorded_at: now,
   });
-
   const existing = collections().attendance.find(
     (a) => a.lesson_id === lessonId && a.student_id === studentId,
   );
@@ -254,12 +258,12 @@ export async function recordCheckin(
       lesson_id: lessonId,
       student_id: studentId,
       status,
-      note: null,
+            note: null,
+      notes: null,
       recorded_at: now,
     });
   }
 }
-
 /** Attendance summary for a single student. */
 export function studentAttendanceSummary(
   studentId: string,
@@ -275,7 +279,7 @@ export function studentAttendanceSummary(
   const recs = collections().attendance.filter((a) => {
     if (a.student_id !== studentId) return false;
     const lesson = collections().lessons.find((item) => item.id === a.lesson_id);
-    return Boolean(lesson && lesson.academy_id === authenticatedAcademyId);
+    return Boolean(lesson && lesson.academy_id === authenticatedAcademyId && !isLessonCanceled(lesson));
   });
   return { ...summarize(recs), byLesson: recs };
 }
@@ -283,7 +287,7 @@ export function studentAttendanceSummary(
 /** Lessons for a group that still have no attendance taken. */
 export function lessonsNeedingAttendance(groupId?: string): Lesson[] {
   let lessons = collections().lessons.filter(
-    (l) => +new Date(l.date) <= Date.now(),
+    (l) => +new Date(l.date) <= Date.now() && !isLessonCanceled(l),
   );
   if (groupId) lessons = lessons.filter((l) => l.group_id === groupId);
   return lessons.filter(

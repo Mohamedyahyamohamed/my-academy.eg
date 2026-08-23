@@ -458,6 +458,12 @@ export interface DashboardMetrics {
   studentsByCourse: { course: string; students: number; color: string }[];
   attendanceTrend: { week: string; rate: number }[];
   gradePerformance: { level: string; count: number }[];
+  expectedRevenueThisMonth: number;
+  collectedRevenueThisMonth: number;
+  overallAttendanceThisMonth: number;
+  atRiskCount: number;
+  revenueByGroup: { name: string; expected: number; collected: number; unpaid: number }[];
+  attendanceTrend4Weeks: { week: string; rate: number }[];
 }
 
 export type DashboardPeriod = "month" | "quarter" | "year";

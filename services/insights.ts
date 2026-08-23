@@ -1,59 +1,146 @@
 /**
- * Smart Insights — RLS-backed. All data via fetchTableRLS.
+ * Smart Insights — RLS-backed. All data access remains tenant-scoped.
  */
-import { fetchTableRLS, teacherGroupScope } from "./_shared";
+import { fetchTableRLS } from "./_shared";
 import { performanceLevel, performanceColor } from "@/lib/constants";
 import { percentage, round } from "@/lib/utils";
+
+type RiskCategory = "safe" | "warning" | "critical";
 
 export interface AtRiskStudent {
   studentId: string;
   name: string;
+  groupName?: string;
   reasons: string[];
   severity: "high" | "medium" | "low";
+  category: RiskCategory;
+  riskScore: number;
+  attendanceRate: number;
+  academicAverage: number;
+}
+
+export interface StudentRiskInput {
+  attendance: Array<{ status?: string; recorded_at?: string; lesson_id?: string }>;
+  grades: Array<{ score?: number; exam_id?: string; created_at?: string; updated_at?: string }>;
+  exams: Array<{ id: string; max_score?: number }>;
+  payments?: Array<{ status?: string; amount_due?: number; amount_paid?: number }>;
+}
+
+/**
+ * Deterministic, explainable early-warning score. It never divides by zero:
+ * missing attendance or grades are neutral rather than penalized.
+ */
+export function calculateRiskScore(input: StudentRiskInput): {
+  score: number;
+  category: RiskCategory;
+  severity: "high" | "medium" | "low";
+  reasons: string[];
+  attendanceRate: number;
+  academicAverage: number;
+} {
+  const attendance = [...(input.attendance ?? [])].sort((a, b) =>
+    +new Date(a.recorded_at ?? 0) - +new Date(b.recorded_at ?? 0),
+  );
+  const attended = attendance.filter((record) => record.status !== "ABSENT").length;
+  const attendanceRate = attendance.length ? percentage(attended, attendance.length) : 0;
+  const examMap = new Map((input.exams ?? []).map((exam) => [exam.id, exam]));
+  const gradePercentages = (input.grades ?? [])
+    .map((grade) => {
+      const max = Number(examMap.get(grade.exam_id ?? "")?.max_score ?? 0);
+      const score = Number(grade.score ?? 0);
+      return max > 0 ? Math.max(0, Math.min(100, (score / max) * 100)) : null;
+    })
+    .filter((value): value is number => value !== null);
+  const academicAverage = gradePercentages.length
+    ? round(gradePercentages.reduce((sum, value) => sum + value, 0) / gradePercentages.length, 0)
+    : 0;
+
+  let score = 0;
+  const reasons: string[] = [];
+  const lastTwo = attendance.slice(-2);
+  if (lastTwo.length === 2 && lastTwo.every((record) => record.status === "ABSENT")) {
+    score += 35;
+    reasons.push("غياب آخر حصتين متتاليتين");
+  }
+  if (attendance.length > 0 && attendanceRate < 60) {
+    score += 30;
+    reasons.push(`نسبة حضور منخفضة (${attendanceRate}%)`);
+  } else if (attendance.length > 0 && attendanceRate < 75) {
+    score += 15;
+    reasons.push(`الحضور يحتاج متابعة (${attendanceRate}%)`);
+  }
+  if (gradePercentages.length > 0 && academicAverage < 50) {
+    score += 30;
+    reasons.push(`متوسط درجات منخفض (${academicAverage}%)`);
+  } else if (gradePercentages.length > 0 && academicAverage < 65) {
+    score += 15;
+    reasons.push(`الدرجات تحتاج متابعة (${academicAverage}%)`);
+  }
+  if (gradePercentages.length >= 2) {
+    const recent = gradePercentages[gradePercentages.length - 1];
+    const previousAverage = gradePercentages.slice(0, -1).reduce((sum, value) => sum + value, 0) / (gradePercentages.length - 1);
+    if (previousAverage - recent >= 20) {
+      score += 25;
+      reasons.push("تراجع واضح في آخر تقييم");
+    }
+  }
+
+  const category: RiskCategory = score >= 60 ? "critical" : score >= 25 ? "warning" : "safe";
+  return {
+    score,
+    category,
+    severity: category === "critical" ? "high" : category === "warning" ? "medium" : "low",
+    reasons,
+    attendanceRate,
+    academicAverage,
+  };
 }
 
 export async function atRiskStudents(academyId?: string): Promise<AtRiskStudent[]> {
-  const [students, attendance, allGrades, payments, exams] = await Promise.all([
+  const [students, attendance, allGrades, payments, exams, groups, memberships, lessons] = await Promise.all([
     fetchTableRLS<any>("students", academyId),
     fetchTableRLS<any>("attendance", academyId),
     fetchTableRLS<any>("grades", academyId),
     fetchTableRLS<any>("payments", academyId),
     fetchTableRLS<any>("exams", academyId),
+    fetchTableRLS<any>("groups", academyId),
+    fetchTableRLS<any>("group_students", academyId),
+    fetchTableRLS<any>("lessons", academyId),
   ]);
-
-  const examMap = new Map(exams.map((e: any) => [e.id, e]));
-  const out: AtRiskStudent[] = [];
-
-  for (const s of students) {
-    if (s.status !== "ACTIVE") continue;
-    const reasons: string[] = [];
-    const att = attendance.filter((a: any) => a.student_id === s.id);
-    const present = att.filter((a: any) => a.status !== "ABSENT").length;
-    const rate = att.length ? percentage(present, att.length) : 100;
-    const grades = allGrades.filter((g: any) => g.student_id === s.id);
-    const avg = grades.length
-      ? round(grades.reduce((x, g) => {
-          const ex = examMap.get(g.exam_id);
-          return x + (ex ? (g.score / ex.max_score) * 100 : 0);
-        }, 0) / grades.length, 0)
-      : 100;
-    const overdue = payments.some((p: any) =>
-      p.student_id === s.id && p.status !== "PAID" && p.amount_due - p.amount_paid > 0);
-
-    if (att.length >= 3 && rate < 70) reasons.push(`حضور منخفض (${rate}%)`);
-    if (grades.length > 0 && avg < 60) reasons.push(`معدّل ضعيف (${avg}%)`);
-    if (att.length >= 5) {
-      const last3 = att.slice(-3);
-      if (last3.every((a: any) => a.status === "ABSENT")) reasons.push("غاب آخر 3 حصص");
-    }
-    if (overdue) reasons.push("مدفوعات متأخرة");
-
-    if (reasons.length) {
-      const severity = reasons.length >= 3 || (rate < 50 && att.length >= 3) ? "high" : reasons.length === 2 ? "medium" : "low";
-      out.push({ studentId: s.id, name: `${s.first_name} ${s.last_name}`, reasons, severity });
-    }
+  const activeLessonIds = new Set(lessons.filter((lesson: any) => lesson.status !== "canceled" && lesson.is_cancelled !== true).map((lesson: any) => lesson.id));
+  const activeAttendance = attendance
+    .filter((record: any) => activeLessonIds.has(record.lesson_id))
+    .map((record: any) => ({
+      ...record,
+      recorded_at: record.recorded_at ?? lessons.find((lesson: any) => lesson.id === record.lesson_id)?.date,
+    }));
+  const groupMap = new Map(groups.map((group: any) => [group.id, group]));
+  const studentGroups = new Map<string, string>();
+  for (const membership of memberships) {
+    if (!studentGroups.has(membership.student_id)) studentGroups.set(membership.student_id, membership.group_id);
   }
-  return out;
+
+  return students
+    .filter((student: any) => student.status === "ACTIVE" && student.is_active !== false)
+    .map((student: any) => {
+      const result = calculateRiskScore({
+        attendance: activeAttendance.filter((record: any) => record.student_id === student.id),
+        grades: allGrades.filter((grade: any) => grade.student_id === student.id),
+        exams,
+        payments: payments.filter((payment: any) => payment.student_id === student.id),
+      });
+      const { score: riskScore, ...risk } = result;
+      const group = groupMap.get(studentGroups.get(student.id) ?? "");
+      return {
+        studentId: student.id,
+        name: `${student.first_name ?? ""} ${student.last_name ?? ""}`.trim() || "طالب بدون اسم",
+        groupName: group?.name,
+        riskScore,
+        ...risk,
+      };
+    })
+    .filter((student) => student.category !== "safe")
+    .sort((a, b) => b.riskScore - a.riskScore || a.name.localeCompare(b.name));
 }
 
 export async function generateReportComment(studentId: string, academyId?: string): Promise<string> {
@@ -63,26 +150,16 @@ export async function generateReportComment(studentId: string, academyId?: strin
     fetchTableRLS<any>("grades", academyId),
     fetchTableRLS<any>("exams", academyId),
   ]);
-  const examMap = new Map(exams.map((e: any) => [e.id, e]));
   const s = students.find((x: any) => x.id === studentId);
-  const name = s ? s.first_name : "الطالب";
-  const att = attendance.filter((a: any) => a.student_id === studentId);
-  const present = att.filter((a: any) => a.status !== "ABSENT").length;
-  const rate = att.length ? percentage(present, att.length) : 0;
-  const grades = allGrades.filter((g: any) => g.student_id === studentId);
-  const avg = grades.length
-    ? round(grades.reduce((x, g) => {
-        const ex = examMap.get(g.exam_id);
-        return x + (ex ? (g.score / ex.max_score) * 100 : 0);
-      }, 0) / grades.length, 0)
-    : 0;
-  const level = performanceLevel(avg);
-
-  if (!att.length && !grades.length) return `${name}: لا توجد بيانات كافية لتقييم الأداء بعد.`;
-  if (level === "Excellent") return `${name} متفوّق بدرجة ممتازة (معدّل ${avg}%) وملتزم بالحضور (${rate}%). أداء يُحتذى به.`;
-  if (level === "Very Good") return `${name} أداؤه جيد جدًا (معدّل ${avg}%). ملتزم نسبيًا بالحضور (${rate}%). مع المراجعة المنتظمة سيصل للممتاز.`;
-  if (level === "Good") return `${name} أداؤه جيد (معدّل ${avg}%). يحتاج إلى مزيد من الالتزام بالحضور (${rate}%) وحلّ الواجبات.`;
-  return `${name} يحتاج إلى دعم ومتابعة (معدّل ${avg}%)، حضور ${rate}%. ننصح بجلسات تقوية ومتابعة أسبوعية.`;
+  const name = s?.first_name ?? "الطالب";
+  const result = calculateRiskScore({
+    attendance: attendance.filter((record: any) => record.student_id === studentId),
+    grades: allGrades.filter((grade: any) => grade.student_id === studentId),
+    exams,
+  });
+  if (!result.reasons.length) return `${name}: لا توجد بيانات كافية لتقييم الأداء بعد.`;
+  if (result.category === "critical") return `${name} يحتاج إلى متابعة عاجلة. ${result.reasons.join("، ")}.`;
+  return `${name} يحتاج إلى متابعة. ${result.reasons.join("، ")}.`;
 }
 
 export { performanceLevel, performanceColor };

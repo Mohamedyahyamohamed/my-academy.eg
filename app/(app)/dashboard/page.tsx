@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PaymentStatusBadge } from "@/components/shared/badges";
-import { TrendArea, Donut, LineTrend } from "@/components/charts";
+import { TrendArea, Donut, LineTrend, GroupedBars } from "@/components/charts";
 import { DashboardService, MiscService, requireScopedRole } from "@/services";
 import { atRiskStudents } from "@/services/insights";
 import { formatClockTime, formatCurrency, formatDate, formatTime, initials } from "@/lib/utils";
@@ -172,38 +172,38 @@ export default async function DashboardPage(
         ))}
       </div>
 
-      {/* Stat cards */}
+      {/* Master BI metrics — current month */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label={en ? "Total students" : "إجمالي الطلاب"}
-          value={d.totalStudents}
-          hint={`${d.activeStudents} ${en ? "active" : "نشط"}`}
+          label={en ? "Total active students" : "إجمالي الطلاب النشطين"}
+          value={d.activeStudents}
+          hint={en ? "Active accounts this month" : "الحسابات النشطة هذا الشهر"}
           icon={Users}
           accent="primary"
           href="/students"
         />
         <StatCard
-          label={en ? "Active groups" : "المجموعات النشطة"}
-          value={d.totalGroups}
-          hint={en ? "Currently teaching" : "قيد التدريس حاليًا"}
-          icon={UsersRound}
-          accent="info"
-          href="/groups"
-        />
-        <StatCard
-          label={`${en ? "Collected" : "المحصّل"} ${PERIOD_LABELS[period][en ? "en" : "ar"]}`}
-          value={formatCurrency(d.collectedForPeriod, "EGP", en ? "en-EG" : "ar-EG")}
+          label={en ? "Expected / collected revenue" : "الإيراد المتوقع / المحصّل"}
+          value={formatCurrency(d.expectedRevenueThisMonth, "EGP", en ? "en-EG" : "ar-EG")}
+          hint={`${en ? "Collected" : "المحصّل"}: ${formatCurrency(d.collectedRevenueThisMonth, "EGP", en ? "en-EG" : "ar-EG")}`}
           icon={Wallet}
           accent="success"
           href="/payments"
-          trend={period === "month" ? { value: Math.abs(collectionTrend), positive: collectionTrend >= 0, label: en ? "Compared with last month" : "مقارنة بالشهر الماضي" } : undefined}
         />
         <StatCard
-          label={en ? "Outstanding" : "المتبقي (المتأخرات)"}
-          value={formatCurrency(d.outstanding, "EGP", en ? "en-EG" : "ar-EG")}
-          icon={TrendingDown}
-          accent="warning"
-          href="/payments"
+          label={en ? "Academy attendance" : "نسبة حضور الأكاديمية"}
+          value={`${d.overallAttendanceThisMonth}%`}
+          hint={en ? "Current month, canceled lessons excluded" : "هذا الشهر مع استبعاد الحصص الملغاة"}
+          icon={CalendarCheck}
+          accent="info"
+        />
+        <StatCard
+          label={en ? "At-risk students" : "الطلاب المعرضون للخطر"}
+          value={d.atRiskCount}
+          hint={en ? "Warning or critical" : "تحذير أو خطر حرج"}
+          icon={AlertTriangle}
+          accent="destructive"
+          href="#at-risk"
         />
       </div>
 
@@ -238,7 +238,40 @@ export default async function DashboardPage(
         />
       </div>
 
-      {/* Charts row */}
+      {/* BI charts */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>{en ? "Revenue by group" : "الإيراد حسب المجموعة"}</CardTitle>
+            <CardDescription>{en ? "Expected, collected, and unpaid for the current month" : "المتوقع والمحصّل وغير المدفوع خلال الشهر الحالي"}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {d.revenueByGroup.length === 0 ? (
+              <p className="py-12 text-center text-sm text-muted-foreground">{en ? "No group revenue data yet." : "لا توجد بيانات إيراد للمجموعات بعد."}</p>
+            ) : (
+              <GroupedBars
+                data={d.revenueByGroup.slice(0, 8)}
+                xKey="name"
+                keys={[
+                  { key: "collected", label: en ? "Collected" : "المحصّل", color: "#10b981" },
+                  { key: "unpaid", label: en ? "Unpaid" : "غير مدفوع", color: "#f59e0b" },
+                ]}
+              />
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>{en ? "Attendance — last 4 weeks" : "الحضور — آخر ٤ أسابيع"}</CardTitle>
+            <CardDescription>{en ? "Weekly percentage excluding canceled lessons" : "النسبة الأسبوعية مع استبعاد الحصص الملغاة"}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LineTrend data={d.attendanceTrend4Weeks} dataKey="rate" xKey="week" color="#0ea5e9" />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Existing trend and distribution views */}
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -341,7 +374,7 @@ export default async function DashboardPage(
       </div>
 
       {/* Lists */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div id="at-risk" className="grid gap-4 lg:grid-cols-3">
         {/* Upcoming lessons */}
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -401,19 +434,21 @@ export default async function DashboardPage(
               </p>
             ) : (
               atRisk.map((r) => (
-                <Link
-                  key={r.studentId}
-                  href={`/students/${r.studentId}`}
-                  className="flex items-center justify-between gap-3 rounded-lg p-2 transition-colors hover:bg-accent"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{r.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">{r.reasons.join(" · ")}</p>
+                <div key={r.studentId} className="rounded-lg border border-border/70 p-3 transition-colors hover:bg-accent/60">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{r.name}</p>
+                      <p className="truncate text-xs text-muted-foreground">{r.groupName ?? (en ? "No group" : "بدون مجموعة")}</p>
+                    </div>
+                    <Badge variant={r.severity === "high" ? "destructive" : "warning"}>
+                      {(SEVERITY[r.severity]?.[en ? "en" : "ar"]) ?? r.severity} · {r.riskScore}
+                    </Badge>
                   </div>
-                  <Badge variant={r.severity === "high" ? "destructive" : r.severity === "medium" ? "warning" : "secondary"}>
-                    {(SEVERITY[r.severity]?.[en ? "en" : "ar"]) ?? r.severity}
-                  </Badge>
-                </Link>
+                  <p className="mt-2 text-xs leading-5 text-rose-700">{r.reasons.join(" · ") || (en ? "Needs review" : "يحتاج مراجعة")}</p>
+                  <div className="mt-2 flex gap-3 text-xs font-medium">
+                    <Link href={`/students/${r.studentId}`} className="text-primary hover:underline">{en ? "Profile" : "الملف"}</Link>
+                  </div>
+                </div>
               ))
             )}
           </CardContent>

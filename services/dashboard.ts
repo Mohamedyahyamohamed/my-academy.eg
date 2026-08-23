@@ -25,6 +25,7 @@ import { performanceLevel } from "@/lib/constants";
 import { percentage, round } from "@/lib/utils";
 import { currentAcademyId } from "./session";
 import { isLessonUpcoming, lessonWallClockMinute } from "./lessons";
+import { calculateRiskScore } from "./insights";
 
 function monthLabel(key: string) {
   const [y, m] = key.split("-").map(Number);
@@ -38,7 +39,7 @@ function averageGradePercent(
   if (!grades.length) return 0;
   const sum = grades.reduce((s, g) => {
     const ex = exams.find((e) => e.id === g.exam_id);
-    return s + (ex ? (g.score / ex.max_score) * 100 : 0);
+    return s + (ex && Number(ex.max_score) > 0 ? (Number(g.score) / Number(ex.max_score)) * 100 : 0);
   }, 0);
   return round(sum / grades.length, 0);
 }
@@ -48,9 +49,22 @@ function currentMonthKey() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function paymentMonth(payment: any): string {
+  return String(payment?.month_year ?? payment?.month ?? "");
+}
+
+function activeLesson(lesson: any): boolean {
+  return lesson?.status !== "canceled" && lesson?.is_cancelled !== true;
+}
+
+function dateInRange(value: unknown, start: number, end: number): boolean {
+  const time = +new Date(String(value ?? ""));
+  return Number.isFinite(time) && time >= start && time < end;
+}
+
 // ─── RLS-backed data fetch for dashboard aggregations ────────────
 async function getRLSData(academyId?: string) {
-  const [students, groups, exams, payments, courses, lessons, attendance, grades, teachers, homework, submissions] =
+  const [students, groups, exams, payments, courses, lessons, attendance, grades, teachers, homework, submissions, groupStudents] =
     await Promise.all([
       fetchTableRLS<Student>("students", academyId),
       fetchTableRLS<any>("groups", academyId),
@@ -63,6 +77,7 @@ async function getRLSData(academyId?: string) {
       fetchTableRLS<any>("teachers", academyId),
       fetchTableRLS<any>("homework", academyId),
       fetchTableRLS<any>("homework_submissions", academyId),
+      fetchTableRLS<any>("group_students", academyId),
     ]);
 
   // Apply teacher scope if applicable.
@@ -86,6 +101,7 @@ async function getRLSData(academyId?: string) {
     teachers,
     homework,
     submissions,
+    groupStudents,
     scopedLessonIds,
     scopedGroupIds,
   };
@@ -96,11 +112,11 @@ export async function getDashboardData(
   academyId?: string,
 ): Promise<DashboardData> {
   const d = await getRLSData(academyId);
-  const { students, groups, exams, payments, attendance, grades } = d;
+  const { students, groups, exams, payments, attendance, grades, lessons, groupStudents } = d;
 
   const totalStudents = students.length;
-  const activeStudents = students.filter((s: any) => s.status === "ACTIVE").length;
-  const totalGroups = groups.filter((g: any) => g.status === "ACTIVE").length;
+  const activeStudents = students.filter((s: any) => s.status === "ACTIVE" && s.is_active !== false).length;
+  const totalGroups = groups.filter((g: any) => g.status === "ACTIVE" && g.is_active !== false).length;
 
   // نطاق الرسم البياني + عدد شهور التحصيل حسب الفترة المختارة.
   const chartRange = period === "year" ? 12 : 6;
@@ -118,6 +134,61 @@ export async function getDashboardData(
   });
   const present = recentAtt.filter((a: any) => a.status !== "ABSENT").length;
   const attendanceRate = recentAtt.length ? percentage(present, recentAtt.length) : 0;
+  const currentMonth = currentMonthKey();
+  const activeStudentsSet = new Set(students.filter((student: any) => student.status === "ACTIVE" && student.is_active !== false).map((student: any) => student.id));
+  const expectedRevenueThisMonth = groups
+    .filter((group: any) => group.status === "ACTIVE" && group.is_active !== false)
+    .reduce((sum: number, group: any) => {
+      const enrolled = groupStudents.filter((membership: any) => membership.group_id === group.id && activeStudentsSet.has(membership.student_id)).length;
+      return sum + Math.max(0, Number(group.monthly_fee ?? 0)) * enrolled;
+    }, 0);
+  const collectedRevenueThisMonth = payments
+    .filter((payment: any) => paymentMonth(payment) === currentMonth)
+    .reduce((sum: number, payment: any) => sum + Math.max(0, Number(payment.amount_paid ?? 0)), 0);
+  const currentMonthLessonIds = new Set(lessons
+    .filter((lesson: any) => activeLesson(lesson) && String(lesson.date ?? "").slice(0, 7) === currentMonth)
+    .map((lesson: any) => lesson.id));
+  const currentMonthAttendance = attendance.filter((record: any) => currentMonthLessonIds.has(record.lesson_id));
+  const currentMonthPresent = currentMonthAttendance.filter((record: any) => record.status !== "ABSENT").length;
+  const overallAttendanceThisMonth = currentMonthAttendance.length
+    ? percentage(currentMonthPresent, currentMonthAttendance.length)
+    : 0;
+  const revenueByGroup = groups
+    .filter((group: any) => group.status === "ACTIVE" && group.is_active !== false)
+    .map((group: any) => {
+      const enrolled = groupStudents.filter((membership: any) => membership.group_id === group.id && activeStudentsSet.has(membership.student_id)).length;
+      const expected = Math.max(0, Number(group.monthly_fee ?? 0)) * enrolled;
+      const collected = payments
+        .filter((payment: any) => payment.group_id === group.id && paymentMonth(payment) === currentMonth)
+        .reduce((sum: number, payment: any) => sum + Math.max(0, Number(payment.amount_paid ?? 0)), 0);
+      return { name: group.name ?? "بدون اسم", expected, collected, unpaid: Math.max(0, expected - collected) };
+    })
+    .sort((a, b) => b.expected - a.expected || a.name.localeCompare(b.name));
+  const riskStudents = students
+    .filter((student: any) => student.status === "ACTIVE" && student.is_active !== false)
+    .map((student: any) => calculateRiskScore({
+      attendance: attendance.filter((record: any) => record.student_id === student.id),
+      grades: grades.filter((grade: any) => grade.student_id === student.id),
+      exams,
+    }))
+    .filter((risk) => risk.category !== "safe");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const mondayOffset = (today.getDay() + 6) % 7;
+  const currentWeekStart = new Date(today);
+  currentWeekStart.setDate(today.getDate() - mondayOffset);
+  const attendanceTrend4Weeks = Array.from({ length: 4 }, (_, index) => {
+    const startDate = new Date(currentWeekStart);
+    startDate.setDate(currentWeekStart.getDate() - (3 - index) * 7);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 7);
+    const start = startDate.getTime();
+    const end = endDate.getTime();
+    const lessonIds = new Set(lessons.filter((lesson: any) => activeLesson(lesson) && dateInRange(lesson.date, start, end)).map((lesson: any) => lesson.id));
+    const records = attendance.filter((record: any) => lessonIds.has(record.lesson_id));
+    const attended = records.filter((record: any) => record.status !== "ABSENT").length;
+    return { week: `الأسبوع ${index + 1}`, rate: records.length ? percentage(attended, records.length) : 0 };
+  });
 
   // students by course
   const courseMap = new Map<string, { students: number; color: string }>();
@@ -147,8 +218,8 @@ export async function getDashboardData(
   const perfBuckets: Record<string, number> = { Excellent: 0, "Very Good": 0, Good: 0, "Needs Improvement": 0 };
   for (const g of grades) {
     const exam = exams.find((e: any) => e.id === g.exam_id);
-    if (!exam) continue;
-    perfBuckets[performanceLevel((g.score / exam.max_score) * 100)]++;
+    if (!exam || Number(exam.max_score) <= 0) continue;
+    perfBuckets[performanceLevel((Number(g.score) / Number(exam.max_score)) * 100)]++;
   }
   const gradePerformance = Object.entries(perfBuckets).map(([level, count]) => ({ level, count }));
 
@@ -218,6 +289,12 @@ export async function getDashboardData(
     recentPayments,
     outstandingStudents,
     studentsNeedingAttention: needing.slice(0, 5),
+    expectedRevenueThisMonth,
+    collectedRevenueThisMonth,
+    overallAttendanceThisMonth,
+    atRiskCount: riskStudents.length,
+    revenueByGroup,
+    attendanceTrend4Weeks,
   };
 }
 

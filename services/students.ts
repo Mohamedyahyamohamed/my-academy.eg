@@ -28,6 +28,7 @@ import {
   fetchTableRLS,
 } from "./_shared";
 import { percentage, round } from "@/lib/utils";
+import { gradeMatches } from "@/lib/student-grades";
 import { isSupabaseConfigured } from "./supabase/config";
 import { canCreate } from "./saas";
 import { STUDENT_DEFAULT_PASSWORD } from "@/lib/auth";
@@ -245,7 +246,7 @@ function listStudentsFromCache(
   }
 
   if (status !== "ALL") items = items.filter((s) => s.status === status);
-  if (grade !== "ALL") items = items.filter((s) => (s.grade ?? "").trim() === grade);
+  if (grade !== "ALL") items = items.filter((s) => gradeMatches(s.grade, grade));
   if (gender !== "ALL") items = items.filter((s) => s.gender === gender);
 
   if (groupId !== "ALL") {

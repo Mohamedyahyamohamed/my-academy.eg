@@ -1,4 +1,5 @@
 import type { Student } from "@/types";
+import { gradeMatches } from "@/lib/student-grades";
 
 export type GenderFilter = "all" | "male" | "female";
 
@@ -16,7 +17,7 @@ export function filterAvailableStudents(
   return students.filter((student) => {
     const fullName = normalizeSearch(`${student.first_name} ${student.last_name}`);
     const matchesName = !query || fullName.includes(query);
-    const matchesGrade = !gradeFilter || (student.grade ?? "") === gradeFilter;
+    const matchesGrade = gradeMatches(student.grade, gradeFilter);
     const matchesGender = genderFilter === "all" || student.gender === genderFilter;
     return matchesName && matchesGrade && matchesGender;
   });

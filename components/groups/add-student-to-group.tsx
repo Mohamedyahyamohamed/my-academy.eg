@@ -27,6 +27,7 @@ import { useRouter } from "next/navigation";
 import type { Student } from "@/types";
 import { useClientLang } from "@/lib/i18n-client";
 import { filterAvailableStudents, type GenderFilter } from "@/lib/student-filters";
+import { GLOBAL_GRADE_OPTIONS } from "@/lib/student-grades";
 
 export function AddStudentToGroupDialog({
   groupId,
@@ -44,11 +45,7 @@ export function AddStudentToGroupDialog({
   const [saving, setSaving] = React.useState(false);
   const router = useRouter();
 
-  const grades = React.useMemo(
-    () => Array.from(new Set(availableStudents.map((student) => student.grade).filter((grade): grade is string => Boolean(grade?.trim()))))
-      .sort((a, b) => a.localeCompare(b, en ? "en" : "ar")),
-    [availableStudents, en],
-  );
+  const grades = GLOBAL_GRADE_OPTIONS;
   const filteredStudents = React.useMemo(
     () => filterAvailableStudents(availableStudents, nameQuery, gradeFilter, genderFilter),
     [availableStudents, nameQuery, gradeFilter, genderFilter],

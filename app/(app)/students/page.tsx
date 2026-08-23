@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StudentsService, GroupsService, MiscService, requireScopedRole } from "@/services";
 import type { StudentFilters } from "@/types";
+import { GLOBAL_GRADE_OPTIONS } from "@/lib/student-grades";
 import { cookies } from "next/headers";
 import { getLangFromCookie } from "@/lib/i18n";
 
@@ -54,7 +55,6 @@ export default async function StudentsPage(
   };
 
   const result = await StudentsService.listStudents(filters, user.academy_id);
-  const grades = await StudentsService.listStudentGrades(user.academy_id);
   const groups = await GroupsService.listGroups(
     "",
     user.academy_id,
@@ -69,7 +69,7 @@ export default async function StudentsPage(
   ];
   const gradeOptions = [
     { value: "ALL", label: en ? "All grades" : "كل الصفوف" },
-    ...grades.map((grade) => ({ value: grade, label: grade })),
+    ...GLOBAL_GRADE_OPTIONS.map((grade) => ({ value: grade, label: grade })),
   ];
 
   return (

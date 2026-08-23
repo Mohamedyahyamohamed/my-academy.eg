@@ -256,6 +256,37 @@ create table grades (
   created_at timestamptz not null default now(),
   unique (exam_id, student_id)
 );
+
+-- LMS-compatible names. Legacy exams/grades remain synchronized by the
+-- assessments_compatibility_tables migration and remain the app's existing API.
+create table assessments (
+  id uuid primary key references exams(id) on delete cascade,
+  academy_id uuid not null references academies(id) on delete cascade,
+  group_id uuid not null references groups(id) on delete cascade,
+  course_id uuid references courses(id) on delete restrict,
+  title text not null,
+  type text not null default 'exam' check (type in ('homework', 'quiz', 'exam')),
+  max_score numeric(10,2) not null check (max_score > 0),
+  date date not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index assessments_academy_idx on assessments(academy_id);
+create index assessments_group_date_idx on assessments(group_id, date desc);
+
+create table student_grades (
+  id uuid primary key default gen_random_uuid(),
+  academy_id uuid not null references academies(id) on delete cascade,
+  assessment_id uuid not null references assessments(id) on delete cascade,
+  student_id uuid not null references students(id) on delete cascade,
+  score numeric(10,2) not null check (score >= 0),
+  notes text,
+  created_at timestamptz not null default now(),
+  unique (assessment_id, student_id)
+);
+create index student_grades_academy_idx on student_grades(academy_id);
+create index student_grades_assessment_idx on student_grades(assessment_id);
+create index student_grades_student_idx on student_grades(student_id);
 -- Enforce score <= max_score via trigger
 create or replace function check_grade_bounds() returns trigger as $$
 declare max_score numeric;
@@ -369,6 +400,8 @@ alter table payments enable row level security;
 alter table payment_transactions enable row level security;
 alter table exams enable row level security;
 alter table grades enable row level security;
+alter table assessments enable row level security;
+alter table student_grades enable row level security;
 alter table homework enable row level security;
 alter table homework_submissions enable row level security;
 alter table notifications enable row level security;
@@ -399,6 +432,12 @@ create policy tenant_students on students for all using (academy_id = auth_acade
 create policy tenant_groups on groups for all using (academy_id = auth_academy_id());
 create policy tenant_lessons on lessons for all using (academy_id = auth_academy_id());
 create policy tenant_exams on exams for all using (academy_id = auth_academy_id());
+create policy tenant_assessments on assessments for all
+  using (academy_id = auth_academy_id())
+  with check (academy_id = auth_academy_id());
+create policy tenant_student_grades on student_grades for all
+  using (academy_id = auth_academy_id())
+  with check (academy_id = auth_academy_id());
 create policy tenant_homework on homework for all using (academy_id = auth_academy_id());
 create policy tenant_payments on payments for all using (academy_id = auth_academy_id());
 create policy tenant_notes on notes for all using (academy_id = auth_academy_id());

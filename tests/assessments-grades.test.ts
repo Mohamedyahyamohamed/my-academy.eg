@@ -5,15 +5,28 @@ import { describe, expect, it } from "vitest";
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 
 describe("assessments and grades contracts", () => {
-  it("extends the tenant-scoped assessment schema without creating a second source of truth", () => {
-    const migration = read("supabase/migrations/20260823_assessments_and_grade_notes.sql");
+  it("creates the requested tenant-scoped LMS tables and backfills existing records", () => {
+    const migration = read("supabase/migrations/20260823_assessments_compatibility_tables.sql");
     const schema = read("supabase/schema.sql");
-    expect(migration).toContain("alter table public.exams");
-    expect(migration).toContain("type in ('homework', 'quiz', 'exam')");
-    expect(migration).toContain("alter table public.grades");
-    expect(migration).toContain("add column if not exists notes text");
-    expect(schema).toContain("group_id uuid not null references groups(id) on delete cascade");
-    expect(schema).toContain("exam_id uuid not null references exams(id) on delete cascade");
+    expect(migration).toContain("create table if not exists public.assessments");
+    expect(migration).toContain("title text not null");
+    expect(migration).toContain("type text not null default 'exam'");
+    expect(migration).toContain("group_id uuid not null references public.groups(id) on delete cascade");
+    expect(migration).toContain("create table if not exists public.student_grades");
+    expect(migration).toContain("assessment_id uuid not null references public.assessments(id) on delete cascade");
+    expect(migration).toContain("student_id uuid not null references public.students(id) on delete cascade");
+    expect(migration).toContain("insert into public.assessments");
+    expect(migration).toContain("insert into public.student_grades");
+    expect(schema).toContain("type text not null default 'exam' check (type in ('homework', 'quiz', 'exam'))");
+    expect(schema).toContain("notes text");
+  });
+
+  it("keeps the requested LMS tables synchronized with the existing grading screens", () => {
+    const migration = read("supabase/migrations/20260823_assessments_compatibility_tables.sql");
+    expect(migration).toContain("sync_assessment_from_exam");
+    expect(migration).toContain("sync_student_grade_from_grade");
+    expect(migration).toContain("trg_sync_assessment_from_exam");
+    expect(migration).toContain("trg_sync_student_grade_from_grade");
   });
 
   it("protects bulk grade writes with tenant and roster checks in one RPC transaction", () => {

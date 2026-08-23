@@ -4,6 +4,7 @@ import * as React from "react";
 import { UserPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -14,10 +15,18 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { addStudentToGroupAction } from "@/app/actions/groups";
 import { useRouter } from "next/navigation";
 import type { Student } from "@/types";
 import { useClientLang } from "@/lib/i18n-client";
+import { filterAvailableStudents, type GenderFilter } from "@/lib/student-filters";
 
 export function AddStudentToGroupDialog({
   groupId,
@@ -29,8 +38,21 @@ export function AddStudentToGroupDialog({
   const [open, setOpen] = React.useState(false);
   const en = useClientLang() === "en";
   const [selected, setSelected] = React.useState<string[]>([]);
+  const [nameQuery, setNameQuery] = React.useState("");
+  const [gradeFilter, setGradeFilter] = React.useState("");
+  const [genderFilter, setGenderFilter] = React.useState<GenderFilter>("all");
   const [saving, setSaving] = React.useState(false);
   const router = useRouter();
+
+  const grades = React.useMemo(
+    () => Array.from(new Set(availableStudents.map((student) => student.grade).filter((grade): grade is string => Boolean(grade?.trim()))))
+      .sort((a, b) => a.localeCompare(b, en ? "en" : "ar")),
+    [availableStudents, en],
+  );
+  const filteredStudents = React.useMemo(
+    () => filterAvailableStudents(availableStudents, nameQuery, gradeFilter, genderFilter),
+    [availableStudents, nameQuery, gradeFilter, genderFilter],
+  );
 
   const submit = async () => {
     if (!selected.length) return;
@@ -56,6 +78,12 @@ export function AddStudentToGroupDialog({
     }
   };
 
+  const clearFilters = () => {
+    setNameQuery("");
+    setGradeFilter("");
+    setGenderFilter("all");
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -66,39 +94,80 @@ export function AddStudentToGroupDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{en ? "Add students to group" : "إضافة طلاب إلى المجموعة"}</DialogTitle>
-          <DialogDescription>{en ? "Choose the students to enroll." : "اختر الطلاب المطلوب تسجيلهم."}</DialogDescription>
+          <DialogDescription>{en ? "Filter by name, grade, or gender, then choose the students to enroll." : "فلتر بالاسم أو الصف أو النوع، ثم اختر الطلاب المطلوب تسجيلهم."}</DialogDescription>
         </DialogHeader>
         {availableStudents.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">
             {en ? "All students are already enrolled." : "كل الطلاب مسجلون بالفعل."}
           </p>
         ) : (
-          <div className="max-h-80 space-y-1 overflow-y-auto">
-            {availableStudents.map((s) => {
-              const checked = selected.includes(s.id);
-              return (
-                <label
-                  key={s.id}
-                  className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-2.5 hover:bg-accent/50"
-                >
-                  <Checkbox
-                    checked={checked}
-                    onCheckedChange={(v) =>
-                      setSelected((cur) =>
-                        v ? [...cur, s.id] : cur.filter((x) => x !== s.id),
-                      )
-                    }
-                  />
-                  <Label className="cursor-pointer">
-                    {s.first_name} {s.last_name}
-                    <span className="ms-2 text-xs text-muted-foreground">
-                      {s.grade}
-                    </span>
-                  </Label>
-                </label>
-              );
-            })}
-          </div>
+          <>
+            <div className="grid gap-2 sm:grid-cols-3" role="search" aria-label={en ? "Student filters" : "فلاتر الطلاب"}>
+              <Input
+                value={nameQuery}
+                onChange={(event) => setNameQuery(event.target.value)}
+                placeholder={en ? "Search by name" : "بحث بالاسم"}
+                aria-label={en ? "Search by student name" : "البحث باسم الطالب"}
+              />
+              <Select value={gradeFilter || "all-grades"} onValueChange={(value) => setGradeFilter(value === "all-grades" ? "" : value)}>
+                <SelectTrigger aria-label={en ? "Filter by grade" : "فلترة بالصف"}>
+                  <SelectValue placeholder={en ? "All grades" : "كل الصفوف"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all-grades">{en ? "All grades" : "كل الصفوف"}</SelectItem>
+                  {grades.map((grade) => <SelectItem key={grade} value={grade}>{grade}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={genderFilter} onValueChange={(value) => setGenderFilter(value as GenderFilter)}>
+                <SelectTrigger aria-label={en ? "Filter by gender" : "فلترة بالنوع"}>
+                  <SelectValue placeholder={en ? "All genders" : "الكل"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{en ? "All genders" : "الكل"}</SelectItem>
+                  <SelectItem value="male">{en ? "Male" : "ذكر"}</SelectItem>
+                  <SelectItem value="female">{en ? "Female" : "أنثى"}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {(nameQuery || gradeFilter || genderFilter !== "all") && (
+              <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                <span>{en ? `${filteredStudents.length} of ${availableStudents.length} students` : `${filteredStudents.length} من ${availableStudents.length} طالب`}</span>
+                <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>{en ? "Clear filters" : "مسح الفلاتر"}</Button>
+              </div>
+            )}
+            {filteredStudents.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                {en ? "No students match these filters." : "لا يوجد طلاب مطابقون لهذه الفلاتر."}
+              </p>
+            ) : (
+              <div className="max-h-80 space-y-1 overflow-y-auto">
+                {filteredStudents.map((s) => {
+                  const checked = selected.includes(s.id);
+                  return (
+                    <label
+                      key={s.id}
+                      className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-2.5 hover:bg-accent/50"
+                    >
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={(v) =>
+                          setSelected((cur) =>
+                            v ? (cur.includes(s.id) ? cur : [...cur, s.id]) : cur.filter((x) => x !== s.id),
+                          )
+                        }
+                      />
+                      <Label className="cursor-pointer">
+                        {s.first_name} {s.last_name}
+                        <span className="ms-2 text-xs text-muted-foreground">
+                          {s.grade || (en ? "No grade" : "بدون صف")} {s.gender ? `· ${s.gender === "male" ? (en ? "Male" : "ذكر") : (en ? "Female" : "أنثى")}` : ""}
+                        </span>
+                      </Label>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => setOpen(false)}>{en ? "Cancel" : "إلغاء"}</Button>

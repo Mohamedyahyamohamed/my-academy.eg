@@ -119,13 +119,91 @@ function assertStudentManager(userOverride?: SessionUser) {
   return user;
 }
 
-function assertRequestedGroupScope(groupIds: string[], academyId: string, authenticatedUser?: SessionUser) {
+async function currentStudentGroupIds(studentId: string, academyId: string): Promise<string[]> {
+  const cached = collections().groupStudents
+    .filter((row) => row.student_id === studentId)
+    .map((row) => row.group_id)
+    .filter((groupId) => collections().groups.some((group) => group.id === groupId && group.academy_id === academyId));
+  if (!isSupabaseConfigured()) return cached;
+
+  const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
+  const client = nodeSupabaseClient();
+  if (!client) return cached;
+  const { data: memberships, error: membershipError } = await client
+    .from("group_students")
+    .select("group_id")
+    .eq("student_id", studentId)
+    .limit(1000);
+  if (membershipError) throw new Error(`Could not read student group memberships: ${membershipError.message}`);
+  const candidateIds = (memberships ?? []).map((row: any) => row.group_id).filter(Boolean);
+  if (!candidateIds.length) return [];
+  const { data: groups, error: groupError } = await client
+    .from("groups")
+    .select("id")
+    .eq("academy_id", academyId)
+    .in("id", candidateIds)
+    .limit(1000);
+  if (groupError) throw new Error(`Could not validate student group memberships: ${groupError.message}`);
+  return (groups ?? []).map((group: any) => group.id).filter(Boolean);
+}
+
+async function assertRequestedGroupScope(groupIds: string[], academyId: string, authenticatedUser?: SessionUser) {
   const user = assertStudentManager(authenticatedUser);
-  const groups = groupIds.map((id) => collections().groups.find((group) => group.id === id && group.academy_id === academyId));
-  if (groups.some((group) => !group)) throw new Error("A selected group is outside the authenticated academy.");
+  const requestedIds = [...new Set(groupIds.filter((id): id is string => typeof id === "string" && id.length > 0))];
+  if (!requestedIds.length) return;
+
+  // Always validate against the durable tenant-scoped table in production.
+  // The request snapshot can lag behind a group that was just created or loaded
+  // on another page, which previously caused a false "outside academy" error.
+  let groups: Array<{ id: string; academy_id: string; teacher_id: string | null }> = collections().groups
+    .filter((group) => group.academy_id === academyId && requestedIds.includes(group.id))
+    .map((group) => ({ id: group.id, academy_id: group.academy_id!, teacher_id: group.teacher_id ?? null }));
+  if (isSupabaseConfigured()) {
+    const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
+    const client = nodeSupabaseClient();
+    if (client) {
+      const { data, error } = await client
+        .from("groups")
+        .select("id, academy_id, teacher_id")
+        .eq("academy_id", academyId)
+        .in("id", requestedIds)
+        .limit(1000);
+      if (error) throw new Error(`Could not validate selected groups: ${error.message}`);
+      groups = (data ?? []) as Array<{ id: string; academy_id: string; teacher_id: string | null }>;
+    }
+  }
+  const validIds = new Set(groups.map((group) => group.id));
+  if (validIds.size !== requestedIds.length) {
+    throw new Error("A selected group is outside the authenticated academy.");
+  }
+
   if (!hasAcademyWideScope(user.role)) {
-    const scope = teacherGroupScope();
-    if (!scope || groupIds.some((id) => !scope.has(id))) {
+    let authorizedIds = teacherGroupScope();
+    if (isSupabaseConfigured()) {
+      const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
+      const client = nodeSupabaseClient();
+      if (client) {
+        const { data: teacher } = await client
+          .from("teachers")
+          .select("id")
+          .eq("academy_id", academyId)
+          .or(`profile_id.eq.${user.id},email.eq.${user.email}`)
+          .maybeSingle();
+        if (teacher?.id) {
+          const [{ data: owned }, { data: assisted }] = await Promise.all([
+            client.from("groups").select("id").eq("academy_id", academyId).eq("teacher_id", teacher.id).in("id", requestedIds),
+            client.from("group_assistants").select("group_id").eq("teacher_id", teacher.id).in("group_id", requestedIds),
+          ]);
+          authorizedIds = new Set([
+            ...(owned ?? []).map((row: any) => row.id),
+            ...(assisted ?? []).map((row: any) => row.group_id),
+          ]);
+        } else {
+          authorizedIds = new Set();
+        }
+      }
+    }
+    if (!authorizedIds || requestedIds.some((id) => !authorizedIds.has(id))) {
       throw new Error("Teachers can only manage students in assigned groups.");
     }
   }
@@ -752,7 +830,7 @@ export async function createStudent(
     throw new Error("The requested academy is outside the authenticated scope.");
   }
   const groupIdsForAuthorization = input.groupIds ?? [];
-  assertRequestedGroupScope(groupIdsForAuthorization, academyId, authenticatedUser);
+  await assertRequestedGroupScope(groupIdsForAuthorization, academyId, authenticatedUser);
   if (input.parent_id) {
     const parent = collections().parents.find((item) => item.id === input.parent_id && item.academy_id === academyId);
     if (!parent) throw new Error("Parent is outside the authenticated academy.");
@@ -913,7 +991,7 @@ export async function updateStudent(
   if (input.parent_id) {
     await assertParentMutationScope(input.parent_id, academyId);
   }
-  if (input.groupIds?.length) assertRequestedGroupScope(input.groupIds, academyId, authenticatedUser);
+  if (input.groupIds !== undefined) await assertRequestedGroupScope(input.groupIds, academyId, authenticatedUser);
   Object.assign(s, {
     ...input,
     updated_at: new Date().toISOString(),
@@ -923,17 +1001,43 @@ export async function updateStudent(
   // حوّل التاريخ الفاضي ("") لـ null عشان الداتابيز يقبلّه
   if (patch.date_of_birth === "") patch.date_of_birth = null;
   await persistUpdate("students", id, { ...patch, updated_at: new Date().toISOString() }, academyId);
-  if (input.groupIds?.length) {
-    collections().groupStudents = collections().groupStudents.filter(
-      (gs) => gs.student_id !== id,
-    );
+  if (input.groupIds !== undefined) {
+    const desiredGroupIds = [...new Set(input.groupIds)];
+    const previousGroupIds = await currentStudentGroupIds(id, academyId);
+    const previousSet = new Set(previousGroupIds);
+    const desiredSet = new Set(desiredGroupIds);
+    const addedGroupIds = desiredGroupIds.filter((groupId) => !previousSet.has(groupId));
+    const removedGroupIds = previousGroupIds.filter((groupId) => !desiredSet.has(groupId));
     const now = new Date().toISOString();
-    for (const gid of input.groupIds) {
-      collections().groupStudents.push({
-        group_id: gid,
-        student_id: id,
-        joined_at: now,
-      });
+
+    try {
+      // Add new memberships first, then remove old ones. If either step fails,
+      // compensate the completed writes so the roster is not left half-synced.
+      for (const groupId of addedGroupIds) {
+        await persistInsert("group_students", { group_id: groupId, student_id: id, joined_at: now }, academyId);
+      }
+      for (const groupId of removedGroupIds) {
+        await persistDelete("group_students", { group_id: groupId, student_id: id }, academyId);
+      }
+    } catch (error) {
+      for (const groupId of addedGroupIds) {
+        try { await persistDelete("group_students", { group_id: groupId, student_id: id }, academyId); } catch (rollbackError) {
+          console.error("student membership add rollback failed", rollbackError);
+        }
+      }
+      for (const groupId of removedGroupIds) {
+        try { await persistInsert("group_students", { group_id: groupId, student_id: id, joined_at: now }, academyId); } catch (rollbackError) {
+          console.error("student membership remove rollback failed", rollbackError);
+        }
+      }
+      throw error;
+    }
+
+    collections().groupStudents = collections().groupStudents.filter(
+      (gs) => gs.student_id !== id || desiredSet.has(gs.group_id),
+    );
+    for (const groupId of addedGroupIds) {
+      collections().groupStudents.push({ group_id: groupId, student_id: id, joined_at: now });
     }
   }
   return attachRelations(s);

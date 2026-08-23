@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Student } from "@/types";
-import { filterAvailableStudents } from "@/lib/student-filters";
+import { filterAvailableStudents, toggleVisibleSelection } from "@/lib/student-filters";
 
 const students = [
   { id: "1", first_name: "Ahmed", last_name: "Ali", grade: "الصف الأول الثانوي", gender: "male" },
@@ -10,6 +10,11 @@ const students = [
 ] as Student[];
 
 describe("student picker filters", () => {
+  it("selects all filtered students while preserving hidden selections", () => {
+    expect(toggleVisibleSelection(["hidden"], ["a", "b"])).toEqual(["hidden", "a", "b"]);
+    expect(toggleVisibleSelection(["hidden", "a", "b"], ["a", "b"])).toEqual(["hidden"]);
+  });
+
   it("filters by a case-insensitive name query", () => {
     expect(filterAvailableStudents(students, "mOnA", "", "all").map((student) => student.id)).toEqual(["2"]);
   });

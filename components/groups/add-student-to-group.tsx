@@ -26,7 +26,7 @@ import { addStudentToGroupAction } from "@/app/actions/groups";
 import { useRouter } from "next/navigation";
 import type { Student } from "@/types";
 import { useClientLang } from "@/lib/i18n-client";
-import { filterAvailableStudents, type GenderFilter } from "@/lib/student-filters";
+import { filterAvailableStudents, toggleVisibleSelection, type GenderFilter } from "@/lib/student-filters";
 import { GLOBAL_GRADE_OPTIONS } from "@/lib/student-grades";
 
 export function AddStudentToGroupDialog({
@@ -81,6 +81,13 @@ export function AddStudentToGroupDialog({
     setGenderFilter("all");
   };
 
+  const visibleStudentIds = filteredStudents.map((student) => student.id);
+  const selectedVisibleCount = visibleStudentIds.filter((id) => selected.includes(id)).length;
+  const allVisibleSelected = visibleStudentIds.length > 0 && selectedVisibleCount === visibleStudentIds.length;
+  const toggleAllVisible = () => {
+    setSelected((current) => toggleVisibleSelection(current, visibleStudentIds));
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -130,6 +137,21 @@ export function AddStudentToGroupDialog({
               <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                 <span>{en ? `${filteredStudents.length} of ${availableStudents.length} students` : `${filteredStudents.length} من ${availableStudents.length} طالب`}</span>
                 <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>{en ? "Clear filters" : "مسح الفلاتر"}</Button>
+              </div>
+            )}
+            {filteredStudents.length > 0 && (
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+                <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+                  <Checkbox
+                    checked={allVisibleSelected ? true : selectedVisibleCount > 0 ? "indeterminate" : false}
+                    onCheckedChange={toggleAllVisible}
+                    aria-label={en ? "Select all filtered students" : "تحديد كل الطلاب الظاهرين بعد الفلترة"}
+                  />
+                  <span>{allVisibleSelected ? (en ? "Deselect visible" : "إلغاء تحديد الظاهرين") : (en ? "Select all visible" : "تحديد كل الظاهرين")}</span>
+                </label>
+                <span className="text-xs text-muted-foreground">
+                  {en ? `${selectedVisibleCount} selected from ${filteredStudents.length}` : `${selectedVisibleCount} محدد من ${filteredStudents.length}`}
+                </span>
               </div>
             )}
             {filteredStudents.length === 0 ? (

@@ -7,6 +7,13 @@ function normalizeSearch(value: string | null | undefined) {
   return (value ?? "").trim().toLocaleLowerCase();
 }
 
+export function toggleVisibleSelection(selectedIds: string[], visibleIds: string[]): string[] {
+  const visible = new Set(visibleIds);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  if (allVisibleSelected) return selectedIds.filter((id) => !visible.has(id));
+  return Array.from(new Set([...selectedIds, ...visibleIds]));
+}
+
 export function filterAvailableStudents(
   students: Student[],
   nameQuery: string,

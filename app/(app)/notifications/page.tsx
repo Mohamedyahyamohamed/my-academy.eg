@@ -41,7 +41,7 @@ export default async function NotificationsPage() {
           <CardContent className="divide-y p-0">
             {items.map((n) => (
               <div key={n.id} className={cn("flex items-start gap-3 p-4", !n.read && "bg-primary/[0.03]")}>
-                <span className={cn("mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full", dotColor[n.type])} />
+                <span className={cn("mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full", dotColor[n.type] ?? dotColor.system)} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
                     <p className={cn("text-sm", !n.read ? "font-semibold" : "font-medium")}>{n.title}</p>
@@ -59,7 +59,7 @@ export default async function NotificationsPage() {
         <Card>
           <CardContent className="p-0">
             <div className="border-b p-4"><h2 className="font-semibold">{en ? "WhatsApp notification log" : "سجل إشعارات واتساب"}</h2><p className="mt-1 text-xs text-muted-foreground">{en ? "Tenant-scoped delivery attempts; phone numbers are masked." : "محاولات الإرسال داخل الأكاديمية فقط، مع إخفاء أرقام الهاتف."}</p></div>
-            {whatsappLogs.length === 0 ? <p className="p-5 text-sm text-muted-foreground">{en ? "No WhatsApp attempts yet." : "لا توجد محاولات واتساب بعد."}</p> : <div className="divide-y">{whatsappLogs.map((log) => <div key={log.id} className="flex flex-wrap items-center gap-3 p-4 text-sm"><span className="rounded-full bg-muted px-2 py-1 text-xs font-semibold">{log.status}</span><span className="font-medium">{log.event_type}</span><span className="text-muted-foreground">{log.recipient_phone_last4 ? `••••${log.recipient_phone_last4}` : (en ? "No phone" : "لا يوجد رقم")}</span><span className="ms-auto text-xs text-muted-foreground">{formatRelative(log.created_at, en ? "en-EG" : "ar-EG")}</span>{log.failure_reason && <p className="basis-full text-xs text-rose-600">{log.failure_reason}</p>}</div>)}</div>}
+            {whatsappLogs.length === 0 ? <div className="p-4"><EmptyState icon={Bell} title={en ? "No WhatsApp attempts yet" : "لا توجد محاولات واتساب بعد"} description={en ? "Operational delivery attempts will appear here when an alert is triggered." : "ستظهر محاولات الإرسال التشغيلية هنا عند تشغيل أي تنبيه."} /></div> : <div className="divide-y">{whatsappLogs.map((log) => <div key={log.id} className="flex min-w-0 flex-wrap items-center gap-3 p-4 text-sm"><span className="rounded-full bg-muted px-2 py-1 text-xs font-semibold">{log.status}</span><span className="font-medium">{log.event_type}</span><span className="text-muted-foreground">{log.recipient_phone_last4 ? `••••${log.recipient_phone_last4}` : (en ? "No phone" : "لا يوجد رقم")}</span><span className="ms-auto text-xs text-muted-foreground">{formatRelative(log.created_at, en ? "en-EG" : "ar-EG")}</span>{log.failure_reason && <p className="basis-full break-words text-xs text-rose-600">{log.failure_reason}</p>}</div>)}</div>}
           </CardContent>
         </Card>
       )}

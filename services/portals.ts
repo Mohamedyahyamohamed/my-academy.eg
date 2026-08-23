@@ -603,6 +603,7 @@ function buildStudentPortalData(
   grades: any[],
   materials: StudentPortalMaterial[] = [],
   homework: StudentPortalHomework[] = [],
+  holidays: string[] = [],
 ): StudentPortalData {
   const groupIds = new Set(groups.map((group: any) => group.id));
   const eligibleLessons = lessons.filter(
@@ -610,6 +611,7 @@ function buildStudentPortalData(
       groupIds.has(lesson.group_id) &&
       lesson.status !== "canceled" &&
       lesson.is_cancelled !== true &&
+      !holidays.includes(String(lesson.date).slice(0, 10)) &&
       String(lesson.date) <= new Date().toISOString().slice(0, 10),
   );
   const eligibleLessonIds = new Set(eligibleLessons.map((lesson: any) => lesson.id));
@@ -691,7 +693,7 @@ export async function getStudentPortalByToken(token: string): Promise<StudentPor
     const homeworkRows = collections().homework.filter((item: any) => groupIds.includes(item.group_id));
     const submissions = collections().submissions.filter((item: any) => homeworkRows.some((homework: any) => homework.id === item.homework_id) && item.student_id === student.id);
     const lms = buildPortalLmsData(normalizedToken, student, groups, contentCourses, contentFiles, homeworkRows, submissions);
-    return buildStudentPortalData(student, academy?.name ?? "MYAcademy", groups, lessons, attendance, exams, grades, lms.materials, lms.homework);
+    return buildStudentPortalData(student, academy?.name ?? "MYAcademy", groups, lessons, attendance, exams, grades, lms.materials, lms.homework, Array.isArray((academy as any)?.holidays) ? (academy as any).holidays : []);
   }
 
   const client = nodeSupabaseClient();
@@ -707,12 +709,12 @@ export async function getStudentPortalByToken(token: string): Promise<StudentPor
   const student = rawStudent as Student;
 
   const [{ data: academy }, { data: memberships, error: membershipError }] = await Promise.all([
-    client.from("academies").select("name").eq("id", student.academy_id).maybeSingle(),
+    client.from("academies").select("name,holidays").eq("id", student.academy_id).maybeSingle(),
     client.from("group_students").select("group_id").eq("student_id", student.id).limit(1000),
   ]);
   if (membershipError) return null;
   const groupIds = [...new Set((memberships ?? []).map((row: any) => row.group_id).filter(Boolean))];
-  if (!groupIds.length) return buildStudentPortalData(student, academy?.name ?? "MYAcademy", [], [], [], [], []);
+  if (!groupIds.length) return buildStudentPortalData(student, academy?.name ?? "MYAcademy", [], [], [], [], [], [], [], Array.isArray((academy as any)?.holidays) ? (academy as any).holidays : []);
 
   const [{ data: groups, error: groupsError }, { data: lessons, error: lessonsError }, { data: exams, error: examsError }, { data: contentCourses, error: contentCoursesError }, { data: homeworkRows, error: homeworkError }] = await Promise.all([
     client.from("groups").select("id,academy_id,name,course_id").eq("academy_id", student.academy_id).in("id", groupIds).limit(1000),
@@ -734,5 +736,5 @@ export async function getStudentPortalByToken(token: string): Promise<StudentPor
   ]);
   if (attendanceError || gradesError || contentFilesError || submissionsError) return null;
   const lms = buildPortalLmsData(normalizedToken, student, groups ?? [], contentCourses ?? [], contentFiles ?? [], homeworkRows ?? [], submissions ?? []);
-  return buildStudentPortalData(student, academy?.name ?? "MYAcademy", groups ?? [], lessons ?? [], attendance ?? [], exams ?? [], grades ?? [], lms.materials, lms.homework);
+  return buildStudentPortalData(student, academy?.name ?? "MYAcademy", groups ?? [], lessons ?? [], attendance ?? [], exams ?? [], grades ?? [], lms.materials, lms.homework, Array.isArray((academy as any)?.holidays) ? (academy as any).holidays : []);
 }

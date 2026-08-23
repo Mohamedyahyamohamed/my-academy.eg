@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { RoleBadge } from "@/components/shared/badges";
+import { EmptyState } from "@/components/shared/empty-state";
 import { AcademySettingsForm, CoursesManager } from "@/components/settings/settings-forms";
 import { AcademyBranding } from "@/components/settings/academy-branding";
 import { InviteManager } from "@/components/settings/invite-manager";
@@ -109,7 +110,9 @@ export default async function SettingsPage({
               <div><CardTitle className="text-base">{text.usersTitle}</CardTitle><CardDescription>{text.usersDescription}</CardDescription></div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="divide-y">
+              {users.length === 0 ? (
+                <div className="p-5"><EmptyState icon={Users} title={lang === "en" ? "No users yet" : "لا يوجد مستخدمون بعد"} description={lang === "en" ? "Users and team members will appear here when they are added." : "سيظهر المستخدمون وأعضاء الفريق هنا بعد إضافتهم."} /></div>
+              ) : <div className="divide-y">
                 {users.map((u) => (
                   <div key={u.id} className="flex items-center gap-3 p-4">
                     <Avatar><AvatarFallback>{initials(u.full_name)}</AvatarFallback></Avatar>
@@ -118,7 +121,7 @@ export default async function SettingsPage({
                     <Badge variant={u.is_active ? "success" : "secondary"}>{u.is_active ? text.active : text.inactive}</Badge>
                   </div>
                 ))}
-              </div>
+              </div>}
             </CardContent>
           </Card>
           <div id="invite" className="mt-4 scroll-mt-6"><InviteManager initialInvites={invites} /><DirectAccountManager lang={lang} /><AssistantManager groups={assistantGroups} /></div>

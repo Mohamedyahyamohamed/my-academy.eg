@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PaymentStatusBadge } from "@/components/shared/badges";
+import { EmptyState } from "@/components/shared/empty-state";
 import { RecordPaymentDialog } from "@/components/payments/payment-dialogs";
 import { createPaymentAction } from "@/app/actions/payments";
 import { formatCurrency } from "@/lib/utils";
@@ -70,7 +71,7 @@ export function GroupFinancials({
       </CardHeader>
       <CardContent className="p-0">
         {students.length === 0 ? (
-          <p className="p-6 text-center text-sm text-muted-foreground">{en ? "No active students in this group yet." : "لا يوجد طلاب نشطون في هذه المجموعة حتى الآن."}</p>
+          <div className="p-5"><EmptyState icon={Wallet} title={en ? "No active students yet" : "لا يوجد طلاب نشطون بعد"} description={en ? "Add active students to this group to start tracking payments." : "أضف طلابًا نشطين إلى المجموعة لبدء متابعة المدفوعات."} /></div>
         ) : (
           <Table>
             <TableHeader>
@@ -159,8 +160,7 @@ function CollectPaymentDialog({
       setAmount("");
       setNote("");
       router.refresh();
-    } catch (error) {
-      console.error("group payment action failed", error);
+    } catch {
       toast.error(en ? "Unable to record payment. Please try again." : "تعذّر تسجيل الدفعة. حاول مرة أخرى.");
     } finally {
       setSaving(false);

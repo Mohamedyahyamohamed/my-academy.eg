@@ -84,6 +84,19 @@ describe("Phase 1 lifecycle rules", () => {
     expect(db.data.groupStudents.filter((row) => row.group_id === group.id)).toHaveLength(students.length);
   });
 
+  it("lets the authenticated teacher enroll students in an owned group", async () => {
+    setRequestContext({
+      id: "prof-teacher",
+      email: "teacher@myacademy.edu",
+      role: "TEACHER",
+      academy_id: ACADEMY_ID,
+    } as any);
+    const result = await addStudentsToGroup("group-1", ["student-3", "student-4"], ACADEMY_ID);
+    expect(result).toMatchObject({ ok: true, added: 2, skipped: 0, total: 2 });
+    expect(db.data.groupStudents.filter((row) => row.group_id === "group-1").map((row) => row.student_id))
+      .toEqual(expect.arrayContaining(["student-3", "student-4"]));
+  });
+
   it("stores a manual attendance note and rejects cancelled lessons", async () => {
     setRequestContext({
       id: "prof-teacher",

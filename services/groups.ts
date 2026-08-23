@@ -566,9 +566,33 @@ export async function addStudentsToGroup(
     return { ok: false, code: "STUDENT_SCOPE_INVALID", field: "studentIds", message: "يوجد طالب واحد أو أكثر خارج نطاق الأكاديمية الحالية.", details: "لم تتم إضافة أي طالب." };
   }
 
-  const scope = teacherGroupScope();
-  if (scope && !scope.has(groupId)) {
-    return { ok: false, code: "GROUP_NOT_ASSIGNED", field: "groupId", message: "لا تملك صلاحية إدارة طلاب هذه المجموعة.", details: "اختر مجموعة مسندة إليك." };
+  const actor = getCurrentUser();
+  if (actor?.role === "TEACHER") {
+    // Do not trust an empty request-local teacher snapshot. Resolve the
+    // authenticated teacher against the tenant-scoped server data, then check
+    // ownership/assistant assignment for this exact group.
+    const resolvedTeacher = await resolveTeacherForGroups(academyId, actor.id, actor.email);
+    let assigned = Boolean(resolvedTeacher && group.teacher_id === resolvedTeacher.id);
+    if (!assigned && resolvedTeacher && client) {
+      const { data: assignment, error: assignmentError } = await client
+        .from("group_assistants")
+        .select("group_id")
+        .eq("group_id", groupId)
+        .eq("teacher_id", resolvedTeacher.id)
+        .maybeSingle();
+      if (assignmentError) {
+        return { ok: false, code: "GROUP_SCOPE_LOOKUP_FAILED", field: "groupId", message: "تعذر التحقق من صلاحية المدرس على المجموعة.", details: "حدّث الصفحة ثم حاول مرة أخرى." };
+      }
+      assigned = Boolean(assignment);
+    }
+    if (!assigned) {
+      return { ok: false, code: "GROUP_NOT_ASSIGNED", field: "groupId", message: "لا تملك صلاحية إدارة طلاب هذه المجموعة.", details: "اختر مجموعة مسندة إليك." };
+    }
+  } else {
+    const scope = teacherGroupScope();
+    if (scope && !scope.has(groupId)) {
+      return { ok: false, code: "GROUP_NOT_ASSIGNED", field: "groupId", message: "لا تملك صلاحية إدارة طلاب هذه المجموعة.", details: "اختر مجموعة مسندة إليك." };
+    }
   }
 
   const existingIds = new Set<string>();

@@ -22,6 +22,7 @@ import { StudentStatusBadge } from "@/components/shared/badges";
 import { EditGroupDialog } from "@/components/groups/group-dialogs";
 import { AddStudentToGroupDialog } from "@/components/groups/add-student-to-group";
 import { AssistantsManager } from "@/components/groups/assistants-manager";
+import { DeleteEntityButton } from "@/components/shared/delete-entity-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import {
   Table,
@@ -98,6 +99,14 @@ export default async function GroupDetailPage(
           defaultTeacherId={tid}
           lockedTeacher={isTeacher}
         />
+        {detail.status !== "INACTIVE" && (
+          <DeleteEntityButton
+            entity="group"
+            id={detail.id}
+            name={detail.name}
+            redirectTo="/groups"
+          />
+        )}
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

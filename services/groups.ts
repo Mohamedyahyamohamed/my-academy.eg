@@ -75,11 +75,12 @@ export async function listGroups(search = "", academyId?: string, teacherProfile
   if (!scopedAssistants.length && teacher) {
     scopedAssistants = collections().groupAssistants.filter((ga) => ga.teacher_id === teacher.id);
   }
+  const activeItems = scopedItems.filter((group) => group.is_active !== false);
   let items = teacher
-    ? scopedItems.filter((g) => g.teacher_id === teacher.id || scopedAssistants.some((ga: any) => ga.teacher_id === teacher.id && ga.group_id === g.id))
+    ? activeItems.filter((g) => g.teacher_id === teacher.id || scopedAssistants.some((ga: any) => ga.teacher_id === teacher.id && ga.group_id === g.id))
     : teacherProfileId
       ? []
-      : applyTeacherGroupScope(scopedItems);
+      : applyTeacherGroupScope(activeItems);
   if (search.trim()) {
     const q = search.toLowerCase();
     items = items.filter(
@@ -193,6 +194,7 @@ export async function createGroup(input: GroupInput, academyIdOverride?: string)
     schedule: input.schedule,
     room: input.room ?? null,
     status: input.status ?? "ACTIVE",
+    is_active: true,
     created_at: now,
     updated_at: now,
   };
@@ -225,20 +227,55 @@ export async function updateGroup(id: string, input: Partial<GroupInput>): Promi
   return attach(g);
 }
 
-export async function deleteGroup(id: string): Promise<boolean> {
-  const academyId = currentAcademyId();
-  const group = collections().groups.find((g) => g.id === id);
-  if (!group) return false;
-  if (!academyId || group.academy_id !== academyId) {
-    throw new Error("Group is outside the authenticated academy.");
+export type GroupDeleteResult = {
+  ok: true;
+  mode: "hard_deleted" | "archived";
+  relationCount: number;
+};
+
+/** Hard-delete an empty group; retain any group with historical relations. */
+export async function deleteGroup(
+  id: string,
+  authenticatedAcademyId?: string,
+): Promise<GroupDeleteResult> {
+  const academyId = authenticatedAcademyId ?? currentAcademyId();
+  if (!academyId) throw new Error("Missing authenticated academy context.");
+  const group = collections().groups.find((g) => g.id === id && g.academy_id === academyId);
+  if (!group) throw new Error("Group is outside the authenticated academy.");
+  const scope = teacherGroupScope();
+  if (scope && !scope.has(id)) throw new Error("Teachers can only manage their assigned groups.");
+
+  const [memberships, lessons, payments, exams, homework, assistants, contentCourses] = await Promise.all([
+    fetchTableRLS<any>("group_students", academyId),
+    fetchTableRLS<any>("lessons", academyId),
+    fetchTableRLS<any>("payments", academyId),
+    fetchTableRLS<any>("exams", academyId),
+    fetchTableRLS<any>("homework", academyId),
+    fetchTableRLS<any>("group_assistants", academyId),
+    fetchTableRLS<any>("content_courses", academyId),
+  ]);
+  const relationCount = [
+    memberships.filter((row) => row.group_id === id).length,
+    lessons.filter((row) => row.group_id === id).length,
+    payments.filter((row) => row.group_id === id).length,
+    exams.filter((row) => row.group_id === id).length,
+    homework.filter((row) => row.group_id === id).length,
+    assistants.filter((row) => row.group_id === id).length,
+    contentCourses.filter((row) => row.group_id === id).length,
+  ].reduce((sum, count) => sum + count, 0);
+
+  const updatedAt = new Date().toISOString();
+  if (relationCount > 0) {
+    await persistUpdate("groups", id, { status: "INACTIVE", is_active: false, updated_at: updatedAt }, academyId);
+    Object.assign(group, { status: "INACTIVE", is_active: false, updated_at: updatedAt });
+    return { ok: true, mode: "archived", relationCount };
   }
-  await persistDelete("groups", { id });
-  const before = collections().groups.length;
-  collections().groups = collections().groups.filter((g) => g.id !== id);
-  collections().groupStudents = collections().groupStudents.filter(
-    (gs) => gs.group_id !== id,
-  );
-  return collections().groups.length < before;
+
+  await persistDelete("groups", { id }, academyId);
+  collections().groups = collections().groups.filter((item) => item.id !== id);
+  collections().groupStudents = collections().groupStudents.filter((row) => row.group_id !== id);
+  collections().groupAssistants = collections().groupAssistants.filter((row) => row.group_id !== id);
+  return { ok: true, mode: "hard_deleted", relationCount: 0 };
 }
 
 async function verifyGroupStudentScope(groupId: string, studentId: string): Promise<boolean> {

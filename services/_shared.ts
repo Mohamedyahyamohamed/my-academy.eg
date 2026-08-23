@@ -326,7 +326,7 @@ export function studentsInGroup(groupId: string): Student[] {
   const ids = groupStudents
     .filter((gs) => gs.group_id === groupId)
     .map((gs) => gs.student_id);
-  return students.filter((s) => ids.includes(s.id));
+  return students.filter((s) => ids.includes(s.id) && s.is_active !== false);
 }
 
 /** Groups a student belongs to (with course attached). */
@@ -338,14 +338,14 @@ export function groupsForStudent(studentId: string): (Group & {
     .filter((gs) => gs.student_id === studentId)
     .map((gs) => gs.group_id);
   return groups
-    .filter((g) => groupIds.includes(g.id))
+    .filter((g) => groupIds.includes(g.id) && g.is_active !== false)
     .map((g) => ({ ...g, course: getCourse(g.course_id) }));
 }
 
 /** Lessons for a group, newest first. */
 export function lessonsForGroup(groupId: string): Lesson[] {
   return collections()
-    .lessons.filter((l) => l.group_id === groupId)
+    .lessons.filter((l) => l.group_id === groupId && l.is_cancelled !== true)
     .sort((a, b) => +new Date(b.date) - +new Date(a.date));
 }
 

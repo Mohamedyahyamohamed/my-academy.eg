@@ -13,7 +13,7 @@ import type {
 } from "@/types";
 import { collections } from "./data/store";
 import { currentAcademyId, currentTeacherId, getCurrentUser } from "./session";
-import { persistInsert, persistUpdate } from "./data/store";
+import { persistDelete, persistInsert, persistUpdate } from "./data/store";
 import {
   attendanceForStudent,
   byAcademy,
@@ -25,6 +25,7 @@ import {
   paymentsForStudent,
   teacherStudentScope,
   teacherGroupScope,
+  fetchTableRLS,
 } from "./_shared";
 import { percentage, round } from "@/lib/utils";
 import { isSupabaseConfigured } from "./supabase/config";
@@ -222,6 +223,9 @@ function listStudentsFromCache(
   } = filters;
 
   let items = byAcademy(collections().students, academyId);
+  items = status === "ARCHIVED"
+    ? items.filter((student) => student.is_active === false)
+    : items.filter((student) => student.is_active !== false);
   const tScope = teacherStudentScope();
   if (tScope) items = items.filter((s) => tScope.has(s.id));
 
@@ -366,7 +370,10 @@ export async function listStudents(
   }
   if (scopedStudentIds) query = query.in("id", [...scopedStudentIds]);
 
-  if (status !== "ALL") query = query.eq("status", status);
+  // Archived rows are lifecycle-hidden by default; the explicit ARCHIVED filter is the only way to request them.
+  if (status === "ARCHIVED") query = query.eq("is_active", false);
+  else query = query.neq("is_active", false);
+  if (status !== "ALL" && status !== "ARCHIVED") query = query.eq("status", status);
   if (grade !== "ALL") query = query.eq("grade", grade);
   if (gender !== "ALL") query = query.eq("gender", gender);
 
@@ -421,7 +428,7 @@ export async function listStudents(
     ? await client.from("parents").select("*").in("id", parentIds)
     : { data: [] };
   const parentsMap = new Map((parentsData ?? []).map((p: any) => [p.id, p]));
-  const items = (data ?? []).map((s) => {
+  const items = (data ?? []).filter((s: any) => status === "ARCHIVED" ? s.is_active === false : s.is_active !== false).map((s) => {
     const student = attachRelations(s as Student);
     const sp = s as any;
     if ((!student.parent || !student.parent?.id) && sp.parent_id && parentsMap.has(sp.parent_id)) {
@@ -622,6 +629,7 @@ export interface StudentInput {
   grade?: string | null;
   notes?: string | null;
   status?: Student["status"];
+  is_active?: boolean;
   groupIds?: string[];
   consent_given?: boolean;
 }
@@ -797,6 +805,7 @@ export async function createStudent(
     notes: rest.notes ?? null,
     // Student access stays inactive until consent is actually recorded.
     status: consentGiven ? (rest.status ?? "ACTIVE") : "INACTIVE",
+    is_active: true,
     consent_given: consentGiven,
     consent_at: consentGiven ? now : null,
     consent_by: consentGiven ? (consentActorId ?? null) : null,
@@ -912,6 +921,56 @@ export async function setStudentStatus(
   id: string,
   status: Student["status"],
   authenticatedAcademyId?: string,
+  authenticatedUser?: SessionUser,
 ): Promise<Student | null> {
-  return updateStudent(id, { status }, authenticatedAcademyId);
+  return updateStudent(id, { status, is_active: status !== "ARCHIVED" }, authenticatedAcademyId, authenticatedUser);
+}
+
+export type StudentDeleteResult = {
+  ok: true;
+  mode: "hard_deleted" | "archived";
+  relationCount: number;
+};
+
+/**
+ * Hard-delete only an unreferenced student. Any attendance, grades, payments,
+ * homework submissions, notes, or group membership turns this into an archive.
+ */
+export async function deleteStudent(
+  id: string,
+  authenticatedAcademyId?: string,
+  authenticatedUser?: SessionUser,
+): Promise<StudentDeleteResult> {
+  const academyId = authenticatedAcademyId ?? currentAcademyId();
+  if (!academyId) throw new Error("Missing authenticated academy context.");
+  const student = await resolveStudentMutationScope(id, academyId, authenticatedUser);
+
+  const [memberships, attendance, payments, grades, submissions, notes] = await Promise.all([
+    fetchTableRLS<any>("group_students", academyId),
+    fetchTableRLS<any>("attendance", academyId),
+    fetchTableRLS<any>("payments", academyId),
+    fetchTableRLS<any>("grades", academyId),
+    fetchTableRLS<any>("homework_submissions", academyId),
+    fetchTableRLS<any>("notes", academyId),
+  ]);
+  const relationCount = [
+    memberships.filter((row) => row.student_id === id).length,
+    attendance.filter((row) => row.student_id === id).length,
+    payments.filter((row) => row.student_id === id).length,
+    grades.filter((row) => row.student_id === id).length,
+    submissions.filter((row) => row.student_id === id).length,
+    notes.filter((row) => row.student_id === id).length,
+  ].reduce((sum, count) => sum + count, 0);
+
+  const updatedAt = new Date().toISOString();
+  if (relationCount > 0) {
+    await persistUpdate("students", id, { status: "ARCHIVED", is_active: false, updated_at: updatedAt }, academyId);
+    Object.assign(student, { status: "ARCHIVED", is_active: false, updated_at: updatedAt });
+    return { ok: true, mode: "archived", relationCount };
+  }
+
+  await persistDelete("students", { id }, academyId);
+  collections().students = collections().students.filter((item) => item.id !== id);
+  collections().groupStudents = collections().groupStudents.filter((row) => row.student_id !== id);
+  return { ok: true, mode: "hard_deleted", relationCount: 0 };
 }

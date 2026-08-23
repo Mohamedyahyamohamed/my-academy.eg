@@ -26,6 +26,7 @@ export interface LessonFilters {
   groupId?: string | "ALL";
   upcoming?: boolean;
   past?: boolean;
+  includeCancelled?: boolean;
   page?: number;
   pageSize?: number;
 }
@@ -40,11 +41,13 @@ export async function listLessons(
     groupId = "ALL",
     upcoming,
     past,
+    includeCancelled = false,
     page = 1,
     pageSize = 12,
   } = filters;
   const now = Date.now();
   let items = await fetchTableRLS<Lesson>("lessons", academyId);
+  if (!includeCancelled) items = items.filter((lesson) => lesson.is_cancelled !== true);
   // Teachers only see lessons in their groups. Resolve the teacher from the
   // tenant-scoped server data when the request-local snapshot is incomplete.
   const currentUser = getCurrentUser();
@@ -179,7 +182,7 @@ export function getActiveLessonForTeacher(now = new Date()): Lesson | null {
   const scope = teacherId ? teacherGroupScope() : null;
   if (!teacherId || !scope?.size) return null;
   const active = collections().lessons
-    .filter((lesson) => lesson.academy_id === academyId && scope.has(lesson.group_id))
+    .filter((lesson) => lesson.academy_id === academyId && lesson.is_cancelled !== true && scope.has(lesson.group_id))
     .filter((lesson) => isLessonActive(lesson, now))
     .sort((a, b) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time));
   return active[0] ? attach(active[0]) : null;
@@ -239,6 +242,8 @@ export async function createRecurringLessonsForGroup(
     const timestamp = new Date().toISOString();
     const lesson: Lesson = {
       id: lid(),
+      is_cancelled: false,
+      cancellation_reason: null,
       academy_id: resolvedAcademyId,
       group_id: group.id,
       teacher_id: group.teacher_id,
@@ -286,6 +291,8 @@ export async function createLesson(input: LessonInput): Promise<Lesson> {
   const now = new Date().toISOString();
   const l: Lesson = {
     id: lid(),
+    is_cancelled: false,
+    cancellation_reason: null,
     academy_id: academyId,
     group_id: group.id,
     teacher_id: group.teacher_id,
@@ -345,6 +352,24 @@ export async function updateLesson(
   const { id: _id, ...patch } = next;
   await persistUpdate("lessons", id, patch);
   Object.assign(l, next);
+  return attach(l);
+}
+
+export async function cancelLesson(id: string, reason?: string): Promise<Lesson | null> {
+  const l = collections().lessons.find((lesson) => lesson.id === id);
+  if (!l) return null;
+  const academyId = currentAcademyId();
+  if (!academyId || l.academy_id !== academyId) throw new Error("Lesson is outside the authenticated academy.");
+  const scope = teacherGroupScope();
+  if (scope && !scope.has(l.group_id)) throw new Error("You do not have permission to cancel this lesson.");
+  if (l.is_cancelled) return attach(l);
+  const patch = {
+    is_cancelled: true,
+    cancellation_reason: reason?.trim() || null,
+    updated_at: new Date().toISOString(),
+  };
+  await persistUpdate("lessons", id, patch, academyId);
+  Object.assign(l, patch);
   return attach(l);
 }
 

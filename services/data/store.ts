@@ -450,15 +450,20 @@ export async function persistUpdate(table: string, id: string, patch: any, acade
 export async function persistDelete(
   table: string,
   filters: Record<string, string>,
+  academyIdOverride?: string,
 ) {
   const client = getAdminClient();
+  const activeId = activeAcademyId();
+  if (activeId && academyIdOverride && activeId !== academyIdOverride) {
+    throw new Error(`Database delete academy scope mismatch for ${table}.`);
+  }
   if (!client) {
     if (isSupabaseConfigured()) {
       throw new Error(`Database write is not configured for ${table}.`);
     }
     return;
   }
-  const academyId = scopedAcademyId(table);
+  const academyId = scopedAcademyId(table, academyIdOverride);
   if (DIRECT_ACADEMY_TABLES.has(table) && !academyId) {
     throw new Error(`Database delete is missing an authenticated academy scope for ${table}.`);
   }

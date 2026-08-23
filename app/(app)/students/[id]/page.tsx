@@ -27,6 +27,7 @@ import { ParentConsentLink } from "@/components/students/parent-consent-link";
 import { EditStudentDialog } from "@/components/students/student-dialogs";
 import { StudentQrCard } from "@/components/attendance/student-qr-card";
 import { StudentGroupTransfer } from "@/components/students/student-group-transfer";
+import { DeleteEntityButton } from "@/components/shared/delete-entity-button";
 import { CreatePaymentDialog, RecordPaymentDialog } from "@/components/payments/payment-dialogs";
 import { TrendArea, LineTrend } from "@/components/charts";
 import {
@@ -137,6 +138,14 @@ export default async function StudentProfilePage(
           trigger={<Button variant="outline">{en ? "QR card" : "بطاقة QR"}</Button>}
         />
         {!isPlatformOwner && <EditStudentDialog student={detail} parents={parents} groups={groups} />}
+        {!isPlatformOwner && detail.status !== "ARCHIVED" && (
+          <DeleteEntityButton
+            entity="student"
+            id={detail.id}
+            name={`${detail.first_name} ${detail.last_name}`}
+            redirectTo="/students"
+          />
+        )}
         <Button asChild variant="outline">
           <Link href={`/students/${params.id}/report`} target="_blank">
             <FileText className="me-2 h-4 w-4" /> {en ? "Grade report" : "كشف درجات"}

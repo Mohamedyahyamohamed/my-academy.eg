@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { StudentAvatar } from "@/components/shared/student-avatar";
 import { AttendanceBadge } from "@/components/shared/badges";
 import { AttendanceStatusEditor } from "@/components/attendance/attendance-status-editor";
+import { LessonExceptionDialog } from "@/components/lessons/lesson-exception-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -50,11 +51,16 @@ export default async function LessonDetailPage(
         description={lesson.description ?? undefined}
         breadcrumbs={[{ label: en ? "Lessons" : "الحصص", href: "/lessons" }, { label: lesson.topic }]}
       >
-        <Button asChild variant="soft">
-          <Link href={`/attendance?group=${lesson.group_id}&lesson=${lesson.id}`}>
-            <CalendarCheck className="h-4 w-4" /> {lesson.attendance_taken ? (en ? "Edit attendance" : "تعديل الحضور") : (en ? "Record attendance" : "تسجيل الحضور")}
-          </Link>
-        </Button>
+        {lesson.is_cancelled ? (
+          <Badge variant="destructive">{en ? "Cancelled" : "ملغاة"}</Badge>
+        ) : (
+          <Button asChild variant="soft">
+            <Link href={`/attendance?group=${lesson.group_id}&lesson=${lesson.id}`}>
+              <CalendarCheck className="h-4 w-4" /> {lesson.attendance_taken ? (en ? "Edit attendance" : "تعديل الحضور") : (en ? "Record attendance" : "تسجيل الحضور")}
+            </Link>
+          </Button>
+        )}
+        <LessonExceptionDialog lesson={lesson} />
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -68,9 +74,13 @@ export default async function LessonDetailPage(
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">{en ? "Attendance" : "الحضور"}</CardTitle>
+            {lesson.is_cancelled ? (
+              <Badge variant="destructive">{en ? "Excluded from attendance" : "مستبعدة من احتساب الحضور"}</Badge>
+            ) : (
             <Badge variant={lesson.attendance_taken ? "success" : "outline"}>
               {lesson.attendance_taken ? (en ? "Recorded" : "مسجّل") : (en ? "Not recorded" : "لم يُسجّل")}
             </Badge>
+            )}
           </CardHeader>
           <CardContent className="p-0">
             {sheet.length === 0 ? (
@@ -96,7 +106,19 @@ export default async function LessonDetailPage(
                         </div>
                       </TableCell>
                       <TableCell>
-                        {e.status ? <AttendanceBadge status={e.status} /> : <Badge variant="outline">—</Badge>}
+                        {e.status ? (
+                          <div className="flex items-center gap-2">
+                            <AttendanceBadge status={e.status} />
+                            {collections().attendance.find((record) => record.lesson_id === lesson.id && record.student_id === e.student.id)?.note && (
+                              <span
+                                title={collections().attendance.find((record) => record.lesson_id === lesson.id && record.student_id === e.student.id)?.note ?? ""}
+                                className="cursor-help text-xs text-muted-foreground underline decoration-dotted"
+                              >
+                                {en ? "Note" : "ملاحظة"}
+                              </span>
+                            )}
+                          </div>
+                        ) : <Badge variant="outline">—</Badge>}
                       </TableCell>
                       <TableCell>
                         <AttendanceStatusEditor
@@ -104,6 +126,8 @@ export default async function LessonDetailPage(
                           lessonId={lesson.id}
                           studentId={e.student.id}
                           currentStatus={e.status}
+                          currentNote={collections().attendance.find((record) => record.lesson_id === lesson.id && record.student_id === e.student.id)?.note ?? null}
+                          disabled={lesson.is_cancelled === true}
                         />
                       </TableCell>
                     </TableRow>

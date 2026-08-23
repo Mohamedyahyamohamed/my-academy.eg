@@ -8,7 +8,7 @@ import { StudentAvatar } from "@/components/shared/student-avatar";
 import { StudentStatusBadge } from "@/components/shared/badges";
 import { AddStudentDialog, EditStudentDialog } from "@/components/students/student-dialogs";
 import { CreateAccountsButton } from "@/components/students/create-accounts-button";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { DeleteEntityButton } from "@/components/shared/delete-entity-button";
 import {
   Table,
   TableBody,
@@ -20,7 +20,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StudentsService, GroupsService, MiscService, requireScopedRole } from "@/services";
-import { archiveStudentAction } from "@/app/actions/students";
 import type { StudentFilters } from "@/types";
 import { cookies } from "next/headers";
 import { getLangFromCookie } from "@/lib/i18n";
@@ -190,17 +189,11 @@ export default async function StudentsPage(
                         </Button>
                         {canManageStudents && <EditStudentDialog student={s} parents={parents} groups={groups} />}
                         {canManageStudents && s.status !== "ARCHIVED" && (
-                          <ConfirmDialog
-                            destructive
-                            trigger={
-                              <Button variant="ghost" size="icon-sm" aria-label={en ? "Archive" : "أرشفة"}>
-                                <span className="sr-only">{en ? "Archive" : "أرشفة"}</span>
-                              </Button>
-                            }
-                            title={en ? "Archive student?" : "أرشفة الطالب؟"}
-                            description={en ? `${s.first_name} ${s.last_name} will be hidden from active lists while their data is retained.` : `سيُخفى ${s.first_name} ${s.last_name} من القوائم النشطة مع الاحتفاظ ببياناته.`}
-                            confirmLabel={en ? "Archive" : "أرشفة"}
-                            onConfirm={archiveStudentAction.bind(null, s.id)}
+                          <DeleteEntityButton
+                            entity="student"
+                            id={s.id}
+                            name={`${s.first_name} ${s.last_name}`}
+                            redirectTo="/students"
                           />
                         )}
                       </div>

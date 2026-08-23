@@ -25,6 +25,24 @@ export async function updateLessonAction(id: string, input: Partial<LessonInput>
   return l;
 }
 
+export async function cancelLessonAction(id: string, reason?: string) {
+  const user = await requireScopedRole("TEACHER");
+  if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot cancel lessons.");
+  const lesson = await LessonsService.cancelLesson(id, reason);
+  if (!lesson) throw new Error("Lesson was not found in the authenticated academy.");
+  await audit({
+    action: "lesson.cancel",
+    entity_type: "lesson",
+    entity_id: id,
+    new_data: { cancellation_reason: lesson.cancellation_reason },
+  }, user);
+  revalidatePath("/lessons");
+  revalidatePath(`/lessons/${id}`);
+  revalidatePath("/dashboard");
+  revalidatePath(`/groups/${lesson.group_id}`);
+  return lesson;
+}
+
 export async function deleteLessonAction(id: string) {
   const user = await requireScopedRole("TEACHER");
   if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage lessons.");

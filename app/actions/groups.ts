@@ -39,11 +39,20 @@ export async function updateGroupAction(id: string, input: Partial<GroupInput>) 
 }
 
 export async function deleteGroupAction(id: string) {
-  await requireScopedRole("ADMIN");
-  await GroupsService.deleteGroup(id);
-    void audit({ action: "group.delete" });
+  const user = await requireScopedRole("ADMIN", "TEACHER");
+  if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot delete groups.");
+  const result = await GroupsService.deleteGroup(id, user.academy_id);
+  void audit({
+    action: result.mode === "archived" ? "group.archive" : "group.delete",
+    entity_type: "group",
+    entity_id: id,
+    metadata: { mode: result.mode, relation_count: result.relationCount },
+  }, user);
   revalidatePath("/groups");
+  revalidatePath(`/groups/${id}`);
+  revalidatePath("/lessons");
   revalidatePath("/dashboard");
+  return result;
 }
 
 export async function addStudentToGroupAction(groupId: string, studentId: string) {

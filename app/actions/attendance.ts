@@ -111,17 +111,18 @@ export async function updateAttendanceStatusAction(
   lessonId: string,
   studentId: string,
   status: AttendanceStatus,
+  note?: string | null,
 ) {
   const user = await requireAttendanceTeacher();
-  const result = await AttendanceService.updateAttendanceStatus(groupId, lessonId, studentId, status);
+  const result = await AttendanceService.updateAttendanceStatus(groupId, lessonId, studentId, status, note);
   if (result.ok) {
     void audit({
       action: "attendance.manual_override",
       entity_type: "attendance",
       entity_id: result.attendanceId,
       old_data: { status: result.previousStatus },
-      new_data: { status: result.status },
-      metadata: { source: "manual_override", lesson_id: lessonId, student_id: studentId },
+      new_data: { status: result.status, note: result.note },
+      metadata: { source: "manual_override", lesson_id: lessonId, student_id: studentId, note: result.note },
     }, user);
     revalidatePath(`/lessons/${lessonId}`);
     revalidatePath(`/attendance?group=${groupId}&lesson=${lessonId}`);

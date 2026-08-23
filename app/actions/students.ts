@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireScopedRole, StudentsService, currentAcademyId, isLimitedAssistant } from "@/services";
 import { DuplicateStudentError, findStudentDuplicates, type StudentInput } from "@/services/students";
 import { STUDENT_DEFAULT_PASSWORD } from "@/lib/auth";
+import { audit } from "@/services/audit";
 
 export async function findStudentDuplicatesAction(input: StudentInput) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
@@ -81,13 +82,29 @@ export async function updateStudentAction(id: string, input: Partial<StudentInpu
 export async function archiveStudentAction(id: string) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
   if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage students.");
-  await StudentsService.setStudentStatus(id, "ARCHIVED", user.academy_id);
+  await StudentsService.setStudentStatus(id, "ARCHIVED", user.academy_id, user);
   await import("@/services/audit").then((m) => m.audit(
     { action: "student.archive", entity_type: "student", entity_id: id },
     user,
   ));
   revalidatePath("/students");
   revalidatePath(`/students/${id}`);
+}
+
+export async function deleteStudentAction(id: string) {
+  const user = await requireScopedRole("ADMIN", "TEACHER");
+  if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage students.");
+  const result = await StudentsService.deleteStudent(id, user.academy_id, user);
+  void audit({
+    action: result.mode === "archived" ? "student.archive" : "student.delete",
+    entity_type: "student",
+    entity_id: id,
+    metadata: { mode: result.mode, relation_count: result.relationCount },
+  }, user);
+  revalidatePath("/students");
+  revalidatePath(`/students/${id}`);
+  revalidatePath("/dashboard");
+  return result;
 }
 
 export async function restoreStudentAction(id: string) {
@@ -101,7 +118,7 @@ export async function restoreStudentAction(id: string) {
   const { data: student } = client && aid
     ? await client.from("students").select("consent_given").eq("id", id).eq("academy_id", aid).maybeSingle()
     : { data: null };
-  await StudentsService.setStudentStatus(id, student?.consent_given === true ? "ACTIVE" : "INACTIVE", user.academy_id);
+  await StudentsService.setStudentStatus(id, student?.consent_given === true ? "ACTIVE" : "INACTIVE", user.academy_id, user);
   revalidatePath("/students");
   revalidatePath(`/students/${id}`);
 }

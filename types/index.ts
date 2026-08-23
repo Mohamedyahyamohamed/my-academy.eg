@@ -197,6 +197,8 @@ export interface Student {
   grade: string | null; // e.g. "Grade 9"
   notes: string | null;
   status: StudentStatus;
+  /** Lifecycle flag; false means archived/hidden from active lists. */
+  is_active?: boolean;
   consent_given?: boolean;
   consent_at?: ISODate | null;
   consent_by?: UUID | null;
@@ -219,6 +221,8 @@ export interface Group {
   schedule: string; // human readable e.g. "Sun, Tue, Thu — 4:00 PM"
   room: string | null;
   status: "ACTIVE" | "INACTIVE";
+  /** Lifecycle flag; false means archived/hidden from active lists. */
+  is_active?: boolean;
   created_at: ISODate;
   updated_at: ISODate;
   // relations
@@ -245,6 +249,9 @@ export interface Lesson {
   topic: string;
   description: string | null;
   notes: string | null;
+  /** A generated lesson can be cancelled without deleting history. */
+  is_cancelled?: boolean;
+  cancellation_reason?: string | null;
   created_at: ISODate;
   updated_at: ISODate;
   // relations

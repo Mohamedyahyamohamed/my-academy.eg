@@ -35,6 +35,7 @@ function assertAttendanceManager(lessonId: string) {
     throw new Error("You are not allowed to record attendance.");
   }
   const { lesson, group } = lessonInCurrentAcademy(lessonId);
+  if (lesson.is_cancelled) throw new Error("Cannot record attendance for a cancelled lesson.");
   if (!hasAcademyWideScope(user.role) && !teacherGroupScope()?.has(group.id)) {
     throw new Error("You can only record attendance for an assigned group.");
   }
@@ -118,7 +119,7 @@ export async function saveAttendance(
 }
 
 export type AttendanceStatusUpdateResult =
-  | { ok: true; attendanceId: string; previousStatus: AttendanceStatus | null; status: AttendanceStatus }
+  | { ok: true; attendanceId: string; previousStatus: AttendanceStatus | null; status: AttendanceStatus; note: string | null }
   | { ok: false; code: string; field: string; message: string; details?: string };
 
 /** Update one student's attendance without changing other students or lessons. */
@@ -127,6 +128,7 @@ export async function updateAttendanceStatus(
   lessonId: string,
   studentId: string,
   status: AttendanceStatus,
+  note?: string | null,
 ): Promise<AttendanceStatusUpdateResult> {
   try {
     if (!["PRESENT", "ABSENT", "LATE"].includes(status)) {
@@ -138,7 +140,16 @@ export async function updateAttendanceStatus(
         details: "اختر حاضر أو متأخر أو غائب.",
       };
     }
-    const { group } = assertAttendanceManager(lessonId);
+    const { lesson, group } = assertAttendanceManager(lessonId);
+    if (lesson.is_cancelled) {
+      return {
+        ok: false,
+        code: "LESSON_CANCELLED",
+        field: "lessonId",
+        message: "لا يمكن تسجيل الحضور لحصة ملغاة.",
+        details: "أعد جدولة الحصة أو ألغِ الإلغاء أولًا قبل تعديل الحضور.",
+      };
+    }
     if (group.id !== groupId) {
       return {
         ok: false,
@@ -160,7 +171,7 @@ export async function updateAttendanceStatus(
       lesson_id: lessonId,
       student_id: student.id,
       status,
-      note: existing?.note ?? null,
+      note: note !== undefined ? (note?.trim() || null) : (existing?.note ?? null),
       recorded_at: now,
     };
 
@@ -171,20 +182,22 @@ export async function updateAttendanceStatus(
 
     if (existing) Object.assign(existing, row);
     else collections().attendance.push(row);
-    return { ok: true, attendanceId, previousStatus, status };
+    return { ok: true, attendanceId, previousStatus, status, note: row.note };
   } catch (error) {
     const raw = error instanceof Error ? error.message : "تعذر تعديل الحضور.";
     const message = raw.includes("not enrolled")
       ? "الطالب غير مسجل في مجموعة هذه الحصة."
       : raw.includes("assigned group")
         ? "لا تملك صلاحية تعديل حضور هذه المجموعة."
-        : raw.includes("outside") || raw.includes("academy")
+        : raw.includes("cancelled")
+          ? "لا يمكن تعديل حضور حصة ملغاة."
+          : raw.includes("outside") || raw.includes("academy")
           ? "الحصة أو الطالب خارج نطاق الأكاديمية الحالية."
           : "تعذر حفظ تعديل الحضور في قاعدة البيانات.";
     return {
       ok: false,
-      code: "ATTENDANCE_UPDATE_FAILED",
-      field: raw.includes("not enrolled") ? "studentId" : "attendance",
+      code: raw.includes("cancelled") ? "LESSON_CANCELLED" : "ATTENDANCE_UPDATE_FAILED",
+      field: raw.includes("cancelled") ? "lessonId" : raw.includes("not enrolled") ? "studentId" : "attendance",
       message,
       details: raw,
     };

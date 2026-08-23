@@ -1,9 +1,10 @@
 /**
  * Groups service.
  */
-import type { Group, PaginatedResult } from "@/types";
+import type { Group, PaginatedResult, SessionUser } from "@/types";
 import { collections, invalidateStore } from "./data/store";
 import { currentAcademyId, getCurrentUser } from "./session";
+import { setRequestContext } from "./request-context";
 import { persistInsert, persistUpdate, persistDelete } from "./data/store";
 import {
   getCourse,
@@ -357,12 +358,18 @@ function removeLocalGroupCascade(id: string, relationIds: ReturnType<typeof coll
 export async function deleteGroup(
   id: string,
   authenticatedAcademyId?: string,
+  authenticatedUser?: SessionUser,
 ): Promise<GroupDeleteResult> {
-  const academyId = authenticatedAcademyId ?? currentAcademyId();
-  const user = getCurrentUser();
+  // The action has already authenticated and hydrated this actor. Prefer that
+  // explicit value over AsyncLocalStorage, which can be lost across an awaited
+  // store hydration in Next.js Server Actions. Re-bind it before any helper
+  // (teacherGroupScope, collections, or persist guards) reads request context.
+  const user = authenticatedUser ?? getCurrentUser();
+  const academyId = authenticatedAcademyId ?? user?.academy_id ?? null;
   if (!academyId || !user || user.academy_id !== academyId) {
     throw new Error("Missing authenticated academy context.");
   }
+  setRequestContext(user);
 
   const client = isSupabaseConfigured() ? nodeSupabaseClient() : null;
   let group = collections().groups.find((g) => g.id === id && g.academy_id === academyId);

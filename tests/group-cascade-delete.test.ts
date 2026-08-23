@@ -9,7 +9,9 @@ describe("force group cascade delete contract", () => {
     const migration = readFileSync(resolve(process.cwd(), "supabase/migrations/20260823_force_group_cascade_delete.sql"), "utf8");
 
     expect(action).toContain('requireScopedRole("ADMIN", "TEACHER")');
-    expect(action).toContain("GroupsService.deleteGroup(id, user.academy_id)");
+    expect(action).toContain("GroupsService.deleteGroup(id, user.academy_id, user)");
+    expect(service).toContain("authenticatedUser?: SessionUser");
+    expect(service).toContain("setRequestContext(user)");
     expect(service).toContain('client.rpc("delete_group_cascade"');
     expect(service).toContain("p_group_id: id");
     expect(service).toContain("p_academy_id: academyId");

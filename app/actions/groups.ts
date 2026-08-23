@@ -35,7 +35,7 @@ export async function deleteGroupAction(id: string) {
   return safeAction(async () => {
     const user = await requireScopedRole("ADMIN", "TEACHER");
     if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot delete groups.");
-    const result = await GroupsService.deleteGroup(id, user.academy_id);
+    const result = await GroupsService.deleteGroup(id, user.academy_id, user);
     void audit({
       action: "group.delete",
       entity_type: "group",

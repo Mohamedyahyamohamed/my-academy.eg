@@ -51,28 +51,77 @@ function resolveLocalUser(email: string): SessionUser | null {
 /**
  * Read the current session (server-only).
  * Returns null if not authenticated.
+ *
+ * In Supabase mode, the signed `ma_session` cookie is only a tenant-selection
+ * hint. The authenticated identity always comes from Supabase Auth, then the
+ * profile and active academy membership are reloaded server-side. This keeps a
+ * stale or missing custom cookie from breaking Server Actions after an async
+ * boundary, and prevents it from becoming the source of truth for identity.
  */
 export async function loadCurrentUser(): Promise<SessionUser | null> {
-  // Always resolve the current request's cookie first. AsyncLocalStorage can
-  // retain a previous request's context in some Next.js render paths; trusting
-  // that cached value before reading cookies can redirect a valid session to
-  // /login or, worse, associate a request with the wrong tenant.
   const cookieStore = await cookies();
   const raw = cookieStore.get(SESSION_COOKIE)?.value;
-  const user = readSignedSession(raw);
-  if (user) {
-    const hydratedUser = await hydrateTenantContext(user);
-    if (!hydratedUser) {
+  const signedUser = readSignedSession(raw);
+
+  if (isSupabaseConfigured()) {
+    try {
+      const { createServerSupabaseClient } = await import("@/lib/supabase/server");
+      const supabase = await createServerSupabaseClient();
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData.user) {
+        setRequestContext(null);
+        return null;
+      }
+
+      const sameIdentity = signedUser?.id === authData.user.id;
+      const selectedAcademyId = cookieStore.get(ACTIVE_ACADEMY_COOKIE)?.value;
+      const identity: SessionUser = {
+        id: authData.user.id,
+        email: authData.user.email ?? (sameIdentity ? signedUser?.email : undefined) ?? "",
+        // hydrateTenantContext replaces this with the server-side profile /
+        // membership role before any protected action proceeds.
+        role: sameIdentity ? signedUser!.role : "STUDENT",
+        full_name:
+          authData.user.user_metadata?.full_name
+          ?? (sameIdentity ? signedUser?.full_name : undefined)
+          ?? authData.user.email
+          ?? "",
+        avatar_url: sameIdentity ? signedUser?.avatar_url ?? null : null,
+        // An empty value intentionally falls back to profiles.academy_id in
+        // hydrateTenantContext; an active-academy cookie is verified there.
+        academy_id: selectedAcademyId ?? "",
+        active_membership_id: sameIdentity ? signedUser?.active_membership_id : undefined,
+        memberships: sameIdentity ? signedUser?.memberships : undefined,
+      };
+      const hydratedUser = await hydrateTenantContext(identity);
+      if (!hydratedUser) {
+        setRequestContext(null);
+        return null;
+      }
+      const sessionUser = await hydrateAssistantFlag(hydratedUser);
+      setRequestContext(sessionUser);
+      return sessionUser;
+    } catch (error) {
+      console.error("[session] unable to load Supabase auth session:", (error as Error).message);
       setRequestContext(null);
       return null;
     }
-    const sessionUser = await hydrateAssistantFlag(hydratedUser);
-    setRequestContext(sessionUser);
-    return sessionUser;
   }
 
-  setRequestContext(null);
-  return null;
+  // Local/demo mode retains the signed cookie flow because no Supabase Auth
+  // session exists there.
+  if (!signedUser) {
+    setRequestContext(null);
+    return null;
+  }
+  const hydratedUser = await hydrateTenantContext(signedUser);
+  if (!hydratedUser) {
+    setRequestContext(null);
+    return null;
+  }
+  const sessionUser = await hydrateAssistantFlag(hydratedUser);
+  setRequestContext(sessionUser);
+  return sessionUser;
 }
 
 /**

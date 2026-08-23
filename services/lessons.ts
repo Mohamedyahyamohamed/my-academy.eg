@@ -251,8 +251,11 @@ export async function createRecurringLessonsForGroup(
       created_at: timestamp,
       updated_at: timestamp,
     };
+    // Persist with the verified tenant scope first. Only update the local
+    // snapshot after the durable write succeeds, so a lesson-generation error
+    // cannot leave the request believing a lesson was saved.
+    await persistInsert("lessons", lesson, resolvedAcademyId);
     collections().lessons.push(lesson);
-    await persistInsert("lessons", lesson);
     existingKeys.add(key);
     created += 1;
   }

@@ -10,7 +10,6 @@ import type {
   Payment,
   Student,
 } from "@/types";
-import { collections } from "./data/store";
 import {
   getCourse,
   getGroup,
@@ -127,10 +126,18 @@ export async function getDashboardData(
     .reduce((s, r) => s + r.collected, 0);
 
   const cutoff = Date.now() - 30 * 86_400_000;
-  const recentAtt = attendance.filter((a: any) => {
-    if (+new Date(a.recorded_at) < cutoff) return false;
-    const lesson = d.lessons.find((item: any) => item.id === a.lesson_id);
-    return Boolean(lesson && lesson.status !== "canceled" && lesson.is_cancelled !== true);
+  const activeAttendance = attendance
+    .filter((record: any) => {
+      const lesson = lessons.find((item: any) => item.id === record.lesson_id);
+      return Boolean(lesson && activeLesson(lesson));
+    })
+    .map((record: any) => ({
+      ...record,
+      recorded_at: record.recorded_at ?? lessons.find((lesson: any) => lesson.id === record.lesson_id)?.date,
+    }));
+  const recentAtt = activeAttendance.filter((record: any) => {
+    const recordedAt = +new Date(String(record.recorded_at ?? ""));
+    return Number.isFinite(recordedAt) && recordedAt >= cutoff;
   });
   const present = recentAtt.filter((a: any) => a.status !== "ABSENT").length;
   const attendanceRate = recentAtt.length ? percentage(present, recentAtt.length) : 0;
@@ -167,7 +174,7 @@ export async function getDashboardData(
   const riskStudents = students
     .filter((student: any) => student.status === "ACTIVE" && student.is_active !== false)
     .map((student: any) => calculateRiskScore({
-      attendance: attendance.filter((record: any) => record.student_id === student.id),
+      attendance: activeAttendance.filter((record: any) => record.student_id === student.id),
       grades: grades.filter((grade: any) => grade.student_id === student.id),
       exams,
     }))
@@ -196,8 +203,8 @@ export async function getDashboardData(
     const course = d.courses.find((c: any) => c.id === g.course_id);
     const key = course?.name ?? "Uncategorized";
     const cur = courseMap.get(key) ?? { students: 0, color: course?.color ?? "#94a3b8" };
-    cur.students += students.filter((s: any) =>
-      collections().groupStudents.some((gs) => gs.group_id === g.id && gs.student_id === s.id)
+      cur.students += students.filter((s: any) =>
+      groupStudents.some((gs: any) => gs.group_id === g.id && gs.student_id === s.id)
     ).length;
     courseMap.set(key, cur);
   }
@@ -300,7 +307,7 @@ export async function getDashboardData(
 
 export async function getAnalytics(academyId?: string): Promise<AnalyticsData> {
   const d = await getRLSData(academyId);
-  const { students, groups, exams, payments, courses, attendance, grades } = d;
+  const { students, groups, exams, payments, courses, attendance, grades, groupStudents } = d;
 
   const growth: { month: string; students: number }[] = [];
   for (let i = 5; i >= 0; i--) {
@@ -328,8 +335,8 @@ export async function getAnalytics(academyId?: string): Promise<AnalyticsData> {
     const courseGrades = grades.filter((g: any) => courseExams.some((e: any) => e.id === g.exam_id));
     if (!courseGrades.length) return { course: c.name, average: 0 };
     const sum = courseGrades.reduce((s, g) => {
-      const ex = exams.find((e: any) => e.id === g.exam_id)!;
-      return s + (g.score / ex.max_score) * 100;
+      const ex = exams.find((e: any) => e.id === g.exam_id);
+      return s + (ex && Number(ex.max_score) > 0 ? (Number(g.score) / Number(ex.max_score)) * 100 : 0);
     }, 0);
     return { course: c.name, average: round(sum / courseGrades.length, 1) };
   }).filter((x) => x.average > 0);
@@ -342,15 +349,15 @@ export async function getAnalytics(academyId?: string): Promise<AnalyticsData> {
   const popularCourses = courses.map((c: any) => {
     const courseGroups = groups.filter((g: any) => g.course_id === c.id);
     const enrolled = courseGroups.reduce((s, g) =>
-      s + collections().groupStudents.filter((gs) => gs.group_id === g.id).length, 0);
+      s + groupStudents.filter((gs: any) => gs.group_id === g.id && students.some((student: any) => student.id === gs.student_id && student.status === "ACTIVE" && student.is_active !== false)).length, 0);
     const revenue = payments.filter((p: any) => courseGroups.some((cg: any) => cg.id === p.group_id))
-      .reduce((x, p) => x + p.amount_paid, 0);
+      .reduce((x, p) => x + Math.max(0, Number(p.amount_paid ?? 0)), 0);
     return { course: c.name, students: enrolled, revenue };
   }).filter((x) => x.students > 0).sort((a, b) => b.students - a.students);
 
   const profitableGroups = groups.map((g: any) => {
     const pays = payments.filter((p: any) => p.group_id === g.id);
-    return { group: g.name, revenue: pays.reduce((s, p) => s + p.amount_paid, 0), students: collections().groupStudents.filter((gs) => gs.group_id === g.id).length };
+    return { group: g.name, revenue: pays.reduce((s, p) => s + Math.max(0, Number(p.amount_paid ?? 0)), 0), students: groupStudents.filter((gs: any) => gs.group_id === g.id && students.some((student: any) => student.id === gs.student_id && student.status === "ACTIVE" && student.is_active !== false)).length };
   }).sort((a, b) => b.revenue - a.revenue).slice(0, 6);
 
   return { studentGrowth: growth, monthlyRevenue, attendanceTrend: attTrend, averageGrades: avgGrades, retention, popularCourses, profitableGroups };

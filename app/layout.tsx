@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { APP_CONFIG } from "@/lib/constants";
 import { getLangFromCookie, isRTL } from "@/lib/i18n";
 import { PwaRegister } from "@/components/layout/pwa-register";
+import { GlobalErrorMonitor } from "@/components/layout/global-error-monitor";
 import "./globals.css";
 
 // خط النظام بدل next/font/google — عشان يشتغل أوفلاين ومن غير إنترنت لـ Google.
@@ -72,6 +73,7 @@ export default async function RootLayout({
     <html lang={lang} dir={dir} suppressHydrationWarning>
       <body className="font-sans">
         <PwaRegister />
+        <GlobalErrorMonitor />
         {children}
         <Toaster
           position={dir === "rtl" ? "top-left" : "top-right"}

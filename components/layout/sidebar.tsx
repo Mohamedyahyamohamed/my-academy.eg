@@ -30,7 +30,7 @@ export function Sidebar({ sections, academyName, role }: SidebarProps) {
   }[role];
 
   return (
-    <aside className="hidden h-full w-72 shrink-0 flex-col border-e border-sidebar-border bg-sidebar lg:flex">
+    <aside className="print-shell-sidebar hidden h-full w-72 shrink-0 flex-col border-e border-sidebar-border bg-sidebar lg:flex">
       <div className="flex h-16 items-center px-5">
         <Link href={homeHref} className="transition-opacity hover:opacity-80">
           <Logo />

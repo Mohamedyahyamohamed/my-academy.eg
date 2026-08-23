@@ -88,12 +88,22 @@ export function QrPrintCards({
             background: #fff !important;
           }
 
-          aside, nav, header, [data-sidebar], .qr-print-toolbar, .print-hidden {
+          aside, nav, header, [data-sidebar], .print-shell-sidebar, .print-shell-topbar, .qr-print-toolbar, .print-hidden {
             display: none !important;
           }
 
+          .print-app-shell,
+          .print-area {
+            display: block !important;
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+          }
+
+          .print-area > div,
           .qr-print-page {
             max-width: none !important;
+            width: 100% !important;
             padding: 0 !important;
             margin: 0 !important;
           }
@@ -109,6 +119,7 @@ export function QrPrintCards({
             min-height: 52mm !important;
             break-inside: avoid;
             page-break-inside: avoid;
+            print-color-adjust: exact;
             border: 0.3mm solid #cbd5e1 !important;
             border-radius: 3mm !important;
             box-shadow: none !important;

@@ -2,18 +2,22 @@
 
 import { revalidatePath } from "next/cache";
 import { requireScopedRole, GradesService, isLimitedAssistant } from "@/services";
+import { setRequestContext } from "@/services/request-context";
 import type { ExamInput } from "@/services/grades";
 
 export async function createExamAction(input: ExamInput) {
   const user = await requireScopedRole("TEACHER");
+  setRequestContext(user);
   if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage grades.");
   const e = await GradesService.createExam(input);
   revalidatePath("/grades");
+  revalidatePath(`/groups/${input.group_id}`);
   return e;
 }
 
 export async function deleteExamAction(id: string) {
   const user = await requireScopedRole("TEACHER");
+  setRequestContext(user);
   if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage grades.");
   await GradesService.deleteExam(id);
   revalidatePath("/grades");
@@ -21,9 +25,10 @@ export async function deleteExamAction(id: string) {
 
 export async function saveGradesAction(
   examId: string,
-  entries: { studentId: string; score: number }[],
+  entries: { studentId: string; score: number; notes?: string | null }[],
 ) {
   const user = await requireScopedRole("TEACHER");
+  setRequestContext(user);
   if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage grades.");
   const res = await GradesService.saveGrades(examId, entries);
   if (res.ok) {
@@ -38,6 +43,7 @@ export async function saveGradesAction(
     // during production audit/testing; the in-app notification above is retained.
     revalidatePath("/grades");
     revalidatePath(`/exams/${examId}`);
+    revalidatePath(`/grades/${examId}`);
     revalidatePath("/dashboard");
   }
   return res;

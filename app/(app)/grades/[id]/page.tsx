@@ -26,6 +26,7 @@ export default async function ExamGradePage(props: { params: Promise<{ id: strin
     return {
       studentId: r.studentId,
       score: r.score,
+      notes: r.notes,
       name: s ? fullName(s) : (en ? "Unknown" : "غير معروف"),
     };
   });
@@ -43,6 +44,7 @@ export default async function ExamGradePage(props: { params: Promise<{ id: strin
       </PageHeader>
 
       <div className="flex flex-wrap gap-2">
+        <Badge variant="secondary">{en ? "Type: " : "النوع: "}{exam.type === "homework" ? (en ? "Homework" : "واجب") : exam.type === "quiz" ? (en ? "Quiz" : "اختبار قصير") : (en ? "Exam" : "امتحان")}</Badge>
         <Badge variant="secondary">{en ? "Maximum score: " : "الدرجة النهائية: "}{exam.max_score}</Badge>
         <Badge variant="info">{roster.length} {en ? "students" : "طلاب"}</Badge>
       </div>

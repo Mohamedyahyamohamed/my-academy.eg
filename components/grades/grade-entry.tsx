@@ -17,19 +17,25 @@ import { useClientLang } from "@/lib/i18n-client";
 interface GradeEntryProps {
   examId: string;
   maxScore: number;
-  roster: { studentId: string; name: string; score: number | null }[];
+  roster: { studentId: string; name: string; score: number | null; notes?: string | null }[];
 }
 
 export function GradeEntry({ examId, maxScore, roster }: GradeEntryProps) {
   const router = useRouter();
   const en = useClientLang() === "en";
   const [scores, setScores] = React.useState<Record<string, string>>({});
+  const [notes, setNotes] = React.useState<Record<string, string>>({});
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
     const init: Record<string, string> = {};
-    roster.forEach((r) => (init[r.studentId] = r.score != null ? String(r.score) : ""));
+    const noteInit: Record<string, string> = {};
+    roster.forEach((r) => {
+      init[r.studentId] = r.score != null ? String(r.score) : "";
+      noteInit[r.studentId] = r.notes ?? "";
+    });
     setScores(init);
+    setNotes(noteInit);
   }, [roster]);
 
   const avg = React.useMemo(() => {
@@ -41,7 +47,7 @@ export function GradeEntry({ examId, maxScore, roster }: GradeEntryProps) {
   }, [scores, maxScore]);
 
   const save = async () => {
-    const entries: { studentId: string; score: number }[] = [];
+    const entries: { studentId: string; score: number; notes?: string | null }[] = [];
     for (const r of roster) {
       const raw = scores[r.studentId];
       if (raw === "" || raw == null) continue;
@@ -52,7 +58,7 @@ export function GradeEntry({ examId, maxScore, roster }: GradeEntryProps) {
       }
       if (n < 0) { toast.error(en ? "Scores cannot be negative." : "لا يمكن أن تكون الدرجات سالبة."); return; }
       if (n > maxScore) { toast.error(en ? `${r.name}'s score exceeds the maximum (${maxScore}).` : `تتجاوز درجة ${r.name} الحد الأقصى (${maxScore}).`); return; }
-      entries.push({ studentId: r.studentId, score: n });
+      entries.push({ studentId: r.studentId, score: n, notes: notes[r.studentId]?.trim() || null });
     }
     setSaving(true);
     try {
@@ -106,6 +112,14 @@ export function GradeEntry({ examId, maxScore, roster }: GradeEntryProps) {
                     placeholder="—"
                   />
                   <span className="w-16 text-sm text-muted-foreground">/ {maxScore}</span>
+                  <Input
+                    value={notes[r.studentId] ?? ""}
+                    onChange={(e) => setNotes((cur) => ({ ...cur, [r.studentId]: e.target.value }))}
+                    className="w-44"
+                    maxLength={500}
+                    placeholder={en ? "Note (optional)" : "ملاحظة اختيارية"}
+                    aria-label={en ? `Note for ${r.name}` : `ملاحظة ${r.name}`}
+                  />
                 </div>
               </div>
             );

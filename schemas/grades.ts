@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const examSchema = z.object({
   name: z.string().min(1, "Exam name is required").max(120),
+  type: z.enum(["homework", "quiz", "exam"]),
   course_id: z.string().min(1, "Select a course"),
   group_id: z.string().min(1, "Select a group"),
   date: z.string().min(1, "Date is required"),

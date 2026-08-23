@@ -313,10 +313,13 @@ export interface PaymentTransaction {
   note: string | null;
 }
 
+export type AssessmentType = "homework" | "quiz" | "exam";
+
 export interface Exam {
   id: UUID;
   academy_id: UUID;
   name: string;
+  type?: AssessmentType;
   course_id: UUID;
   group_id: UUID;
   date: ISODate;
@@ -332,6 +335,7 @@ export interface Grade {
   exam_id: UUID;
   student_id: UUID;
   score: number;
+  notes?: string | null;
   created_at: ISODate;
   // computed
   percentage?: number;

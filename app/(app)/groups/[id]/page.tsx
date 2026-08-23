@@ -23,6 +23,7 @@ import { StudentStatusBadge } from "@/components/shared/badges";
 import { EditGroupDialog } from "@/components/groups/group-dialogs";
 import { AddStudentToGroupDialog } from "@/components/groups/add-student-to-group";
 import { AssistantsManager } from "@/components/groups/assistants-manager";
+import { GroupAssessments } from "@/components/groups/group-assessments";
 import { DeleteEntityButton } from "@/components/shared/delete-entity-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import {
@@ -37,6 +38,7 @@ import {
   GroupsService,
   MiscService,
   StudentsService,
+  GradesService,
   requireScopedRole,
 } from "@/services";
 import { removeStudentFromGroupAction } from "@/app/actions/groups";
@@ -70,7 +72,26 @@ export default async function GroupDetailPage(
   const availableStudents = allStudents.filter(
     (s) => !enrolledIds.includes(s.id) && s.status !== "ARCHIVED",
   );
-  const avgGrade = GroupsService.groupAverageGrade(params.id);
+  const groupAssessments = (await GradesService.listExams(user.academy_id, isTeacher ? user.id : undefined))
+    .filter((assessment) => assessment.group_id === params.id);
+  const groupGrades = (await GradesService.listGrades(
+    { groupId: params.id, pageSize: 5000 },
+    user.academy_id,
+    isTeacher ? user.id : undefined,
+  )).items;
+  const assessmentStats: Record<string, { count: number; average: number }> = {};
+  for (const grade of groupGrades) {
+    const stat = assessmentStats[grade.exam_id] ?? { count: 0, average: 0 };
+    stat.count += 1;
+    stat.average += grade.percentage ?? 0;
+    assessmentStats[grade.exam_id] = stat;
+  }
+  for (const stat of Object.values(assessmentStats)) {
+    stat.average = stat.count ? Math.round(stat.average / stat.count) : 0;
+  }
+  const avgGrade = groupGrades.length
+    ? Math.round(groupGrades.reduce((sum, grade) => sum + (grade.percentage ?? 0), 0) / groupGrades.length)
+    : 0;
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
 
   const stats = [
@@ -128,6 +149,13 @@ export default async function GroupDetailPage(
           </Card>
         ))}
       </div>
+
+      <GroupAssessments
+        group={detail}
+        course={detail.course}
+        assessments={groupAssessments}
+        stats={assessmentStats}
+      />
 
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Students */}

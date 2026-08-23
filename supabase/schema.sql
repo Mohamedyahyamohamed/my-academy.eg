@@ -238,6 +238,7 @@ create table exams (
   id uuid primary key default gen_random_uuid(),
   academy_id uuid not null references academies(id) on delete cascade,
   name text not null,
+  type text not null default 'exam' check (type in ('homework', 'quiz', 'exam')),
   course_id uuid not null references courses(id) on delete restrict,
   group_id uuid not null references groups(id) on delete cascade,
   date date not null,
@@ -251,6 +252,7 @@ create table grades (
   exam_id uuid not null references exams(id) on delete cascade,
   student_id uuid not null references students(id) on delete cascade,
   score numeric(10,2) not null default 0 check (score >= 0),
+  notes text,
   created_at timestamptz not null default now(),
   unique (exam_id, student_id)
 );

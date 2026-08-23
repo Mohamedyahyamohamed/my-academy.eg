@@ -190,7 +190,7 @@ export default async function StudentProfilePage(
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <InfoItem icon={User} label={en ? "Parent" : "ولي الأمر"} value={detail.parent ? <Link href={`/parents/${detail.parent.id}`} className="text-primary hover:underline">{detail.parent.first_name} {detail.parent.last_name}</Link> : (en ? "Not linked" : "غير مرتبط")} />
+            <InfoItem icon={User} label={en ? "Parent" : "ولي الأمر"} value={detail.parent ? <Link href={`/parents/${detail.parent.id}?studentId=${encodeURIComponent(detail.id)}`} className="text-primary hover:underline">{detail.parent.first_name} {detail.parent.last_name}</Link> : (en ? "Not linked" : "غير مرتبط")} />
             <InfoItem icon={School} label={en ? "School" : "المدرسة"} value={detail.school || "—"} />
             <InfoItem icon={Phone} label={en ? "Phone" : "الموبايل"} value={detail.phone || "—"} />
             <InfoItem icon={Mail} label={en ? "Email" : "البريد الإلكتروني"} value={detail.email || "—"} />

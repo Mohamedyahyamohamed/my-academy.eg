@@ -10,15 +10,18 @@ import { StudentAvatar } from "@/components/shared/student-avatar";
 import { StudentStatusBadge } from "@/components/shared/badges";
 import { requireScopedRole } from "@/services";
 import { teacherStudentScope } from "@/services/_shared";
+import { StudentsService } from "@/services";
 
 export const dynamic = "force-dynamic";
 
 export default async function ParentDetailPage(
   props: {
     params: Promise<{ id: string }>;
+    searchParams?: Promise<{ studentId?: string }>;
   }
 ) {
   const params = await props.params;
+  const searchParams = props.searchParams ? await props.searchParams : {};
   const user = await requireScopedRole("ADMIN", "TEACHER");
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
   const { createServerSupabaseClient } = await import("@/lib/supabase/server");
@@ -38,7 +41,19 @@ export default async function ParentDetailPage(
     .eq("parent_id", params.id)
     .eq("academy_id", user.academy_id);
   const teacherScope = user.role === "TEACHER" ? (teacherStudentScope() ?? new Set<string>()) : null;
-  const children = (rawChildren ?? []).filter((child: any) => !teacherScope || teacherScope.has(child.id));
+  let children = (rawChildren ?? []).filter((child: any) => !teacherScope || teacherScope.has(child.id));
+
+  // The parent link can originate from a student profile that the teacher is
+  // already allowed to view. Carry that student id so a stale in-memory scope
+  // cannot turn a valid parent link into a false 404. Re-validate the student
+  // through the normal tenant- and teacher-scoped service before using it.
+  if (user.role === "TEACHER" && children.length === 0 && searchParams.studentId) {
+    const sourceStudent = await StudentsService.getStudentDetail(searchParams.studentId);
+    if (sourceStudent?.parent_id === params.id) {
+      children = (rawChildren ?? []).filter((child: any) => child.id === sourceStudent.id);
+    }
+  }
+
   if (user.role === "TEACHER" && children.length === 0) notFound();
 
   return (

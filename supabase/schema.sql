@@ -206,8 +206,9 @@ create table payments (
   id uuid primary key default gen_random_uuid(),
   academy_id uuid not null references academies(id) on delete cascade,
   student_id uuid not null references students(id) on delete cascade,
-  group_id uuid references groups(id) on delete set null,
-  month text not null, -- 'YYYY-MM'
+  group_id uuid references groups(id) on delete cascade,
+  month text not null, -- legacy-compatible 'YYYY-MM'
+  month_year text not null, -- canonical 'YYYY-MM', synchronized by migration trigger
   amount_due numeric(10,2) not null default 0 check (amount_due >= 0),
   amount_paid numeric(10,2) not null default 0 check (amount_paid >= 0),
   remaining numeric(10,2) generated always as (greatest(amount_due - amount_paid, 0)) stored,
@@ -224,6 +225,7 @@ create table payments (
 create index payments_student_idx on payments(student_id);
 create index payments_status_idx on payments(status);
 create index payments_month_idx on payments(month);
+create index payments_month_year_idx on payments(month_year);
 
 create table payment_transactions (
   id uuid primary key default gen_random_uuid(),

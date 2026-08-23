@@ -569,6 +569,7 @@ export function createSeedData(): SeedData {
         student_id: gs.student_id,
         group_id: gs.group_id,
         month: m.key,
+        month_year: m.key,
         amount_due: fee,
         amount_paid: amountPaid,
         remaining,

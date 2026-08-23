@@ -289,7 +289,9 @@ export interface Payment {
   academy_id: UUID;
   student_id: UUID;
   group_id: UUID | null;
-  month: string; // "2026-08"
+  month: string; // legacy canonical field: "2026-08"
+  /** Canonical billing period; synchronized with month in Production. */
+  month_year?: string;
   amount_due: number;
   amount_paid: number;
   remaining: number;

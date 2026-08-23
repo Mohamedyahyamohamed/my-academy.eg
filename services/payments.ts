@@ -6,6 +6,8 @@
 import type { PaginatedResult, Payment, PaymentStatus } from "@/types";
 import { collections } from "./data/store";
 import { currentAcademyId } from "./session";
+import { nodeSupabaseClient } from "@/lib/supabase/node-client";
+import { isSupabaseConfigured } from "./supabase/config";
 import { persistInsert, persistUpdate, persistDelete } from "./data/store";
 import { derivePayment, getGroup, getParent, byAcademy, fetchTableRLS } from "./_shared";
 import { fullName } from "./_shared";
@@ -13,10 +15,13 @@ import { fullName } from "./_shared";
 function attach(p: Payment): Payment {
   const d = derivePayment(p);
   const student = collections().students.find((s) => s.id === p.student_id);
+  const safeStudent = student
+    ? (({ access_token: _accessToken, ...withoutToken }) => withoutToken)(student)
+    : undefined;
   return {
     ...d,
-    student: student
-      ? { ...student, parent: getParent(student.parent_id) ?? null }
+    student: safeStudent
+      ? { ...safeStudent, parent: getParent(safeStudent.parent_id) ?? null }
       : undefined,
     group: getGroup(p.group_id) ?? undefined,
   };
@@ -54,7 +59,7 @@ export async function listPayments(
   let items = (await fetchTableRLS<Payment>("payments", authenticatedAcademyId)).filter((p: any) => !p.deleted_at).map(derivePayment);
 
   if (status !== "ALL") items = items.filter((p) => p.status === status);
-  if (month !== "ALL") items = items.filter((p) => p.month === month);
+  if (month !== "ALL") items = items.filter((p) => (p.month_year ?? p.month) === month);
   if (groupId !== "ALL") items = items.filter((p) => p.group_id === groupId);
   if (studentId !== "ALL")
     items = items.filter((p) => p.student_id === studentId);
@@ -67,7 +72,7 @@ export async function listPayments(
   }
 
   items.sort((a, b) =>
-    a.month === b.month
+    (a.month_year ?? a.month) === (b.month_year ?? b.month)
       ? (b.amount_due - b.amount_paid) - (a.amount_due - a.amount_paid)
       : a.month < b.month
         ? 1
@@ -105,12 +110,47 @@ export interface CreatePaymentInput {
 }
 
 async function validStudent(id: string, academyId: string) {
-  const students = await fetchTableRLS<Payment & { id: string }>("students", academyId);
-  return students.some((student) => student.id === id);
+  const students = await fetchTableRLS<{ id: string; academy_id: string }>("students", academyId);
+  return students.some((student) => student.id === id && student.academy_id === academyId);
+}
+
+async function validPaymentGroup(studentId: string, groupId: string | null | undefined, academyId: string) {
+  if (!groupId) return true;
+  const groups = await fetchTableRLS<{ id: string; academy_id: string }>("groups", academyId);
+  if (!groups.some((group) => group.id === groupId && group.academy_id === academyId)) return false;
+  const memberships = await fetchTableRLS<{ group_id: string; student_id: string }>("group_students", academyId);
+  return memberships.some((membership) => membership.group_id === groupId && membership.student_id === studentId);
 }
 
 function pid() {
   return crypto.randomUUID();
+}
+
+async function runAtomicPaymentRpc(input: {
+  academyId: string;
+  paymentId?: string | null;
+  studentId: string;
+  groupId?: string | null;
+  month: string;
+  amountDue: number;
+  amountPaid: number;
+  method?: string | null;
+  notes?: string | null;
+}) {
+  const client = nodeSupabaseClient();
+  if (!client) return { data: null, error: new Error("Database client is unavailable.") };
+  const { data, error } = await client.rpc("record_payment_atomic", {
+    p_academy_id: input.academyId,
+    p_payment_id: input.paymentId ?? null,
+    p_student_id: input.studentId,
+    p_group_id: input.groupId ?? null,
+    p_month_year: input.month,
+    p_amount_due: input.amountDue,
+    p_amount_paid: input.amountPaid,
+    p_method: input.method ?? "Cash",
+    p_notes: input.notes ?? null,
+  });
+  return { data: Array.isArray(data) ? data[0] : data, error };
 }
 
 export async function createPayment(input: CreatePaymentInput, academyIdOverride?: string): Promise<{
@@ -127,12 +167,30 @@ export async function createPayment(input: CreatePaymentInput, academyIdOverride
   }
   if (!(await validStudent(input.student_id, authenticatedAcademyId)))
     return { ok: false, error: "Invalid student." };
+  if (!(await validPaymentGroup(input.student_id, input.group_id, authenticatedAcademyId)))
+    return { ok: false, error: "Student is not enrolled in this academy group." };
   if (input.amount_due < 0 || (input.amount_paid ?? 0) < 0)
     return { ok: false, error: "Amounts cannot be negative." };
   if ((input.amount_paid ?? 0) > input.amount_due)
     return { ok: false, error: "Paid amount cannot exceed amount due." };
 
   const now = new Date().toISOString();
+  if (isSupabaseConfigured()) {
+    const atomic = await runAtomicPaymentRpc({
+      academyId,
+      studentId: input.student_id,
+      groupId: input.group_id,
+      month: input.month,
+      amountDue: input.amount_due,
+      amountPaid: input.amount_paid ?? 0,
+      method: input.method,
+      notes: input.notes,
+    });
+    if (atomic.error || !atomic.data) {
+      return { ok: false, error: atomic.error?.message ?? "Could not record payment." };
+    }
+    return { ok: true, payment: attach(derivePayment(atomic.data as Payment)) };
+  }
   const draft: Payment = {
     id: pid(),
     academy_id: academyId,
@@ -153,7 +211,7 @@ export async function createPayment(input: CreatePaymentInput, academyIdOverride
   const payment = derivePayment(draft);
   // `remaining` is a GENERATED column in Postgres — never insert it.
   const { remaining: _r, ...paymentPersist } = payment;
-  await persistInsert("payments", paymentPersist);
+  await persistInsert("payments", paymentPersist, authenticatedAcademyId);
   collections().payments.push(payment);
   if (payment.amount_paid > 0) {
     const tx = {
@@ -186,8 +244,25 @@ export async function recordPayment(
   const newPaid = p.amount_paid + amount;
   if (newPaid > p.amount_due)
     return { ok: false, error: "Payment exceeds remaining balance." };
-  p.amount_paid = newPaid;
   const now = new Date().toISOString();
+  if (isSupabaseConfigured()) {
+    const atomic = await runAtomicPaymentRpc({
+      academyId: authenticatedAcademyId,
+      paymentId,
+      studentId: p.student_id,
+      groupId: p.group_id,
+      month: p.month_year ?? p.month,
+      amountDue: p.amount_due,
+      amountPaid: amount,
+      method,
+      notes: note ?? p.notes,
+    });
+    if (atomic.error || !atomic.data) {
+      return { ok: false, error: atomic.error?.message ?? "Could not record payment." };
+    }
+    return { ok: true, payment: attach(derivePayment(atomic.data as Payment)) };
+  }
+  p.amount_paid = newPaid;
   p.payment_date = now;
   p.method = method;
   p.notes = note ?? p.notes;
@@ -196,7 +271,7 @@ export async function recordPayment(
   await persistUpdate("payments", paymentId, {
     amount_paid: p.amount_paid, payment_date: now, method, status: p.status,
     notes: note ?? p.notes, updated_at: now,
-  });
+  }, authenticatedAcademyId);
   const tx = {
     id: crypto.randomUUID(),
     payment_id: paymentId,

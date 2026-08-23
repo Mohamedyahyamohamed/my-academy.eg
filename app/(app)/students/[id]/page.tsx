@@ -298,8 +298,8 @@ export default async function StudentProfilePage(
             {!isPlatformOwner && (
               <CardHeader className="flex flex-row items-center justify-between gap-3">
                 <div>
-                  <CardTitle className="text-base">{en ? "Cash payments" : "المدفوعات النقدية"}</CardTitle>
-                  <CardDescription>{en ? "Record cash received from this student." : "سجّل النقد المستلم من هذا الطالب."}</CardDescription>
+                  <CardTitle className="text-base">{en ? "Payment history" : "سجل المدفوعات"}</CardTitle>
+                  <CardDescription>{en ? "Review the student's payment history and record cash received." : "راجع سجل مدفوعات الطالب وسجّل أي مبالغ نقدية مستلمة."}</CardDescription>
                 </div>
                 <CreatePaymentDialog
                   students={[detail]}
@@ -324,7 +324,7 @@ export default async function StudentProfilePage(
                 <TableBody>
                   {payments.map((p) => (
                     <TableRow key={p.id}>
-                      <TableCell className="font-medium">{p.month}</TableCell>
+                      <TableCell className="font-medium">{p.month_year ?? p.month}</TableCell>
                       <TableCell>{formatCurrency(p.amount_due, "EGP", en ? "en-EG" : "ar-EG")}</TableCell>
                       <TableCell>{formatCurrency(p.amount_paid, "EGP", en ? "en-EG" : "ar-EG")}</TableCell>
                       <TableCell className={p.remaining > 0 ? "text-rose-600" : ""}>

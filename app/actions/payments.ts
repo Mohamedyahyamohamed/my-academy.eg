@@ -98,6 +98,7 @@ export async function createPaymentAction(input: CreatePaymentInput) {
   ));
   revalidatePath("/payments");
   revalidatePath(`/students/${input.student_id}`);
+  if (input.group_id) revalidatePath(`/groups/${input.group_id}`);
   revalidatePath("/dashboard");
   return res;
 }
@@ -144,6 +145,8 @@ export async function recordPaymentAction(
       }
     })();
     revalidatePath("/payments");
+    revalidatePath(`/students/${payment.student_id}`);
+    if (payment.group_id) revalidatePath(`/groups/${payment.group_id}`);
     revalidatePath("/dashboard");
   }
   return res;

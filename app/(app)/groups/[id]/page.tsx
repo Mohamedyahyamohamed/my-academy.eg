@@ -24,6 +24,7 @@ import { EditGroupDialog } from "@/components/groups/group-dialogs";
 import { AddStudentToGroupDialog } from "@/components/groups/add-student-to-group";
 import { AssistantsManager } from "@/components/groups/assistants-manager";
 import { GroupAssessments } from "@/components/groups/group-assessments";
+import { GroupFinancials } from "@/components/groups/group-financials";
 import { DeleteEntityButton } from "@/components/shared/delete-entity-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import {
@@ -39,6 +40,7 @@ import {
   MiscService,
   StudentsService,
   GradesService,
+  PaymentsService,
   requireScopedRole,
 } from "@/services";
 import { removeStudentFromGroupAction } from "@/app/actions/groups";
@@ -92,6 +94,15 @@ export default async function GroupDetailPage(
   const avgGrade = groupGrades.length
     ? Math.round(groupGrades.reduce((sum, grade) => sum + (grade.percentage ?? 0), 0) / groupGrades.length)
     : 0;
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const groupPayments = (await PaymentsService.listPayments(
+    { groupId: params.id, month: currentMonth, pageSize: 500 },
+    user.academy_id,
+  )).items;
+  const activeFinancialStudents = detail.students
+    .filter((student) => student.is_active !== false && student.status !== "ARCHIVED")
+    .map((student) => ({ id: student.id, first_name: student.first_name, last_name: student.last_name, grade: student.grade }));
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
 
   const stats = [
@@ -155,6 +166,14 @@ export default async function GroupDetailPage(
         course={detail.course}
         assessments={groupAssessments}
         stats={assessmentStats}
+      />
+
+      <GroupFinancials
+        groupId={detail.id}
+        month={currentMonth}
+        monthlyFee={detail.monthly_fee}
+        students={activeFinancialStudents}
+        payments={groupPayments}
       />
 
       <div className="grid gap-4 lg:grid-cols-3">

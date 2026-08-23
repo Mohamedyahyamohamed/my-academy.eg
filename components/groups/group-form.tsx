@@ -17,6 +17,7 @@ import {
 import { createGroupAction, updateGroupAction } from "@/app/actions/groups";
 import { createCourseAction } from "@/app/actions/settings";
 import type { Course, Group, Teacher } from "@/types";
+import type { GroupInput } from "@/services/groups";
 import { useClientLang } from "@/lib/i18n-client";
 import { buildSchedule, formatClockTime, parseSchedule } from "@/lib/utils";
 
@@ -83,21 +84,24 @@ export function GroupForm({
       )?.id;
       if (!courseId) {
         const created = await createCourseAction({
-          name: courseName.trim(),
-          color: courseColor,
-        } as any);
-        courseId = (created as any)?.id;
+          name: String(courseName).trim(),
+          color: String(courseColor),
+        });
+        courseId = created?.id;
         if (!courseId) throw new Error(en ? "Could not create course." : "تعذّر إنشاء المادة.");
       }
 
+      // Server Actions must receive a plain JSON-compatible object. Keep the
+      // boundary explicit: no Date, event, Select item, or teacher object is
+      // allowed to cross from this client component.
       const payload = {
-        name: name.trim(),
-        course_id: courseId,
-        teacher_id: teacherId,
+        name: String(name).trim(),
+        course_id: String(courseId),
+        teacher_id: String(teacherId),
         monthly_fee: Number(fee) || 0,
-        schedule: buildSchedule(selectedDays, startTime, endTime),
+        schedule: String(buildSchedule([...selectedDays], String(startTime), String(endTime))),
         room: room.trim() || undefined,
-      };
+      } satisfies Omit<GroupInput, "academy_id">;
       if (group) {
         await updateGroupAction(group.id, payload);
         toast.success(en ? "Group updated." : "تم تحديث المجموعة.");

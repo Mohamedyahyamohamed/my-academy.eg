@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { db, collections } from "@/services/data/store";
 import { createSeedData } from "@/services/data/seed";
 import { setRequestContext } from "@/services/request-context";
@@ -34,5 +36,16 @@ describe("group creation request-context fallback", () => {
 
     expect(group.academy_id).toBe(ACADEMY);
     expect(collections().groups.some((item) => item.id === group.id && item.academy_id === ACADEMY)).toBe(true);
+  });
+
+  it("guards table-specific parent_id access in the production tenant trigger migration", () => {
+    const migration = readFileSync(
+      resolve(process.cwd(), "supabase/20260823_fix_direct_academy_trigger_parent_reference.sql"),
+      "utf8",
+    );
+
+    expect(migration).toContain("if tg_table_name = 'students' then");
+    expect(migration).toContain("if new.parent_id is not null then");
+    expect(migration).not.toContain("tg_table_name = 'students' and new.parent_id");
   });
 });

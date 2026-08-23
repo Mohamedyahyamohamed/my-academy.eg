@@ -1,71 +1,7 @@
--- Tenant mutation integrity hardening.
--- Every relationship row must resolve to the same academy as its parents.
--- This protects writes performed by trusted server-side clients as well as
--- ordinary authenticated RLS clients.
-
-create or replace function public.enforce_same_academy_relationship()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  expected_academy uuid;
-  related_academy uuid;
-begin
-  if tg_table_name = 'group_students' then
-    select academy_id into expected_academy from public.groups where id = new.group_id;
-    select academy_id into related_academy from public.students where id = new.student_id;
-  elsif tg_table_name = 'group_assistants' then
-    select academy_id into expected_academy from public.groups where id = new.group_id;
-    select academy_id into related_academy from public.teachers where id = new.teacher_id;
-  elsif tg_table_name = 'attendance' then
-    select academy_id into expected_academy from public.lessons where id = new.lesson_id;
-    select academy_id into related_academy from public.students where id = new.student_id;
-  elsif tg_table_name = 'payment_transactions' then
-    select academy_id into expected_academy
-    from public.payments p where p.id = new.payment_id;
-    related_academy := expected_academy;
-  elsif tg_table_name = 'grades' then
-    select academy_id into expected_academy from public.exams where id = new.exam_id;
-    select academy_id into related_academy from public.students where id = new.student_id;
-  elsif tg_table_name = 'homework_submissions' then
-    select academy_id into expected_academy from public.homework where id = new.homework_id;
-    select academy_id into related_academy from public.students where id = new.student_id;
-  else
-    return new;
-  end if;
-
-  if expected_academy is null or related_academy is null
-     or expected_academy <> related_academy then
-    raise exception using
-      errcode = '23514',
-      message = format('Tenant mutation rejected for %s: related rows are not in one academy', tg_table_name);
-  end if;
-  return new;
-end;
-$$;
-
-do $$
-declare
-  table_name text;
-begin
-  foreach table_name in array array[
-    'group_students', 'group_assistants', 'attendance',
-    'payment_transactions', 'grades', 'homework_submissions'
-  ] loop
-    execute format('drop trigger if exists trg_%I_same_academy on public.%I', table_name, table_name);
-    execute format(
-      'create trigger trg_%I_same_academy before insert or update on public.%I for each row execute function public.enforce_same_academy_relationship()',
-      table_name, table_name
-    );
-  end loop;
-end $$;
-
-revoke all on function public.enforce_same_academy_relationship() from public;
-grant execute on function public.enforce_same_academy_relationship() to authenticated;
-
--- Direct-tenant rows must not be relinked to another academy through a child FK.
+-- Fix: PL/pgSQL may evaluate both sides of a boolean expression. The old
+-- A combined table-name check with a NEW field reference can therefore attempt
+-- to read NEW.parent_id while the trigger is running for public.groups.
+-- Keep the tenant checks unchanged, but isolate table-specific NEW fields.
 create or replace function public.enforce_direct_academy_references()
 returns trigger
 language plpgsql
@@ -152,22 +88,6 @@ begin
   return new;
 end;
 $$;
-
-do $$
-declare
-  table_name text;
-begin
-  foreach table_name in array array[
-    'students', 'groups', 'lessons', 'payments', 'exams',
-    'homework', 'notifications', 'notes', 'files'
-  ] loop
-    execute format('drop trigger if exists trg_%I_direct_refs on public.%I', table_name, table_name);
-    execute format(
-      'create trigger trg_%I_direct_refs before insert or update on public.%I for each row execute function public.enforce_direct_academy_references()',
-      table_name, table_name
-    );
-  end loop;
-end $$;
 
 revoke all on function public.enforce_direct_academy_references() from public;
 grant execute on function public.enforce_direct_academy_references() to authenticated;

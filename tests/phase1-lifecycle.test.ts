@@ -3,7 +3,7 @@ import { db } from "@/services/data/store";
 import { createSeedData } from "@/services/data/seed";
 import { setRequestContext } from "@/services/request-context";
 import { deleteStudent } from "@/services/students";
-import { deleteGroup } from "@/services/groups";
+import { deleteGroup, addStudentsToGroup } from "@/services/groups";
 import { updateAttendanceStatus, studentAttendanceSummary } from "@/services/attendance";
 import { cancelLesson } from "@/services/lessons";
 
@@ -68,6 +68,20 @@ describe("Phase 1 lifecycle rules", () => {
     expect(db.data.groupStudents.some((row) => row.group_id === group.id)).toBe(false);
     expect(db.data.lessons.some((row) => row.id === lesson.id)).toBe(false);
     expect(db.data.attendance.some((row) => row.id === attendance.id)).toBe(false);
+  });
+
+  it("adds a student roster once and skips duplicate memberships", async () => {
+    const sourceGroup = db.data.groups[0]!;
+    const group = { ...sourceGroup, id: "batch-membership-group" };
+    const students = db.data.students.slice(0, 2);
+    db.data.groups.push(group);
+
+    const first = await addStudentsToGroup(group.id, students.map((student) => student.id), ACADEMY_ID);
+    expect(first).toMatchObject({ ok: true, added: students.length, skipped: 0, total: students.length });
+
+    const second = await addStudentsToGroup(group.id, students.map((student) => student.id), ACADEMY_ID);
+    expect(second).toMatchObject({ ok: true, added: 0, skipped: students.length, total: students.length });
+    expect(db.data.groupStudents.filter((row) => row.group_id === group.id)).toHaveLength(students.length);
   });
 
   it("stores a manual attendance note and rejects cancelled lessons", async () => {

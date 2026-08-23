@@ -5,6 +5,7 @@ import { requireScopedRole, GroupsService, isLimitedAssistant } from "@/services
 import type { GroupInput } from "@/services/groups";
 import { audit } from "@/services/audit";
 import { safeAction } from "@/lib/action-result";
+import { setRequestContext } from "@/services/request-context";
 
 export async function createGroupAction(input: GroupInput) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
@@ -50,13 +51,37 @@ export async function deleteGroupAction(id: string) {
   }, "تعذر حذف المجموعة. حاول مرة أخرى.", "GROUP_DELETE_FAILED");
 }
 
-export async function addStudentToGroupAction(groupId: string, studentId: string) {
+export async function addStudentsToGroupAction(groupId: string, studentIds: string[]) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
-  if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage group membership.");
-  const res = await GroupsService.addStudent(groupId, studentId);
-  void audit({ action: "group.add_student" });
-  revalidatePath(`/groups/${groupId}`);
-  return res;
+  if (await isLimitedAssistant(user)) {
+    return { ok: false as const, code: "ASSISTANT_NOT_ALLOWED", field: "groupId", message: "الحساب المساعد لا يملك صلاحية إدارة عضويات المجموعة." };
+  }
+  setRequestContext(user);
+  try {
+    const result = await GroupsService.addStudentsToGroup(groupId, studentIds, user.academy_id);
+    if (result.ok) {
+      void audit({ action: "group.add_students", metadata: { added: result.added, skipped: result.skipped, total: result.total } }, user);
+      revalidatePath(`/groups/${groupId}`);
+      revalidatePath("/groups");
+    }
+    return result;
+  } catch (error) {
+    console.error("[groups] bulk membership add failed:", error instanceof Error ? error.message : error);
+    return {
+      ok: false as const,
+      code: "MEMBERSHIP_ADD_FAILED",
+      field: "studentIds",
+      message: "تعذر إضافة الطلاب إلى المجموعة.",
+      details: "تحقق من المجموعة والطلاب ثم حاول مرة أخرى.",
+    };
+  }
+}
+
+export async function addStudentToGroupAction(groupId: string, studentId: string) {
+  const result = await addStudentsToGroupAction(groupId, [studentId]);
+  if (!result.ok) return { ok: false, error: result.message };
+  if (result.added === 0) return { ok: false, error: "الطالب في الجروب ده بالفعل." };
+  return { ok: true };
 }
 
 export async function transferStudentGroupAction(studentId: string, fromGroupId: string, toGroupId: string) {

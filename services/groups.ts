@@ -519,35 +519,122 @@ async function verifyGroupStudentScope(groupId: string, studentId: string): Prom
   return Boolean(group && student);
 }
 
+export type GroupMembershipBatchResult =
+  | { ok: true; added: number; skipped: number; total: number }
+  | { ok: false; code: string; field: string; message: string; details?: string };
+
+/**
+ * Add a roster to one group with one tenant-scoped database operation.
+ * Existing memberships are deliberately ignored, while invalid cross-tenant
+ * student ids reject the whole request before any insert is attempted.
+ */
+export async function addStudentsToGroup(
+  groupId: string,
+  studentIds: string[],
+  academyIdOverride?: string,
+): Promise<GroupMembershipBatchResult> {
+  const academyId = academyIdOverride ?? currentAcademyId();
+  const ids = [...new Set(studentIds.map((id) => id.trim()).filter(Boolean))];
+  if (!academyId) {
+    return { ok: false, code: "ACADEMY_CONTEXT_MISSING", field: "academy", message: "لا توجد أكاديمية حالية مرتبطة بالجلسة." };
+  }
+  if (!ids.length) {
+    return { ok: false, code: "NO_STUDENTS_SELECTED", field: "studentIds", message: "اختر طالبًا واحدًا على الأقل." };
+  }
+
+  const client = isSupabaseConfigured() ? nodeSupabaseClient() : null;
+  let group = collections().groups.find((item) => item.id === groupId && item.academy_id === academyId);
+  let validStudentIds = new Set(
+    collections().students
+      .filter((student) => student.academy_id === academyId && ids.includes(student.id))
+      .map((student) => student.id),
+  );
+
+  if (client) {
+    const [{ data: liveGroup, error: groupError }, { data: liveStudents, error: studentError }] = await Promise.all([
+      client.from("groups").select("id,academy_id,teacher_id").eq("id", groupId).eq("academy_id", academyId).maybeSingle(),
+      client.from("students").select("id,academy_id").eq("academy_id", academyId).in("id", ids).limit(500),
+    ]);
+    if (groupError) return { ok: false, code: "GROUP_LOOKUP_FAILED", field: "groupId", message: "تعذر التحقق من المجموعة داخل الأكاديمية.", details: "حدّث الصفحة ثم اختر المجموعة مرة أخرى." };
+    if (studentError) return { ok: false, code: "STUDENT_LOOKUP_FAILED", field: "studentIds", message: "تعذر التحقق من الطلاب داخل الأكاديمية.", details: "حدّث قائمة الطلاب ثم حاول مرة أخرى." };
+    group = liveGroup as Group | undefined;
+    validStudentIds = new Set((liveStudents ?? []).map((student: any) => student.id));
+  }
+
+  if (!group) return { ok: false, code: "GROUP_NOT_FOUND", field: "groupId", message: "المجموعة غير موجودة داخل الأكاديمية الحالية.", details: "لا يمكن إضافة طلاب إلى مجموعة من أكاديمية أخرى." };
+  if (validStudentIds.size !== ids.length) {
+    return { ok: false, code: "STUDENT_SCOPE_INVALID", field: "studentIds", message: "يوجد طالب واحد أو أكثر خارج نطاق الأكاديمية الحالية.", details: "لم تتم إضافة أي طالب." };
+  }
+
+  const scope = teacherGroupScope();
+  if (scope && !scope.has(groupId)) {
+    return { ok: false, code: "GROUP_NOT_ASSIGNED", field: "groupId", message: "لا تملك صلاحية إدارة طلاب هذه المجموعة.", details: "اختر مجموعة مسندة إليك." };
+  }
+
+  const existingIds = new Set<string>();
+  if (client) {
+    const { data: existing, error } = await client
+      .from("group_students")
+      .select("student_id")
+      .eq("group_id", groupId)
+      .in("student_id", ids)
+      .limit(500);
+    if (error) return { ok: false, code: "MEMBERSHIP_LOOKUP_FAILED", field: "studentIds", message: "تعذر قراءة عضويات المجموعة.", details: "لم يتم تغيير أي عضوية." };
+    for (const row of existing ?? []) if (row.student_id) existingIds.add(row.student_id);
+
+    const missingRows = ids
+      .filter((studentId) => !existingIds.has(studentId))
+      .map((studentId) => ({ group_id: groupId, student_id: studentId, joined_at: new Date().toISOString() }));
+    if (missingRows.length) {
+      // One SQL statement; concurrent duplicate memberships are ignored by the
+      // unique constraint rather than failing the whole selected roster.
+      const { error: insertError } = await client
+        .from("group_students")
+        .upsert(missingRows, { onConflict: "group_id,student_id", ignoreDuplicates: true });
+      if (insertError) return { ok: false, code: "MEMBERSHIP_INSERT_FAILED", field: "studentIds", message: "تعذر حفظ الطلاب في المجموعة.", details: "لم يتم اعتماد الإضافة الجماعية." };
+    }
+
+    // Re-read only the requested ids so the returned count reflects races and
+    // duplicate rows without exposing any other tenant's memberships.
+    const { data: after, error: afterError } = await client
+      .from("group_students")
+      .select("student_id")
+      .eq("group_id", groupId)
+      .in("student_id", ids)
+      .limit(500);
+    if (afterError) return { ok: false, code: "MEMBERSHIP_VERIFY_FAILED", field: "studentIds", message: "تمت الكتابة لكن تعذر التحقق من نتيجتها.", details: "أعد فتح المجموعة للتحقق." };
+    const afterIds = new Set<string>(
+      (after ?? [])
+        .map((row: any) => row.student_id)
+        .filter((studentId: unknown): studentId is string => typeof studentId === "string" && studentId.length > 0),
+    );
+    const added = [...afterIds].filter((studentId) => !existingIds.has(studentId)).length;
+    for (const studentId of afterIds) {
+      if (!collections().groupStudents.some((row) => row.group_id === groupId && row.student_id === studentId)) {
+        collections().groupStudents.push({ group_id: groupId, student_id: studentId, joined_at: new Date().toISOString() } as any);
+      }
+    }
+    return { ok: true, added, skipped: ids.length - added, total: ids.length };
+  }
+
+  const localExisting = new Set(
+    collections().groupStudents.filter((row) => row.group_id === groupId).map((row) => row.student_id),
+  );
+  const newRows = ids
+    .filter((studentId) => !localExisting.has(studentId))
+    .map((studentId) => ({ group_id: groupId, student_id: studentId, joined_at: new Date().toISOString() }));
+  collections().groupStudents.push(...newRows as any);
+  return { ok: true, added: newRows.length, skipped: ids.length - newRows.length, total: ids.length };
+}
+
 export async function addStudent(
   groupId: string,
   studentId: string,
+  academyIdOverride?: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!(await verifyGroupStudentScope(groupId, studentId))) {
-    return { ok: false, error: "المجموعة أو الطالب خارج نطاق الأكاديمية الحالية." };
-  }
-  const exists = collections().groupStudents.some(
-    (gs) => gs.group_id === groupId && gs.student_id === studentId,
-  );
-  if (exists) return { ok: false, error: "الطالب في الجروب ده بالفعل." };
-  const now = new Date().toISOString();
-  const row = {
-    group_id: groupId,
-    student_id: studentId,
-    joined_at: now,
-  };
-  collections().groupStudents.push(row as any);
-  try {
-    const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
-    const client = nodeSupabaseClient();
-    if (client) {
-      // insert مباشر (مش upsert) — upsert كان بيتلخبط على group_students
-      const r = await client.from("group_students").insert(row);
-      if (r.error) return { ok: false, error: r.error.message };
-    }
-  } catch (e) {
-    return { ok: false, error: (e as Error)?.message ?? "خطأ غير متوقع" };
-  }
+  const result = await addStudentsToGroup(groupId, [studentId], academyIdOverride);
+  if (!result.ok) return { ok: false, error: result.message };
+  if (result.added === 0) return { ok: false, error: "الطالب في الجروب ده بالفعل." };
   return { ok: true };
 }
 

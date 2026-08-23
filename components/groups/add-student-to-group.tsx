@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { addStudentToGroupAction } from "@/app/actions/groups";
+import { addStudentsToGroupAction } from "@/app/actions/groups";
 import { useRouter } from "next/navigation";
 import type { Student } from "@/types";
 import { useClientLang } from "@/lib/i18n-client";
@@ -55,21 +55,26 @@ export function AddStudentToGroupDialog({
     if (!selected.length) return;
     setSaving(true);
     try {
-      let added = 0;
-      const errors: string[] = [];
-      for (const id of selected) {
-        const res = await addStudentToGroupAction(groupId, id);
-        if (res?.ok) added++;
-        else if (res?.error) errors.push(res.error);
+      const result = await addStudentsToGroupAction(groupId, selected);
+      if (!result.ok) {
+        toast.error(`${result.message}${result.details ? ` — ${result.details}` : ""}`);
+        return;
       }
-      if (added > 0) toast.success(en ? `Added ${added} student${added === 1 ? "" : "s"} to the group` : `تم إضافة ${added} طالب للجروب`);
-      if (errors.length > 0) toast.error(errors[0]);
+      if (result.added > 0) {
+        toast.success(
+          en
+            ? `Added ${result.added} student${result.added === 1 ? "" : "s"}${result.skipped ? `; skipped ${result.skipped} already enrolled` : ""}.`
+            : `تمت إضافة ${result.added} طالب${result.skipped ? `، وتم تخطي ${result.skipped} مسجلين بالفعل` : ""}.`,
+        );
+      } else {
+        toast.info(en ? "All selected students are already enrolled." : "كل الطلاب المحددين مسجلون بالفعل في المجموعة.");
+      }
       setSelected([]);
       setOpen(false);
       router.refresh();
     } catch (error) {
-      console.error("async action failed:", error);
-      toast.error(en ? "Something went wrong. Please try again." : "حدث خطأ، حاول مرة أخرى.");
+      console.error("bulk membership action failed:", error);
+      toast.error(en ? "Students were not added. Check the group and try again." : "لم تتم إضافة الطلاب. تحقق من المجموعة وحاول مرة أخرى.");
     } finally {
       setSaving(false);
     }

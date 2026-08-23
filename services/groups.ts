@@ -92,6 +92,12 @@ export async function listGroups(search = "", academyId?: string, teacherProfile
         getCourse(g.course_id)?.name.toLowerCase().includes(q),
     );
   }
+  // Keep the grid deterministic and easy to scan instead of relying on
+  // insertion/creation order from the database or the local snapshot.
+  items.sort((a, b) =>
+    a.name.localeCompare(b.name, "ar", { sensitivity: "base" }) ||
+    a.id.localeCompare(b.id),
+  );
   const admin = academyId && isSupabaseConfigured() ? nodeSupabaseClient() : null;
   if (admin && items.length) {
     try {

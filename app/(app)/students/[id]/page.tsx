@@ -13,6 +13,7 @@ import {
   School,
   User,
   FileText,
+  ExternalLink,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
@@ -146,9 +147,16 @@ export default async function StudentProfilePage(
             redirectTo="/students"
           />
         )}
+        {detail.access_token && (
+          <Button asChild variant="outline">
+            <Link href={`/portal/${detail.access_token}`} target="_blank" rel="noreferrer">
+              <ExternalLink className="me-2 h-4 w-4" /> {en ? "Student portal" : "بوابة الطالب"}
+            </Link>
+          </Button>
+        )}
         <Button asChild variant="outline">
           <Link href={`/students/${params.id}/report`} target="_blank">
-            <FileText className="me-2 h-4 w-4" /> {en ? "Grade report" : "كشف درجات"}
+            <FileText className="me-2 h-4 w-4" /> {en ? "Generate parent report" : "توليد تقرير ولي الأمر"}
           </Link>
         </Button>
       </PageHeader>

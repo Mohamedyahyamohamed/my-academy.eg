@@ -42,6 +42,12 @@ function attachRelations(s: Student): Student {
   };
 }
 
+/** Portal bearer tokens are never needed in collection/list responses. */
+function withoutPortalToken(s: Student): Student {
+  const { access_token: _accessToken, ...safeStudent } = s;
+  return safeStudent;
+}
+
 export async function liveTeacherStudentScope(client: any, academyId: string, scopedUser = getCurrentUser()): Promise<Set<string> | null> {
   const user = scopedUser;
   if (!user || hasAcademyWideScope(user.role)) return null;
@@ -268,7 +274,7 @@ function listStudentsFromCache(
   const total = items.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const start = (page - 1) * pageSize;
-  const paged = items.slice(start, start + pageSize).map(attachRelations);
+  const paged = items.slice(start, start + pageSize).map((student) => attachRelations(withoutPortalToken(student)));
 
   return {
     items: paged,
@@ -357,7 +363,7 @@ export async function listStudents(
     sortDir = "asc",
   } = filters;
 
-  let query = client.from("students").select("*", { count: "exact" });
+  let query = client.from("students").select("id,academy_id,owner_teacher_id,first_name,last_name,date_of_birth,gender,phone,email,parent_id,school,grade,notes,status,is_active,consent_given,consent_at,consent_by,consent_version,enrolled_at,created_at,updated_at", { count: "exact" });
   const effectiveAcademyId = academyId ?? currentAcademyId();
   if (effectiveAcademyId) query = query.eq("academy_id", effectiveAcademyId);
 
@@ -430,7 +436,7 @@ export async function listStudents(
     : { data: [] };
   const parentsMap = new Map((parentsData ?? []).map((p: any) => [p.id, p]));
   const items = (data ?? []).filter((s: any) => status === "ARCHIVED" ? s.is_active === false : s.is_active !== false).map((s) => {
-    const student = attachRelations(s as Student);
+    const student = attachRelations(withoutPortalToken(s as Student));
     const sp = s as any;
     if ((!student.parent || !student.parent?.id) && sp.parent_id && parentsMap.has(sp.parent_id)) {
       student.parent = parentsMap.get(sp.parent_id);
@@ -804,6 +810,7 @@ export async function createStudent(
   const student: Student = {
     id: uid(),
     academy_id: academyId,
+    access_token: uid(),
     owner_teacher_id: ownerTeacherId,
     first_name: rest.first_name,
     last_name: rest.last_name,
@@ -829,7 +836,10 @@ export async function createStudent(
   collections().students.push(student);
   // أعمدة الموافقة موجودة في Production؛ نحفظها حتى تبقى موافقة WhatsApp قابلة للتدقيق
   // وتستمر عمليات الإرسال اللاحقة في احترام قرار الطالب أو ولي الأمر.
-  await persistInsert("students", student);
+  // Production generates the bearer token from the database default. Keep the
+  // cache token for demo mode, but never require the new column during rollout.
+  const { access_token: _accessToken, ...studentPersistence } = student;
+  await persistInsert("students", studentPersistence);
 
   // ── إنشاء حساب دخول للطالب (إيميل + باسورد افتراضي) عشان يقدر يدخل ──
   try {

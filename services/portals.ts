@@ -496,3 +496,161 @@ export async function getStudentDashboard(user: SessionUser): Promise<StudentDas
     recentAttendance: attendance.filter((a: any) => a.student_id === student.id).slice(-5).reverse(),
   };
 }
+
+
+export interface StudentPortalAssessment {
+  id: string;
+  title: string;
+  type: "homework" | "quiz" | "exam";
+  date: string;
+  score: number | null;
+  maxScore: number;
+  percentage: number | null;
+  notes: string | null;
+}
+
+export interface StudentPortalData {
+  student: Pick<Student, "id" | "first_name" | "last_name" | "grade">;
+  academyName: string;
+  attendance: {
+    totalLessons: number;
+    attendedLessons: number;
+    absentCount: number;
+    lateCount: number;
+    attendancePercentage: number;
+  };
+  assessments: StudentPortalAssessment[];
+  averageGrade: number;
+  generatedAt: string;
+}
+
+const validPortalToken = (token: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(token);
+
+function buildStudentPortalData(
+  student: Student,
+  academyName: string,
+  groups: any[],
+  lessons: any[],
+  attendanceRows: any[],
+  exams: any[],
+  grades: any[],
+): StudentPortalData {
+  const groupIds = new Set(groups.map((group: any) => group.id));
+  const eligibleLessons = lessons.filter(
+    (lesson: any) =>
+      groupIds.has(lesson.group_id) &&
+      lesson.status !== "canceled" &&
+      lesson.is_cancelled !== true &&
+      String(lesson.date) <= new Date().toISOString().slice(0, 10),
+  );
+  const eligibleLessonIds = new Set(eligibleLessons.map((lesson: any) => lesson.id));
+  const attendance = attendanceRows.filter((row: any) => eligibleLessonIds.has(row.lesson_id));
+  const attendedLessons = attendance.filter((row: any) => row.status === "PRESENT" || row.status === "LATE").length;
+  const absentCount = attendance.filter((row: any) => row.status === "ABSENT").length;
+  const lateCount = attendance.filter((row: any) => row.status === "LATE").length;
+  const examMap = new Map(exams.map((exam: any) => [String(exam.id), exam]));
+  const portalAssessments = grades
+    .map((grade: any) => {
+      const exam = examMap.get(String(grade.exam_id));
+      if (!exam) return null;
+      const score = Number(grade.score ?? 0);
+      const maxScore = Number(exam.max_score ?? 0);
+      return {
+        id: String(exam.id),
+        title: String(exam.name ?? ""),
+        type: (exam.type === "homework" || exam.type === "quiz" ? exam.type : "exam") as StudentPortalAssessment["type"],
+        date: String(exam.date),
+        score,
+        maxScore,
+        percentage: maxScore > 0 ? round((score / maxScore) * 100, 1) : null,
+        notes: grade.notes ?? null,
+      } satisfies StudentPortalAssessment;
+    })
+    .filter(Boolean) as StudentPortalAssessment[];
+  const averageGrade = portalAssessments.length
+    ? round(portalAssessments.reduce((sum, item) => sum + (item.percentage ?? 0), 0) / portalAssessments.length, 1)
+    : 0;
+  return {
+    student: {
+      id: student.id,
+      first_name: student.first_name,
+      last_name: student.last_name,
+      grade: student.grade,
+    },
+    academyName,
+    attendance: {
+      totalLessons: attendance.length,
+      attendedLessons,
+      absentCount,
+      lateCount,
+      attendancePercentage: attendance.length ? round((attendedLessons / attendance.length) * 100, 1) : 0,
+    },
+    assessments: portalAssessments.sort((a, b) => String(b.date).localeCompare(String(a.date))),
+    averageGrade,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Public read-only portal lookup. The bearer token is the only input accepted;
+ * every related query is explicitly constrained by the student's academy and
+ * group memberships. No mutation and no broad anonymous RLS policy are used.
+ */
+export async function getStudentPortalByToken(token: string): Promise<StudentPortalData | null> {
+  const normalizedToken = token.trim();
+  if (!validPortalToken(normalizedToken)) return null;
+
+  if (!isSupabaseConfigured()) {
+    const student = collections().students.find(
+      (item) => item.access_token?.toLowerCase() === normalizedToken.toLowerCase() && item.status !== "ARCHIVED" && item.is_active !== false,
+    );
+    if (!student) return null;
+    const academy = collections().academies.find((item: any) => item.id === student.academy_id);
+    const memberships = collections().groupStudents.filter((row) => row.student_id === student.id);
+    const groupIds = memberships.map((row) => row.group_id);
+    const groups = collections().groups.filter((group) => group.academy_id === student.academy_id && groupIds.includes(group.id));
+    const lessons = collections().lessons.filter((lesson) => lesson.academy_id === student.academy_id && groupIds.includes(lesson.group_id));
+    const lessonIds = lessons.map((lesson) => lesson.id);
+    const attendance = collections().attendance.filter((row) => row.student_id === student.id && lessonIds.includes(row.lesson_id));
+    const exams = collections().exams.filter((exam) => exam.academy_id === student.academy_id && groupIds.includes(exam.group_id));
+    const examIds = exams.map((exam) => exam.id);
+    const grades = collections().grades.filter((grade) => grade.student_id === student.id && examIds.includes(grade.exam_id));
+    return buildStudentPortalData(student, academy?.name ?? "MYAcademy", groups, lessons, attendance, exams, grades);
+  }
+
+  const client = nodeSupabaseClient();
+  if (!client) return null;
+  const { data: rawStudent, error: studentError } = await client
+    .from("students")
+    .select("id,academy_id,first_name,last_name,grade,status,is_active,access_token")
+    .eq("access_token", normalizedToken)
+    .eq("is_active", true)
+    .neq("status", "ARCHIVED")
+    .maybeSingle();
+  if (studentError || !rawStudent) return null;
+  const student = rawStudent as Student;
+
+  const [{ data: academy }, { data: memberships, error: membershipError }] = await Promise.all([
+    client.from("academies").select("name").eq("id", student.academy_id).maybeSingle(),
+    client.from("group_students").select("group_id").eq("student_id", student.id).limit(1000),
+  ]);
+  if (membershipError) return null;
+  const groupIds = [...new Set((memberships ?? []).map((row: any) => row.group_id).filter(Boolean))];
+  if (!groupIds.length) return buildStudentPortalData(student, academy?.name ?? "MYAcademy", [], [], [], [], []);
+
+  const [{ data: groups, error: groupsError }, { data: lessons, error: lessonsError }, { data: exams, error: examsError }] = await Promise.all([
+    client.from("groups").select("id,academy_id,name,course_id").eq("academy_id", student.academy_id).in("id", groupIds).limit(1000),
+    client.from("lessons").select("id,academy_id,group_id,date,status,is_cancelled").eq("academy_id", student.academy_id).in("group_id", groupIds).limit(2000),
+    client.from("exams").select("id,academy_id,group_id,name,type,date,max_score").eq("academy_id", student.academy_id).in("group_id", groupIds).order("date", { ascending: false }).limit(1000),
+  ]);
+  if (groupsError || lessonsError || examsError) return null;
+  const lessonIds = (lessons ?? []).map((lesson: any) => lesson.id).filter(Boolean);
+  const examIds = (exams ?? []).map((exam: any) => exam.id).filter(Boolean);
+  const [{ data: attendance, error: attendanceError }, { data: grades, error: gradesError }] = await Promise.all([
+    lessonIds.length ? client.from("attendance").select("lesson_id,status").eq("student_id", student.id).in("lesson_id", lessonIds).limit(2000) : Promise.resolve({ data: [], error: null }),
+    examIds.length ? client.from("grades").select("exam_id,score,notes").eq("student_id", student.id).in("exam_id", examIds).limit(1000) : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (attendanceError || gradesError) return null;
+  return buildStudentPortalData(student, academy?.name ?? "MYAcademy", groups ?? [], lessons ?? [], attendance ?? [], exams ?? [], grades ?? []);
+}

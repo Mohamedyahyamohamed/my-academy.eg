@@ -186,6 +186,8 @@ export interface Student {
   academy_id: UUID;
   /** Personal-workspace owner; null for academy-managed students. */
   owner_teacher_id?: UUID | null;
+  /** Private bearer token for the read-only student/parent portal. */
+  access_token?: string | null;
   first_name: string;
   last_name: string;
   date_of_birth: ISODate | null;

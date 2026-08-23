@@ -121,6 +121,7 @@ create index parents_academy_idx on parents(academy_id);
 create table students (
   id uuid primary key default gen_random_uuid(),
   academy_id uuid not null references academies(id) on delete cascade,
+  access_token uuid not null default gen_random_uuid() unique,
   first_name text not null,
   last_name text not null,
   date_of_birth date,

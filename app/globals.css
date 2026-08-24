@@ -1,9 +1,11 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Cairo:wght@400;500;600;700;800&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
+    --font-sans: "IBM Plex Sans Arabic", "Cairo", "Tajawal", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
     --background: 240 16% 98%;
     --foreground: 240 10% 10%;
 

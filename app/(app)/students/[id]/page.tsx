@@ -72,7 +72,7 @@ export default async function StudentProfilePage(
   if (!user) redirect("/login");
   setRequestContext(user);
   const isPlatformOwner = user.role === "SUPER_ADMIN";
-  const canManageStudentAccounts = isPlatformOwner || user.role === "ADMIN";
+  const canManageStudentAccounts = isPlatformOwner || user.role === "ADMIN" || user.role === "TEACHER";
   if (!isPlatformOwner && user.role !== "ADMIN" && user.role !== "TEACHER") redirect(roleHome(user.role));
   const detail = isPlatformOwner
     ? await StudentsService.getPlatformStudentDetail(params.id)

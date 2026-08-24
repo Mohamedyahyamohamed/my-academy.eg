@@ -44,8 +44,10 @@ describe("portal credentials contract", () => {
   });
 
   it("enforces Admin-only provisioning and tenant-constrained updates", () => {
-    expect(auth).toContain('user.role !== "ADMIN" && user.role !== "SUPER_ADMIN"');
+    expect(auth).toContain('user.role !== "ADMIN" && user.role !== "SUPER_ADMIN" && user.role !== "TEACHER"');
     expect(auth).toContain('.eq("academy_id", user.academy_id)');
+    expect(auth).toContain("liveTeacherStudentScope");
+    expect(auth).toContain("طلاب مجموعاتك المعيّنة");
     expect(auth).toContain('.eq("id", student.id)');
     expect(auth).toContain('.eq("academy_id", student.academy_id)');
     expect(studentService).toContain("portal_password: _portalPassword");

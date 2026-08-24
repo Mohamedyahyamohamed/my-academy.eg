@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
 import { redirect } from "next/navigation";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
+import { liveTeacherStudentScope } from "@/services/students";
 import { rateLimit, LIMITS } from "@/lib/rate-limit";
 import { setPortalSessionCookie, clearPortalSessionCookie, type PortalRole } from "@/lib/portal-session";
 import type { SessionUser } from "@/types";
@@ -29,9 +30,13 @@ export interface GeneratedPortalCredentials {
 }
 
 export async function generatePortalCredentials(user: SessionUser, studentId: string): Promise<GeneratedPortalCredentials> {
-  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") throw new Error("بيانات الدخول الافتراضية متاحة لمالك الأكاديمية فقط.");
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN" && user.role !== "TEACHER") throw new Error("لا تملك صلاحية إنشاء بيانات دخول البوابة.");
   const client = nodeSupabaseClient();
   if (!client) throw new Error("Supabase غير مهيأ.");
+  if (user.role === "TEACHER") {
+    const scopedStudents = await liveTeacherStudentScope(client, user.academy_id, user);
+    if (!scopedStudents?.has(studentId)) throw new Error("لا يمكنك إنشاء بيانات دخول إلا لطلاب مجموعاتك المعيّنة.");
+  }
 
   let query = client
     .from("students")

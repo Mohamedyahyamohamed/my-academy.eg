@@ -43,7 +43,7 @@ export function LandingNavbar({ en, authenticated, destination, ctaLabel }: Land
     <header
       className={`sticky top-0 z-50 border-b transition-[background-color,backdrop-filter,box-shadow] duration-300 ${
         scrolled
-          ? "border-white/20 bg-white/80 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-950/80"
+          ? "border-white/20 bg-white/75 shadow-lg shadow-slate-900/5 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/70"
           : "border-transparent bg-transparent backdrop-blur-0 dark:bg-transparent"
       }`}
     >

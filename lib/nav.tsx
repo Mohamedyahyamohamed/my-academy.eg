@@ -160,7 +160,6 @@ export const SUPER_ADMIN_NAV: NavSection[] = [
     items: [
       { titleAr: "إدارة الأكاديميات", titleEn: "Academy Management", href: "/platform", icon: Crown },
       { titleAr: "مستخدمو المنصة", titleEn: "Platform Users", href: "/platform?tab=users", icon: UsersRound },
-      { titleAr: "الطلاب", titleEn: "Students", href: "/students", icon: Users },
     ],
   },
   {

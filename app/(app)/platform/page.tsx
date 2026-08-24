@@ -167,11 +167,32 @@ export default async function PlatformPage(props: { searchParams?: Promise<{ tab
 
   return (
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
-      <PageHeader
-        title={en ? "Platform owner dashboard" : "لوحة مالك المنصة"}
-        description={en ? "A unified view of growth, activation, revenue, and academies requiring attention." : "صورة تشغيلية موحدة للنمو، التفعيل، الإيراد، والأكاديميات التي تحتاج متابعة."}
-        showBack={false}
-      />
+      <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-l from-violet-950 via-indigo-950 to-slate-950 p-8 shadow-[0_20px_60px_-20px_rgb(109_40_217/0.5)]">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgb(139_92_246/0.25),transparent_45%),radial-gradient(circle_at_85%_75%,rgb(56_189_248/0.15),transparent_40%)]" />
+        <div aria-hidden className="pointer-events-none absolute -top-16 -end-16 h-48 w-48 rounded-full bg-violet-600/20 blur-3xl" />
+        <div className="relative flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-400/20 to-amber-600/10 shadow-[0_0_30px_-5px_rgb(251_191_36/0.4)]">
+              <Crown className="h-7 w-7 text-amber-400" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+                {en ? "Platform owner dashboard" : "لوحة مالك المنصة"}
+              </h1>
+              <p className="mt-1 max-w-xl text-sm text-slate-300">
+                {en ? "A unified view of growth, activation, revenue, and academies requiring attention." : "صورة تشغيلية موحدة للنمو، التفعيل، الإيراد، والأكاديميات التي تحتاج متابعة."}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+            </span>
+            <span className="text-xs font-semibold text-emerald-300">{en ? "All systems operational" : "كل الأنظمة تعمل"}</span>
+          </div>
+        </div>
+      </div>
 
       <nav className="flex flex-wrap gap-2 border-b pb-3" aria-label={en ? "Platform sections" : "أقسام المنصة"}>
         <Link href="/platform" className={`rounded-md px-3 py-2 text-sm ${activeTab === "overview" ? "bg-primary text-primary-foreground" : "border text-muted-foreground hover:text-foreground"}`}>{en ? "Overview" : "نظرة عامة"}</Link>
@@ -380,7 +401,7 @@ function MetricCard({ icon, label, value, hint, tone }: { icon: React.ReactNode;
     sky: "border-sky-500/25 bg-gradient-to-br from-sky-500/10 via-sky-500/5 to-transparent text-sky-700 shadow-[0_8px_30px_-12px_rgb(14_165_233/0.25)]",
     amber: "border-amber-500/25 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent text-amber-700 shadow-[0_8px_30px_-12px_rgb(245_158_11/0.25)]",
   };
-  return <Card className={`premium-card ${tones[tone]}`}><CardContent className="p-5"><div className="flex items-center gap-2 text-xs font-semibold">{icon}<span>{label}</span></div><p className="mt-2 text-3xl font-black tracking-tight">{value}</p><p className="mt-1 text-xs text-muted-foreground">{hint}</p></CardContent></Card>;
+  return <Card className={`premium-card ${tones[tone]}`}><CardContent className="p-5"><div className="flex items-center gap-2 text-xs font-semibold">{icon}<span>{label}</span></div><p className="mt-2 bg-gradient-to-l from-slate-900 to-slate-600 bg-clip-text text-4xl font-black tracking-tight text-transparent dark:from-white dark:to-slate-400">{value}</p><p className="mt-1 text-xs text-muted-foreground">{hint}</p></CardContent></Card>;
 }
 
 function FunnelStep({ label, value, hint, final = false }: { label: string; value: number; hint: string; final?: boolean }) {

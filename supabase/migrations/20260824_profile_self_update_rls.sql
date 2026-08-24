@@ -6,17 +6,19 @@
 --    their own row. Column-level protection is enforced by the API layer
 --    (server actions never expose arbitrary column writes), and role changes
 --    remain admin-only via profile_admin_update + trigger guards.
+--
+-- NOTE: auth helpers live in the private schema since 20260817_audit7.
 
 drop policy if exists profile_admin_update on public.profiles;
 create policy profile_admin_update on public.profiles
   for update to authenticated
   using (
-    public.auth_has_academy_role(academy_id, array['ADMIN']::user_role[])
-    or public.auth_role() = 'SUPER_ADMIN'
+    private.auth_has_academy_role(academy_id, array['ADMIN']::public.user_role[])
+    or private.auth_role() = 'SUPER_ADMIN'
   )
   with check (
-    public.auth_has_academy_role(academy_id, array['ADMIN']::user_role[])
-    or public.auth_role() = 'SUPER_ADMIN'
+    private.auth_has_academy_role(academy_id, array['ADMIN']::public.user_role[])
+    or private.auth_role() = 'SUPER_ADMIN'
   );
 
 drop policy if exists profile_self_update on public.profiles;

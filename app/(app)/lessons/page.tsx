@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, Plus, Clock, Calendar, UsersRound } from "lucide-react";
+import { BookOpen, Plus, Clock, Calendar, UsersRound, ChevronLeft } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { ToolbarRoot, ToolbarSearch, ToolbarSelect, ToolbarActions } from "@/components/shared/toolbar";
 import { PaginationBar } from "@/components/shared/pagination";
@@ -100,21 +100,29 @@ export default async function LessonsPage(
                   <TableHead>{en ? "Date" : "التاريخ"}</TableHead>
                   <TableHead>{en ? "Time" : "الوقت"}</TableHead>
                   <TableHead>{en ? "Attendance" : "الحضور"}</TableHead>
+                  <TableHead className="w-10"><span className="sr-only">{en ? "Open" : "فتح"}</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {result.items.map((l) => (
-                  <TableRow key={l.id} className={l.status === "canceled" ? "bg-muted/40 text-muted-foreground line-through decoration-muted-foreground/60" : undefined}>
+                  <TableRow key={l.id} className={`group border-b border-gray-100 transition-colors hover:bg-gray-50 dark:border-border dark:hover:bg-accent/40 ${l.status === "canceled" ? "bg-muted/40 text-muted-foreground line-through decoration-muted-foreground/60" : "cursor-pointer"}`}>
                     <TableCell className="font-medium">
-                      <Link href={`/lessons/${l.id}`} className="hover:text-primary">{l.topic}</Link>
+                      <Link href={`/lessons/${l.id}`} className="hover:text-primary">
+                        {l.topic?.trim() ? l.topic : <span className="text-gray-400 italic">{en ? "Untitled" : "بدون عنوان"}</span>}
+                      </Link>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{l.group?.name}</TableCell>
                     <TableCell className="text-sm">{formatDate(l.date, undefined, en ? "en-EG" : "ar-EG")}</TableCell>
                     <TableCell className="text-sm"><span dir="ltr" className="whitespace-nowrap">{formatTimeRange(l.start_time, l.end_time, en ? "en-EG" : "ar-EG")}</span></TableCell>
                     <TableCell>
-                      <Badge variant={l.status === "canceled" ? "destructive" : l.attendance_taken ? "success" : "outline"}>
+                      <Badge variant={l.status === "canceled" ? "destructive" : "outline"} className={l.status === "canceled" ? undefined : l.attendance_taken ? "rounded-full border-green-200 bg-green-100 px-3 py-1 text-sm font-medium text-green-700 hover:bg-green-100 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300" : "rounded-full border-yellow-200 bg-yellow-100 px-3 py-1 text-sm font-medium text-yellow-700 hover:bg-yellow-100 dark:border-yellow-900 dark:bg-yellow-950/40 dark:text-yellow-300"}>
                         {l.status === "canceled" ? (en ? "Canceled — excluded" : "ملغاة — مستبعدة") : l.status === "completed" ? (en ? "Completed" : "مكتملة") : l.attendance_taken ? (en ? "Recorded" : "تم تسجيله") : (en ? "Pending" : "معلّق")}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="w-10 p-0">
+                      <Link href={`/lessons/${l.id}`} className="flex h-10 w-10 items-center justify-center" aria-label={en ? "Open lesson" : "فتح الحصة"}>
+                        <ChevronLeft className="h-4 w-4 text-gray-300 transition-colors group-hover:text-indigo-500" aria-hidden="true" />
+                      </Link>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -124,10 +132,10 @@ export default async function LessonsPage(
 
           <div className="space-y-3 md:hidden">
             {result.items.map((l) => (
-              <Link key={l.id} href={`/lessons/${l.id}`} className={`card-surface block p-4 ${l.status === "canceled" ? "bg-muted/40 text-muted-foreground line-through decoration-muted-foreground/60" : ""}`}>
-                <div className="flex items-center justify-between">
-                  <p className="font-medium">{l.topic}</p>
-                  <Badge variant={l.status === "canceled" ? "destructive" : l.attendance_taken ? "success" : "outline"}>
+              <Link key={l.id} href={`/lessons/${l.id}`} className={`group card-surface block border border-transparent p-4 transition-colors hover:border-gray-100 hover:bg-gray-50 dark:hover:border-border dark:hover:bg-accent/40 ${l.status === "canceled" ? "bg-muted/40 text-muted-foreground line-through decoration-muted-foreground/60" : ""}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 font-medium">{l.topic?.trim() ? l.topic : <span className="text-gray-400 italic">{en ? "Untitled" : "بدون عنوان"}</span>}</p>
+                  <Badge variant={l.status === "canceled" ? "destructive" : "outline"} className={l.status === "canceled" ? undefined : l.attendance_taken ? "shrink-0 rounded-full border-green-200 bg-green-100 px-3 py-1 text-sm font-medium text-green-700 hover:bg-green-100 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300" : "shrink-0 rounded-full border-yellow-200 bg-yellow-100 px-3 py-1 text-sm font-medium text-yellow-700 hover:bg-yellow-100 dark:border-yellow-900 dark:bg-yellow-950/40 dark:text-yellow-300"}>
                     {l.status === "canceled" ? (en ? "Canceled — excluded" : "ملغاة — مستبعدة") : l.status === "completed" ? (en ? "Completed" : "مكتملة") : l.attendance_taken ? (en ? "Recorded" : "تم تسجيله") : (en ? "Pending" : "معلّق")}
                   </Badge>
                 </div>

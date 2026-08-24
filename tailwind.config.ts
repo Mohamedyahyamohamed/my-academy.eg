@@ -93,11 +93,10 @@ const config: Config = {
         soft: "0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06)",
         card: "0 1px 3px 0 rgb(15 23 42 / 0.05), 0 1px 2px -1px rgb(15 23 42 / 0.05)",
         elevated:
-          "0 10px 30px -12px rgb(15 23 42 / 0.12), 0 4px 12px -6px rgb(15 23 42 / 0.08)",
+          "0 10px 30px -12px rgb(15 23 42 / 0.12), 0 4px 1,
         premium:
-          "0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(76 51 214 / 0.18), 0 24px 60px -28px rgb(76 51 214 / 0.22)",
-        "premium-lg":
-          "0 2px 6px rgb(15 23 42 / 0.06), 0 18px 40px -18px rgb(76 51 214 / 0.28), 0 40px 90px -40px rgb(76 51 214 / 0.35)",
+          "0 1px 0 0 rgba(255,255,255,0.06) inset, 0 10px 40px -10px hsl(var(--primary) / 0.35), 0 30px 80px -30px hsl(var(--primary) / 0.45)",
+        glass: "0 8px 32px -8px rgba(15, 23, 42, 0.25)",2px -6px rgb(15 23 42 / 0.08)",
       },
       keyframes: {
         "accordion-down": {
@@ -108,6 +107,14 @@ const config: Config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "blob-drift": {
+          "0%, 100%": { transform: "translate(0px, 0px) scale(1)" },
+          "33%": { transform: "translate(30px, -20px) scale(1.08)" },
+          "66%": { transform: "translate(-20px, 15px) scale(0.96)" },
+        },
+        "shimmer": {
+          "100%": { transform: "translateX(100%)" },
+        },
         "fade-in": {
           from: { opacity: "0", transform: "translateY(4px)" },
           to: { opacity: "1", transform: "translateY(0)" },
@@ -115,27 +122,13 @@ const config: Config = {
         shimmer: {
           "100%": { transform: "translateX(100%)" },
         },
-        "blob-drift": {
-          "0%, 100%": { transform: "translate3d(0,0,0) scale(1)" },
-          "33%": { transform: "translate3d(30px,-20px,0) scale(1.08)" },
-          "66%": { transform: "translate3d(-20px,15px,0) scale(0.96)" },
-        },
-        "float-slow": {
-          "0%, 100%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(-12px)" },
-        },
-        "pulse-ring": {
-          "0%": { transform: "scale(0.9)", opacity: "0.7" },
-          "70%, 100%": { transform: "scale(1.6)", opacity: "0" },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.3s ease-out",
         "blob-drift": "blob-drift 18s ease-in-out infinite",
-        "float-slow": "float-slow 7s ease-in-out infinite",
-        "pulse-ring": "pulse-ring 2.4s cubic-bezier(0.4,0,0.2,1) infinite",
+        "shimmer": "shimmer 2.5s infinite",
       },
     },
   },

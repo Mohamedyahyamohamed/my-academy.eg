@@ -137,41 +137,31 @@
   .quiet-divider {
     @apply border-border/80;
   }
-  /* ---- Premium design system ---- */
-  .glass {
-    background: hsl(var(--card) / 0.72);
-    backdrop-filter: saturate(180%) blur(16px);
-    -webkit-backdrop-filter: saturate(180%) blur(16px);
+
+  /* Premium design system */
+  .glass-strong {
+    background: color-mix(in oklab, hsl(var(--card)) 72%, transparent);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border: 1px solid color-mix(in oklab, hsl(var(--border)) 80%, hsl(var(--primary) / 0.25));
   }
-  .dark .glass {
-    background: hsl(240 14% 7% / 0.66);
-  }
-  .shadow-premium {
-    box-shadow:
-      0 1px 2px rgb(15 23 42 / 0.04),
-      0 8px 24px -12px rgb(76 51 214 / 0.18),
-      0 24px 60px -28px rgb(76 51 214 / 0.22);
-  }
-  .shadow-premium-lg {
-    box-shadow:
-      0 2px 6px rgb(15 23 42 / 0.06),
-      0 18px 40px -18px rgb(76 51 214 / 0.28),
-      0 40px 90px -40px rgb(76 51 214 / 0.35);
-  }
-  .text-gradient-brand {
-    background-image: linear-gradient(100deg, hsl(252 58% 46%), hsl(255 80% 62%), hsl(190 80% 45%));
+  .brand-gradient-text {
+    background-image: linear-gradient(105deg, hsl(var(--primary)), hsl(var(--accent)));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
-  .ring-premium {
-    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.5);
+  .hero-glow::before {
+    content: "";
+    position: absolute;
+    inset: -20% -10% auto -10%;
+    height: 60%;
+    background: radial-gradient(60% 100% at 50% 0%, hsl(var(--primary) / 0.25), transparent 70%);
+    filter: blur(40px);
+    pointer-events: none;
   }
-  .dark .ring-premium {
-    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.08);
-  }
-  .badge-glow {
-    box-shadow: 0 0 0 1px hsl(252 58% 46% / 0.18), 0 6px 20px -8px hsl(252 58% 46% / 0.4);
+  .ring-glow {
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.2), 0 20px 60px -20px hsl(var(--primary) / 0.45);
   }
 
   .form-surface {

@@ -37,7 +37,11 @@ describe("landing premium polish", () => {
     expect(page).not.toContain("redirect(roleHome(user.role))");
   });
 
-  it("does not claim an image LCP asset where the hero is a CSS dashboard mockup", () => {
+  it("keeps the hero responsive and avoids an unstable image LCP candidate", () => {
+    expect(page).toContain("grid-cols-[1.02fr_.98fr]");
+    expect(page).toContain("lg:grid-cols-[1.02fr_.98fr]");
+    expect(page).toContain("max-w-xl");
+    expect(page).toContain("sm:p-5");
     expect(page).not.toContain("<img");
     expect(page).not.toContain("next/image");
     expect(page).toContain("Owner intelligence");

@@ -28,13 +28,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
-import { LanguageToggle } from "@/components/layout/language-toggle";
 import { DemoLoginButton } from "@/components/auth/demo-login-button";
 import { Button } from "@/components/ui/button";
 import { APP_CONFIG } from "@/lib/constants";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 import { loadCurrentUser, roleHome } from "@/services";
 import { Reveal, Stagger, StaggerItem } from "@/components/marketing/landing-motion";
+import { LandingNavbar } from "@/components/marketing/landing-navbar";
 
 const featureContent = {
   ar: [
@@ -118,22 +118,7 @@ export default async function LandingPage() {
 
   return (
     <div dir={en ? "ltr" : "rtl"} className="min-h-screen overflow-hidden bg-background text-foreground">
-      <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/70 backdrop-blur-md dark:border-white/10 dark:bg-slate-950/75">
-        <div className="mx-auto flex h-[4.75rem] max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Logo />
-          <nav className="hidden items-center gap-1 rounded-full border border-border/70 bg-card/70 p-1 text-sm font-medium md:flex">
-            <a href="#features" className="rounded-full px-4 py-2 text-muted-foreground transition hover:bg-muted hover:text-foreground">{en ? "Platform" : "المنصة"}</a>
-            <a href="#experience" className="rounded-full px-4 py-2 text-muted-foreground transition hover:bg-muted hover:text-foreground">{en ? "Experience" : "التجربة"}</a>
-            <a href="#how" className="rounded-full px-4 py-2 text-muted-foreground transition hover:bg-muted hover:text-foreground">{en ? "How it works" : "كيف تعمل"}</a>
-            <Link href="/pricing" className="rounded-full px-4 py-2 text-muted-foreground transition hover:bg-muted hover:text-foreground">{en ? "Pricing" : "الأسعار"}</Link>
-          </nav>
-          <div className="flex items-center gap-2">
-            <LanguageToggle />
-            {!authenticated && <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex"><Link href="/login">{en ? "Sign in" : "تسجيل الدخول"}</Link></Button>}
-            <Button asChild size="sm"><Link href={destination}>{authenticated ? ctaLabel : (en ? "Start free" : "ابدأ مجانًا")}<ArrowLeft className="ms-1 h-4 w-4" /></Link></Button>
-          </div>
-        </div>
-      </header>
+      <LandingNavbar en={en} authenticated={authenticated} destination={destination} ctaLabel={ctaLabel} />
 
       <main>
         <section className="relative border-b border-border/60">

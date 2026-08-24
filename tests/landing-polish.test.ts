@@ -6,13 +6,15 @@ const read = (file: string) => readFileSync(resolve(process.cwd(), file), "utf8"
 
 describe("landing premium polish", () => {
   const page = read("app/page.tsx");
+  const navbar = read("components/marketing/landing-navbar.tsx");
   const styles = read("app/globals.css");
 
   it("uses a sticky glass navbar with a high stacking context", () => {
-    expect(page).toContain("sticky top-0 z-50");
-    expect(page).toContain("bg-white/70");
-    expect(page).toContain("backdrop-blur-md");
-    expect(page).toContain("dark:bg-slate-950/75");
+    expect(navbar).toContain("sticky top-0 z-50");
+    expect(navbar).toContain("bg-white/70");
+    expect(navbar).toContain("backdrop-blur-md");
+    expect(navbar).toContain("dark:bg-slate-950/75");
+    expect(navbar).toContain("window.scrollY > 12");
   });
 
   it("adds subtle floating motion and reduced-motion support to the dashboard mockup", () => {

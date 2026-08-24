@@ -142,13 +142,13 @@ export default async function LandingPage() {
             </Reveal>
 
             <Reveal delay={0.1}>
-              <HeroReveal delay={0.12} className="hero-dashboard-float relative mx-auto w-full max-w-xl">
-                <div className="pointer-events-none absolute -inset-20 -z-0" aria-hidden="true">
+              <HeroReveal delay={0.12} className="hero-dashboard-float isolate relative mx-auto w-full max-w-xl">
+                <div className="pointer-events-none absolute -inset-20 z-0" aria-hidden="true">
                   <span className="hero-ambient-blob absolute left-2 top-8 h-56 w-56 rounded-full bg-purple-500/30 blur-3xl" />
                   <span className="hero-ambient-blob absolute right-0 top-0 h-64 w-64 rounded-full bg-indigo-500/30 blur-3xl [animation-delay:1.2s]" />
                   <span className="hero-ambient-blob absolute bottom-0 left-1/3 h-48 w-48 rounded-full bg-cyan-400/20 blur-3xl [animation-delay:2.4s]" />
                 </div>
-                <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-primary/20 via-transparent to-cyan-400/20 blur-2xl" />
+                <div className="absolute inset-0 z-0 scale-105 rounded-[2rem] bg-gradient-to-br from-primary/20 via-transparent to-cyan-400/20 blur-2xl" />
                 <div className="relative z-10 rounded-[1.75rem] border border-white/70 bg-card/90 p-4 shadow-2xl shadow-indigo-500/20 ring-1 ring-gray-900/5 transition-[transform,box-shadow] hover:-translate-y-2 hover:scale-[1.02] hover:shadow-indigo-500/30 backdrop-blur sm:p-5">
                   <div className="flex items-center justify-between border-b pb-4"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground"><BrainCircuit className="h-5 w-5" /></div><div><p className="font-bold">{en ? "Owner intelligence" : "ذكاء المالك"}</p><p className="text-xs text-muted-foreground">{en ? "A clear view of today" : "صورة واضحة لليوم"}</p></div></div><span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-600">{en ? "LIVE" : "مباشر"}</span></div>
                   <div className="grid grid-cols-2 gap-3 py-4 sm:grid-cols-4">{(en ? [["Active students", "248"], ["Attendance", "94%"], ["Collected", "EGP 42.5k"], ["At risk", "06"]] : [["طلاب نشطون", "٢٤٨"], ["الحضور", "٩٤٪"], ["المحصّل", "٤٢٫٥ ألف"], ["تحت المتابعة", "٠٦"]]).map(([label, value], index) => <div key={label} className="rounded-xl border bg-background/70 p-3"><div className={`mb-3 h-1.5 w-8 rounded-full ${["bg-primary", "bg-cyan-500", "bg-emerald-500", "bg-amber-500"][index]}`} /><p className="text-lg font-black sm:text-xl">{value}</p><p className="mt-1 text-[10px] text-muted-foreground">{label}</p></div>)}</div>

@@ -28,6 +28,7 @@ import { ParentConsentLink } from "@/components/students/parent-consent-link";
 import { EditStudentDialog } from "@/components/students/student-dialogs";
 import { StudentQrCard } from "@/components/attendance/student-qr-card";
 import { StudentGroupTransfer } from "@/components/students/student-group-transfer";
+import { PortalCredentialsDialog } from "@/components/students/portal-credentials-dialog";
 import { DeleteEntityButton } from "@/components/shared/delete-entity-button";
 import { CreatePaymentDialog, RecordPaymentDialog } from "@/components/payments/payment-dialogs";
 import { TrendArea, LineTrend } from "@/components/charts";
@@ -71,6 +72,7 @@ export default async function StudentProfilePage(
   if (!user) redirect("/login");
   setRequestContext(user);
   const isPlatformOwner = user.role === "SUPER_ADMIN";
+  const canManageStudentAccounts = isPlatformOwner || user.role === "ADMIN";
   if (!isPlatformOwner && user.role !== "ADMIN" && user.role !== "TEACHER") redirect(roleHome(user.role));
   const detail = isPlatformOwner
     ? await StudentsService.getPlatformStudentDetail(params.id)
@@ -131,6 +133,11 @@ export default async function StudentProfilePage(
             targetGroups={groups.filter((group) => !studentGroups.some((current) => current.id === group.id)).map((group) => ({ id: group.id, name: group.name }))}
           />
         )}
+        {canManageStudentAccounts && (
+          <PortalCredentialsDialog
+            student={{ id: detail.id, first_name: detail.first_name, last_name: detail.last_name, portal_email: detail.portal_email }}
+          />
+        )}
         <StudentQrCard
           studentId={detail.id}
           name={`${detail.first_name} ${detail.last_name}`}
@@ -147,13 +154,11 @@ export default async function StudentProfilePage(
             redirectTo="/students"
           />
         )}
-        {detail.access_token && (
-          <Button asChild variant="outline">
-            <Link href={`/portal/${detail.access_token}`} target="_blank" rel="noreferrer">
-              <ExternalLink className="me-2 h-4 w-4" /> {en ? "Student portal" : "بوابة الطالب"}
-            </Link>
-          </Button>
-        )}
+        <Button asChild variant="outline">
+          <Link href="/portal/login" target="_blank" rel="noreferrer">
+            <ExternalLink className="me-2 h-4 w-4" /> {en ? "Portal login" : "دخول البوابة"}
+          </Link>
+        </Button>
         <Button asChild variant="outline">
           <Link href={`/students/${params.id}/report`} target="_blank">
             <FileText className="me-2 h-4 w-4" /> {en ? "Generate parent report" : "توليد تقرير ولي الأمر"}

@@ -42,9 +42,9 @@ function attachRelations(s: Student): Student {
   };
 }
 
-/** Portal bearer tokens are never needed in collection/list responses. */
-function withoutPortalToken(s: Student): Student {
-  const { access_token: _accessToken, ...safeStudent } = s;
+/** Sensitive portal tokens and password hashes never leave the server service layer. */
+function withoutPortalSecrets(s: Student): Student {
+  const { access_token: _accessToken, portal_password: _portalPassword, ...safeStudent } = s as Student & { portal_password?: string | null };
   return safeStudent;
 }
 
@@ -352,7 +352,7 @@ function listStudentsFromCache(
   const total = items.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const start = (page - 1) * pageSize;
-  const paged = items.slice(start, start + pageSize).map((student) => attachRelations(withoutPortalToken(student)));
+  const paged = items.slice(start, start + pageSize).map((student) => attachRelations(withoutPortalSecrets(student)));
 
   return {
     items: paged,
@@ -441,7 +441,7 @@ export async function listStudents(
     sortDir = "asc",
   } = filters;
 
-  let query = client.from("students").select("id,academy_id,owner_teacher_id,first_name,last_name,date_of_birth,gender,phone,email,parent_id,school,grade,notes,status,is_active,consent_given,consent_at,consent_by,consent_version,enrolled_at,created_at,updated_at", { count: "exact" });
+  let query = client.from("students").select("id,academy_id,owner_teacher_id,first_name,last_name,date_of_birth,gender,phone,email,parent_id,school,grade,notes,status,is_active,consent_given,consent_at,consent_by,consent_version,enrolled_at,created_at,updated_at,portal_email", { count: "exact" });
   const effectiveAcademyId = academyId ?? currentAcademyId();
   if (effectiveAcademyId) query = query.eq("academy_id", effectiveAcademyId);
 
@@ -514,7 +514,7 @@ export async function listStudents(
     : { data: [] };
   const parentsMap = new Map((parentsData ?? []).map((p: any) => [p.id, p]));
   const items = (data ?? []).filter((s: any) => status === "ARCHIVED" ? s.is_active === false : s.is_active !== false).map((s) => {
-    const student = attachRelations(withoutPortalToken(s as Student));
+    const student = attachRelations(withoutPortalSecrets(s as Student));
     const sp = s as any;
     if ((!student.parent || !student.parent?.id) && sp.parent_id && parentsMap.has(sp.parent_id)) {
       student.parent = parentsMap.get(sp.parent_id);
@@ -567,7 +567,7 @@ export async function getStudentDetail(
   }
 
   return {
-    ...attachRelations(student),
+    ...withoutPortalSecrets(attachRelations(student)),
     stats: computeStudentStats(student.id),
   };
 }
@@ -626,7 +626,7 @@ export async function getPlatformStudentDetail(id: string): Promise<StudentDetai
   const outstanding = payments.reduce((sum: number, row) => sum + row.remaining, 0);
 
   return {
-    ...student,
+    ...withoutPortalSecrets(student),
     parent: parent ?? null,
     groups: groupRows ?? [],
     stats: {
@@ -664,7 +664,7 @@ export async function getStudent(id: string): Promise<Student | null> {
     const liveScope = effectiveAcademyId ? await liveTeacherStudentScope(client, effectiveAcademyId) : new Set<string>();
     if (liveScope && !liveScope.has(id)) return null;
   }
-  return attachRelations(student);
+  return withoutPortalSecrets(attachRelations(student));
 }
 
 export function computeStudentStats(studentId: string): StudentStats {

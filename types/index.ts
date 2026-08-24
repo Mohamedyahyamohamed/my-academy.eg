@@ -191,8 +191,10 @@ export interface Student {
   academy_id: UUID;
   /** Personal-workspace owner; null for academy-managed students. */
   owner_teacher_id?: UUID | null;
-  /** Private bearer token for the read-only student/parent portal. */
+  /** Private bearer token for the legacy read-only student/parent portal. */
   access_token?: string | null;
+  /** Virtual credentials login email; never expose the password hash. */
+  portal_email?: string | null;
   first_name: string;
   last_name: string;
   date_of_birth: ISODate | null;

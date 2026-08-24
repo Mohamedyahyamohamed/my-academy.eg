@@ -37,14 +37,14 @@ describe("student portal contract", () => {
 
   it("does not include the bearer token in list queries or cached collection responses", () => {
     const service = read("services/students.ts");
-    expect(service).toContain("function withoutPortalToken");
+    expect(service).toContain("function withoutPortalSecrets");
     expect(service).toContain("select(\"id,academy_id,owner_teacher_id");
     expect(service).not.toContain('from("students").select("*", { count: "exact" })');
   });
 
   it("exposes both the portal link and parent report action from the secured profile", () => {
     const profile = read("app/(app)/students/[id]/page.tsx");
-    expect(profile).toContain("/portal/${detail.access_token}");
+    expect(profile).toContain("href=\"/portal/login\"");
     expect(profile).toContain("توليد تقرير ولي الأمر");
   });
 });

@@ -88,6 +88,8 @@ describe("landing premium polish", () => {
   it("renders the feature bento and short one-line feature copy", () => {
     expect(page).toContain("lg:row-span-2");
     expect(page).toContain("featured={index === 0}");
+    expect(page).toContain("Today at a glance");
+    expect(page).toContain("ملخص اليوم");
     expect(page).toContain("سجّل حضور كل حصة في ثوانٍ دون إدخال متكرر.");
     expect(page).toContain("Record every lesson in seconds without repetitive entry.");
     expect(page).not.toContain("مجاني بالكامل");
@@ -96,6 +98,10 @@ describe("landing premium polish", () => {
   it("gives each audience a real route and supports signup role preselection", () => {
     expect(page).toContain('href: "/support"');
     expect(page).toContain('href: "/signup?workspace=teacher"');
+    expect(page).toContain("border-violet-200");
+    expect(page).toContain("border-indigo-200");
+    expect(page).toContain("border-emerald-200");
+    expect(page).toContain("border-cyan-200");
     expect(page).toContain('href: "/portal/login"');
     expect(page).toContain("مؤسسة");
     expect(page).toContain("تواصل معنا");
@@ -139,6 +145,8 @@ describe("landing premium polish", () => {
     expect(page).toContain('id="faq"');
     expect(page).toContain("Free within core limits");
     expect(page).toContain("ابدأ مجانًا ضمن الحدود الأساسية");
+    expect(page).toContain("No credit card required • Core limits apply");
+    expect(page).toContain("دون بطاقة ائتمان • ضمن الحدود الأساسية");
     expect(styles).toContain("scroll-behavior: smooth");
     expect(motion).toContain("initial={false}");
     expect(motion).toContain("duration: 0.52");

@@ -171,8 +171,30 @@
   will-change: transform;
 }
 
+@keyframes hero-ambient-pulse {
+  0%, 100% { opacity: 0.52; transform: translate3d(0, 0, 0) scale(1); }
+  50% { opacity: 0.9; transform: translate3d(0, -12px, 0) scale(1.08); }
+}
+
+@keyframes hero-gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.hero-ambient-blob {
+  animation: hero-ambient-pulse 6s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.hero-gradient-text {
+  background-size: 220% auto;
+  animation: hero-gradient-shift 6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .hero-dashboard-float { animation: none; }
+  .hero-dashboard-float,
+  .hero-ambient-blob,
+  .hero-gradient-text { animation: none; }
 }
 
 

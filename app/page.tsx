@@ -34,7 +34,7 @@ import { APP_CONFIG } from "@/lib/constants";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 import { loadCurrentUser, roleHome } from "@/services";
 import { readPortalSession } from "@/lib/portal-session";
-import { Reveal, Stagger, StaggerItem } from "@/components/marketing/landing-motion";
+import { HeroReveal, Reveal, Stagger, StaggerItem } from "@/components/marketing/landing-motion";
 import { LandingNavbar } from "@/components/marketing/landing-navbar";
 
 const featureContent = {
@@ -130,7 +130,7 @@ export default async function LandingPage() {
             <Reveal>
               <div className="max-w-2xl">
                 <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3.5 py-2 text-xs font-bold text-primary"><Sparkles className="h-3.5 w-3.5" />{en ? "The operating system for modern academies" : "نظام التشغيل للأكاديميات العصرية"}</div>
-                <h1 className="text-4xl font-black leading-[1.12] tracking-tight sm:text-6xl">{en ? <>Build a smarter academy.<br /><span className="bg-gradient-to-r from-primary via-violet-500 to-cyan-500 bg-clip-text text-transparent">Teach with more impact.</span></> : <>ابنِ أكاديمية أذكى.<br /><span className="bg-gradient-to-l from-primary via-violet-500 to-cyan-500 bg-clip-text text-transparent">وعلّم بتأثير أكبر.</span></>}</h1>
+                <h1 className="text-4xl font-black leading-[1.12] tracking-tight sm:text-6xl">{en ? <>Build a smarter academy.<br /><span className="hero-gradient-text bg-gradient-to-r from-primary via-violet-500 to-cyan-500 bg-clip-text text-transparent">Teach with more impact.</span></> : <>ابنِ أكاديمية أذكى.<br /><span className="hero-gradient-text bg-gradient-to-l from-primary via-violet-500 to-cyan-500 bg-clip-text text-transparent">وعلّم بتأثير أكبر.</span></>}</h1>
                 <p className="mt-6 max-w-xl text-base font-medium leading-8 text-slate-600 dark:text-slate-300 sm:text-lg">{en ? `${APP_CONFIG.name} brings learning, attendance, family communication, and business intelligence into one calm workspace.` : `${APP_CONFIG.name} تجمع التعليم والحضور والتواصل مع الأسرة وذكاء الأعمال داخل مساحة واحدة هادئة وواضحة.`}</p>
                 <div className="mt-8 flex flex-wrap gap-3">
                   <Button asChild size="lg" className="shadow-lg shadow-primary/20"><Link href={destination}>{authenticated ? ctaLabel : (en ? "Create your academy" : "أنشئ أكاديميتك")}<ArrowUpLeft className="ms-1 h-4 w-4" /></Link></Button>
@@ -142,14 +142,19 @@ export default async function LandingPage() {
             </Reveal>
 
             <Reveal delay={0.1}>
-              <div className="hero-dashboard-float relative mx-auto w-full max-w-xl">
+              <HeroReveal delay={0.12} className="hero-dashboard-float relative mx-auto w-full max-w-xl">
+                <div className="pointer-events-none absolute -inset-20 -z-0" aria-hidden="true">
+                  <span className="hero-ambient-blob absolute left-2 top-8 h-56 w-56 rounded-full bg-purple-500/30 blur-3xl" />
+                  <span className="hero-ambient-blob absolute right-0 top-0 h-64 w-64 rounded-full bg-indigo-500/30 blur-3xl [animation-delay:1.2s]" />
+                  <span className="hero-ambient-blob absolute bottom-0 left-1/3 h-48 w-48 rounded-full bg-cyan-400/20 blur-3xl [animation-delay:2.4s]" />
+                </div>
                 <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-primary/20 via-transparent to-cyan-400/20 blur-2xl" />
-                <div className="relative rounded-[1.75rem] border border-white/70 bg-card/90 p-4 shadow-2xl shadow-indigo-500/20 ring-1 ring-gray-900/5 transition-transform hover:-translate-y-2 backdrop-blur sm:p-5">
+                <div className="relative z-10 rounded-[1.75rem] border border-white/70 bg-card/90 p-4 shadow-2xl shadow-indigo-500/20 ring-1 ring-gray-900/5 transition-[transform,box-shadow] hover:-translate-y-2 hover:scale-[1.02] hover:shadow-indigo-500/30 backdrop-blur sm:p-5">
                   <div className="flex items-center justify-between border-b pb-4"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground"><BrainCircuit className="h-5 w-5" /></div><div><p className="font-bold">{en ? "Owner intelligence" : "ذكاء المالك"}</p><p className="text-xs text-muted-foreground">{en ? "A clear view of today" : "صورة واضحة لليوم"}</p></div></div><span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-600">{en ? "LIVE" : "مباشر"}</span></div>
                   <div className="grid grid-cols-2 gap-3 py-4 sm:grid-cols-4">{(en ? [["Active students", "248"], ["Attendance", "94%"], ["Collected", "EGP 42.5k"], ["At risk", "06"]] : [["طلاب نشطون", "٢٤٨"], ["الحضور", "٩٤٪"], ["المحصّل", "٤٢٫٥ ألف"], ["تحت المتابعة", "٠٦"]]).map(([label, value], index) => <div key={label} className="rounded-xl border bg-background/70 p-3"><div className={`mb-3 h-1.5 w-8 rounded-full ${["bg-primary", "bg-cyan-500", "bg-emerald-500", "bg-amber-500"][index]}`} /><p className="text-lg font-black sm:text-xl">{value}</p><p className="mt-1 text-[10px] text-muted-foreground">{label}</p></div>)}</div>
                   <div className="grid gap-3 sm:grid-cols-[1.15fr_.85fr]"><div className="rounded-xl border bg-background/70 p-4"><div className="mb-5 flex items-center justify-between"><p className="text-xs font-bold">{en ? "Attendance trend" : "اتجاه الحضور"}</p><span className="text-[10px] font-bold text-emerald-600">+8.4%</span></div><div className="flex h-32 items-end gap-2">{[45, 62, 55, 76, 68, 91, 80, 96].map((height, index) => <div key={index} className="flex h-full flex-1 items-end"><div className={`w-full rounded-t-lg transition ${index === 7 ? "bg-primary" : "bg-primary/15"}`} style={{ height: `${height}%` }} /></div>)}</div><div className="mt-3 flex justify-between text-[9px] text-muted-foreground"><span>{en ? "4 weeks ago" : "منذ ٤ أسابيع"}</span><span>{en ? "This week" : "هذا الأسبوع"}</span></div></div><div className="rounded-xl border bg-background/70 p-4"><p className="mb-4 text-xs font-bold">{en ? "Priority signals" : "إشارات مهمة"}</p><div className="space-y-3 text-xs"><Activity icon={CheckCircle2} title={en ? "Attendance updated" : "تم تحديث الحضور"} detail={en ? "Math group" : "مجموعة الرياضيات"} /><Activity icon={BarChart3} title={en ? "Grade trend ready" : "اتجاه الدرجات جاهز"} detail={en ? "Monthly assessment" : "تقييم الشهر"} /><Activity icon={ShieldCheck} title={en ? "All data scoped" : "البيانات معزولة"} detail={en ? "Academy workspace" : "مساحة الأكاديمية"} /></div></div></div>
                 </div>
-              </div>
+              </HeroReveal>
             </Reveal>
           </div>
         </section>

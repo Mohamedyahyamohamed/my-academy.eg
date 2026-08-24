@@ -10,14 +10,19 @@ describe("landing premium polish", () => {
   const styles = read("app/globals.css");
 
   it("uses a sticky glass navbar with a high stacking context", () => {
-    expect(navbar).toContain("sticky top-0 z-50 border-b border-gray-100 bg-white/70 backdrop-blur-md");
-    expect(navbar).toContain("dark:bg-slate-950/75");
+    expect(navbar).toContain("sticky top-0 z-50 border-b border-white/30 bg-white/40 backdrop-blur-xl");
+    expect(navbar).toContain("dark:border-slate-700/50 dark:bg-slate-900/50");
     expect(navbar).toContain("window.scrollY > 12");
   });
 
   it("adds subtle floating motion and reduced-motion support to the dashboard mockup", () => {
     expect(page).toContain("hero-dashboard-float");
-    expect(page).toContain("shadow-2xl shadow-indigo-500/20 ring-1 ring-gray-900/5 transition-transform hover:-translate-y-2");
+    expect(page).toContain("shadow-2xl shadow-indigo-500/20");
+    expect(page).toContain("ring-1 ring-gray-900/5");
+    expect(page).toContain("transition-[transform,box-shadow]");
+    expect(page).toContain("hover:-translate-y-2 hover:scale-[1.02]");
+    expect(page).toContain("hero-ambient-blob");
+    expect(page).toContain("HeroReveal");
     expect(styles).toContain("@keyframes hero-dashboard-float");
     expect(styles).toContain("prefers-reduced-motion: reduce");
   });

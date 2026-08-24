@@ -21,8 +21,11 @@ export function SignupForm({ initialLang = "ar" }: { initialLang?: Lang }) {
   const en = lang === "en";
 
   React.useEffect(() => {
-    const workspace = new URLSearchParams(window.location.search).get("workspace");
-    if (workspace === "teacher") setForm((current) => ({ ...current, workspaceType: "TEACHER" }));
+    const params = new URLSearchParams(window.location.search);
+    const workspace = params.get("workspace");
+    const role = params.get("role");
+    if (workspace === "teacher" || role === "teacher") setForm((current) => ({ ...current, workspaceType: "TEACHER" }));
+    if (workspace === "academy" || role === "academy" || role === "owner") setForm((current) => ({ ...current, workspaceType: "ACADEMY" }));
     const stored = document.cookie.match(/(?:^|; )ma_lang=(en|ar)/)?.[1] as Lang | undefined;
     if (stored) setLang(stored);
   }, []);

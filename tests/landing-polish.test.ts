@@ -85,6 +85,40 @@ describe("landing premium polish", () => {
     expect(faq).toContain("transition-[grid-template-rows,opacity]");
   });
 
+  it("renders the feature bento and short one-line feature copy", () => {
+    expect(page).toContain("lg:row-span-2");
+    expect(page).toContain("featured={index === 0}");
+    expect(page).toContain("سجّل حضور كل حصة في ثوانٍ دون إدخال متكرر.");
+    expect(page).toContain("Record every lesson in seconds without repetitive entry.");
+    expect(page).not.toContain("مجاني بالكامل");
+  });
+
+  it("gives each audience a real route and supports signup role preselection", () => {
+    expect(page).toContain('href: "/support"');
+    expect(page).toContain('href: "/signup?workspace=teacher"');
+    expect(page).toContain('href: "/portal/login"');
+    expect(page).toContain("مؤسسة");
+    expect(page).toContain("تواصل معنا");
+    const signup = read("components/auth/signup-form.tsx");
+    expect(signup).toContain('params.get("role")');
+    expect(signup).toContain('role === "teacher"');
+    expect(signup).toContain('role === "academy"');
+  });
+
+  it("connects the three how-it-works steps and provides a closing CTA", () => {
+    expect(page).toContain("border-l border-dashed border-primary/25 md:hidden");
+    expect(page).toContain("border-t border-dashed border-primary/25 md:block");
+    expect(page).toContain("ابدأ رحلتك الآن");
+    expect(page).toContain("Start your journey now");
+  });
+
+  it("keeps legal and support links explicit in a three-part footer", () => {
+    expect(page).toContain('href="/terms"');
+    expect(page).toContain('href="/privacy"');
+    expect(page).toContain('href="/support"');
+    expect(page).toContain("مراجعة قانونية");
+  });
+
   it("aligns trust badges and keeps anchors, motion, and LCP stable", () => {
     expect(page).toContain("flex flex-wrap items-center gap-6");
     expect(page).toContain("text-indigo-500");
@@ -93,6 +127,8 @@ describe("landing premium polish", () => {
     expect(page).toContain('id="audiences"');
     expect(page).toContain('id="how"');
     expect(page).toContain('id="faq"');
+    expect(page).toContain("Free within core limits");
+    expect(page).toContain("ابدأ مجانًا ضمن الحدود الأساسية");
     expect(styles).toContain("scroll-behavior: smooth");
     expect(motion).toContain("initial={reduceMotion ? false : { opacity: 0, y: 16 }}");
     expect(motion).toContain("duration: 0.52");

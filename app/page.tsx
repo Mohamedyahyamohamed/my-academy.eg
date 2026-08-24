@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { APP_CONFIG } from "@/lib/constants";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 import { loadCurrentUser, roleHome } from "@/services";
+import { readPortalSession } from "@/lib/portal-session";
 import { Reveal, Stagger, StaggerItem } from "@/components/marketing/landing-motion";
 import { LandingNavbar } from "@/components/marketing/landing-navbar";
 
@@ -100,9 +101,11 @@ const faqContent = {
 
 export default async function LandingPage() {
   const user = await loadCurrentUser();
-  const authenticated = Boolean(user);
-  const isPortalRole = user?.role === "STUDENT" || user?.role === "PARENT";
-  const destination = user ? roleHome(user.role) : "/signup";
+  const portalSession = await readPortalSession();
+  const authenticated = Boolean(user || portalSession);
+  const isPortalRole = Boolean(portalSession) || user?.role === "STUDENT" || user?.role === "PARENT";
+  const portalDestination = portalSession?.role === "parent" ? "/portal/parent" : "/portal/student";
+  const destination = portalSession ? portalDestination : user ? roleHome(user.role) : "/signup";
 
   const lang = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value);
   const en = lang === "en";

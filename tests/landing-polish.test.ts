@@ -31,7 +31,10 @@ describe("landing premium polish", () => {
 
   it("routes authenticated users to roleHome and hides sign-up CTAs", () => {
     expect(page).toContain("const user = await loadCurrentUser();");
-    expect(page).toContain("const destination = user ? roleHome(user.role) : \"/signup\";");
+    expect(page).toContain("const portalSession = await readPortalSession();");
+    expect(page).toContain("const destination = portalSession ? portalDestination : user ? roleHome(user.role) : \"/signup\";");
+    expect(page).toContain("/portal/student");
+    expect(page).toContain("/portal/parent");
     expect(page).toContain("!authenticated &&");
     expect(page).toContain("{authenticated ? ctaLabel");
     expect(page).not.toContain("redirect(roleHome(user.role))");

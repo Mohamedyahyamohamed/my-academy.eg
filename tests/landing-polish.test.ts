@@ -14,13 +14,13 @@ describe("landing premium polish", () => {
     expect(navbar).toContain("dark:bg-slate-950/75");
     expect(navbar).toContain("window.scrollY > 12");
     expect(navbar).toContain("hover:text-indigo-600 transition-colors");
-    expect(navbar).toContain("rtl:-scale-x-100");
+    expect(navbar).not.toContain("rtl:-scale-x-100");
   });
 
   it("removes the muddy glow and uses the crisp layered mockup treatment", () => {
     expect(page).toContain("hero-dashboard-float");
-    expect(page).toContain("shadow-2xl shadow-indigo-500/10");
-    expect(page).toContain("border border-slate-100/50");
+    expect(page).toContain("shadow-[0_20px_50px_rgba(79,70,229,0.15)]");
+    expect(page).toContain("border border-slate-200/60 bg-white");
     expect(page).toContain("ring-1 ring-gray-900/5");
     expect(page).toContain("transition-[transform,box-shadow]");
     expect(page).toContain("hover:-translate-y-2");
@@ -39,7 +39,7 @@ describe("landing premium polish", () => {
   it("routes public signup CTAs to registration and styles the portal CTA", () => {
     expect(page).toContain('href={authenticated ? destination : "/signup"}');
     expect(page).toContain("border border-slate-200 bg-white text-slate-800 shadow-sm hover:bg-slate-50");
-    expect(page).toContain("rtl:-scale-x-100");
+    expect(page).not.toContain("rtl:-scale-x-100");
   });
 
   it("routes authenticated users to their dashboard or portal and hides signup CTAs", () => {

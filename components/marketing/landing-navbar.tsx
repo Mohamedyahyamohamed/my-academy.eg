@@ -41,7 +41,7 @@ export function LandingNavbar({ en, authenticated, destination, ctaLabel }: Land
         <div className="flex items-center gap-2">
           <LanguageToggle />
           {!authenticated && <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex"><Link href="/login">{en ? "Sign in" : "تسجيل الدخول"}</Link></Button>}
-          <Button asChild size="sm"><Link href={destination}>{authenticated ? ctaLabel : (en ? "Start free" : "ابدأ مجانًا")}<ArrowLeft className="ms-1 h-4 w-4 rtl:-scale-x-100" /></Link></Button>
+          <Button asChild size="sm"><Link href={destination}>{authenticated ? ctaLabel : (en ? "Start free" : "ابدأ مجانًا")}<ArrowLeft className="ms-1 h-4 w-4" /></Link></Button>
         </div>
       </div>
     </header>

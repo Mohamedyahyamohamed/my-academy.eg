@@ -375,16 +375,16 @@ function SubscriptionsTab({
 
 function MetricCard({ icon, label, value, hint, tone }: { icon: React.ReactNode; label: string; value: string; hint: string; tone: "emerald" | "violet" | "sky" | "amber" }) {
   const tones = {
-    emerald: "border-emerald-500/30 bg-emerald-500/5 text-emerald-700",
-    violet: "border-violet-500/30 bg-violet-500/5 text-violet-700",
-    sky: "border-sky-500/30 bg-sky-500/5 text-sky-700",
-    amber: "border-amber-500/30 bg-amber-500/5 text-amber-700",
+    emerald: "border-emerald-500/25 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent text-emerald-700 shadow-[0_8px_30px_-12px_rgb(16_185_129/0.25)]",
+    violet: "border-violet-500/25 bg-gradient-to-br from-violet-500/10 via-violet-500/5 to-transparent text-violet-700 shadow-[0_8px_30px_-12px_rgb(139_92_246/0.25)]",
+    sky: "border-sky-500/25 bg-gradient-to-br from-sky-500/10 via-sky-500/5 to-transparent text-sky-700 shadow-[0_8px_30px_-12px_rgb(14_165_233/0.25)]",
+    amber: "border-amber-500/25 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent text-amber-700 shadow-[0_8px_30px_-12px_rgb(245_158_11/0.25)]",
   };
-  return <Card className={tones[tone]}><CardContent className="p-5"><div className="flex items-center gap-2 text-xs font-medium">{icon}<span>{label}</span></div><p className="mt-2 text-3xl font-bold">{value}</p><p className="mt-1 text-xs text-muted-foreground">{hint}</p></CardContent></Card>;
+  return <Card className={`premium-card ${tones[tone]}`}><CardContent className="p-5"><div className="flex items-center gap-2 text-xs font-semibold">{icon}<span>{label}</span></div><p className="mt-2 text-3xl font-black tracking-tight">{value}</p><p className="mt-1 text-xs text-muted-foreground">{hint}</p></CardContent></Card>;
 }
 
 function FunnelStep({ label, value, hint, final = false }: { label: string; value: number; hint: string; final?: boolean }) {
-  return <div className={`rounded-xl border p-4 ${final ? "border-emerald-500/30 bg-emerald-500/5" : "bg-muted/20"}`}><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-2xl font-bold">{value}</p><p className="mt-1 text-xs text-muted-foreground">{hint}</p></div>;
+  return <div className={`rounded-xl border p-4 transition-colors ${final ? "border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5" : "bg-muted/20 hover:bg-muted/40"}`}><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-2xl font-bold">{value}</p><p className="mt-1 text-xs text-muted-foreground">{hint}</p></div>;
 }
 
 function OperationalRow({ label, value }: { label: string; value: string }) {

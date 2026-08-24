@@ -21,7 +21,7 @@ export default async function LoginPage() {
 
   return (
     <div className="flex min-h-screen bg-background" dir={en ? "ltr" : "rtl"}>
-      <div className="hidden w-1/2 flex-col justify-between border-e border-border bg-muted/40 p-12 lg:flex">
+      <div className="auth-info-panel relative hidden w-1/2 flex-col justify-between overflow-hidden border-e border-indigo-100/70 bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/70 p-12 dark:border-indigo-900/40 dark:from-indigo-950/50 dark:via-slate-950 dark:to-purple-950/40 lg:flex">
         <div>
           <Logo />
         </div>
@@ -53,7 +53,7 @@ export default async function LoginPage() {
         <div className={`absolute top-4 ${en ? "right-4" : "left-4"}`}><LanguageToggle /></div>
         <div className="w-full max-w-sm">
           <div className="mb-8 lg:hidden"><Logo /></div>
-          <div className="rounded-lg border border-border bg-card p-6 shadow-sm sm:p-8">
+          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-2xl shadow-slate-900/10 sm:p-8 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/30">
             <h1 className="text-2xl font-semibold tracking-tight">{en ? "Welcome back" : "أهلاً بعودتك"}</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">{en ? `Sign in to your ${APP_CONFIG.name} account to continue.` : `سجّل دخولك لحساب ${APP_CONFIG.name} للمتابعة.`}</p>
             <div className="mt-6"><LoginForm /></div>

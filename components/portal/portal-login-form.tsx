@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { GraduationCap, LockKeyhole, UsersRound } from "lucide-react";
+import { GraduationCap, Loader2, LockKeyhole, UsersRound } from "lucide-react";
 import { portalLoginAction } from "@/app/actions/portal-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,11 +15,11 @@ export function PortalLoginForm() {
     <form action={formAction} className="space-y-5" dir="rtl">
       <div className="space-y-2">
         <Label htmlFor="portal-email">البريد الافتراضي</Label>
-        <Input id="portal-email" name="email" type="email" autoComplete="username" placeholder="student@portal.myacademy.local" required />
+        <Input id="portal-email" name="email" type="email" autoComplete="username" autoFocus placeholder="student@portal.myacademy.local" required className="rounded-lg border border-gray-300 bg-white text-slate-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" />
       </div>
       <div className="space-y-2">
         <Label htmlFor="portal-password">كلمة المرور</Label>
-        <Input id="portal-password" name="password" type="password" autoComplete="current-password" required />
+        <Input id="portal-password" name="password" type="password" autoComplete="current-password" required className="rounded-lg border border-gray-300 bg-white text-slate-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" />
       </div>
 
       <fieldset className="space-y-3">
@@ -42,9 +42,9 @@ export function PortalLoginForm() {
         </div>
       </fieldset>
 
-      {state?.ok === false && <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">{state.error}</p>}
-      <Button type="submit" className="h-11 w-full gap-2" disabled={pending}>
-        <LockKeyhole className="h-4 w-4" aria-hidden="true" />
+      {state?.ok === false && <p role="alert" aria-live="polite" className="mt-2 text-sm leading-6 text-red-500 dark:text-red-400">{state.error}</p>}
+      <Button type="submit" className="h-11 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-70" disabled={pending} aria-busy={pending}>
+        {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <LockKeyhole className="h-4 w-4" aria-hidden="true" />}
         {pending ? "جارٍ التحقق..." : "دخول البوابة"}
       </Button>
       <p className="text-center text-xs leading-6 text-muted-foreground">بيانات الدخول ينشئها مسؤول الأكاديمية فقط، ولا يمكن تعديلها من هذه الصفحة.</p>

@@ -8,7 +8,7 @@ export default function PortalLoginPage() {
   return (
     <main dir="rtl" className="min-h-screen bg-slate-950 px-4 py-10 text-slate-100 sm:py-16">
       <div className="mx-auto grid max-w-5xl overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900 shadow-2xl lg:grid-cols-[0.9fr_1.1fr]">
-        <section className="hidden bg-gradient-to-br from-violet-700 via-indigo-700 to-slate-950 p-10 lg:flex lg:flex-col lg:justify-between">
+        <section className="auth-info-panel relative hidden overflow-hidden bg-gradient-to-br from-violet-700 via-indigo-700 to-slate-950 p-10 lg:flex lg:flex-col lg:justify-between">
           <div>
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15"><GraduationCap className="h-6 w-6" /></div>
             <p className="mt-8 text-sm font-semibold text-violet-200">MYAcademy</p>
@@ -17,7 +17,7 @@ export default function PortalLoginPage() {
           </div>
           <div className="flex items-center gap-2 text-xs text-violet-100"><ShieldCheck className="h-4 w-4" /> جلسة آمنة ومحددة بالأكاديمية والطالب</div>
         </section>
-        <section className="bg-card p-6 text-card-foreground sm:p-10">
+        <section className="bg-white p-6 text-slate-900 shadow-2xl shadow-black/20 sm:p-10 dark:bg-slate-900 dark:text-slate-100">
           <div className="mb-8 lg:hidden"><p className="text-sm font-semibold text-primary">MYAcademy</p><h1 className="mt-2 text-3xl font-black">بوابة الطالب وولي الأمر</h1></div>
           <div className="mb-7"><h2 className="text-2xl font-bold">تسجيل الدخول</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">استخدم البريد وكلمة المرور اللذين سلّمهما لك مسؤول الأكاديمية.</p></div>
           <PortalLoginForm />

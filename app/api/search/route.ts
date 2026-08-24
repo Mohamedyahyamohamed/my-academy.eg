@@ -26,6 +26,30 @@ export async function GET(req: NextRequest) {
 
   const q = req.nextUrl.searchParams.get("q") ?? "";
 
+  // SUPER_ADMIN: search academies and platform users (cross-tenant, read-only).
+  if (user.role === "SUPER_ADMIN") {
+    const query = q.trim().toLowerCase();
+    if (!query) return NextResponse.json({ results: [] });
+    const results: { type: "academy" | "user"; id: string; label: string; subtitle: string; href: string }[] = [];
+    try {
+      const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
+      const sb = nodeSupabaseClient();
+      const [academies, users] = await Promise.all([
+        sb.from("academies").select("id, name").ilike("name", `%${query}%`).limit(5),
+        sb.from("profiles").select("id, full_name, email, role").or(`full_name.ilike.%${query}%,email.ilike.%${query}%`).limit(5),
+      ]);
+      for (const a of academies.data ?? []) {
+        results.push({ type: "academy", id: a.id, label: a.name, subtitle: "أكاديمية", href: `/platform?academy=${a.id}` });
+      }
+      for (const u of users.data ?? []) {
+        results.push({ type: "user", id: u.id, label: u.full_name, subtitle: u.email, href: `/platform?tab=users&user=${u.id}` });
+      }
+    } catch {
+      // fail closed with empty results
+    }
+    return NextResponse.json({ results });
+  }
+
   // ADMIN/TEACHER: academy-wide search.
   if (user.role === "ADMIN" || user.role === "TEACHER") {
     return NextResponse.json({ results: MiscService.globalSearch(q) });

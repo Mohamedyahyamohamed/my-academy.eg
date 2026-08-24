@@ -154,7 +154,7 @@ export async function deleteNote(id: string, studentId: string): Promise<boolean
 /* ---------------- Search ---------------- */
 
 export interface SearchResult {
-  type: "student" | "group" | "lesson" | "payment";
+  type: "student" | "group" | "lesson" | "payment" | "academy" | "user";
   id: string;
   label: string;
   subtitle: string;

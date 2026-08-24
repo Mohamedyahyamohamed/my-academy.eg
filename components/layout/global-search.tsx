@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Search, Users, UsersRound, BookOpen, Wallet, CornerDownLeft } from "lucide-react";
+import { Search, Users, UsersRound, BookOpen, Wallet, CornerDownLeft, Crown, UserCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { SearchResult } from "@/services/misc";
@@ -15,7 +15,11 @@ const iconFor = (type: SearchResult["type"]) =>
       ? UsersRound
       : type === "lesson"
         ? BookOpen
-        : Wallet;
+        : type === "academy"
+          ? Crown
+          : type === "user"
+            ? UserCircle
+            : Wallet;
 
 export function GlobalSearch() {
   const router = useRouter();
@@ -90,7 +94,7 @@ export function GlobalSearch() {
           }
           if (e.key === "Escape") setOpen(false);
         }}
-        placeholder={en ? "Search students, groups, lessons…" : "ابحث عن طلاب، مجموعات، حصص…"}
+        placeholder={en ? "Search…" : "ابحث…"}
         className="ps-9 pe-4"
         aria-label={en ? "Global search" : "بحث عام"}
       />

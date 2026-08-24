@@ -2,7 +2,6 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import {
   ArrowLeft,
-  ArrowUpLeft,
   BarChart3,
   Baby,
   BrainCircuit,
@@ -133,7 +132,7 @@ export default async function LandingPage() {
                 <h1 className="text-4xl font-black leading-[1.12] tracking-tight sm:text-6xl">{en ? <>Build a smarter academy.<br /><span className="hero-gradient-text bg-gradient-to-r from-primary via-violet-500 to-cyan-500 bg-clip-text text-transparent">Teach with more impact.</span></> : <>ابنِ أكاديمية أذكى.<br /><span className="hero-gradient-text bg-gradient-to-l from-primary via-violet-500 to-cyan-500 bg-clip-text text-transparent">وعلّم بتأثير أكبر.</span></>}</h1>
                 <p className="mt-6 max-w-xl text-base font-medium leading-8 text-slate-600 dark:text-slate-300 sm:text-lg">{en ? `${APP_CONFIG.name} brings learning, attendance, family communication, and business intelligence into one calm workspace.` : `${APP_CONFIG.name} تجمع التعليم والحضور والتواصل مع الأسرة وذكاء الأعمال داخل مساحة واحدة هادئة وواضحة.`}</p>
                 <div className="mt-8 flex flex-wrap gap-3">
-                  <Button asChild size="lg" className="shadow-lg shadow-primary/20"><Link href={destination}>{authenticated ? ctaLabel : (en ? "Create your academy" : "أنشئ أكاديميتك")}<ArrowUpLeft className="ms-1 h-4 w-4" /></Link></Button>
+                  <Button asChild size="lg" className="shadow-lg shadow-primary/20"><Link href={destination}>{authenticated ? ctaLabel : (en ? "Create your academy" : "أنشئ أكاديميتك")}<ArrowLeft className="ms-1 h-4 w-4" /></Link></Button>
                   <Button asChild size="lg" variant="outline"><Link href={authenticated ? destination : "/login"}>{authenticated ? ctaLabel : (en ? "Student & parent portal" : "دخول الطلاب وأولياء الأمور")}<ChevronLeft className="ms-1 h-4 w-4" /></Link></Button>
                   {!authenticated && demoEnabled && <DemoLoginButton email="admin@myacademy.edu" password="demo1234" label={en ? "Try the demo" : "جرّب العرض التجريبي"} variant="outline" />}
                 </div>

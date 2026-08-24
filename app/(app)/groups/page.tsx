@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { UsersRound, Calendar, ArrowRight, UserPlus } from "lucide-react";
+import { UsersRound, Calendar, ArrowLeft, FolderOpen, UserPlus } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { AddGroupDialog } from "@/components/groups/group-dialogs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { GroupsService, MiscService, requireScopedRole, getCurrentUser, currentTeacherId } from "@/services";
 import { formatCurrency, formatSchedule } from "@/lib/utils";
 import { cookies } from "next/headers";
@@ -64,8 +63,8 @@ export default async function GroupsPage() {
 
       {groups.length === 0 ? (
         <EmptyState
-          icon={UsersRound}
-          title={en ? "No groups yet" : "لا توجد مجموعات بعد"}
+              icon={FolderOpen}
+              title={en ? "No groups yet" : "لا توجد مجموعات بعد"}
           description={en ? "Create your first group to start scheduling lessons and tracking attendance." : "أنشئ أول مجموعة لبدء جدولة الحصص ومتابعة الحضور."}
           action={
             <AddGroupDialog
@@ -73,15 +72,16 @@ export default async function GroupsPage() {
               teachers={teachers}
               defaultTeacherId={tid}
               lockedTeacher={isTeacher}
-              disabled={groupCreationBlocked}
-            />
+                disabled={groupCreationBlocked}
+                label={en ? "Create your first group" : "إنشاء أول مجموعة"}
+              />
           }
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {groups.map((g) => (
             <Link key={g.id} href={`/groups/${g.id}`}>
-              <Card className="h-full transition-shadow hover:shadow-elevated">
+              <Card className="group h-full border-border transition-all duration-200 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-xl dark:hover:border-indigo-800">
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
@@ -93,10 +93,10 @@ export default async function GroupsPage() {
                       </span>
                       <div>
                         <p className="font-semibold leading-tight">{g.name}</p>
-                        <p className="text-xs text-muted-foreground">{g.course?.name}</p>
+                        <p className="mt-1 inline-flex rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">{g.course?.name ?? (en ? "General" : "عام")}</p>
                       </div>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    <ArrowLeft className="h-4 w-4 text-muted-foreground transition-transform group-hover:-translate-x-1" aria-hidden="true" />
                   </div>
                   <div className="mt-4 flex flex-wrap gap-3 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1.5">
@@ -113,7 +113,7 @@ export default async function GroupsPage() {
                         {g.teacher ? `${g.teacher.first_name} ${g.teacher.last_name}` : "—"}
                       </span>
                     </span>
-                    <Badge variant="secondary">{formatCurrency(g.monthly_fee)}/{en ? "month" : "شهر"}</Badge>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">{formatCurrency(g.monthly_fee)}/{en ? "month" : "شهر"}</span>
                   </div>
                 </CardContent>
               </Card>

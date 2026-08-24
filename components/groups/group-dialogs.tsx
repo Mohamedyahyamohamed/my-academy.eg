@@ -21,19 +21,21 @@ export function AddGroupDialog({
   defaultTeacherId,
   lockedTeacher,
   disabled,
+  label,
 }: {
   courses: Course[];
   teachers: Teacher[];
   defaultTeacherId?: string | null;
   lockedTeacher?: boolean;
   disabled?: boolean;
+  label?: string;
 }) {
   const en = useClientLang() === "en";
   const [open, setOpen] = React.useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button disabled={disabled}><Plus className="h-4 w-4" /> {en ? "New group" : "مجموعة جديدة"}</Button>
+        <Button disabled={disabled}><Plus className="h-4 w-4" /> {label ?? (en ? "New group" : "مجموعة جديدة")}</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

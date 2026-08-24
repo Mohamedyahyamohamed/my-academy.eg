@@ -26,10 +26,8 @@ export function LandingNavbar({ en, authenticated, destination, ctaLabel }: Land
 
   return (
     <header
-      className={`sticky top-0 z-50 border-b transition-[background-color,backdrop-filter,box-shadow,height] duration-300 ${
-        scrolled
-          ? "border-slate-200/70 bg-white/70 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-950/75"
-          : "border-transparent bg-transparent"
+      className={`sticky top-0 z-50 border-b border-gray-100 bg-white/70 backdrop-blur-md transition-[background-color,backdrop-filter,box-shadow,height] duration-300 dark:border-white/10 dark:bg-slate-950/75 ${
+        scrolled ? "shadow-sm" : "shadow-none"
       }`}
     >
       <div className={`mx-auto flex max-w-7xl items-center justify-between px-4 transition-[height] duration-300 sm:px-6 ${scrolled ? "h-[4.25rem]" : "h-[4.75rem]"}`}>

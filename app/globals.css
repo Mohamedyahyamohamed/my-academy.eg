@@ -159,3 +159,18 @@
     break-inside: avoid;
   }
 }
+
+/* Landing hero: subtle, GPU-friendly motion that stops for reduced-motion users. */
+@keyframes hero-dashboard-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -8px, 0); }
+}
+
+.hero-dashboard-float {
+  animation: hero-dashboard-float 5s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-dashboard-float { animation: none; }
+}

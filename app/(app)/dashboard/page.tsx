@@ -115,9 +115,9 @@ export default async function DashboardPage(
           {quickActions.map((action) => {
             const Icon = action.icon;
             return (
-              <Button key={action.href} asChild variant="outline" className="h-auto justify-start gap-2 px-3 py-3 text-start">
+              <Button key={action.href} asChild variant="outline" className="h-auto justify-start gap-2 border-indigo-100 bg-indigo-50/50 px-3 py-3 text-start text-indigo-700 transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-800 dark:border-indigo-900/50 dark:bg-indigo-950/30 dark:text-indigo-200 dark:hover:border-indigo-800 dark:hover:bg-indigo-950/60">
                 <Link href={action.href}>
-                  <Icon className="h-4 w-4 shrink-0 text-primary" />
+                  <Icon className="h-4 w-4 shrink-0 text-indigo-700 dark:text-indigo-300" />
                   <span className="truncate">{action.label}</span>
                 </Link>
               </Button>
@@ -192,8 +192,8 @@ export default async function DashboardPage(
         />
         <StatCard
           label={en ? "Academy attendance" : "نسبة حضور الأكاديمية"}
-          value={`${d.overallAttendanceThisMonth}%`}
-          hint={en ? "Current month, canceled lessons excluded" : "هذا الشهر مع استبعاد الحصص الملغاة"}
+          value={d.overallAttendanceSessionsThisMonth === 0 ? (en ? "N/A" : "—") : `${d.overallAttendanceThisMonth}%`}
+          hint={d.overallAttendanceSessionsThisMonth === 0 ? (en ? "No attendance recorded yet" : "لم تُسجّل حصص بعد") : (en ? "Current month, canceled lessons excluded" : "هذا الشهر مع استبعاد الحصص الملغاة")}
           icon={CalendarCheck}
           accent="info"
         />
@@ -225,7 +225,7 @@ export default async function DashboardPage(
         />
         <StatCard
           label={en ? "Attendance rate" : "نسبة الحضور"}
-          value={`${d.attendanceRate}%`}
+          value={d.attendanceSessions === 0 ? (en ? "N/A" : "—") : `${d.attendanceRate}%`}
           icon={CalendarCheck}
           accent="info"
         />

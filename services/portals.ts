@@ -275,6 +275,8 @@ export interface TeacherDashboardData {
   studentCount: number;
   upcomingCount: number;
   attendanceRate: number;
+  /** Number of attendance records available for the rate; zero means show an empty metric. */
+  totalSessions: number;
   pendingReview: number;
   upcomingLessons: any[];
   groups: any[];
@@ -400,6 +402,7 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
     studentCount: enrolledIds.size,
     upcomingCount: upcoming.length,
     attendanceRate,
+    totalSessions: att.length,
     pendingReview,
     upcomingLessons: upcoming,
     groups: myGroups,

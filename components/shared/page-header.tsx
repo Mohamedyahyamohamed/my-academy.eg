@@ -4,7 +4,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { BackButton } from "@/components/shared/back-button";
 
 interface PageHeaderProps {
-  title: string;
+  title: React.ReactNode;
   description?: string;
   children?: React.ReactNode;
   breadcrumbs?: { label: string; href?: string }[];

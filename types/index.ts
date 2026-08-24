@@ -459,6 +459,8 @@ export interface DashboardMetrics {
   collectedThisMonth: number;
   outstanding: number;
   attendanceRate: number;
+  /** Number of attendance records included in the period-level rate. */
+  attendanceSessions: number;
   averageGrade: number;
   collectionTrend: number;
   revenueByMonth: { month: string; revenue: number; collected: number }[];
@@ -468,6 +470,8 @@ export interface DashboardMetrics {
   expectedRevenueThisMonth: number;
   collectedRevenueThisMonth: number;
   overallAttendanceThisMonth: number;
+  /** Number of current-month attendance records included in the overall rate. */
+  overallAttendanceSessionsThisMonth: number;
   atRiskCount: number;
   revenueByGroup: { name: string; expected: number; collected: number; unpaid: number }[];
   attendanceTrend4Weeks: { week: string; rate: number }[];

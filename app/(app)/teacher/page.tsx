@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   Users, UsersRound, CalendarClock, ClipboardList, CheckCircle2,
-  ArrowRight, AlertCircle,
+  ArrowLeft, AlertCircle, Inbox,
 } from "lucide-react";
 import { cookies } from "next/headers";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
@@ -39,7 +39,11 @@ export default async function TeacherDashboard() {
 
   return (
     <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>
-      <PageHeader title={`${t.welcome}، ${(d.teacherName || displayName).split(/\s+/)[0]} 👋`} description={t.overview} showBack={false} />
+      <PageHeader
+        title={<><span>{t.welcome}، </span><bdi dir="auto">{(d.teacherName || displayName).split(/\s+/)[0]}</bdi><span aria-hidden="true"> 👋</span></>}
+        description={t.overview}
+        showBack={false}
+      />
 
       {d.assistantFor.length > 0 && (
         <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
@@ -61,9 +65,9 @@ export default async function TeacherDashboard() {
           ].map((action) => {
             const Icon = action.icon;
             return (
-              <Button key={action.href} asChild variant="outline" className="h-auto justify-start gap-2 px-3 py-3 text-start">
+              <Button key={action.href} asChild variant="outline" className="h-auto justify-start gap-2 border-indigo-100 bg-indigo-50/50 px-3 py-3 text-start text-indigo-700 transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-800 dark:border-indigo-900/50 dark:bg-indigo-950/30 dark:text-indigo-200 dark:hover:border-indigo-800 dark:hover:bg-indigo-950/60">
                 <Link href={action.href}>
-                  <Icon className="h-4 w-4 shrink-0 text-primary" />
+                  <Icon className="h-4 w-4 shrink-0 text-indigo-700 dark:text-indigo-300" />
                   <span className="truncate">{action.label}</span>
                 </Link>
               </Button>
@@ -76,7 +80,7 @@ export default async function TeacherDashboard() {
         <StatCard label={t.groups} value={d.groupCount} icon={UsersRound} accent="primary" href="/groups" />
         <StatCard label={t.students} value={d.studentCount} icon={Users} accent="info" href="/students" />
         <StatCard label={t.upcoming} value={d.upcomingCount} icon={CalendarClock} accent="success" href="/lessons" />
-        <StatCard label={t.attendanceRate} value={`${d.attendanceRate}%`} icon={CheckCircle2} accent="warning" href="/attendance" />
+        <StatCard label={t.attendanceRate} value={d.totalSessions === 0 ? (isRTL ? "—" : "N/A") : `${d.attendanceRate}%`} hint={d.totalSessions === 0 ? (isRTL ? "لم تُسجّل حصص بعد" : "No attendance recorded yet") : undefined} icon={CheckCircle2} accent="warning" href="/attendance" />
       </div>
 
       {d.pendingReview > 0 && (
@@ -130,7 +134,7 @@ export default async function TeacherDashboard() {
           </CardHeader>
           <CardContent className="space-y-1">
             {d.needsAttendance.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">{t.allRecorded}</p>
+              <EmptyState icon={CheckCircle2} title={t.allRecorded} description={isRTL ? "لا توجد حصص بانتظار تسجيل الحضور." : "There are no lessons waiting for attendance."} className="border-0 bg-transparent px-2 py-6" />
             ) : (
               d.needsAttendance.map((l) => (
                 <Link key={l.id} href={`/attendance?group=${l.group_id}&lesson=${l.id}`} className="flex items-center justify-between rounded-lg p-2.5 hover:bg-accent">
@@ -154,7 +158,7 @@ export default async function TeacherDashboard() {
               <p className="py-4 text-center text-sm text-muted-foreground">{t.groupsAssigned}</p>
             ) : (
               d.groups.map((g: any) => (
-                <Link key={g.id} href={`/groups/${g.id}`} className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-accent/50">
+                <Link key={g.id} href={`/groups/${g.id}`} className="flex items-center gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-accent/50">
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold text-white" style={{ background: g.course?.color ?? "#7c5cfc" }}>
                     {g.course?.name?.[0] ?? "م"}
                   </span>
@@ -162,7 +166,7 @@ export default async function TeacherDashboard() {
                     <p className="truncate text-sm font-medium">{g.name}</p>
                     <p className="text-xs text-muted-foreground">{formatSchedule(g.schedule, lang === "en" ? "en-EG" : "ar-EG")}</p>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  <ArrowLeft className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 </Link>
               ))
             )}
@@ -173,7 +177,7 @@ export default async function TeacherDashboard() {
           <CardHeader><CardTitle className="text-base">{t.submissions}</CardTitle></CardHeader>
           <CardContent className="space-y-1">
             {d.recentSubmissions.length === 0 ? (
-              <p className="py-4 text-center text-sm text-muted-foreground">{t.noSubmissions}</p>
+              <EmptyState icon={Inbox} title={t.noSubmissions} description={isRTL ? "ستظهر هنا أحدث الواجبات التي يرسلها طلاب مجموعاتك." : "Recent homework submissions will appear here."} className="border-0 bg-transparent px-2 py-6" />
             ) : (
               d.recentSubmissions.map((s) => (
                 <Link key={s.id} href={`/homework`} className="flex items-center justify-between rounded-lg p-2.5 hover:bg-accent">

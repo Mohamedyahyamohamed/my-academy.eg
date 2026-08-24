@@ -41,7 +41,7 @@ export function HeroReveal({
   return (
     <motion.div
       className={className}
-      initial={reduceMotion ? false : { opacity: 0, y: 24, scale: 0.98 }}
+      initial={false}
       animate={reduceMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
       transition={reduceMotion ? undefined : { duration: 0.8, delay, ease: [0.22, 1, 0.36, 1] }}
     >

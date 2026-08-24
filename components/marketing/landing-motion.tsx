@@ -17,7 +17,7 @@ export function Reveal({
   return (
     <motion.div
       className={className}
-      initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+      initial={false}
       whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.18 }}
       transition={reduceMotion ? undefined : { duration: 0.42, delay, ease: [0.23, 1, 0.32, 1] }}
@@ -41,7 +41,7 @@ export function HeroReveal({
   return (
     <motion.div
       className={className}
-      initial={reduceMotion ? false : { opacity: 0, y: 16, scale: 0.98 }}
+      initial={false}
       animate={reduceMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
       transition={reduceMotion ? undefined : { duration: 0.52, delay, ease: [0.22, 1, 0.36, 1] }}
     >
@@ -74,7 +74,7 @@ export function StaggerItem({ children, className }: { children: ReactNode; clas
   return (
     <motion.div
       className={className}
-      initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+      initial={false}
       variants={{ show: { opacity: 1, y: 0 } }}
       transition={reduceMotion ? undefined : { duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
     >

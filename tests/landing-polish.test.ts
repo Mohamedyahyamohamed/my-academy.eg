@@ -119,6 +119,16 @@ describe("landing premium polish", () => {
     expect(page).toContain("مراجعة قانونية");
   });
 
+  it("keeps landing content visible without motion JavaScript", () => {
+    expect(motion).toContain("initial={false}");
+    expect(motion).not.toContain("initial={reduceMotion ? false : { opacity: 0");
+    expect(page).toContain("LandingSectionBoundary");
+    expect(page).toContain('label={en ? "Hero" : "الرئيسية"}');
+    expect(page).toContain('label={en ? "Features" : "المزايا"}');
+    expect(page).toContain('label={en ? "FAQ" : "الأسئلة الشائعة"}');
+    expect(page).toContain('label={en ? "Footer" : "التذييل"}');
+  });
+
   it("aligns trust badges and keeps anchors, motion, and LCP stable", () => {
     expect(page).toContain("flex flex-wrap items-center gap-6");
     expect(page).toContain("text-indigo-500");
@@ -130,7 +140,7 @@ describe("landing premium polish", () => {
     expect(page).toContain("Free within core limits");
     expect(page).toContain("ابدأ مجانًا ضمن الحدود الأساسية");
     expect(styles).toContain("scroll-behavior: smooth");
-    expect(motion).toContain("initial={reduceMotion ? false : { opacity: 0, y: 16 }}");
+    expect(motion).toContain("initial={false}");
     expect(motion).toContain("duration: 0.52");
     expect(motion).toContain("staggerChildren: 0.07");
     expect(page).not.toContain("<img");

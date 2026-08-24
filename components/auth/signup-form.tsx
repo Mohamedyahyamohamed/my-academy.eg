@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Loader2, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,18 +61,18 @@ export function SignupForm({ initialLang = "ar" }: { initialLang?: Lang }) {
       <div className="space-y-2">
         <Label>{en ? "How will you use MYAcademy?" : "كيف ستستخدم MYAcademy؟"}</Label>
         <div className="grid gap-2 sm:grid-cols-2">
-          <button type="button" onClick={() => set("workspaceType", "ACADEMY")} className={`rounded-xl border p-3 ${en ? "text-left" : "text-right"} transition-colors ${form.workspaceType === "ACADEMY" ? "border-primary bg-primary/10" : "border-border hover:bg-muted"}`}>
+          <button type="button" aria-pressed={form.workspaceType === "ACADEMY"} onClick={() => set("workspaceType", "ACADEMY")} className={`rounded-xl border p-3 ${en ? "text-left" : "text-right"} transition-all duration-200 hover:-translate-y-0.5 ${form.workspaceType === "ACADEMY" ? "border-primary bg-primary/10" : "border-border hover:border-indigo-200 hover:bg-indigo-50/50 dark:hover:border-indigo-800 dark:hover:bg-indigo-950/40"}`}>
             <p className="font-semibold">{en ? "I manage an academy" : "أدير أكاديمية"}</p>
             <p className="mt-1 text-xs text-muted-foreground">{en ? "Manage teachers, students, parents, and billing." : "إدارة مدرسين وطلاب وأولياء أمور وفوترة."}</p>
           </button>
-          <button type="button" onClick={() => set("workspaceType", "TEACHER")} className={`rounded-xl border p-3 ${en ? "text-left" : "text-right"} transition-colors ${form.workspaceType === "TEACHER" ? "border-primary bg-primary/10" : "border-border hover:bg-muted"}`}>
+          <button type="button" aria-pressed={form.workspaceType === "TEACHER"} onClick={() => set("workspaceType", "TEACHER")} className={`rounded-xl border p-3 ${en ? "text-left" : "text-right"} transition-all duration-200 hover:-translate-y-0.5 ${form.workspaceType === "TEACHER" ? "border-primary bg-primary/10" : "border-border hover:border-indigo-200 hover:bg-indigo-50/50 dark:hover:border-indigo-800 dark:hover:bg-indigo-950/40"}`}>
             <p className="font-semibold">{en ? "Independent teacher" : "مدرس مستقل"}</p>
             <p className="mt-1 text-xs text-muted-foreground">{en ? "A personal workspace for your groups and students." : "مساحة شخصية لإدارة مجموعاتك وطلابك مباشرة."}</p>
           </button>
         </div>
       </div>
 
-      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground shadow-sm shadow-primary/5 transition-colors">
         <div className="flex items-start gap-3">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
           <p>{form.workspaceType === "TEACHER"
@@ -81,13 +81,13 @@ export function SignupForm({ initialLang = "ar" }: { initialLang?: Lang }) {
         </div>
       </div>
 
-      {form.workspaceType === "ACADEMY" && <div className="space-y-1.5"><Label htmlFor="academy">{en ? "Academy name" : "اسم الأكاديمية"}</Label><Input id="academy" required placeholder={en ? "Example: Elite Academy" : "مثال: أكاديمية النخبة"} value={form.academyName} onChange={(event) => set("academyName", event.target.value)} disabled={loading} /></div>}
-      <div className="space-y-1.5"><Label htmlFor="name">{en ? "Full name" : "اسمك بالكامل"}</Label><Input id="name" required autoComplete="name" placeholder={en ? "Full name" : "الاسم بالكامل"} value={form.fullName} onChange={(event) => set("fullName", event.target.value)} disabled={loading} /></div>
-      <div className="space-y-1.5"><Label htmlFor="email">{en ? "Email address" : "البريد الإلكتروني"}</Label><Input id="email" required type="email" autoComplete="email" placeholder="you@email.com" value={form.email} onChange={(event) => set("email", event.target.value)} disabled={loading} /></div>
-      <div className="space-y-1.5"><Label htmlFor="password">{en ? "Password" : "كلمة المرور"}</Label><Input id="password" required type="password" autoComplete="new-password" placeholder={en ? "At least 8 characters" : "8 أحرف على الأقل"} value={form.password} onChange={(event) => set("password", event.target.value)} disabled={loading} /><PasswordRequirements password={form.password} lang={lang} minLength={8} /></div>
+      {form.workspaceType === "ACADEMY" && <div className="space-y-1.5"><Label htmlFor="academy">{en ? "Academy name" : "اسم الأكاديمية"}</Label><Input id="academy" required autoFocus placeholder={en ? "Example: Elite Academy" : "مثال: أكاديمية النخبة"} className="rounded-lg border border-gray-300 bg-white text-slate-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" value={form.academyName} onChange={(event) => set("academyName", event.target.value)} disabled={loading} /></div>}
+      <div className="space-y-1.5"><Label htmlFor="name">{en ? "Full name" : "اسمك بالكامل"}</Label><Input id="name" required autoComplete="name" autoFocus={form.workspaceType === "TEACHER"} placeholder={en ? "Full name" : "الاسم بالكامل"} className="rounded-lg border border-gray-300 bg-white text-slate-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" value={form.fullName} onChange={(event) => set("fullName", event.target.value)} disabled={loading} /></div>
+      <div className="space-y-1.5"><Label htmlFor="email">{en ? "Email address" : "البريد الإلكتروني"}</Label><Input id="email" required type="email" autoComplete="email" placeholder="you@email.com" className="rounded-lg border border-gray-300 bg-white text-slate-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" value={form.email} onChange={(event) => set("email", event.target.value)} disabled={loading} /></div>
+      <div className="space-y-1.5"><Label htmlFor="password">{en ? "Password" : "كلمة المرور"}</Label><Input id="password" required type="password" autoComplete="new-password" placeholder={en ? "At least 8 characters" : "8 أحرف على الأقل"} className="rounded-lg border border-gray-300 bg-white text-slate-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" value={form.password} onChange={(event) => set("password", event.target.value)} disabled={loading} /><PasswordRequirements password={form.password} lang={lang} minLength={8} /></div>
 
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? <><Loader2 className="h-4 w-4 animate-spin" />{en ? "Preparing your workspace…" : "جارٍ تجهيز مساحتك…"}</> : <>{form.workspaceType === "TEACHER" ? (en ? "Create teacher workspace" : "إنشاء مساحة المدرس") : (en ? "Create my academy" : "إنشاء أكاديميتي")} <ArrowRight className="h-4 w-4" /></>}
+      <Button type="submit" className="w-full gap-2 disabled:cursor-not-allowed disabled:opacity-70" disabled={loading} aria-busy={loading}>
+        {loading ? <><Loader2 className="h-4 w-4 animate-spin" />{en ? "Preparing your workspace…" : "جارٍ تجهيز مساحتك…"}</> : <>{form.workspaceType === "TEACHER" ? (en ? "Create teacher workspace" : "إنشاء مساحة المدرس") : (en ? "Create my academy" : "إنشاء أكاديميتي")} <ArrowLeft className={`h-4 w-4 ${en ? "rotate-180" : ""}`} /></>}
       </Button>
 
       <p className="text-center text-xs text-muted-foreground">{en ? "Have an academy invitation? Open the invitation link sent to your email." : "لديك دعوة من أكاديمية؟ افتح رابط الدعوة الذي وصل إلى بريدك."} <Link href="/login" className="font-semibold text-primary hover:underline">{en ? "I already have an account" : "لديّ حساب بالفعل"}</Link></p>

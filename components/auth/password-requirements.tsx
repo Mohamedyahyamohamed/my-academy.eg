@@ -19,7 +19,7 @@ export function PasswordRequirements({
   const items = [
     {
       ok: lengthOk,
-      text: en ? `At least ${minLength} characters` : `8 أحرف على الأقل`,
+      text: en ? `At least ${minLength} characters` : `${minLength} أحرف على الأقل`,
     },
     {
       ok: matchOk,
@@ -29,13 +29,13 @@ export function PasswordRequirements({
   ].filter((item) => !item.hidden);
 
   return (
-    <div className="rounded-lg border border-border/70 bg-muted/35 px-3 py-2.5 text-xs text-muted-foreground" aria-live="polite">
+    <div className="rounded-xl border border-border/70 bg-muted/35 px-3 py-2.5 text-xs text-muted-foreground transition-colors" aria-live="polite">
       <p className="font-medium text-foreground">{en ? "Password requirements" : "متطلبات كلمة المرور"}</p>
       <div className="mt-1.5 grid gap-1">
         {items.map((item) => (
           <div key={item.text} className="flex items-center gap-1.5">
-            {item.ok ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" /> : <Circle className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />}
-            <span className={item.ok ? "text-emerald-700 dark:text-emerald-400" : undefined}>{item.text}</span>
+            {item.ok ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500 transition-colors" aria-hidden="true" /> : <Circle className="h-3.5 w-3.5 text-muted-foreground transition-colors" aria-hidden="true" />}
+            <span className={item.ok ? "text-green-600 dark:text-green-400" : undefined}>{item.text}</span>
           </div>
         ))}
       </div>

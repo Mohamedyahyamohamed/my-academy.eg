@@ -14,11 +14,11 @@ export default async function SignupPage() {
   const en = lang === "en";
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-6 py-12" dir={isRTL(lang) ? "rtl" : "ltr"}>
+    <div className="flex min-h-screen items-center justify-center bg-slate-50/60 px-6 py-12 dark:bg-slate-950" dir={isRTL(lang) ? "rtl" : "ltr"}>
       <div className="w-full max-w-md">
         <div className="mb-4 flex justify-end"><LanguageToggle /></div>
         <div className="mb-8 flex justify-center"><Logo size="lg" /></div>
-        <div className="card-surface p-8">
+        <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-xl shadow-slate-900/10 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/30">
           <h1 className="text-xl font-semibold tracking-tight">{en ? "Get started with MYAcademy" : "ابدأ باستخدام MYAcademy"}</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">{en ? "Choose what fits you: manage a full academy or create an independent teacher workspace for your students and groups." : "اختر ما يناسبك: إدارة أكاديمية كاملة أو إنشاء مساحة مدرس مستقلة لإدارة طلابك ومجموعاتك."}</p>
           <div className="mt-6"><SignupForm initialLang={lang} /></div>

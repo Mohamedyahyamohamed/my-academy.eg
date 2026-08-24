@@ -92,11 +92,9 @@ const config: Config = {
       boxShadow: {
         soft: "0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06)",
         card: "0 1px 3px 0 rgb(15 23 42 / 0.05), 0 1px 2px -1px rgb(15 23 42 / 0.05)",
-        elevated:
-          "0 10px 30px -12px rgb(15 23 42 / 0.12), 0 4px 1,
-        premium:
-          "0 1px 0 0 rgba(255,255,255,0.06) inset, 0 10px 40px -10px hsl(var(--primary) / 0.35), 0 30px 80px -30px hsl(var(--primary) / 0.45)",
-        glass: "0 8px 32px -8px rgba(15, 23, 42, 0.25)",2px -6px rgb(15 23 42 / 0.08)",
+        elevated: "0 10px 30px -12px rgb(15 23 42 / 0.12), 0 4px 12px -6px rgb(15 23 42 / 0.08)",
+        premium: "0 1px 0 0 rgba(255,255,255,0.06) inset, 0 10px 40px -10px hsl(var(--primary) / 0.35), 0 30px 80px -30px hsl(var(--primary) / 0.45)",
+        glass: "0 8px 32px -8px rgba(15, 23, 42, 0.25)",
       },
       keyframes: {
         "accordion-down": {

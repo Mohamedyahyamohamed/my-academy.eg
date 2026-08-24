@@ -9,29 +9,40 @@ describe("landing premium polish", () => {
   const navbar = read("components/marketing/landing-navbar.tsx");
   const styles = read("app/globals.css");
 
-  it("uses a sticky glass navbar with a high stacking context", () => {
-    expect(navbar).toContain("sticky top-0 z-50 border-b border-white/30 bg-white/40 backdrop-blur-xl");
-    expect(navbar).toContain("dark:border-slate-700/50 dark:bg-slate-900/50");
+  it("uses the required sticky glass navbar and navigation hover states", () => {
+    expect(navbar).toContain("sticky top-0 z-50 backdrop-blur-md bg-white/70 border-b border-white/20 shadow-sm");
+    expect(navbar).toContain("dark:bg-slate-950/75");
     expect(navbar).toContain("window.scrollY > 12");
+    expect(navbar).toContain("hover:text-indigo-600 transition-colors");
+    expect(navbar).toContain("rtl:-scale-x-100");
   });
 
-  it("adds subtle floating motion and reduced-motion support to the dashboard mockup", () => {
+  it("removes the muddy glow and uses the crisp layered mockup treatment", () => {
     expect(page).toContain("hero-dashboard-float");
-    expect(page).toContain("shadow-2xl shadow-indigo-500/20");
+    expect(page).toContain("shadow-2xl shadow-indigo-500/10");
+    expect(page).toContain("border border-slate-100/50");
     expect(page).toContain("ring-1 ring-gray-900/5");
     expect(page).toContain("transition-[transform,box-shadow]");
-    expect(page).toContain("hover:-translate-y-2 hover:scale-[1.02]");
-    expect(page).toContain("hero-ambient-blob");
-    expect(page).toContain("HeroReveal");
+    expect(page).toContain("hover:-translate-y-2");
+    expect(page).not.toContain("hero-ambient-blob");
+    expect(page).not.toContain("blur-2xl");
     expect(styles).toContain("@keyframes hero-dashboard-float");
     expect(styles).toContain("prefers-reduced-motion: reduce");
   });
 
-  it("uses a darker, breathable hero subheadline", () => {
+  it("uses the required subtitle contrast and protects the gradient title from clipping", () => {
     expect(page).toContain("text-base font-medium leading-8 text-slate-600 dark:text-slate-300");
+    expect(page).toContain("max-w-full break-words");
+    expect(page).toContain("hero-gradient-text");
   });
 
-  it("routes authenticated users to roleHome and hides sign-up CTAs", () => {
+  it("routes public signup CTAs to registration and styles the portal CTA", () => {
+    expect(page).toContain('href={authenticated ? destination : "/signup"}');
+    expect(page).toContain("border border-slate-200 bg-white text-slate-800 shadow-sm hover:bg-slate-50");
+    expect(page).toContain("rtl:-scale-x-100");
+  });
+
+  it("routes authenticated users to their dashboard or portal and hides signup CTAs", () => {
     expect(page).toContain("const user = await loadCurrentUser();");
     expect(page).toContain("const portalSession = await readPortalSession();");
     expect(page).toContain("const destination = portalSession ? portalDestination : user ? roleHome(user.role) : \"/signup\";");
@@ -40,6 +51,11 @@ describe("landing premium polish", () => {
     expect(page).toContain("!authenticated &&");
     expect(page).toContain("{authenticated ? ctaLabel");
     expect(page).not.toContain("redirect(roleHome(user.role))");
+  });
+
+  it("aligns trust badges with flex spacing and indigo icons", () => {
+    expect(page).toContain("flex flex-wrap items-center gap-6");
+    expect(page).toContain("text-indigo-500");
   });
 
   it("keeps the hero responsive and avoids an unstable image LCP candidate", () => {

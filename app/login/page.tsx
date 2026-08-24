@@ -68,7 +68,7 @@ export default async function LoginPage() {
               </div>
             )}
           </div>
-          <p className="mt-4 text-center text-sm text-muted-foreground">{en ? "New here?" : "جديد عندنا؟"} <Link href="/signup" className="font-medium text-primary hover:underline">{en ? "Create an account (academy / independent teacher) →" : "سجّل الآن (أكاديمية / مدرس مستقل) →"}</Link></p>
+          <p className="mt-4 text-center text-sm text-muted-foreground">{en ? "New here?" : "جديد عندنا؟"} <Link href="/signup" className="font-medium text-primary hover:underline">{en ? "Create an account (academy / independent teacher) →" : "سجّل الآن (أكاديمية / مدرس مستقل) ←"}</Link></p>
         </div>
       </div>
     </div>

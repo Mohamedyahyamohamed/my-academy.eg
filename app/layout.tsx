@@ -76,10 +76,13 @@ export default async function RootLayout({
         <GlobalErrorMonitor />
         {children}
         <Toaster
-          position={dir === "rtl" ? "top-left" : "top-right"}
+          position="top-center"
           richColors
           closeButton
-          toastOptions={{ style: { borderRadius: "0.65rem" } }}
+          toastOptions={{
+            className: "rounded-xl px-4 py-3 text-sm shadow-lg",
+            style: { borderRadius: "0.75rem" },
+          }}
         />
       </body>
     </html>

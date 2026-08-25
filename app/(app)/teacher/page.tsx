@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
   Users, UsersRound, CalendarClock, ClipboardList, CheckCircle2,
   ArrowLeft, AlertCircle, Inbox,
-} from "lucide-react";
+} ;
 import { cookies } from "next/headers";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 import { PageHeader } from "@/components/shared/page-header";
@@ -26,7 +26,8 @@ export default async function TeacherDashboard() {
     dashboard: "Dashboard", noTeacher: "No teacher profile linked", noTeacherDesc: "Your account is not linked to a teacher record. Ask an administrator to assign groups to you.", welcome: "Welcome", overview: "A quick view of your groups, students, and lessons only.", groups: "My groups", students: "My students", upcoming: "Upcoming lessons", attendanceRate: "Average attendance", pending: "homework submissions are waiting for your review.", review: "Review now", noUpcoming: "No upcoming lessons.", all: "View all", attendanceMissing: "Attendance not recorded", recordAttendance: "Record attendance", allRecorded: "All attendance is recorded", groupsAssigned: "No groups are assigned to you.", submissions: "Recent submissions", noSubmissions: "No submissions yet."
   };
   const user = await requireScopedRole("TEACHER");
-  const displayName = user.full_name?.trim() || user.email || "المعلّم";
+  const rawName = user.full_name?.trim() || user.email || "";
+  const displayName = rawName ? rawName.split(/\s+/)[0] : (isRTL ? "المعلّم" : "Teacher");
   const d = await getTeacherDashboard(user);
   if (!d) {
     return (
@@ -39,11 +40,27 @@ export default async function TeacherDashboard() {
 
   return (
     <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>
-      <PageHeader
-        title={<><span>{t.welcome}، </span><bdi dir="auto">{(d.teacherName || displayName).split(/\s+/)[0]}</bdi><span aria-hidden="true"> 👋</span></>}
-        description={t.overview}
-        showBack={false}
-      />
+      <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-l from-emerald-950 via-teal-950 to-slate-950 p-8 shadow-[0_20px_60px_-20px_rgb(13_148_136/0.45)]">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_25%,rgb(20_184_166/0.22),transparent_45%),radial-gradient(circle_at_85%_70%,rgb(251_191_36/0.10),transparent_40%)]" />
+        <div aria-hidden className="pointer-events-none absolute -top-14 -start-14 h-44 w-44 rounded-full bg-teal-500/15 blur-3xl" />
+        <div className="relative flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-teal-400/30 bg-gradient-to-br from-teal-400/20 to-emerald-600/10 shadow-[0_0_30px_-5px_rgb(45_212_191/0.4)]">
+              <GraduationCap className="h-7 w-7 text-teal-300" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+                {t.welcome}، <bdi dir="auto">{(d.teacherName || displayName).split(/\s+/)[0]}</bdi><span aria-hidden="true"> 👋</span>
+              </h1>
+              <p className="mt-1 max-w-xl text-sm text-slate-300">{t.overview}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md">
+            <BookOpen className="h-4 w-4 text-teal-300" />
+            <span className="text-xs font-semibold text-teal-200">{isRTL == false ? "Teaching mode" : "وضع التدريس"}</span>
+          </div>
+        </div>
+      </div>
 
       {d.assistantFor.length > 0 && (
         <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm">

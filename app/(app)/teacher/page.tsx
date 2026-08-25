@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
   Users, UsersRound, CalendarClock, ClipboardList, CheckCircle2,
   ArrowLeft, AlertCircle, Inbox,
-} ;
+} from "lucide-react";
 import { cookies } from "next/headers";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
 import { Crown } from "lucide-react";

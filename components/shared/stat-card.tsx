@@ -36,7 +36,7 @@ export function StatCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <p className="text-sm font-medium text-muted-foreground">{label}</p>
-          <p className="truncate text-2xl font-semibold tracking-tight text-foreground">{value}</p>
+          <p className="truncate text-3xl font-bold tracking-tight bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent transition-transform duration-300 group-hover:scale-[1.03]">{value}</p>
           {trend && (
             <div className="flex items-center gap-1 text-xs">
               <span className={cn("inline-flex items-center gap-0.5 font-medium", trend.positive ? "text-emerald-600" : "text-rose-600")}>
@@ -55,7 +55,19 @@ export function StatCard({
     </CardContent>
   );
 
-  const card = <Card className="overflow-hidden">{content}</Card>;
+  const glowMap: Record<string, string> = {
+    primary: "shadow-[0_12px_36px_-14px_rgb(8_127_145/0.45)]",
+    success: "shadow-[0_12px_36px_-14px_rgb(16_185_129/0.4)]",
+    warning: "shadow-[0_12px_36px_-14px_rgb(245_158_11/0.4)]",
+    info: "shadow-[0_12px_36px_-14px_rgb(56_189_248/0.45)]",
+    destructive: "shadow-[0_12px_36px_-14px_rgb(244_63_94/0.4)]",
+  };
+
+  const card = (
+    <Card className={cn("group overflow-hidden border-border/60 bg-gradient-to-b from-white to-muted/30 transition-all duration-300 hover:-translate-y-1 hover:border-primary/25", glowMap[accent])}>
+      {content}
+    </Card>
+  );
   return href ? (
     <Link href={href} className="block rounded-xl transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={label}>
       {card}

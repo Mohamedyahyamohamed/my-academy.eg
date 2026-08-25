@@ -37,11 +37,21 @@ export default async function HomeworkPage(
 
   return (
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
-      <PageHeader
-        title={en ? "Homework" : "الواجبات"}
-        description={en ? "Assign homework to groups and review student submissions." : "حدّد واجبات للمجموعات وراجع تسليمات الطلاب."}
-      >
-        <CreateHomeworkDialog groups={groups} />
+      <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-l from-amber-950 via-orange-950 to-slate-950 p-6 shadow-[0_16px_50px_-20px_rgb(245_158_11/0.45)]">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,amber_500/0.18),transparent_42%)]" />
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-500/10">
+              <ClipboardList className={`h-5 w-5 text-amber-300`} />
+            </div>
+            <div>
+              <h1 className="text-xl font-black tracking-tight text-white sm:text-2xl">{ en ? "Homework" : "الواجبات" }</h1>
+              <p className="mt-0.5 text-sm text-slate-400">{ en ? "Assign homework to groups and review student submissions." : "حدّد واجبات للمجموعات وراجع تسليمات الطلاب." }</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
       </PageHeader>
 
       <div className="card-surface p-4">

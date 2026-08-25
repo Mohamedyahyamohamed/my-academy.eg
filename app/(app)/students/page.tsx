@@ -74,10 +74,19 @@ export default async function StudentsPage(
 
   return (
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
-      <PageHeader
-        title={en ? "Students" : "الطلاب"}
-        description={en ? "Manage student profiles, enrollment, and status in your academy." : "إدارة ملفات الطلاب والتسجيل والحالة في أكاديميتك."}
-      >
+      <div className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-gradient-to-l from-rose-950 via-pink-950 to-slate-950 p-6 shadow-[0_16px_50px_-20px_rgb(244_63_94/0.45)]">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,rgb(244_63_94/0.16),transparent_42%)]" />
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-rose-400/25 bg-rose-500/10">
+              <Users className="h-5 w-5 text-rose-300" />
+            </div>
+            <div>
+              <h1 className="text-xl font-black tracking-tight text-white sm:text-2xl">{en ? "Students" : "الطلاب"}</h1>
+              <p className="mt-0.5 text-sm text-slate-400">{en ? "Manage student profiles, enrollment, and status in your academy." : "إدارة ملفات الطلاب والتسجيل والحالة في أكاديميتك."}</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
         <div className="flex gap-2">
           {canManageStudents && (
             <>
@@ -89,7 +98,9 @@ export default async function StudentsPage(
             </>
           )}
         </div>
-      </PageHeader>
+      </div>
+        </div>
+      </div>
 
       <div className="card-surface p-4">
         <ToolbarRoot>

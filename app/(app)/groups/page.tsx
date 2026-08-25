@@ -27,17 +27,21 @@ export default async function GroupsPage() {
 
   return (
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
-      <PageHeader
-        title={en ? "Groups" : "المجموعات"}
-        description={en ? "Organize students by subject, teacher, and schedule." : "نظّم الطلاب في مجموعات حسب المادة والمدرّس والجدول."}
-      >
-        <AddGroupDialog
-          courses={courses}
-          teachers={teachers}
-          defaultTeacherId={tid}
-          lockedTeacher={isTeacher}
-          disabled={groupCreationBlocked}
-        />
+      <div className="relative overflow-hidden rounded-2xl border border-indigo-500/20 bg-gradient-to-l from-indigo-950 via-blue-950 to-slate-950 p-6 shadow-[0_16px_50px_-20px_rgb(99_102_241/0.45)]">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,indigo_500/0.18),transparent_42%)]" />
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-indigo-400/25 bg-indigo-500/10">
+              <UsersRound className={`h-5 w-5 text-indigo-300`} />
+            </div>
+            <div>
+              <h1 className="text-xl font-black tracking-tight text-white sm:text-2xl">{ en ? "Groups" : "المجموعات" }</h1>
+              <p className="mt-0.5 text-sm text-slate-400">{ en ? "Organize students by subject, teacher, and schedule." : "نظّم الطلاب في مجموعات حسب المادة والمدرّس والجدول." }</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
       </PageHeader>
 
       {groupCreationBlocked && (

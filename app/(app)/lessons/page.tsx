@@ -43,13 +43,21 @@ export default async function LessonsPage(
 
   return (
     <div dir={isRTL(lang) ? "rtl" : "ltr"} className="space-y-6">
-      <PageHeader
-        title={en ? "Lessons" : "الحصص"}
-        description={en ? "Schedule and track lessons across all your groups." : "جدوِل وتابع الحصص عبر كل مجموعاتك."}
-      >
-        {limitedAssistant ? (
-          <Button disabled title={en ? "Assistant accounts cannot manage lessons." : "حساب المساعد لا يدير الحصص."}>
-            <Plus className="h-4 w-4" /> {en ? "Add lesson (teacher only)" : "إضافة حصة (للمعلم فقط)"}
+      <div className="relative overflow-hidden rounded-2xl border border-sky-500/20 bg-gradient-to-l from-sky-950 via-cyan-950 to-slate-950 p-6 shadow-[0_16px_50px_-20px_rgb(14_165_233/0.45)]">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,sky_500/0.18),transparent_42%)]" />
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-500/10">
+              <BookOpen className={`h-5 w-5 text-sky-300`} />
+            </div>
+            <div>
+              <h1 className="text-xl font-black tracking-tight text-white sm:text-2xl">{ en ? "Lessons" : "الحصص" }</h1>
+              <p className="mt-0.5 text-sm text-slate-400">{ en ? "Schedule and track lessons across all your groups." : "جدوِل وتابع الحصص عبر كل مجموعاتك." }</p>
+            </div>
+          </div>
+
+        </div>
+      </div> {en ? "Add lesson (teacher only)" : "إضافة حصة (للمعلم فقط)"}
           </Button>
         ) : (
           <Button asChild disabled={groups.length === 0}><Link href={groups.length === 0 ? "/groups" : "/lessons/new"}><Plus className="h-4 w-4" /> {groups.length === 0 ? (en ? "Create a group first" : "أنشئ مجموعة أولًا") : (en ? "Add lesson" : "إضافة حصة")}</Link></Button>

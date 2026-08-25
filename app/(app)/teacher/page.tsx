@@ -5,6 +5,7 @@ import {
 } ;
 import { cookies } from "next/headers";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
+import { Crown, GraduationCap, BookOpen, Users, CalendarClock, CheckCircle2, ScrollText } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +33,28 @@ export default async function TeacherDashboard() {
   if (!d) {
     return (
       <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>
-        <PageHeader title={t.dashboard} description={`${t.welcome}، ${displayName}.`} showBack={false} />
+        <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-l from-violet-950 via-indigo-950 to-slate-950 p-6 shadow-[0_16px_50px_-20px_rgb(139_92_246/0.45)]">
+          <div className="pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full bg-violet-500/20 blur-3xl" />
+          <div className="pointer-events-none absolute -right-10 -bottom-10 h-40 w-40 rounded-full bg-sky-500/20 blur-3xl" />
+          <div className="relative flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20 backdrop-blur">
+                <Crown className="h-7 w-7 text-amber-300" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white sm:text-3xl">{`${t.welcome}، ${displayName}`} 👋</h1>
+                <p className="mt-1 text-sm text-violet-200/80">{t.overview}</p>
+              </div>
+            </div>
+            <span className="hidden items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-medium text-emerald-300 ring-1 ring-emerald-400/30 sm:inline-flex">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
+              جاهز للتدريس
+            </span>
+          </div>
+        </div>
         <EmptyState icon={UsersRound} title={t.noTeacher} description={t.noTeacherDesc} />
       </div>
     );

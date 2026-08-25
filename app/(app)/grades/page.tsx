@@ -31,11 +31,21 @@ export default async function GradesPage() {
 
   return (
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
-      <PageHeader
-        title={en ? "Grades" : "الدرجات"}
-        description={en ? "Create exams and record student grades to track performance." : "أنشئ الاختبارات وسجّل درجات الطلاب لمتابعة مستوى الأداء."}
-      >
-        <CreateExamDialog courses={courses} groups={groups} />
+      <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-l from-violet-950 via-purple-950 to-slate-950 p-6 shadow-[0_16px_50px_-20px_rgb(139_92_246/0.45)]">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,violet_500/0.18),transparent_42%)]" />
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-violet-400/25 bg-violet-500/10">
+              <GraduationCap className={`h-5 w-5 text-violet-300`} />
+            </div>
+            <div>
+              <h1 className="text-xl font-black tracking-tight text-white sm:text-2xl">{ en ? "Grades" : "الدرجات" }</h1>
+              <p className="mt-0.5 text-sm text-slate-400">{ en ? "Create exams and record student grades to track performance." : "أنشئ الاختبارات وسجّل درجات الطلاب لمتابعة مستوى الأداء." }</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
       </PageHeader>
 
       {exams.length === 0 ? (

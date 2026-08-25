@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
-import { ScanLine } from "lucide-react";
+import { CalendarCheck, ScanLine } from "lucide-react";
 import { AttendanceWorkshop } from "@/components/attendance/attendance-workshop";
 import { GroupsService, LessonsService, StudentsService, requireAttendanceTeacher } from "@/services";
 import { collections } from "@/services/data/store";
@@ -39,14 +39,25 @@ export default async function AttendancePage() {
 
   return (
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
-      <PageHeader
-        title={en ? "Attendance" : "الحضور"}
-        description={en ? "Choose a group and lesson, then record each student's attendance in seconds." : "اختر المجموعة والحصة، ثم سجّل حضور كل طالب خلال ثوانٍ."}
-      >
+      <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-l from-emerald-950 via-teal-950 to-slate-950 p-6 shadow-[0_16px_50px_-20px_rgb(16_185_129/0.45)]">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,rgb(16_185_129/0.18),transparent_42%)]" />
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-emerald-400/25 bg-emerald-500/10">
+              <CalendarCheck className="h-5 w-5 text-emerald-300" />
+            </div>
+            <div>
+              <h1 className="text-xl font-black tracking-tight text-white sm:text-2xl">{en ? "Attendance" : "الحضور"}</h1>
+              <p className="mt-0.5 text-sm text-slate-400">{en ? "Choose a group and lesson, then record each student's attendance in seconds." : "اختر المجموعة والحصة، ثم سجّل حضور كل طالب خلال ثوانٍ."}</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
         <Button asChild variant="outline">
           <Link href="/attendance/scan"><ScanLine className="h-4 w-4" /> {en ? "Scan student QR codes" : "امسح أكواد الطلاب (QR)"}</Link>
         </Button>
-      </PageHeader>
+      </div>
+        </div>
+      </div>
       <AttendanceWorkshop
         groups={groups}
         lessons={lessons}

@@ -44,7 +44,18 @@ export function ScanWorkshop({
 
   const groupLessons = lessons
     .filter((l) => l.group_id === groupId)
-    .sort((a, b) => +new Date(b.date) - +new Date(a.date));
+    .sort((a, b) => {
+      const da = `${a.date} ${a.start_time ?? ""}`;
+      const db = `${b.date} ${b.start_time ?? ""}`;
+      return +new Date(db) - +new Date(da);
+    });
+
+  // Auto-pick the newest lesson of the chosen group.
+  React.useEffect(() => {
+    if (!groupId || lessonId || groupLessons.length === 0) return;
+    setLessonId(groupLessons[0].id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId, groupLessons.map((l) => l.id).join(",")]);
 
   const startCamera = async () => {
     setError("");
@@ -192,7 +203,7 @@ export function ScanWorkshop({
                 <label className="text-sm font-medium">{en ? "2. Choose lesson" : "2. اختر الدرس"}</label>
                 <select value={lessonId} onChange={(e) => setLessonId(e.target.value)} disabled={!groupId} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50">
                   <option value="">{en ? "Choose…" : "اختر…"}</option>
-                  {groupLessons.map((l) => <option key={l.id} value={l.id}>{l.topic} — {new Date(l.date).toLocaleDateString(en ? "en-EG" : "ar-EG")}</option>)}
+                  {groupLessons.map((l) => <option key={l.id} value={l.id}>{new Date(l.date + "T00:00:00").toLocaleDateString(en ? "en-EG" : "ar-EG", { weekday: "long", day: "numeric", month: "short" })} • {l.start_time ? l.start_time.slice(0, 5) : ""}{l.topic ? ` — ${l.topic}` : ""}</option>)}
                 </select>
               </div>
             </div>

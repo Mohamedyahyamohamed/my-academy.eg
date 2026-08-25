@@ -5,7 +5,7 @@ import {
 } ;
 import { cookies } from "next/headers";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
-import { Crown, GraduationCap, BookOpen, Users, CalendarClock, CheckCircle2, ScrollText } from "lucide-react";
+import { Crown } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

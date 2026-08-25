@@ -72,21 +72,23 @@ function FilterSelect({
   paramKey,
   options,
   label,
+  defaultValue = "ALL",
 }: {
   paramKey: string;
   options: { value: string; label: string }[];
   label: string;
+  defaultValue?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const value = params.get(paramKey) ?? "ALL";
+  const value = params.get(paramKey) ?? defaultValue;
   return (
     <select
       value={value}
       onChange={(e) => {
         const next = new URLSearchParams(params.toString());
-        if (e.target.value === "ALL") next.delete(paramKey);
+        if (e.target.value === defaultValue) next.delete(paramKey);
         else next.set(paramKey, e.target.value);
         next.delete("page");
         router.replace(`${pathname}?${next.toString()}`);

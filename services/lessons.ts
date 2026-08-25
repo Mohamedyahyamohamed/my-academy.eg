@@ -37,6 +37,8 @@ export interface LessonFilters {
   groupId?: string | "ALL";
   upcoming?: boolean;
   past?: boolean;
+  /** Exact calendar date (YYYY-MM-DD) - "today" tab. */
+  date?: string;
   includeCancelled?: boolean;
   page?: number;
   pageSize?: number;
@@ -52,6 +54,7 @@ export async function listLessons(
     groupId = "ALL",
     upcoming,
     past,
+    date,
     includeCancelled = false,
     page = 1,
     pageSize = 12,
@@ -96,6 +99,7 @@ export async function listLessons(
   const endWallClock = (lesson: Lesson) => lessonEndWallClockMinute(lesson.date, lesson.start_time, lesson.end_time);
   if (upcoming) items = items.filter((l) => endWallClock(l) >= currentWallClock);
   if (past) items = items.filter((l) => endWallClock(l) < currentWallClock);
+  if (date) items = items.filter((l) => String(l.date).slice(0, 10) === date);
   items.sort((a, b) => startWallClock(b) - startWallClock(a));
 
   const total = items.length;

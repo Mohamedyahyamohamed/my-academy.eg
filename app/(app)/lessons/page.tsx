@@ -29,11 +29,14 @@ export default async function LessonsPage(
   const sp = (k: string) =>
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
 
+  const rawTab = sp("tab") ?? "today";
+  const todayStr = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD local
   const result = await LessonsService.listLessons({
     search: sp("search"),
     groupId: sp("group") ?? "ALL",
-    upcoming: sp("tab") === "upcoming",
-    past: sp("tab") === "past",
+    upcoming: rawTab === "upcoming",
+    past: rawTab === "past",
+    date: rawTab === "today" ? todayStr : undefined,
     includeCancelled: true,
     page: sp("page") ? Number(sp("page")) : 1,
     pageSize: 10,
@@ -83,7 +86,8 @@ export default async function LessonsPage(
       <div className="card-surface p-4">
         <ToolbarRoot>
           <ToolbarSearch placeholder={en ? "Search lesson topics…" : "ابحث في موضوعات الحصص…"} />
-          <ToolbarSelect paramKey="tab" label={en ? "Filter by time" : "تصفية حسب الوقت"} options={[
+          <ToolbarSelect paramKey="tab" label={en ? "Filter by time" : "تصفية حسب الوقت"} defaultValue="today" options={[
+            { value: "today", label: en ? "Today" : "اليوم" },
             { value: "ALL", label: en ? "All lessons" : "كل الحصص" },
             { value: "upcoming", label: en ? "Upcoming" : "القادمة" },
             { value: "past", label: en ? "Past" : "السابقة" },

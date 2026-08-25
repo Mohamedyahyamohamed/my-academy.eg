@@ -43,6 +43,7 @@ export default async function LessonsPage(
     pageSize: 10,
   }, user.academy_id, user.id);
   const groups = await GroupsService.listGroups("", user.academy_id, user.id);
+  const groupNameById = new Map(groups.map((g) => [g.id, g.name]));
 
   return (
     <div dir={isRTL(lang) ? "rtl" : "ltr"} className="space-y-6">
@@ -125,7 +126,7 @@ export default async function LessonsPage(
                         {l.topic?.trim() ? l.topic : <span className="text-gray-400 italic">{en ? "Untitled" : "بدون عنوان"}</span>}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{l.group?.name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{l.group?.name ?? groupNameById.get(l.group_id) ?? "—"}</TableCell>
                     <TableCell className="text-sm">{formatDate(l.date, undefined, en ? "en-EG" : "ar-EG")}</TableCell>
                     <TableCell className="text-sm">
                       <span dir="ltr" className="whitespace-nowrap">{formatTimeRange(l.start_time, l.end_time, en ? "en-EG" : "ar-EG")}</span>

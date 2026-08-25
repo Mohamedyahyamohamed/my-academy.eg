@@ -99,8 +99,13 @@ export async function listLessons(
   const endWallClock = (lesson: Lesson) => lessonEndWallClockMinute(lesson.date, lesson.start_time, lesson.end_time);
   if (upcoming) items = items.filter((l) => endWallClock(l) >= currentWallClock);
   if (past) items = items.filter((l) => endWallClock(l) < currentWallClock);
-  if (date) items = items.filter((l) => String(l.date).slice(0, 10) === date);
-  items.sort((a, b) => startWallClock(b) - startWallClock(a));
+  if (date) {
+    items = items.filter((l) => String(l.date).slice(0, 10) === date);
+    // A single-day agenda reads chronologically.
+    items.sort((a, b) => startWallClock(a) - startWallClock(b));
+  } else {
+    items.sort((a, b) => startWallClock(b) - startWallClock(a));
+  }
 
   const total = items.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));

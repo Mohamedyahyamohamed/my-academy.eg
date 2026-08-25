@@ -274,6 +274,8 @@ export interface TeacherDashboardData {
   groupCount: number;
   studentCount: number;
   upcomingCount: number;
+  /** Lessons happening today for this teacher. */
+  todayCount: number;
   attendanceRate: number;
   /** Number of attendance records available for the rate; zero means show an empty metric. */
   totalSessions: number;
@@ -396,11 +398,15 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
     return linkedTeacher ? `${linkedTeacher.first_name} ${linkedTeacher.last_name}`.trim() : "";
   }).filter(Boolean);
 
+  const todayKey = new Date().toLocaleDateString("en-CA");
+  const todayLessons = upcoming.filter((l: any) => String(l.date).slice(0, 10) === todayKey);
+
   return {
     teacherName: `${teacher.first_name} ${teacher.last_name}`,
     groupCount: myGroups.length,
     studentCount: enrolledIds.size,
     upcomingCount: upcoming.length,
+    todayCount: todayLessons.length,
     attendanceRate,
     totalSessions: att.length,
     pendingReview,

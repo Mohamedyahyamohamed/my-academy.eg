@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { LessonsService, GroupsService, isLimitedAssistant, requireScopedRole } from "@/services";
+import { isLessonActive } from "@/services/lessons";
 import { formatDate, formatTimeRange, formatClockTime } from "@/lib/utils";
 import { cookies } from "next/headers";
 import { getLangFromCookie, isRTL } from "@/lib/i18n";
@@ -126,7 +127,18 @@ export default async function LessonsPage(
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{l.group?.name}</TableCell>
                     <TableCell className="text-sm">{formatDate(l.date, undefined, en ? "en-EG" : "ar-EG")}</TableCell>
-                    <TableCell className="text-sm"><span dir="ltr" className="whitespace-nowrap">{formatTimeRange(l.start_time, l.end_time, en ? "en-EG" : "ar-EG")}</span></TableCell>
+                    <TableCell className="text-sm">
+                      <span dir="ltr" className="whitespace-nowrap">{formatTimeRange(l.start_time, l.end_time, en ? "en-EG" : "ar-EG")}</span>
+                      {isLessonActive(l) && (
+                        <span className="ms-2 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-600 ring-1 ring-emerald-500/30 dark:text-emerald-300">
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          </span>
+                          {en ? "Live now" : "جارية الآن"}
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={l.status === "canceled" ? "destructive" : "outline"} className={l.status === "canceled" ? undefined : l.attendance_taken ? "rounded-full border-green-200 bg-green-100 px-3 py-1 text-sm font-medium text-green-700 hover:bg-green-100 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300" : "rounded-full border-yellow-200 bg-yellow-100 px-3 py-1 text-sm font-medium text-yellow-700 hover:bg-yellow-100 dark:border-yellow-900 dark:bg-yellow-950/40 dark:text-yellow-300"}>
                         {l.status === "canceled" ? (en ? "Canceled — excluded" : "ملغاة — مستبعدة") : l.status === "completed" ? (en ? "Completed" : "مكتملة") : l.attendance_taken ? (en ? "Recorded" : "تم تسجيله") : (en ? "Pending" : "معلّق")}

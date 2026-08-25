@@ -117,7 +117,7 @@ export default async function TeacherDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label={t.groups} value={d.groupCount} icon={UsersRound} accent="primary" href="/groups" />
         <StatCard label={t.students} value={d.studentCount} icon={Users} accent="info" href="/students" />
-        <StatCard label={t.upcoming} value={d.upcomingCount} icon={CalendarClock} accent="success" href="/lessons" />
+        <StatCard label={isRTL ? "حصص اليوم" : "Today's lessons"} value={d.todayCount ?? 0} hint={isRTL ? `${d.upcomingCount} حصة قادمة` : `${d.upcomingCount} upcoming`} icon={CalendarClock} accent="success" href="/lessons" />
         <StatCard label={t.attendanceRate} value={d.totalSessions === 0 ? (isRTL ? "—" : "N/A") : `${d.attendanceRate}%`} hint={d.totalSessions === 0 ? (isRTL ? "لم تُسجّل حصص بعد" : "No attendance recorded yet") : undefined} icon={CheckCircle2} accent="warning" href="/attendance" />
       </div>
 

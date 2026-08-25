@@ -150,6 +150,22 @@ export async function fetchTeacherAssistantGroupIds(teacherId: string, academyId
   }
 }
 
+
+/** Reject after ms so a stalled RLS read can never hang server rendering. */
+async function withReadTimeout<T>(promise: Promise<T>, ms = 8000): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export async function fetchTableRLS<T = any>(table: string, academyId?: string): Promise<T[]> {
   const aid = academyId ?? getRequestAcademyId();
   // Hydrated SeedData stores underscored SQL tables as camelCase keys
@@ -184,18 +200,24 @@ export async function fetchTableRLS<T = any>(table: string, academyId?: string):
 
   try {
     // Prefer the request-bound user client so RLS remains the primary boundary.
-    let client: any = await createServerSupabaseClient();
+    let client: any = await withReadTimeout(createServerSupabaseClient());
+    if (!client) return [];
     let result: any;
     if (DIRECT_TENANT_TABLES.has(table)) {
-      result = await client.from(table).select("*").eq("academy_id", aid).limit(5000);
+      result = await withReadTimeout(
+        client.from(table).select("*").eq("academy_id", aid).limit(5000),
+      );
     } else if (childRelation) {
       const parentRows = await fetchTableRLS<any>(childRelation.parentTable, aid);
       const parentIds = parentRows.map((row: any) => row.id).filter(Boolean);
       if (!parentIds.length) return [];
-      result = await client.from(table).select("*").in(childRelation.foreignKey, parentIds).limit(5000);
+      result = await withReadTimeout(
+        client.from(table).select("*").in(childRelation.foreignKey, parentIds).limit(5000),
+      );
     } else {
       return [];
     }
+    if (!result) return [];
 
     if (result.error) {
       const admin = nodeSupabaseClient();

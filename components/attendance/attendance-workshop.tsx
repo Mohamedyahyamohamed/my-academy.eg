@@ -50,16 +50,24 @@ export function AttendanceWorkshop({
       return +new Date(db) - +new Date(da);
     });
 
-  // Auto-select the newest lesson when a group is picked and no lesson chosen yet.
-  const groupLessonIds = groupLessons.map((l) => l.id).join(",");
+  // Auto-select the best lesson when a group is picked and no lesson chosen yet:
+  // today's lesson first, then the nearest upcoming one, else the most recent past.
+  const groupLessonsRef = React.useRef(groupLessons);
+  groupLessonsRef.current = groupLessons;
+  const groupKey = groupLessons.map((l) => l.id).join(",");
   React.useEffect(() => {
-    if (!groupId || lessonId || !groupLessonIds) return;
-    const newestId = groupLessonIds.split(",")[0];
+    if (!groupId || lessonId || !groupKey) return;
+    const list = groupLessonsRef.current;
+    const todayKey = new Date().toLocaleDateString("en-CA");
+    const target =
+      list.find((l) => String(l.date).slice(0, 10) === todayKey) ??
+      [...list].sort((a, b) => +new Date(a.date) - +new Date(b.date)).find((l) => +new Date(`${l.date}T${l.start_time ?? "23:59"}`) >= Date.now()) ??
+      list[0];
     const next = new URLSearchParams(params.toString());
-    next.set("lesson", newestId);
+    next.set("lesson", target.id);
     router.replace(`/attendance?${next.toString()}`, { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupId, lessonId, groupLessonIds]);
+  }, [groupId, lessonId, groupKey]);
 
   const roster = React.useMemo(() => {
     const ids = enrollments.filter((e) => e.groupId === groupId).map((e) => e.studentId);

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   Users, UsersRound, CalendarClock, ClipboardList, CheckCircle2,
-  ArrowLeft, AlertCircle, Inbox,
+  ArrowLeft, AlertCircle, Inbox, GraduationCap, BookOpen,
 } from "lucide-react";
 import { cookies } from "next/headers";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";

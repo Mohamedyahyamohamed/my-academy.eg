@@ -54,13 +54,16 @@ export default async function LessonsPage(
               <p className="mt-0.5 text-sm text-slate-400">{ en ? "Schedule and track lessons across all your groups." : "جدوِل وتابع الحصص عبر كل مجموعاتك." }</p>
             </div>
           </div>
-
+          {en !== null && (
+            <Button asChild disabled={groups.length === 0}>
+              <Link href={groups.length === 0 ? "/groups" : "/lessons/new"}>
+                <Plus className="h-4 w-4" />
+                {groups.length === 0 ? (en ? "Create a group first" : "أنشئ مجموعة أولًا") : (en ? "Add lesson" : "إضافة حصة")}
+              </Link>
+            </Button>
+          )}
         </div>
-      </div> {en ? "Add lesson (teacher only)" : "إضافة حصة (للمعلم فقط)"}
-          </Button>
-        ) : (
-          <Button asChild disabled={groups.length === 0}><Link href={groups.length === 0 ? "/groups" : "/lessons/new"}><Plus className="h-4 w-4" /> {groups.length === 0 ? (en ? "Create a group first" : "أنشئ مجموعة أولًا") : (en ? "Add lesson" : "إضافة حصة")}</Link></Button>
-        )}
+      </div>
 
       {groups.length === 0 && (
         <Card className="border-amber-200 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/20">

@@ -44,7 +44,22 @@ export function AttendanceWorkshop({
 
   const groupLessons = lessons
     .filter((l) => l.group_id === groupId)
-    .sort((a, b) => +new Date(b.date) - +new Date(a.date));
+    .sort((a, b) => {
+      const da = `${a.date} ${a.start_time ?? ""}`;
+      const db = `${b.date} ${b.start_time ?? ""}`;
+      return +new Date(db) - +new Date(da);
+    });
+
+  // Auto-select the newest lesson when a group is picked and no lesson chosen yet.
+  const groupLessonIds = groupLessons.map((l) => l.id).join(",");
+  React.useEffect(() => {
+    if (!groupId || lessonId || !groupLessonIds) return;
+    const newestId = groupLessonIds.split(",")[0];
+    const next = new URLSearchParams(params.toString());
+    next.set("lesson", newestId);
+    router.replace(`/attendance?${next.toString()}`, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId, lessonId, groupLessonIds]);
 
   const roster = React.useMemo(() => {
     const ids = enrollments.filter((e) => e.groupId === groupId).map((e) => e.studentId);
@@ -152,7 +167,7 @@ export function AttendanceWorkshop({
               <option value="">{en ? "Choose lesson…" : "اختر حصة…"}</option>
               {groupLessons.map((l) => (
                 <option key={l.id} value={l.id}>
-                  {l.topic} — {new Date(l.date).toLocaleDateString(en ? "en-EG" : "ar-EG")} — {formatClockTime(l.start_time, en ? "en-EG" : "ar-EG")}–{formatClockTime(l.end_time, en ? "en-EG" : "ar-EG")}
+                  {new Date(l.date + "T00:00:00").toLocaleDateString(en ? "en-EG" : "ar-EG", { weekday: "long", day: "numeric", month: "short" })} • {formatClockTime(l.start_time, en ? "en-EG" : "ar-EG")}{l.topic ? ` — ${l.topic}` : ""}
                 </option>
               ))}
             </select>

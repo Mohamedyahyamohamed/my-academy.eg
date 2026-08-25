@@ -262,8 +262,8 @@ export default async function PlatformPage(props: { searchParams?: Promise<{ tab
               const atRisk = status === "past_due" || subscription?.cancel_at_period_end || subscription?.canceled_at;
               const suspended = academy.is_active === false;
               return (
-                <div key={academy.id} className="flex flex-wrap items-center gap-3 p-4">
-                  <Avatar><AvatarFallback>{(academy.name || (en ? "A" : "أكاديمية")).slice(0, 2)}</AvatarFallback></Avatar>
+                <div key={academy.id} className="flex flex-wrap items-center gap-3 p-4 transition-colors hover:bg-violet-500/5">
+                  <Avatar className="border border-violet-500/20 bg-gradient-to-br from-violet-500/15 to-sky-500/10 font-bold text-violet-700"><AvatarFallback>{(academy.name || (en ? "A" : "أكاديمية")).slice(0, 2)}</AvatarFallback></Avatar>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{academy.name || (en ? "Unnamed academy" : "أكاديمية بلا اسم")}</p>
                     <p className="truncate text-xs text-muted-foreground">

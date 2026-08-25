@@ -40,7 +40,18 @@ export default async function AuditLogsPage(
 
   return (
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
-      <PageHeader title={en ? "Audit log" : "سجل العمليات"} description={en ? "Track all sensitive operations in the academy." : "تتبّع كل العمليات الحساسة في الأكاديمية."} />
+      <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-l from-slate-950 via-slate-900 to-slate-950 p-6 shadow-[0_16px_50px_-20px_rgb(15_23_42/0.6)]">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_85%_20%,rgb(56_189_248/0.12),transparent_40%)]" />
+        <div className="relative flex items-center gap-4">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-500/10">
+            <ScrollText className="h-5 w-5 text-sky-400" />
+          </div>
+          <div>
+            <h1 className="text-xl font-black tracking-tight text-white">{en ? "Audit log" : "سجل العمليات"}</h1>
+            <p className="text-sm text-slate-400">{en ? "Track all sensitive operations in the academy." : "تتبّع كل العمليات الحساسة في الأكاديمية."}</p>
+          </div>
+        </div>
+      </div>
       <div className="card-surface p-4">
         <ToolbarRoot>
           <ToolbarSearch placeholder={en ? "Search logs…" : "بحث في السجلات…"} />
@@ -62,7 +73,7 @@ export default async function AuditLogsPage(
             </TableHeader>
             <TableBody>
               {result.items.map((log) => (
-                <TableRow key={log.id}>
+                <TableRow key={log.id} className="transition-colors hover:bg-sky-500/5">
                   <TableCell><Badge variant={actionColor(log.action) as any}>{log.action}</Badge></TableCell>
                   <TableCell className="text-sm">{log.entity_type} {log.entity_id ? `· ${log.entity_id.slice(0, 8)}…` : ""}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{log.actor_name ? `${log.actor_name} · ` : ""}{log.actor_role ?? "—"}</TableCell>

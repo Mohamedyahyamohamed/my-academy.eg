@@ -74,7 +74,18 @@ export default async function SettingsPage({
 
   return (
     <div dir={isRTL(lang) ? "rtl" : "ltr"} className="space-y-6">
-      <PageHeader title={text.title} description={text.description} />
+      <div className="relative overflow-hidden rounded-2xl border border-indigo-500/20 bg-gradient-to-l from-indigo-950 via-violet-950 to-slate-950 p-6 shadow-[0_16px_50px_-20px_rgb(79_70_229/0.45)]">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,rgb(139_92_246/0.2),transparent_42%)]" />
+        <div className="relative flex items-center gap-4">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-violet-400/25 bg-violet-500/10">
+            <Settings className="h-5 w-5 text-violet-300" />
+          </div>
+          <div>
+            <h1 className="text-xl font-black tracking-tight text-white">{text.title}</h1>
+            <p className="text-sm text-slate-400">{text.description}</p>
+          </div>
+        </div>
+      </div>
 
       <Tabs defaultValue={initialTab}>
         <TabsList className="w-full justify-start overflow-x-auto">

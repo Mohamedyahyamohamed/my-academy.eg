@@ -2,7 +2,6 @@ import Link from "next/link";
 import { GraduationCap, ArrowRight } from "lucide-react";
 import { cookies } from "next/headers";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
-import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +45,6 @@ export default async function GradesPage() {
 
         </div>
       </div>
-      </PageHeader>
 
       {exams.length === 0 ? (
         <EmptyState

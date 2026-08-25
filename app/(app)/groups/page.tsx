@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { UsersRound, Calendar, ArrowLeft, FolderOpen, UserPlus } from "lucide-react";
-import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { AddGroupDialog } from "@/components/groups/group-dialogs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,7 +41,6 @@ export default async function GroupsPage() {
 
         </div>
       </div>
-      </PageHeader>
 
       {groupCreationBlocked && (
         <Card className="border-amber-200 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/20">

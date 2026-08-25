@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { BookOpen, Plus, Clock, Calendar, UsersRound, ChevronLeft } from "lucide-react";
-import { PageHeader } from "@/components/shared/page-header";
 import { ToolbarRoot, ToolbarSearch, ToolbarSelect, ToolbarActions } from "@/components/shared/toolbar";
 import { PaginationBar } from "@/components/shared/pagination";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -62,7 +61,6 @@ export default async function LessonsPage(
         ) : (
           <Button asChild disabled={groups.length === 0}><Link href={groups.length === 0 ? "/groups" : "/lessons/new"}><Plus className="h-4 w-4" /> {groups.length === 0 ? (en ? "Create a group first" : "أنشئ مجموعة أولًا") : (en ? "Add lesson" : "إضافة حصة")}</Link></Button>
         )}
-      </PageHeader>
 
       {groups.length === 0 && (
         <Card className="border-amber-200 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/20">

@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ClipboardList, Calendar, Users } from "lucide-react";
 import { cookies } from "next/headers";
 import { getLangFromCookie, LANG_COOKIE } from "@/lib/i18n";
-import { PageHeader } from "@/components/shared/page-header";
 import { ToolbarRoot, ToolbarSearch, ToolbarSelect, ToolbarActions } from "@/components/shared/toolbar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
@@ -52,7 +51,6 @@ export default async function HomeworkPage(
 
         </div>
       </div>
-      </PageHeader>
 
       <div className="card-surface p-4">
         <ToolbarRoot>

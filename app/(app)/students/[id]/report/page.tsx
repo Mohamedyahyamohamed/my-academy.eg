@@ -57,7 +57,7 @@ export default async function StudentReportPage(props: { params: Promise<{ id: s
   };
 
   return (
-    <div dir={en ? "ltr" : "rtl"} className="mx-auto max-w-4xl bg-white p-8 text-black print:p-0" style={{ fontFamily: "system-ui, sans-serif" }}>
+    <div dir={en ? "ltr" : "rtl"} className="mx-auto max-w-4xl bg-white p-8 text-black print:p-0" style={{ fontFamily: "'Alexandria', 'Tajawal', system-ui, sans-serif" }}>
       <div className="mb-4 print:hidden"><BackButton fallback="/students" /></div>
       {/* رأس التقرير */}
       <div className="flex items-center justify-between border-b-2 border-gray-800 pb-4">

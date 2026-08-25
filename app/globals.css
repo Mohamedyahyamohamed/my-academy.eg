@@ -1,11 +1,11 @@
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Cairo:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700;800&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --font-sans: "IBM Plex Sans Arabic", "Cairo", "Tajawal", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+    --font-sans: "Alexandria", "Tajawal", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
     --background: 240 16% 98%;
     --foreground: 240 10% 10%;
 
@@ -107,8 +107,12 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
   }
   ::selection {
     @apply bg-primary/15 text-foreground;

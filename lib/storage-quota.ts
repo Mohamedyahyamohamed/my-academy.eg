@@ -83,15 +83,39 @@ export async function measureStorageUsage(
   return { ok: true, bytes, files };
 }
 
-/** Measure all tenant-owned educational storage buckets as one quota. */
+/**
+ * Measure all tenant-owned educational storage.
+ *
+ * Upload intent requests use the database registry first: it is indexed by
+ * academy_id and avoids recursively listing every Storage folder before each
+ * upload. The recursive Storage scan remains the fail-closed fallback for a
+ * deployment whose registry tables are unavailable.
+ */
 export async function measureTenantStorageUsage(
   client: SupabaseClient,
   academyId: string,
   buckets = ["homework", "content"],
 ): Promise<StorageUsageResult> {
-  const results = await Promise.all(
-    buckets.map((bucket) => measureStorageUsage(client, bucket, academyId)),
-  );
+  if (buckets.length === 2 && buckets[0] === "homework" && buckets[1] === "content") {
+    const [homeworkFiles, contentFiles] = await Promise.all([
+      client.from("files").select("size").eq("academy_id", academyId).limit(MAX_ENTRIES),
+      client.from("content_files").select("size").eq("academy_id", academyId).limit(MAX_ENTRIES),
+    ]);
+
+    if (!homeworkFiles.error && !contentFiles.error) {
+      const rows = [...(homeworkFiles.data ?? []), ...(contentFiles.data ?? [])] as Array<{ size?: number | string | null }>;
+      let bytes = 0;
+      for (const row of rows) {
+        if (row.size === null || row.size === undefined || row.size === "") return { ok: false, error: "Storage metadata could not be verified." };
+        const size = typeof row.size === "number" ? row.size : Number(row.size);
+        if (!Number.isFinite(size) || size < 0) return { ok: false, error: "Storage metadata could not be verified." };
+        bytes += size;
+      }
+      return { ok: true, bytes, files: rows.length };
+    }
+  }
+
+  const results = await Promise.all(buckets.map((bucket) => measureStorageUsage(client, bucket, academyId)));
   let bytes = 0;
   let files = 0;
   for (const usage of results) {

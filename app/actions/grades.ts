@@ -34,7 +34,7 @@ export async function deleteExamAction(id: string) {
       .eq("academy_id", user.academy_id!);
     if (papers && papers.length > 0) {
       const paths = papers.map((f: { url: string | null }) => f.url).filter((u: string | null): u is string => Boolean(u));
-      if (paths.length > 0) await client.storage.from("files").remove(paths);
+      if (paths.length > 0) await client.storage.from("exam-papers").remove(paths);
       await client.from("files").delete().eq("exam_id", id).eq("academy_id", user.academy_id!);
       deletedPapers = papers.length;
     }
@@ -120,14 +120,14 @@ export async function uploadExamPaperAction(formData: FormData) {
 
   const ext = (fileName.split(".").pop() ?? "pdf").toLowerCase();
   const path = `${user.academy_id}/exams/${examId}/${crypto.randomUUID()}.${ext}`;
-  const signed = await client.storage.from("files").createSignedUploadUrl(path, { upsert: false });
+  const signed = await client.storage.from("exam-papers").createSignedUploadUrl(path, { upsert: false });
   if (signed.error || !signed.data?.token) return { ok: false as const, error: "Could not create the upload URL." };
 
   return {
     ok: true as const,
     path,
     token: signed.data.token,
-    bucket: "files",
+    bucket: "exam-papers",
     contentType: mime,
   };
 }
@@ -191,7 +191,7 @@ export async function deleteExamPaperAction(fileId: string, examId: string) {
     .maybeSingle();
   if (!file) throw new Error("File not found.");
 
-  await client.storage.from("files").remove([file.url]);
+  await client.storage.from("exam-papers").remove([file.url]);
   await client.from("files").delete().eq("id", fileId);
 
   revalidatePath(`/grades/${examId}`);

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GradeEntry } from "@/components/grades/grade-entry";
 import { ExamPapers } from "@/components/grades/exam-papers";
+import { DeleteExamDetailButton } from "@/components/grades/delete-exam-button";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { GradesService, requireScopedRole } from "@/services";
 import { fetchTableRLS } from "@/services/_shared";
@@ -45,9 +46,12 @@ export default async function ExamGradePage(props: { params: Promise<{ id: strin
         description={`${exam.course?.name} · ${exam.group?.name} · ${formatDate(exam.date, undefined, en ? "en-EG" : "ar-EG")}`}
         breadcrumbs={[{ label: en ? "Grades" : "الدرجات", href: "/grades" }, { label: exam.name }]}
       >
-        <Button asChild variant="outline">
-          <Link href="/grades"><ArrowLeft className="h-4 w-4" /> {en ? "Back" : "رجوع"}</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <DeleteExamDetailButton examId={params.id} examName={exam.name} />
+          <Button asChild variant="outline">
+            <Link href="/grades"><ArrowLeft className="h-4 w-4" /> {en ? "Back" : "رجوع"}</Link>
+          </Button>
+        </div>
       </PageHeader>
 
       <div className="flex flex-wrap gap-2">

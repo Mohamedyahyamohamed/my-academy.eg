@@ -3,6 +3,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { toast } from "sonner";
 import { deleteExamAction } from "@/app/actions/grades";
 import { useClientLang } from "@/lib/i18n-client";
@@ -63,5 +65,37 @@ export function DeleteExamButton({ examId, examName }: { examId: string; examNam
         </button>
       )}
     </div>
+  );
+}
+
+
+/** Always-visible destructive action for the exam detail page header. */
+export function DeleteExamDetailButton({ examId, examName }: { examId: string; examName: string }) {
+  const en = useClientLang() === "en";
+  const router = useRouter();
+
+  return (
+    <ConfirmDialog
+      destructive
+      trigger={
+        <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive">
+          <Trash2 className="h-4 w-4" />
+          {en ? "Delete exam" : "حذف الامتحان"}
+        </Button>
+      }
+      title={en ? "Delete this exam?" : "حذف الامتحان؟"}
+      description={
+        en
+          ? `"${examName}" and all its recorded grades will be permanently deleted, along with any uploaded exam papers. This cannot be undone.`
+          : `سيتم حذف "${examName}" وكل الدرجات المسجلة فيه نهائيًا، مع حذف أوراق الامتحان المرفوعة. هذا الإجراء لا يمكن التراجع عنه.`
+      }
+      confirmLabel={en ? "Delete permanently" : "حذف نهائي"}
+      onConfirm={async () => {
+        await deleteExamAction(examId);
+        toast.success(en ? "Exam deleted successfully." : "تم حذف الامتحان بنجاح.");
+        router.push("/grades");
+        router.refresh();
+      }}
+    />
   );
 }

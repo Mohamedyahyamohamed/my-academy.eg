@@ -22,8 +22,28 @@ export async function deleteExamAction(id: string) {
   const user = await requireScopedRole("TEACHER");
   setRequestContext(user);
   if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage grades.");
+
+  // Clean up uploaded exam papers (storage objects + registry rows) so no orphans remain.
+  const client = nodeSupabaseClient();
+  let deletedPapers = 0;
+  if (client) {
+    const { data: papers } = await client
+      .from("files")
+      .select("id, url")
+      .eq("exam_id", id)
+      .eq("academy_id", user.academy_id!);
+    if (papers && papers.length > 0) {
+      const paths = papers.map((f: { url: string | null }) => f.url).filter((u): u is string => Boolean(u));
+      if (paths.length > 0) await client.storage.from("files").remove(paths);
+      await client.from("files").delete().eq("exam_id", id).eq("academy_id", user.academy_id!);
+      deletedPapers = papers.length;
+    }
+  }
+
   await GradesService.deleteExam(id);
   revalidatePath("/grades");
+  revalidatePath("/dashboard");
+  return { ok: true as const, deletedPapers };
 }
 
 export async function saveGradesAction(

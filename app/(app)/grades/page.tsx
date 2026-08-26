@@ -7,13 +7,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreateExamDialog } from "@/components/grades/create-exam-dialog";
 import { DeleteExamButton } from "@/components/grades/delete-exam-button";
-import { GradesService, MiscService, GroupsService, requireScopedRole } from "@/services";
+import { GradesService, MiscService, GroupsService, requireScopedRole, isLimitedAssistant } from "@/services";
 import { performanceColor, performanceLevel, performanceLabel } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
 export default async function GradesPage() {
   const user = await requireScopedRole("TEACHER");
+  const limitedAssistant = await isLimitedAssistant(user);
   const exams = await GradesService.listExams(user.academy_id, user.id);
   const courses = await MiscService.listCourses(user.academy_id);
   const groups = await GroupsService.listGroups("", user.academy_id);

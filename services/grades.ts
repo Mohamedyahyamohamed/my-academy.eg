@@ -74,11 +74,14 @@ export async function getExam(id: string, academyIdOverride?: string): Promise<E
   if (academyId && isSupabaseConfigured()) {
     const admin = nodeSupabaseClient();
     if (admin) {
-      const [{ data: liveExam }, { data: liveCourses }, { data: liveGroups }] = await Promise.all([
+      const [examRes, coursesRes, groupsRes] = await withReadTimeout(Promise.all([
         admin.from("exams").select("*").eq("academy_id", academyId).eq("id", id).maybeSingle(),
         admin.from("courses").select("*").eq("academy_id", academyId).limit(1000),
         admin.from("groups").select("*").eq("academy_id", academyId).limit(1000),
-      ]);
+      ])) ?? [{ data: null }, { data: null }, { data: null }];
+      const { data: liveExam } = examRes;
+      const { data: liveCourses } = coursesRes;
+      const { data: liveGroups } = groupsRes;
       if (liveExam) items = [liveExam as Exam];
       if (liveCourses?.length) scopedCourses = liveCourses;
       if (liveGroups?.length) scopedGroups = liveGroups;

@@ -96,8 +96,12 @@ export async function fetchGroupStudentIds(groupId: string, academyId?: string):
   const cached = collections().groupStudents.filter((row) => row.group_id === groupId).map((row) => row.student_id);
   if (!isSupabaseConfigured()) return cached;
   try {
-    let client: any = await createServerSupabaseClient();
-    let result = await client.from("group_students").select("student_id").eq("group_id", groupId).limit(1000);
+    let client: any = await withReadTimeout(createServerSupabaseClient());
+    if (!client) return cached;
+    let result = await withReadTimeout(
+      client.from("group_students").select("student_id").eq("group_id", groupId).limit(1000),
+    );
+    if (!result) return cached;
     const shouldUseValidatedAdminFallback = Boolean(academyId) && !result.error && (result.data ?? []).length === 0;
     if (result.error || shouldUseValidatedAdminFallback) {
       const admin = nodeSupabaseClient();

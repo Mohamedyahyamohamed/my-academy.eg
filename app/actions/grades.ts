@@ -33,7 +33,7 @@ export async function deleteExamAction(id: string) {
       .eq("exam_id", id)
       .eq("academy_id", user.academy_id!);
     if (papers && papers.length > 0) {
-      const paths = papers.map((f: { url: string | null }) => f.url).filter((u): u is string => Boolean(u));
+      const paths = papers.map((f: { url: string | null }) => f.url).filter((u: string | null): u is string => Boolean(u));
       if (paths.length > 0) await client.storage.from("files").remove(paths);
       await client.from("files").delete().eq("exam_id", id).eq("academy_id", user.academy_id!);
       deletedPapers = papers.length;

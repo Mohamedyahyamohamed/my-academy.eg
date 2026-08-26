@@ -5,6 +5,10 @@ import { APP_CONFIG } from "@/lib/constants";
 import { getLangFromCookie, isRTL } from "@/lib/i18n";
 import { PwaRegister } from "@/components/layout/pwa-register";
 import { GlobalErrorMonitor } from "@/components/layout/global-error-monitor";
+import "@fontsource/tajawal/400.css";
+import "@fontsource/tajawal/500.css";
+import "@fontsource/tajawal/700.css";
+import "@fontsource/tajawal/800.css";
 import "./globals.css";
 
 // خط النظام بدل next/font/google — عشان يشتغل أوفلاين ومن غير إنترنت لـ Google.

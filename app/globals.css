@@ -5,7 +5,7 @@
 
 @layer base {
   :root {
-    --font-sans: "Alexandria", "Tajawal", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+    --font-sans: "Tajawal", "Geist", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
     --background: 240 16% 98%;
     --foreground: 240 10% 10%;
 
@@ -107,12 +107,16 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+    font-weight: 400;
+    line-height: 1.6;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
   h1, h2, h3, h4, h5, h6 {
     text-wrap: balance;
+    font-weight: 700;
   }
   ::selection {
     @apply bg-primary/15 text-foreground;

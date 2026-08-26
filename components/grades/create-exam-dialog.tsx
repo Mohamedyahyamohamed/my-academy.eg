@@ -80,7 +80,11 @@ export function CreateExamDialog({ courses, groups }: { courses: Course[]; group
               <Label>{en ? "Group *" : "المجموعة *"}</Label>
               <select {...register("group_id")} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="">{en ? "Choose…" : "اختر…"}</option>
-                {groups.filter((g) => !courseId || g.course_id === courseId).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                {(() => {
+                const matching = courseId ? groups.filter((g) => g.course_id === courseId) : groups;
+                const list = matching.length > 0 ? matching : groups;
+                return list.map((g) => <option key={g.id} value={g.id}>{g.name}</option>);
+              })()}
               </select>
               {errors.group_id && <p className="text-xs text-destructive">{errors.group_id.message}</p>}
             </div>

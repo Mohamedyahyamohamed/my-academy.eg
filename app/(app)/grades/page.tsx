@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreateExamDialog } from "@/components/grades/create-exam-dialog";
+import { DeleteExamButton } from "@/components/grades/delete-exam-button";
 import { GradesService, MiscService, GroupsService, requireScopedRole } from "@/services";
 import { performanceColor, performanceLevel, performanceLabel } from "@/lib/constants";
 
@@ -42,7 +43,7 @@ export default async function GradesPage() {
               <p className="mt-0.5 text-sm text-slate-400">{ en ? "Create exams and record student grades to track performance." : "أنشئ الاختبارات وسجّل درجات الطلاب لمتابعة مستوى الأداء." }</p>
             </div>
           </div>
-
+          {!limitedAssistant && <CreateExamDialog courses={courses} groups={groups} />}
         </div>
       </div>
 
@@ -61,7 +62,9 @@ export default async function GradesPage() {
             const level = performanceLevel(avg);
             const count = stats.count;
             return (
-              <Link key={e.id} href={`/grades/${e.id}`}>
+              <div key={e.id} className="relative group/card">
+                <DeleteExamButton examId={e.id} examName={e.name} />
+                <Link href={`/grades/${e.id}`} className="block h-full">
                 <Card className="h-full transition-shadow hover:shadow-elevated">
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between gap-2">
@@ -88,7 +91,8 @@ export default async function GradesPage() {
                     </div>
                   </CardContent>
                 </Card>
-              </Link>
+                </Link>
+              </div>
             );
           })}
         </div>

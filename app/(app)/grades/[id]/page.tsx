@@ -7,6 +7,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GradeEntry } from "@/components/grades/grade-entry";
+import { ExamPapers } from "@/components/grades/exam-papers";
+import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { GradesService, requireScopedRole } from "@/services";
 import { fetchTableRLS } from "@/services/_shared";
 import { fullName, formatDate } from "@/lib/utils";
@@ -20,6 +22,11 @@ export default async function ExamGradePage(props: { params: Promise<{ id: strin
   if (!exam) notFound();
   const roster = await GradesService.gradesForExam(params.id, user.academy_id);
   const students = await fetchTableRLS<any>("students", user.academy_id);
+  const adminClient = nodeSupabaseClient();
+  const papersRows = adminClient
+    ? (await adminClient.from("files").select("id, name, mime_type, size").eq("exam_id", params.id).order("created_at", { ascending: false })).data ?? []
+    : [];
+  const papers = papersRows as { id: string; name: string; mime_type: string | null; size: number | null }[];
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
   const rosterNamed = roster.map((r) => {
     const s = students.find((x: any) => x.id === r.studentId);
@@ -48,6 +55,8 @@ export default async function ExamGradePage(props: { params: Promise<{ id: strin
         <Badge variant="secondary">{en ? "Maximum score: " : "الدرجة النهائية: "}{exam.max_score}</Badge>
         <Badge variant="info">{roster.length} {en ? "students" : "طلاب"}</Badge>
       </div>
+
+      <ExamPapers examId={params.id} papers={papers} />
 
       <GradeEntry examId={params.id} maxScore={exam.max_score} roster={rosterNamed} />
     </div>

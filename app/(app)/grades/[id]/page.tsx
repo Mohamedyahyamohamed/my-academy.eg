@@ -21,13 +21,25 @@ export default async function ExamGradePage(props: { params: Promise<{ id: strin
   const user = await requireScopedRole("TEACHER");
   const exam = await GradesService.getExam(params.id, user.academy_id);
   if (!exam) notFound();
-  const roster = await GradesService.gradesForExam(params.id, user.academy_id);
-  const students = await fetchTableRLS<any>("students", user.academy_id);
-  const adminClient = nodeSupabaseClient();
-  const papersRows = adminClient
-    ? (await adminClient.from("files").select("id, name, mime_type, size").eq("exam_id", params.id).order("created_at", { ascending: false })).data ?? []
-    : [];
-  const papers = papersRows as { id: string; name: string; mime_type: string | null; size: number | null }[];
+  const [roster, studentsRows, papersRes] = await Promise.all([
+    GradesService.gradesForExam(params.id, user.academy_id, exam),
+    fetchTableRLS<any>("students", user.academy_id),
+    (async () => {
+      const adminClient = nodeSupabaseClient();
+      if (!adminClient) return [] as any[];
+      try {
+        const res = await Promise.race([
+          adminClient.from("files").select("id, name, mime_type, size").eq("exam_id", params.id).order("created_at", { ascending: false }),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 6000)),
+        ]);
+        return res?.data ?? ([] as any[]);
+      } catch {
+        return [] as any[];
+      }
+    })(),
+  ]);
+  const students = studentsRows;
+  const papers = papersRes as { id: string; name: string; mime_type: string | null; size: number | null }[];
   const en = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value) === "en";
   const rosterNamed = roster.map((r) => {
     const s = students.find((x: any) => x.id === r.studentId);

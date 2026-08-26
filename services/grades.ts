@@ -247,8 +247,9 @@ export async function listGrades(
 export async function gradesForExam(
   examId: string,
   academyIdOverride?: string,
+  knownExam?: Exam | null,
 ): Promise<{ studentId: string; score: number | null; notes: string | null; gradeId: string | null }[]> {
-  const exam = await getExam(examId, academyIdOverride);
+  const exam = knownExam ?? (await getExam(examId, academyIdOverride));
   if (!exam) return [];
   const [roster, grades] = await Promise.all([
     fetchGroupStudentIds(exam.group_id),

@@ -98,9 +98,10 @@ export async function fetchGroupStudentIds(groupId: string, academyId?: string):
   try {
     let client: any = await withReadTimeout(createServerSupabaseClient());
     if (!client) return cached;
-    let result = await withReadTimeout(
+    // Explicit shape: the Supabase thenable loses its generic through withReadTimeout.
+    let result = (await withReadTimeout(
       client.from("group_students").select("student_id").eq("group_id", groupId).limit(1000),
-    );
+    )) as { data: Array<{ student_id?: string | null }> | null; error: { message: string } | null } | null;
     if (!result) return cached;
     const shouldUseValidatedAdminFallback = Boolean(academyId) && !result.error && (result.data ?? []).length === 0;
     if (result.error || shouldUseValidatedAdminFallback) {
@@ -122,8 +123,9 @@ export async function fetchGroupStudentIds(groupId: string, academyId?: string):
       client = admin;
       result = await client.from("group_students").select("student_id").eq("group_id", groupId).limit(1000);
     }
-    if (result.error) throw result.error;
-    return (result.data ?? []).map((row: any) => row.student_id).filter(Boolean);
+    const finalResult: any = result;
+    if (finalResult.error) throw finalResult.error;
+    return (finalResult.data ?? []).map((row: any) => row.student_id).filter(Boolean);
   } catch (error) {
     console.error("fetchGroupStudentIds error:", error instanceof Error ? error.message : String(error));
     return cached;

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { audit } from "@/services/audit";
 import { requireScopedRole, isLimitedAssistant } from "@/services/session";
+import { persistDelete } from "@/services/data/store";
 import { setRequestContext } from "@/services/request-context";
 import * as ContentService from "@/services/content";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
@@ -247,6 +248,82 @@ export async function uploadContentFile(formData: FormData) {
   for (const pathToRevalidate of contentPaths(courseId)) revalidatePath(pathToRevalidate);
   await audit({ action: "content.file.uploaded", metadata: { courseId, lessonId, size: file.size, mimeType: safeUpload.contentType, fileId: inserted.data.id } }, user);
   return { ok: true, url: downloadUrl, name: file.name, fileId: inserted.data.id };
+}
+
+export async function deleteContentFileAction(fileId: string) {
+  const user = await requireScopedRole("TEACHER", "ADMIN");
+  setRequestContext(user);
+  if (await isLimitedAssistant(user)) return { ok: false, error: "Assistant accounts cannot delete content files." };
+  if (!can(user, "content.upload")) return { ok: false, error: "You are not allowed to delete content files." };
+  const file = await ContentService.getContentFile(fileId, user);
+  if (!file) return { ok: false, error: "File not found or outside your scope." };
+  const client = nodeSupabaseClient();
+  if (!client) return { ok: false, error: "Storage is not configured." };
+
+  let removed: { error: { message?: string } | null };
+  try {
+    removed = await withContentTimeout<{ error: { message?: string } | null }>(
+      client.storage.from("content").remove([file.storage_path]),
+      "Deleting the content file",
+    );
+  } catch (error) {
+    console.error("[content file delete]", (error as Error)?.message);
+    return { ok: false, error: "Deleting the file is taking too long. Please try again." };
+  }
+  if (removed.error) return { ok: false, error: "The file could not be removed from storage." };
+
+  try {
+    await withContentTimeout(
+      client.from("content_files").delete().eq("id", file.id).eq("academy_id", user.academy_id),
+      "Removing the content file record",
+    );
+  } catch (error) {
+    console.error("[content file registry delete]", (error as Error)?.message);
+    return { ok: false, error: "The file was removed, but its registry record needs another cleanup attempt." };
+  }
+  for (const pathToRevalidate of contentPaths(file.course_id)) revalidatePath(pathToRevalidate);
+  await audit({ action: "content.file.deleted", metadata: { courseId: file.course_id, lessonId: file.lesson_id, fileId: file.id, size: file.size } }, user);
+  return { ok: true };
+}
+
+export async function deleteContentLessonAction(courseId: string, lessonId: string) {
+  const user = await requireScopedRole("TEACHER", "ADMIN");
+  setRequestContext(user);
+  if (await isLimitedAssistant(user)) return { ok: false, error: "Assistant accounts cannot delete lessons." };
+  if (!can(user, "courses.write")) return { ok: false, error: "You are not allowed to delete lessons." };
+  const course = await ContentService.getCourse(courseId, user);
+  const lesson = course?.lessons?.find((item) => item.id === lessonId);
+  if (!course || !lesson) return { ok: false, error: "Lesson not found or outside your scope." };
+  const files = await ContentService.listContentFiles(courseId, user, lessonId);
+  const client = nodeSupabaseClient();
+  if (!client) return { ok: false, error: "Storage is not configured." };
+
+  const paths = files.map((file) => file.storage_path);
+  if (paths.length) {
+    let removed: { error: { message?: string } | null };
+    try {
+      removed = await withContentTimeout<{ error: { message?: string } | null }>(
+        client.storage.from("content").remove(paths),
+        "Deleting lesson files",
+      );
+    } catch (error) {
+      console.error("[content lesson files delete]", (error as Error)?.message);
+      return { ok: false, error: "Lesson files could not be removed. The lesson was kept." };
+    }
+    if (removed.error) return { ok: false, error: "Lesson files could not be removed. The lesson was kept." };
+  }
+
+  try {
+    await persistDelete("content_lessons", { id: lessonId }, user.academy_id);
+  } catch (error) {
+    console.error("[content lesson delete]", (error as Error)?.message);
+    return { ok: false, error: "The files were removed, but the lesson record could not be deleted." };
+  }
+  revalidatePath(`/teacher/content/${courseId}`);
+  revalidatePath(`/teacher/content/${courseId}/lessons/${lessonId}`);
+  revalidatePath(`/student/content/${courseId}`);
+  await audit({ action: "content.lesson.deleted", metadata: { courseId, lessonId, deletedFileCount: files.length } }, user);
+  return { ok: true };
 }
 
 export async function addContentLink(formData: FormData) {

@@ -89,10 +89,12 @@ export async function measureTenantStorageUsage(
   academyId: string,
   buckets = ["homework", "content"],
 ): Promise<StorageUsageResult> {
+  const results = await Promise.all(
+    buckets.map((bucket) => measureStorageUsage(client, bucket, academyId)),
+  );
   let bytes = 0;
   let files = 0;
-  for (const bucket of buckets) {
-    const usage = await measureStorageUsage(client, bucket, academyId);
+  for (const usage of results) {
     if (!usage.ok) return usage;
     bytes += usage.bytes;
     files += usage.files;

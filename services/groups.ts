@@ -56,12 +56,20 @@ export async function resolveTeacherForGroups(academyId?: string, teacherProfile
   return null;
 }
 
-export async function listGroups(search = "", academyId?: string, teacherProfileId?: string, teacherEmail?: string): Promise<Group[]> {
+export async function listGroups(search = "", academyId?: string, teacherProfileId?: string, teacherEmail?: string, academyWide = false): Promise<Group[]> {
   const teacher = teacherProfileId
     ? await resolveTeacherForGroups(academyId, teacherProfileId, teacherEmail ?? collections().profiles.find((p: any) => p.id === teacherProfileId)?.email)
     : null;
 
-  const scopedItems = await fetchTableRLS<Group>("groups", academyId);
+  // Platform/academy administrators need to populate management selectors from
+  // the authoritative tenant read. Their request-bound RLS client can return an
+  // empty result for SUPER_ADMIN even though the role has academy-wide scope.
+  // This does not affect teacher/assistant reads, which continue through the
+  // existing assignment-based RLS path.
+  const adminClient = academyWide && academyId && isSupabaseConfigured() ? nodeSupabaseClient() : null;
+  const scopedItems = adminClient
+    ? (((await adminClient.from("groups").select("*").eq("academy_id", academyId).limit(5000)).data ?? []) as Group[])
+    : await fetchTableRLS<Group>("groups", academyId);
   let scopedAssistants: any[] = [];
   if (teacher && isSupabaseConfigured() && academyId && scopedItems.length) {
     try {

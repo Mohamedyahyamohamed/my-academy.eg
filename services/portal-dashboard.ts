@@ -72,7 +72,7 @@ export async function getPortalDashboard(session: PortalSession): Promise<Portal
   const courseIds = (courses ?? []).map((item: any) => item.id).filter(Boolean);
 
   const [{ data: attendance }, { data: grades }, { data: submissions }, { data: files }] = await Promise.all([
-    lessonIds.length ? client.from("attendance").select("lesson_id,status,marked_at").eq("student_id", session.student_id).in("lesson_id", lessonIds).limit(2000) : Promise.resolve({ data: [] }),
+    lessonIds.length ? client.from("attendance").select("lesson_id,status,recorded_at").eq("student_id", session.student_id).in("lesson_id", lessonIds).limit(2000) : Promise.resolve({ data: [] }),
     examIds.length ? client.from("grades").select("exam_id,score,notes").eq("student_id", session.student_id).in("exam_id", examIds).limit(1000) : Promise.resolve({ data: [] }),
     homeworkIds.length ? client.from("homework_submissions").select("id,homework_id,status,submitted_at,feedback,grade,file_id").eq("student_id", session.student_id).in("homework_id", homeworkIds).limit(1000) : Promise.resolve({ data: [] }),
     courseIds.length ? client.from("content_files").select("id,course_id,name,size,mime_type,created_at").eq("academy_id", session.academy_id).in("course_id", courseIds).limit(2000) : Promise.resolve({ data: [] }),

@@ -18,6 +18,7 @@ import { UserPasswordManagement } from "@/components/settings/user-password-mana
 import { GroupsService, MiscService, requireScopedRole } from "@/services";
 import { initials } from "@/lib/utils";
 import { PAYMENT_METHODS, paymentMethodLabel } from "@/lib/constants";
+import { hasAcademyWideScope } from "@/lib/permissions";
 import { getLangFromCookie, isRTL, type Lang } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
@@ -70,7 +71,7 @@ export default async function SettingsPage({
   const courses = await MiscService.listCourses(user.academy_id);
   const users = await MiscService.listProfiles(user.academy_id);
   const invites = await listAcademyInvites(user.academy_id);
-  const assistantGroups = (await GroupsService.listGroups("", user.academy_id)).map(group => ({ id: group.id, name: group.name }));
+  const assistantGroups = (await GroupsService.listGroups("", user.academy_id, undefined, undefined, hasAcademyWideScope(user.role))).map(group => ({ id: group.id, name: group.name }));
 
   return (
     <div dir={isRTL(lang) ? "rtl" : "ltr"} className="space-y-6">

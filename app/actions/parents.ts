@@ -3,6 +3,7 @@ import { audit } from "@/services/audit";
 
 import { revalidatePath } from "next/cache";
 import { MiscService, requireScopedRole, requireNonAssistantTeacher, currentAcademyId } from "@/services";
+import { generatedParentEmail } from "@/services/misc";
 import { PARENT_DEFAULT_PASSWORD } from "@/lib/auth";
 
 /** Quick-create a parent record (no login) so it can be linked to a student. */
@@ -13,22 +14,36 @@ export async function createParentAction(input: {
   email?: string;
   occupation?: string;
 }) {
-  const user = await requireScopedRole("ADMIN", "TEACHER");
-  await requireNonAssistantTeacher(user);
-  if (!input.first_name || !input.last_name) {
-    return { ok: false, error: "First and last name are required." };
+  try {
+    const user = await requireScopedRole("ADMIN", "TEACHER");
+    await requireNonAssistantTeacher(user);
+    if (!input.first_name?.trim() || !input.last_name?.trim()) {
+      return { ok: false, error: "First and last name are required." };
+    }
+    const p = await MiscService.createParent({
+      first_name: input.first_name.trim(),
+      last_name: input.last_name.trim(),
+      // A blank email gets a unique local identity instead of colliding with
+      // another parent who has the same name.
+      email: input.email?.trim() || generatedParentEmail(input.first_name.trim(), input.last_name.trim()),
+      phone: input.phone?.trim() || null,
+      occupation: input.occupation?.trim() || null,
+      profile_id: null,
+    });
+    void audit({ action: "parent.create", entity_type: "parent", entity_id: p.id, new_data: { name: `${p.first_name} ${p.last_name}` } }, user);
+    revalidatePath("/students");
+    return { ok: true, parent: p };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    console.error("[createParentAction] FAILED:", message);
+    const duplicate = /duplicate|unique|already exists|23505/i.test(message);
+    return {
+      ok: false,
+      error: duplicate
+        ? "ولي الأمر بهذا البريد موجود بالفعل. اترك البريد فارغًا أو استخدم بريدًا مختلفًا."
+        : "تعذّر إضافة ولي الأمر. راجع البيانات وحاول مرة أخرى.",
+    };
   }
-  const p = await MiscService.createParent({
-    first_name: input.first_name,
-    last_name: input.last_name,
-    email: input.email || `${input.first_name}.${input.last_name}@parent.local`,
-    phone: input.phone ?? null,
-    occupation: input.occupation ?? null,
-    profile_id: null,
-  });
-  void audit({ action: "mutation" });
-  revalidatePath("/students");
-  return { ok: true, parent: p };
 }
 
 function parentEmail(p: { first_name: string; last_name: string; id: string }): string {

@@ -75,7 +75,18 @@ export async function listParents(academyId?: string): Promise<Parent[]> {
   return items.slice().sort((a, b) => fullName(a).localeCompare(fullName(b)));
 }
 
-export async function createParent(input: Omit<Parent, "id" | "academy_id" | "created_at" | "updated_at"> & { academy_id?: string }): Promise<Parent> {
+export function generatedParentEmail(firstName: string, lastName: string, nonce = crypto.randomUUID()): string {
+  const namePart = `${firstName}.${lastName}`
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9.]/g, "")
+    .toLowerCase()
+    .replace(/^\.+|\.+$/g, "") || "parent";
+  const suffix = nonce.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10).toLowerCase() || "account";
+  return `${namePart}.${suffix}@parent.local`;
+}
+
+export async function createParent(input: Omit<Parent, "id" | "academy_id" | "created_at" | "updated_at"> & { academy_id?: string; email?: string | null }): Promise<Parent> {
   const academyId = currentAcademyId();
   if (!academyId) throw new Error("An authenticated academy scope is required.");
   if (input.academy_id && input.academy_id !== academyId) {
@@ -84,6 +95,7 @@ export async function createParent(input: Omit<Parent, "id" | "academy_id" | "cr
   const now = new Date().toISOString();
   const p: Parent = {
     ...input,
+    email: input.email?.trim() || generatedParentEmail(input.first_name, input.last_name),
     id: crypto.randomUUID(),
     academy_id: academyId,
     created_at: now,

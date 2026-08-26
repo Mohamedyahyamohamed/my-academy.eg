@@ -152,7 +152,7 @@ export async function fetchTeacherAssistantGroupIds(teacherId: string, academyId
 
 
 /** Reject after ms so a stalled RLS read can never hang server rendering. */
-async function withReadTimeout<T>(promise: Promise<T>, ms = 8000): Promise<T | null> {
+export async function withReadTimeout<T>(promise: Promise<T>, ms = 8000): Promise<T | null> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([

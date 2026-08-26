@@ -37,12 +37,12 @@ export async function listExams(academyId?: string, teacherProfileId?: string): 
   if (academyId && isSupabaseConfigured()) {
     const admin = nodeSupabaseClient();
     if (admin) {
-      const [{ data: groups }, { data: courses }, { data: assistants }, { data: exams }] = await Promise.all([
+      const [{ data: groups }, { data: courses }, { data: assistants }, { data: exams }] = await withReadTimeout(Promise.all([
         admin.from("groups").select("*").eq("academy_id", academyId).limit(1000),
         admin.from("courses").select("*").eq("academy_id", academyId).limit(1000),
         admin.from("group_assistants").select("group_id, teacher_id").limit(2000),
         admin.from("exams").select("*").eq("academy_id", academyId).limit(1000),
-      ]);
+      ])) ?? [{ data: null }, { data: null }, { data: null }, { data: null }];
       if (groups?.length) scopedGroups = groups;
       if (courses?.length) scopedCourses = courses;
       if (teacher && assistants?.length) scopedAssistants = assistants;
@@ -200,10 +200,12 @@ export async function listGrades(
   if (academyId && isSupabaseConfigured()) {
     const admin = nodeSupabaseClient();
     if (admin) {
-      const [{ data: liveExams, error: examsError }, { data: liveGrades, error: gradesError }] = await Promise.all([
+      const [liveExamsRes, liveGradesRes] = await withReadTimeout(Promise.all([
         admin.from("exams").select("*").eq("academy_id", academyId).limit(1000),
         admin.from("grades").select("*").limit(5000),
-      ]);
+      ])) ?? [{ data: null, error: null }, { data: null, error: null }];
+      const { data: liveExams, error: examsError } = liveExamsRes;
+      const { data: liveGrades, error: gradesError } = liveGradesRes;
       if (!examsError && liveExams?.length) scopedExams = liveExams as Exam[];
       if (!gradesError && liveGrades?.length) scopedGrades = liveGrades as Grade[];
     }

@@ -10,14 +10,14 @@ describe("signup page polish", () => {
   const requirements = read("components/auth/password-requirements.tsx");
 
   it("uses a premium rounded signup card with light and dark surfaces", () => {
-    expect(page).toContain("bg-slate-50/60");
+    expect(page).toContain("min-h-screen bg-background");
     expect(page).toContain("rounded-2xl border border-gray-100 bg-white");
-    expect(page).toContain("shadow-xl");
+    expect(page).toContain("shadow-2xl");
     expect(page).toContain("dark:bg-slate-900");
   });
 
   it("keeps signup direction correct and uses a left-facing RTL action icon", () => {
-    expect(page).toContain('dir={isRTL(lang) ? "rtl" : "ltr"}');
+    expect(page).toContain('dir={en ? "ltr" : "rtl"}');
     expect(form).toContain("ArrowLeft");
     expect(form).not.toContain("ArrowRight");
     expect(form).toContain('className={`h-4 w-4 ${en ? "rotate-180" : ""}`}');

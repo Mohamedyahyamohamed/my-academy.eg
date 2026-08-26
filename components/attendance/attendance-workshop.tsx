@@ -53,7 +53,10 @@ export function AttendanceWorkshop({
   // Auto-select the best lesson when a group is picked and no lesson chosen yet:
   // today's lesson first, then the nearest upcoming one, else the most recent past.
   const groupLessonsRef = React.useRef(groupLessons);
-  groupLessonsRef.current = groupLessons;
+  React.useEffect(() => {
+    // Keep the latest list reachable from effects without writing during render.
+    groupLessonsRef.current = groupLessons;
+  }, [groupLessons]);
   const groupKey = groupLessons.map((l) => l.id).join(",");
   React.useEffect(() => {
     if (!groupId || lessonId || !groupKey) return;

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { AppShell } from "@/components/layout/app-shell";
 import { OnboardingGate } from "@/components/layout/onboarding-gate";
 import { DemoBanner } from "@/components/layout/demo-banner";
@@ -23,17 +23,7 @@ export default async function AuthenticatedLayout({
   const restriction = await getAccessRestriction(user);
   if (restriction.blocked) redirect(`/suspended?reason=${restriction.reason}`);
 
-  // Platform owner runs the whole platform, not a single academy's daily ops.
-  // Keep them on platform surfaces only; redirect academy-operations pages.
-  if (user.role === "SUPER_ADMIN") {
-    const h = await headers();
-    const pathname = h.get("x-invoke-path") ?? h.get("x-matched-path") ?? "";
-    const PLATFORM_ALLOWED = ["/platform", "/audit", "/settings", "/support", "/privacy", "/terms", "/help", "/notifications", "/messages"];
-    const isAllowed = PLATFORM_ALLOWED.some((p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + "?"));
-    if (pathname && !isAllowed) {
-      redirect("/platform");
-    }
-  }
+  // Platform-owner containment now lives in middleware.ts (edge).
 
   // Resolve only the small academy record needed by the shell. Do not hydrate
   // every tenant table here: this layout wraps every internal navigation, and

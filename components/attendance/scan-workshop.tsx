@@ -52,7 +52,10 @@ export function ScanWorkshop({
 
   // Auto-pick today's lesson of the chosen group; else nearest upcoming; else most recent.
   const scanLessonsRef = React.useRef(groupLessons);
-  scanLessonsRef.current = groupLessons;
+  React.useEffect(() => {
+    // Keep the latest list reachable from effects without writing during render.
+    scanLessonsRef.current = groupLessons;
+  }, [groupLessons]);
   const scanKey = groupLessons.map((l) => l.id).join(",");
   React.useEffect(() => {
     if (!groupId || lessonId || !scanKey) return;
@@ -63,7 +66,7 @@ export function ScanWorkshop({
       [...list].sort((a, b) => +new Date(a.date) - +new Date(b.date)).find((l) => +new Date(`${l.date}T${l.start_time ?? "23:59"}`) >= Date.now()) ??
       list[0];
     setLessonId(target.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [groupId, lessonId, scanKey]);
 
   const startCamera = async () => {

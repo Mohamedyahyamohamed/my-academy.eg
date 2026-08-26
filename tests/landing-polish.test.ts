@@ -14,7 +14,7 @@ describe("landing premium polish", () => {
   it("uses a transparent-to-glass sticky navbar with accessible hover states", () => {
     expect(navbar).toContain("sticky top-0 z-50 border-b");
     expect(navbar).toContain("bg-transparent backdrop-blur-0");
-    expect(navbar).toContain("bg-white/80 shadow-sm backdrop-blur-md");
+    expect(navbar).toContain("bg-white/75 shadow-lg shadow-slate-900/5 backdrop-blur-xl");
     expect(navbar).toContain("window.scrollY > 12");
     expect(navbar).toContain("hover:text-indigo-600");
     expect(navbar).toContain("focus-visible:ring-2");

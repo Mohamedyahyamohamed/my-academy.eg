@@ -69,7 +69,13 @@ async function responseJson(response: Response) {
 
 describe("Route-Level Cross-Tenant — authenticated local runtime", () => {
   beforeAll(async () => {
-    server = spawn("pnpm", ["dev", "-p", String(PORT)], {
+    // pnpm is optional; npm works everywhere (CI included). Force the old
+    // behaviour with MA_TEST_USE_PNPM=1.
+    const usePnpm = process.env.MA_TEST_USE_PNPM === "1";
+    const command = usePnpm ? "pnpm" : process.platform === "win32" ? "npm.cmd" : "npm";
+    const devArgs = usePnpm ? ["dev", "-p", String(PORT)] : ["run", "dev", "--", "-p", String(PORT)];
+    server = spawn(command, devArgs, {
+      // shell:true lets Windows resolve the npm.cmd shim; harmless on POSIX.
       cwd: process.cwd(),
       env: {
         ...process.env,
@@ -82,6 +88,7 @@ describe("Route-Level Cross-Tenant — authenticated local runtime", () => {
         SUPABASE_SERVICE_ROLE_KEY: "",
       },
       stdio: "ignore",
+      shell: true,
     });
     await waitForServer();
     cookieA = `ma_session=${createSignedSession(adminA)}; myacademy_onboarding_done=1`;

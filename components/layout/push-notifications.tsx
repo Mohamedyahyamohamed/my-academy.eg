@@ -5,8 +5,8 @@ import { Bell, BellOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useClientLang } from "@/lib/i18n-client";
 
-const PUBLIC_VAPID_KEY =
-  "BFD5Yemjsjd3BMejcru_eiNpsuIHQ87tdisS1AYuYqDJlqytE8EGlIMy9rHB3O27-U1nQ2ncEXoXOP3SVhdTbgI";
+// Inlined at build time from the NEXT_PUBLIC_VAPID_PUBLIC_KEY environment variable.
+const PUBLIC_VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -73,7 +73,7 @@ export function PushNotifications() {
     }
   };
 
-  if (status === "unsupported") return null;
+  if (status === "unsupported" || !PUBLIC_VAPID_KEY) return null;
 
   if (status === "granted") {
     return (

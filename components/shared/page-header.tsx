@@ -25,7 +25,7 @@ export function PageHeader({
   showBack = true,
 }: PageHeaderProps) {
   return (
-    <div className={cn("flex flex-col gap-4 md:flex-row md:items-center md:justify-between", className)}>
+    <div className={cn("relative flex flex-col gap-4 border-b border-border/60 pb-5 md:flex-row md:items-center md:justify-between", className)}>
       <div className="space-y-1.5">
         {breadcrumbs && breadcrumbs.length > 0 && (
           <Breadcrumb>
@@ -45,11 +45,11 @@ export function PageHeader({
             </BreadcrumbList>
           </Breadcrumb>
         )}
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
           {title}
         </h1>
         {description && (
-          <p className="text-sm text-muted-foreground max-w-2xl">{description}</p>
+          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{description}</p>
         )}
       </div>
       {(showBack || children) && (

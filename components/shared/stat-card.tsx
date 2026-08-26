@@ -15,11 +15,11 @@ interface StatCardProps {
 }
 
 const accentMap = {
-  primary: "bg-primary/10 text-primary",
-  success: "bg-emerald-50 text-emerald-600",
-  warning: "bg-amber-50 text-amber-600",
-  info: "bg-sky-50 text-sky-600",
-  destructive: "bg-rose-50 text-rose-600",
+  primary: "bg-primary/10 text-primary dark:bg-primary/15 dark:text-primary",
+  success: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300",
+  warning: "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300",
+  info: "bg-sky-50 text-sky-600 dark:bg-sky-500/15 dark:text-sky-300",
+  destructive: "bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300",
 };
 
 export function StatCard({
@@ -64,7 +64,7 @@ export function StatCard({
   };
 
   const card = (
-    <Card className={cn("group overflow-hidden border-border/60 bg-gradient-to-b from-white to-muted/30 transition-all duration-300 hover:-translate-y-1 hover:border-primary/25", glowMap[accent])}>
+    <Card className={cn("group overflow-hidden rounded-2xl border-border/60 bg-gradient-to-b from-card to-muted/25 transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-lg", glowMap[accent])}>
       {content}
     </Card>
   );

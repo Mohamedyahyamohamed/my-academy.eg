@@ -30,13 +30,13 @@ export function MobileNav({ sections }: { sections: NavSection[] }) {
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent side={en ? "left" : "right"} dir={en ? "ltr" : "rtl"} className="w-72 p-0">
-        <SheetHeader className="h-16 justify-center border-b border-sidebar-border">
+      <SheetContent side={en ? "left" : "right"} dir={en ? "ltr" : "rtl"} className="w-[min(88vw,22rem)] border-sidebar-border bg-sidebar/98 p-0 shadow-2xl backdrop-blur-xl">
+        <SheetHeader className="h-16 justify-center border-b border-sidebar-border bg-sidebar-accent/25 px-4">
           <SheetTitle className={en ? "text-left" : "text-right"}>
             <Logo />
           </SheetTitle>
         </SheetHeader>
-        <nav className="space-y-6 overflow-y-auto px-3 py-4">
+        <nav className="space-y-5 overflow-y-auto px-3 py-5">
           {sections.map((section, si) => (
             <div key={si} className="space-y-1">
               {(section.titleAr || section.titleEn) && (
@@ -55,10 +55,10 @@ export function MobileNav({ sections }: { sections: NavSection[] }) {
                     href={item.href}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                      "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                       active
-                        ? "bg-primary/10 text-primary"
-                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent",
+                        ? "border-s-2 border-primary bg-primary/10 ps-2.5 text-primary shadow-sm"
+                        : "border-s-2 border-transparent text-sidebar-foreground/80 hover:translate-x-0.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                     )}
                   >
                     <Icon className="h-[18px] w-[18px]" />

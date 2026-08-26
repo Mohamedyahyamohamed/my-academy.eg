@@ -30,14 +30,14 @@ export function Sidebar({ sections, academyName, role }: SidebarProps) {
   }[role];
 
   return (
-    <aside className="print-shell-sidebar hidden h-full w-72 shrink-0 flex-col border-e border-sidebar-border bg-sidebar lg:flex">
+    <aside className="print-shell-sidebar hidden h-full w-72 shrink-0 flex-col border-e border-sidebar-border bg-sidebar/95 shadow-[8px_0_30px_-24px_hsl(var(--primary)/0.7)] backdrop-blur-xl lg:flex">
       <div className="flex h-16 items-center px-5">
         <Link href={homeHref} className="transition-opacity hover:opacity-80">
           <Logo />
         </Link>
       </div>
-      <div className="mx-3 mb-2 rounded-xl border border-sidebar-border bg-sidebar-accent/40 px-3 py-2.5">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{roleLabel}</p>
+      <div className="mx-3 mb-2 rounded-2xl border border-sidebar-border/80 bg-gradient-to-br from-sidebar-accent/70 to-sidebar-accent/20 px-3 py-3 shadow-sm">
+        <p className="inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">{roleLabel}</p>
         <p className="mt-0.5 truncate text-sm font-medium text-sidebar-foreground" title={academyName}>{academyName}</p>
       </div>
 
@@ -60,10 +60,10 @@ export function Sidebar({ sections, academyName, role }: SidebarProps) {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                       active
-                        ? "border-s-2 border-primary bg-primary/10 ps-2.5 text-primary"
-                        : "border-s-2 border-transparent text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                        ? "border-s-2 border-primary bg-primary/10 ps-2.5 text-primary shadow-sm"
+                        : "border-s-2 border-transparent text-sidebar-foreground/80 hover:translate-x-0.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   )}
                 >
                   <Icon

@@ -12,6 +12,24 @@ type StorageUsageResult =
 
 const PAGE_SIZE = 100;
 const MAX_ENTRIES = 20_000;
+const STORAGE_LIST_TIMEOUT_MS = 15_000;
+
+async function listStorageEntries(client: SupabaseClient, bucket: string, prefix: string, offset: number) {
+  try {
+    return await Promise.race([
+      client.storage.from(bucket).list(prefix, {
+        limit: PAGE_SIZE,
+        offset,
+        sortBy: { column: "name", order: "asc" },
+      }),
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error(`Storage list timed out for ${bucket}.`)), STORAGE_LIST_TIMEOUT_MS);
+      }),
+    ]);
+  } catch {
+    return { data: null, error: new Error("Storage usage request timed out.") };
+  }
+}
 
 /**
  * Recursively measures objects below an academy prefix in a private bucket.
@@ -30,11 +48,7 @@ export async function measureStorageUsage(
   while (directories.length) {
     const prefix = directories.pop()!;
     for (let offset = 0; ; offset += PAGE_SIZE) {
-      const { data, error } = await client.storage.from(bucket).list(prefix, {
-        limit: PAGE_SIZE,
-        offset,
-        sortBy: { column: "name", order: "asc" },
-      });
+      const { data, error } = await listStorageEntries(client, bucket, prefix, offset);
       if (error) return { ok: false, error: "Storage usage could not be verified." };
 
       const entries = (data ?? []) as StorageEntry[];

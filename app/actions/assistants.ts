@@ -132,7 +132,7 @@ export async function createAssistantAction(input: {
     created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   };
   collections().teachers.push(teacherRec as any);
-  await persistInsert("teachers", teacherRec);
+  await persistInsert("teachers", teacherRec, academyId);
 
   // 3. Grant access to the chosen groups.
   const now = new Date().toISOString();

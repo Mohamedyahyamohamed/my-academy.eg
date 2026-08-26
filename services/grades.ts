@@ -6,7 +6,7 @@ import type { AssessmentType, Exam, Grade, PaginatedResult } from "@/types";
 import { collections } from "./data/store";
 import { currentAcademyId, getCurrentUser } from "./session";
 import { persistInsert, persistDelete, persistUpdate } from "./data/store";
-import { getCourse, getGroup, byAcademy, academyExamIds, teacherGroupScope, fetchTableRLS, fetchGroupStudentIds } from "./_shared";
+import { getCourse, getGroup, byAcademy, academyExamIds, teacherGroupScope, fetchTableRLS, fetchGroupStudentIds, withReadTimeout } from "./_shared";
 import { resolveTeacherForGroups } from "./groups";
 import { performanceLevel } from "@/lib/constants";
 import { can, hasAcademyWideScope } from "@/lib/permissions";

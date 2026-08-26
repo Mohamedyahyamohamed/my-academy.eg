@@ -23,7 +23,7 @@ export default async function AuthenticatedLayout({
   const restriction = await getAccessRestriction(user);
   if (restriction.blocked) redirect(`/suspended?reason=${restriction.reason}`);
 
-  // Platform-owner containment now lives in middleware.ts (edge).
+  // Platform-owner containment now lives in proxy.ts (edge).
 
   // Resolve only the small academy record needed by the shell. Do not hydrate
   // every tenant table here: this layout wraps every internal navigation, and

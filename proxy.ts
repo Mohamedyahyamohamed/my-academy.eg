@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * Platform-owner containment at the edge.
+ * Platform-owner containment at the edge (Next.js 16 `proxy` file convention,
+ * formerly `middleware`).
  *
  * The signed application session cookie (ma_session) carries the user's role.
  * Its signature is verified server-side on every page (requireScopedRole), so
@@ -74,7 +75,7 @@ function isAllowedForPlatformOwner(pathname: string): boolean {
   );
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const role = readRoleClaim(request.cookies.get("ma_session")?.value);

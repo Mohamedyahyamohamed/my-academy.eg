@@ -37,3 +37,8 @@ next-env.d.ts
 my-academy.zip
 
 /uploads
+
+# Next.js-generated agent/build artifacts
+.build-log.txt
+AGENTS.md
+CLAUDE.md

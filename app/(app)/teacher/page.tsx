@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { HomeworkBadge } from "@/components/shared/badges";
 import { getTeacherDashboard, requireScopedRole, getTeacherDailyOps } from "@/services";
+import { generateTeacherAlerts, listNotifications } from "@/services/notifications";
+import type { AppNotification, NotificationType } from "@/types";
 import { formatDate, formatClockTime, formatSchedule } from "@/lib/utils";
 import { TeacherDailyOpsBoard } from "@/components/teacher/daily-ops-board";
 
@@ -31,6 +33,13 @@ export default async function TeacherDashboard() {
   const displayName = rawName ? rawName.split(/\s+/)[0] : (isRTL ? "المعلّم" : "Teacher");
   const d = await getTeacherDashboard(user);
   const dailyOps = await getTeacherDailyOps(user.academy_id);
+  // P2: generate + surface actionable teacher alerts
+  await generateTeacherAlerts(user.id);
+  const allNotifs = await listNotifications(user.id);
+  const ALERT_TYPES: NotificationType[] = ["absence_repeat", "low_grade", "payment_overdue", "homework_assigned"];
+  const alerts: AppNotification[] = allNotifs.filter(
+    (n) => ALERT_TYPES.includes(n.type) && !n.read,
+  );
   if (!d) {
     return (
       <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>
@@ -124,6 +133,41 @@ export default async function TeacherDashboard() {
       </div>
 
       <TeacherDailyOpsBoard ops={dailyOps} lang={lang === "en" ? "en" : "ar"} />
+
+      {alerts.length > 0 && (
+        <Card className="border-amber-300 bg-amber-50/70 dark:border-amber-800 dark:bg-amber-950/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <AlertCircle className="h-5 w-5 text-amber-600" />
+              {isRTL ? "تنبيهات تحتاج إجراءً" : "Alerts needing action"}
+              <Badge variant="warning" className="ms-1">{alerts.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {alerts.map((n) => {
+              const Icon =
+                n.type === "absence_repeat" ? UsersRound
+                : n.type === "low_grade" ? GraduationCap
+                : n.type === "payment_overdue" ? AlertCircle
+                : Inbox;
+              return (
+                <div key={n.id} className="flex items-start gap-3 rounded-lg border border-amber-200 bg-white/60 p-3 dark:border-amber-800/60 dark:bg-amber-900/20">
+                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">{n.title}</p>
+                    <p className="text-xs text-amber-700/80 dark:text-amber-200/70">{n.message}</p>
+                  </div>
+                  {n.link && n.link.startsWith("student:") && (
+                    <Button asChild size="sm" variant="soft" className="shrink-0">
+                      <Link href={`/students/${n.link.replace("student:", "")}`}>{isRTL ? "عرض" : "View"}</Link>
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       {d.pendingReview > 0 && (
         <Card className="border-amber-200 bg-amber-50">

@@ -396,6 +396,8 @@ export type NotificationType =
   | "new_grade"
   | "upcoming_lesson"
   | "attendance"
+  | "absence_repeat"
+  | "low_grade"
   | "system";
 
 export interface AppNotification {

@@ -18,6 +18,8 @@ const dotColor: Record<NotificationType, string> = {
   new_grade: "bg-violet-500",
   upcoming_lesson: "bg-indigo-500",
   attendance: "bg-teal-500",
+  absence_repeat: "bg-orange-500",
+  low_grade: "bg-red-500",
   system: "bg-slate-400",
 };
 

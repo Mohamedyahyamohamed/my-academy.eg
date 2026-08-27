@@ -117,6 +117,14 @@ export default async function StudentProfilePage(
     ? consentAudit.metadata.source
     : detail.consent_given === true ? (en ? "Recorded consent" : "موافقة مسجلة") : null;
 
+  // P2: per-student change log (audit trail)
+  const changeLog = isPlatformOwner
+    ? []
+    : (await listAuditLogs(
+        { entity_type: "student", page: 1, pageSize: 50 },
+        detail.academy_id,
+      )).items.filter((e) => e.entity_id === detail.id).slice(0, 30);
+
   return (
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
@@ -461,6 +469,60 @@ export default async function StudentProfilePage(
         }
         notes={<StudentNotes studentId={params.id} notes={notes} readOnly={isPlatformOwner} />}
       />
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FileText className="h-5 w-5 text-slate-500" />
+            {en ? "Change log" : "سجل التغييرات"}
+          </CardTitle>
+          <CardDescription>
+            {en
+              ? "All sensitive changes to this student (data, group transfer, attendance, grade, payment)."
+              : "كل التغييرات الحساسة على هذا الطالب (بيانات، نقل مجموعة، حضور، درجة، دفعة)."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {changeLog.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              {en ? "No changes recorded yet." : "لا توجد تغييرات مسجلة بعد."}
+            </p>
+          ) : (
+            <div className="divide-y divide-border">
+              {changeLog.map((entry: any) => (
+                <div key={entry.id} className="flex items-start gap-3 py-2.5">
+                  <Badge variant="outline" className="shrink-0 font-mono text-[11px]">
+                    {entry.action}
+                  </Badge>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-foreground">
+                      {entry.actor_name
+                        ? `${entry.actor_name}${entry.actor_role ? ` (${entry.actor_role})` : ""}`
+                        : en
+                          ? "System"
+                          : "النظام"}
+                    </p>
+                    {(entry.old_data || entry.new_data) && (
+                      <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                        {entry.new_data
+                          ? `${en ? "New" : "جديد"}: ${JSON.stringify(entry.new_data)}`
+                          : ""}
+                        {entry.old_data
+                          ? ` ${en ? "Old" : "قديم"}: ${JSON.stringify(entry.old_data)}`
+                          : ""}
+                      </p>
+                    )}
+                  </div>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {formatDate(entry.created_at, undefined, en ? "en-EG" : "ar-EG")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
     </div>
   );
 }

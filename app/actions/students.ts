@@ -103,6 +103,8 @@ function localizeStudentValidationError(field: string, message: string) {
     email: "البريد الإلكتروني غير صحيح.",
     school: "اسم المدرسة أطول من المسموح.",
     grade: "الصف الدراسي أطول من المسموح.",
+    portal_email: "بريد دخول البوابة غير صحيح.",
+    portal_password: "كلمة مرور البوابة يجب أن تكون 8 أحرف على الأقل.",
     notes: "الملاحظات أطول من المسموح.",
     consent_given: "موافقة ولي الأمر مطلوبة.",
   };

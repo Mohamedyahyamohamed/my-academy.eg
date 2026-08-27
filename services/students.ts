@@ -34,6 +34,7 @@ import { canCreate } from "./saas";
 import { STUDENT_DEFAULT_PASSWORD } from "@/lib/auth";
 import { can, hasAcademyWideScope } from "@/lib/permissions";
 import { setRequestContext } from "./request-context";
+import bcrypt from "bcryptjs";
 
 function attachRelations(s: Student): Student {
   return {
@@ -729,6 +730,9 @@ export interface StudentInput {
   is_active?: boolean;
   groupIds?: string[];
   consent_given?: boolean;
+  /** Shared external portal login; password is accepted only during creation and never returned. */
+  portal_email?: string | null;
+  portal_password?: string | null;
 }
 
 function uid() {
@@ -849,6 +853,25 @@ export async function createStudent(
   }
 
   const { groupIds = [], ...rest } = input;
+  const portalEmail = rest.portal_email?.trim().toLowerCase() || null;
+  const portalPassword = rest.portal_password?.trim() || null;
+  if (Boolean(portalEmail) !== Boolean(portalPassword)) {
+    throw new Error("Portal email and password must be provided together.");
+  }
+  if (portalEmail && isSupabaseConfigured()) {
+    const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
+    const client = nodeSupabaseClient();
+    if (client) {
+      const { data: existingPortalUsers, error: portalLookupError } = await client
+        .from("students")
+        .select("id")
+        .eq("portal_email", portalEmail)
+        .limit(1);
+      if (portalLookupError) throw new Error("تعذر التحقق من بريد دخول البوابة.");
+      if (existingPortalUsers?.length) throw new Error("بريد دخول البوابة مستخدم بالفعل. اختر بريدًا مختلفًا.");
+    }
+  }
+  const portalPasswordHash = portalPassword ? await bcrypt.hash(portalPassword, 12) : null;
   const now = new Date().toISOString();
   const consentGiven = rest.consent_given === true;
   const currentUser = authenticatedUser ?? getCurrentUser();
@@ -890,6 +913,7 @@ export async function createStudent(
     id: uid(),
     academy_id: academyId,
     access_token: uid(),
+    portal_email: portalEmail,
     owner_teacher_id: ownerTeacherId,
     first_name: rest.first_name,
     last_name: rest.last_name,
@@ -918,7 +942,9 @@ export async function createStudent(
   // Production generates the bearer token from the database default. Keep the
   // cache token for demo mode, but never require the new column during rollout.
   const { access_token: _accessToken, ...studentPersistence } = student;
-  await persistInsert("students", studentPersistence);
+  await persistInsert("students", portalPasswordHash
+    ? { ...studentPersistence, portal_password: portalPasswordHash }
+    : studentPersistence);
 
   // ── إنشاء حساب دخول للطالب (إيميل + باسورد افتراضي) عشان يقدر يدخل ──
   try {
@@ -933,7 +959,7 @@ export async function createStudent(
           .toLowerCase() + `.${student.id.slice(0, 4)}@student.local`;
       const { data: aData, error: aErr } = await client.auth.admin.createUser({
         email: loginEmail,
-        password: STUDENT_DEFAULT_PASSWORD,
+        password: portalPassword || STUDENT_DEFAULT_PASSWORD,
         email_confirm: true,
         user_metadata: {
           full_name: `${student.first_name} ${student.last_name}`,
@@ -994,12 +1020,17 @@ export async function updateStudent(
     await assertParentMutationScope(input.parent_id, academyId);
   }
   if (input.groupIds !== undefined) await assertRequestedGroupScope(input.groupIds, academyId, authenticatedUser);
+  // Portal credentials are managed by the dedicated credential action. Never
+  // accept a password hash/plaintext through the general student edit path.
+  const { groupIds: _g, portal_email: _portalEmail, portal_password: _portalPassword, ...safeInput } = input;
   Object.assign(s, {
-    ...input,
+    ...safeInput,
     updated_at: new Date().toISOString(),
   });
-  const { groupIds: _g, ...patch } = input;
+  const patch = { ...safeInput };
   void _g;
+  void _portalEmail;
+  void _portalPassword;
   // حوّل التاريخ الفاضي ("") لـ null عشان الداتابيز يقبلّه
   if (patch.date_of_birth === "") patch.date_of_birth = null;
   await persistUpdate("students", id, { ...patch, updated_at: new Date().toISOString() }, academyId);

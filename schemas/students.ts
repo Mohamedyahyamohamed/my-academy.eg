@@ -11,6 +11,15 @@ export const studentSchema = z.object({
     .string()
     .optional()
     .refine((v) => !v || z.string().email().safeParse(v).success, "Invalid email"),
+  portal_email: z
+    .string()
+    .trim()
+    .email("Invalid portal email")
+    .optional(),
+  portal_password: z
+    .string()
+    .min(8, "Portal password must be at least 8 characters")
+    .optional(),
   date_of_birth: z.string().optional().nullable(),
   gender: z.enum(["male", "female"]).optional().nullable(),
   parent_id: z

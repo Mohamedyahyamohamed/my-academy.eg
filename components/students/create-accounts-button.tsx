@@ -1,67 +1,79 @@
 "use client";
 
 import * as React from "react";
-import { UserCog, Users, Loader2 } from "lucide-react";
+import { Copy, KeyRound, Loader2, UserRoundPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { createMissingStudentAccountsAction } from "@/app/actions/students";
-import { fixParentAccountsAction } from "@/app/actions/parents";
-import { STUDENT_DEFAULT_PASSWORD, PARENT_DEFAULT_PASSWORD } from "@/lib/auth";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { createMissingSharedPortalAccountsAction } from "@/app/actions/portal-auth";
 import { useClientLang } from "@/lib/i18n-client";
+
+type Credential = { studentId: string; studentName: string; email: string; password: string };
 
 export function CreateAccountsButton() {
   const en = useClientLang() === "en";
-  const [studentLoading, setStudentLoading] = React.useState(false);
-  const [parentLoading, setParentLoading] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
+  const [credentials, setCredentials] = React.useState<Credential[]>([]);
 
-  const createStudents = async () => {
-    setStudentLoading(true);
+  const createAccounts = async () => {
+    setBusy(true);
     try {
-      const res = await createMissingStudentAccountsAction();
-      if (res.ok === false) {
-        toast.error(res.error ?? (en ? "Failed" : "فشل"));
-      } else {
-        toast.success(
-          en ? `${res.created} student account(s) created ✅ — Password: ${STUDENT_DEFAULT_PASSWORD}` : `تم إنشاء ${res.created} حساب طالب ✅ — الباسورد: ${STUDENT_DEFAULT_PASSWORD}`,
-          { duration: 10000 },
-        );
+      const result = await createMissingSharedPortalAccountsAction();
+      if (result.ok === false) {
+        toast.error(result.error ?? (en ? "Could not create portal accounts." : "تعذر إنشاء حسابات البوابة."));
+        return;
       }
-    } catch {
-      toast.error(en ? "An error occurred." : "حصل خطأ");
+      setCredentials(result.credentials);
+      setOpen(true);
+      if (result.created > 0) {
+        toast.success(en ? `${result.created} shared portal account(s) created.` : `تم إنشاء ${result.created} حساب بوابة مشترك.`);
+      } else {
+        toast.success(en ? "All active students already have portal accounts." : "كل الطلاب النشطين لديهم حسابات بوابة بالفعل.");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (en ? "Could not create portal accounts." : "تعذر إنشاء حسابات البوابة."));
     } finally {
-      setStudentLoading(false);
+      setBusy(false);
     }
   };
 
-  const createParents = async () => {
-    setParentLoading(true);
-    try {
-      const res = await fixParentAccountsAction();
-      if (res.ok === false) {
-        toast.error(res.error ?? (en ? "Failed" : "فشل"));
-      } else {
-        toast.success(
-          en ? `${res.updated ?? 0} updated + ${res.created ?? 0} parent account(s) created ✅ — Password: ${PARENT_DEFAULT_PASSWORD}` : `تم تحديث ${res.updated ?? 0} + إنشاء ${res.created ?? 0} حساب ولي أمر ✅ — الباسورد: ${PARENT_DEFAULT_PASSWORD}`,
-          { duration: 10000 },
-        );
-      }
-    } catch {
-      toast.error(en ? "An error occurred." : "حصل خطأ");
-    } finally {
-      setParentLoading(false);
-    }
+  const copy = async (value: string, label: string) => {
+    await navigator.clipboard.writeText(value);
+    toast.success(en ? `${label} copied.` : `تم نسخ ${label}.`);
   };
 
   return (
-    <div className="flex gap-2" dir={en ? "ltr" : "rtl"}>
-      <Button variant="outline" size="sm" onClick={createStudents} disabled={studentLoading}>
-        {studentLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserCog className="mr-2 h-4 w-4" />}
-        {en ? "Student accounts" : "حسابات الطلاب"}
+    <>
+      <Button variant="outline" size="sm" onClick={() => void createAccounts()} disabled={busy}>
+        {busy ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <UserRoundPlus className="me-2 h-4 w-4" />}
+        {en ? "Create shared portal accounts" : "إنشاء حسابات البوابة للطلاب"}
       </Button>
-      <Button variant="outline" size="sm" onClick={createParents} disabled={parentLoading}>
-        {parentLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Users className="mr-2 h-4 w-4" />}
-        {en ? "Parent accounts" : "حسابات الأهالي"}
-      </Button>
-    </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-3xl" dir={en ? "ltr" : "rtl"}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-primary" />{en ? "Shared portal credentials" : "بيانات حسابات البوابة المشتركة"}</DialogTitle>
+            <DialogDescription>
+              {en ? "Use the same email and password for the student or parent. They choose Student or Parent on the public portal login page. This password list is shown only now, so save it securely." : "يستخدم الطالب أو ولي الأمر نفس البريد وكلمة المرور، ثم يختار الطالب أو ولي الأمر من صفحة الدخول العامة. البيانات تظهر الآن فقط؛ احفظها في مكان آمن."}
+            </DialogDescription>
+          </DialogHeader>
+          {credentials.length ? (
+            <div className="max-h-[55vh] space-y-3 overflow-y-auto">
+              {credentials.map((item) => (
+                <div key={item.studentId} className="rounded-xl border border-border bg-muted/20 p-3">
+                  <p className="mb-2 font-semibold">{item.studentName}</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="flex items-center gap-2 rounded-lg bg-background p-2 text-sm"><span className="min-w-0 flex-1 truncate" dir="ltr">{item.email}</span><Button type="button" variant="ghost" size="icon" aria-label={en ? "Copy email" : "نسخ البريد"} onClick={() => void copy(item.email, en ? "Email" : "البريد")}><Copy className="h-4 w-4" /></Button></div>
+                    <div className="flex items-center gap-2 rounded-lg bg-background p-2 text-sm"><span className="min-w-0 flex-1 font-mono tracking-wider" dir="ltr">{item.password}</span><Button type="button" variant="ghost" size="icon" aria-label={en ? "Copy password" : "نسخ كلمة المرور"} onClick={() => void copy(item.password, en ? "Password" : "كلمة المرور")}><Copy className="h-4 w-4" /></Button></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-xl bg-muted/30 p-5 text-center text-sm text-muted-foreground">{en ? "No new accounts were needed." : "لا توجد حسابات جديدة تحتاج إلى إنشاء."}</p>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

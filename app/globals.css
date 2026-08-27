@@ -116,6 +116,16 @@
   h1, h2, h3, h4, h5, h6 {
     text-wrap: balance;
     font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  h1 { font-weight: 800; }
+  /* Tabular numbers for tables, money, grades — keeps digits aligned */
+  .nums { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  /* Crisper, accessible focus ring */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: calc(var(--radius) - 2px);
   }
   ::selection {
     @apply bg-primary/15 text-foreground;

@@ -116,9 +116,9 @@ export default async function PaymentsPage(
                       </Link>
                     </TableCell>
                     <TableCell className="text-sm">{p.month}</TableCell>
-                    <TableCell>{formatCurrency(p.amount_due, "EGP", en ? "en-EG" : "ar-EG")}</TableCell>
-                    <TableCell>{formatCurrency(p.amount_paid, "EGP", en ? "en-EG" : "ar-EG")}</TableCell>
-                    <TableCell className={p.remaining > 0 ? "font-medium text-rose-600" : ""}>{formatCurrency(p.remaining, "EGP", en ? "en-EG" : "ar-EG")}</TableCell>
+                    <TableCell className="nums">{formatCurrency(p.amount_due, "EGP", en ? "en-EG" : "ar-EG")}</TableCell>
+                    <TableCell className="nums">{formatCurrency(p.amount_paid, "EGP", en ? "en-EG" : "ar-EG")}</TableCell>
+                    <TableCell className={`nums ${p.remaining > 0 ? "font-medium text-rose-600" : ""}`}>{formatCurrency(p.remaining, "EGP", en ? "en-EG" : "ar-EG")}</TableCell>
                     <TableCell><PaymentStatusBadge status={p.status} /></TableCell>
                     <TableCell className="text-left">
                       <div className="flex items-center gap-2">
@@ -153,7 +153,7 @@ export default async function PaymentsPage(
                     <PaymentStatusBadge status={p.status} />
                   </div>
                   <div className="mt-3 flex items-center justify-between border-t pt-3 text-sm">
-                    <span className="text-muted-foreground">{en ? "Outstanding: " : "المتبقي: "}<span className="font-medium text-rose-600">{formatCurrency(p.remaining, "EGP", en ? "en-EG" : "ar-EG")}</span></span>
+                    <span className="text-muted-foreground">{en ? "Outstanding: " : "المتبقي: "}<span className="nums font-medium text-rose-600">{formatCurrency(p.remaining, "EGP", en ? "en-EG" : "ar-EG")}</span></span>
                     <RecordPaymentDialog payment={p} students={students} />
                   </div>
                 </CardContent>

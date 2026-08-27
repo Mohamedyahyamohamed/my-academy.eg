@@ -78,7 +78,7 @@ export function GradeEntry({ examId, maxScore, roster }: GradeEntryProps) {
     <div dir={en ? "ltr" : "rtl"}>
       <div className="mb-4 flex items-center gap-3" dir={en ? "ltr" : "rtl"}>
         <Badge variant="secondary">{en ? "Group average" : "متوسط المجموعة"}</Badge>
-        <span className="text-lg font-semibold">{avg}%</span>
+        <span className="nums text-lg font-semibold">{avg}%</span>
         <Badge className={performanceColor(performanceLevel(avg))}>{performanceLabel(performanceLevel(avg))}</Badge>
         <Button onClick={save} disabled={saving} className="ml-auto">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {en ? "Save grades" : "حفظ الدرجات"}
@@ -108,10 +108,10 @@ export function GradeEntry({ examId, maxScore, roster }: GradeEntryProps) {
                     step="any"
                     value={val}
                     onChange={(e) => setScores((cur) => ({ ...cur, [r.studentId]: e.target.value }))}
-                    className="w-24 text-right"
+                    className="nums w-24 text-right"
                     placeholder="—"
                   />
-                  <span className="w-16 text-sm text-muted-foreground">/ {maxScore}</span>
+                  <span className="nums w-16 text-sm text-muted-foreground">/ {maxScore}</span>
                   <Input
                     value={notes[r.studentId] ?? ""}
                     onChange={(e) => setNotes((cur) => ({ ...cur, [r.studentId]: e.target.value }))}

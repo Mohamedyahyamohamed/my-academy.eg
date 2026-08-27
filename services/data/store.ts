@@ -45,10 +45,12 @@ const tenantSnapshots =
   globalThis.__MY_ACADEMY_TENANT_SNAPSHOTS__ ??
   (globalThis.__MY_ACADEMY_TENANT_SNAPSHOTS__ = new Map<string, SeedData>());
 
-// Keep navigation fast by reusing a tenant snapshot briefly. Writes can call
-// invalidateStore(), while a short TTL prevents an idle warm instance from
-// serving an indefinitely stale view. The snapshot is still keyed by academy.
-const TENANT_SNAPSHOT_TTL_MS = 15_000;
+// Keep navigation fast by reusing a tenant snapshot briefly. Writes call
+// invalidateStore(), while a TTL prevents an idle warm instance from serving an
+// indefinitely stale view. When the snapshot is stale we still serve it
+// immediately (stale-while-revalidate) and refresh in the background so the
+// user never waits on a full Supabase hydration.
+const TENANT_SNAPSHOT_TTL_MS = 60_000;
 const tenantSnapshotLoadedAt = new Map<string, number>();
 const tenantHydrationPromises = new Map<string, Promise<SeedData | null>>();
 
@@ -92,10 +94,17 @@ export async function ensureStoreLoaded(academyId?: string): Promise<void> {
   const now = Date.now();
   const cached = tenantSnapshots.get(academyId);
   const loadedAt = tenantSnapshotLoadedAt.get(academyId) ?? 0;
-  if (cached && now - loadedAt < TENANT_SNAPSHOT_TTL_MS) {
+  const fresh = cached && now - loadedAt < TENANT_SNAPSHOT_TTL_MS;
+
+  if (fresh) {
     requestData.enterWith(cached);
     return;
   }
+
+  // Stale-while-revalidate: serve whatever we have immediately so navigation
+  // stays fast, then refresh the snapshot in the background without blocking
+  // the request.
+  if (cached) requestData.enterWith(cached);
 
   // Several server components/actions can request the same tenant at once
   // during an App Router navigation. Share one hydration promise instead of
@@ -107,11 +116,15 @@ export async function ensureStoreLoaded(academyId?: string): Promise<void> {
     void hydration.finally(() => tenantHydrationPromises.delete(academyId));
   }
 
-  const data = await hydration;
-  if (data) {
-    tenantSnapshots.set(academyId, data);
-    tenantSnapshotLoadedAt.set(academyId, Date.now());
-    requestData.enterWith(data);
+  // Only await when we have nothing cached yet (first ever load). Subsequent
+  // requests get the stale snapshot instantly and the refresh lands async.
+  if (!cached) {
+    const data = await hydration;
+    if (data) {
+      tenantSnapshots.set(academyId, data);
+      tenantSnapshotLoadedAt.set(academyId, Date.now());
+      requestData.enterWith(data);
+    }
   }
 }
 

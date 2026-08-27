@@ -5,13 +5,14 @@ import { APP_CONFIG } from "@/lib/constants";
 import { getLangFromCookie, isRTL } from "@/lib/i18n";
 import { PwaRegister } from "@/components/layout/pwa-register";
 import { GlobalErrorMonitor } from "@/components/layout/global-error-monitor";
-import "@fontsource/tajawal/400.css";
-import "@fontsource/tajawal/500.css";
-import "@fontsource/tajawal/700.css";
-import "@fontsource/tajawal/800.css";
+import "@fontsource/cairo/400.css";
+import "@fontsource/cairo/500.css";
+import "@fontsource/cairo/600.css";
+import "@fontsource/cairo/700.css";
+import "@fontsource/cairo/800.css";
 import "./globals.css";
 
-// خط النظام بدل next/font/google — عشان يشتغل أوفلاين ومن غير إنترنت لـ Google.
+// خط Cairo العربي+اللاتيني (أوفلاين) — مناسب لمنصة تعليمية مصرية.
 
 export const viewport: Viewport = {
   width: "device-width",

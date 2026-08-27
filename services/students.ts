@@ -33,6 +33,7 @@ import { isSupabaseConfigured } from "./supabase/config";
 import { canCreate } from "./saas";
 import { STUDENT_DEFAULT_PASSWORD } from "@/lib/auth";
 import { can, hasAcademyWideScope } from "@/lib/permissions";
+import { setRequestContext } from "./request-context";
 
 function attachRelations(s: Student): Student {
   return {
@@ -985,6 +986,7 @@ export async function updateStudent(
   authenticatedAcademyId?: string,
   authenticatedUser?: SessionUser,
 ): Promise<Student | null> {
+  if (authenticatedUser) setRequestContext(authenticatedUser);
   const academyId = authenticatedAcademyId ?? currentAcademyId();
   if (!academyId) throw new Error("Missing authenticated academy context.");
   const s = await resolveStudentMutationScope(id, academyId, authenticatedUser);

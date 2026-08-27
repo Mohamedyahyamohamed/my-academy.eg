@@ -6,6 +6,7 @@ import { DuplicateStudentError, findStudentDuplicates, type StudentInput } from 
 import { STUDENT_DEFAULT_PASSWORD } from "@/lib/auth";
 import { audit } from "@/services/audit";
 import { safeAction } from "@/lib/server-action-result";
+import { setRequestContext } from "@/services/request-context";
 import { studentSchema } from "@/schemas/students";
 
 export async function findStudentDuplicatesAction(input: StudentInput) {
@@ -78,6 +79,7 @@ export async function updateStudentAction(id: string, input: Partial<StudentInpu
 
   return safeAction(async () => {
     const user = await requireScopedRole("ADMIN", "TEACHER");
+    setRequestContext(user);
     if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage students.");
     const student = await StudentsService.updateStudent(id, parsed.data, user.academy_id, user);
     if (student) {

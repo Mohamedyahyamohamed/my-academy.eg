@@ -6,6 +6,7 @@
 import type {
   AnalyticsData,
   DashboardData,
+  Homework,
   Lesson,
   Payment,
   Student,
@@ -18,6 +19,7 @@ import {
   fetchTableRLS,
   teacherGroupScope,
   teacherStudentScope,
+  fullName,
 } from "./_shared";
 import { getPaymentMetrics } from "./payments";
 import { performanceLevel } from "@/lib/constants";
@@ -366,4 +368,194 @@ export async function getAnalytics(academyId?: string): Promise<AnalyticsData> {
   }).sort((a, b) => b.revenue - a.revenue).slice(0, 6);
 
   return { studentGrowth: growth, monthlyRevenue, attendanceTrend: attTrend, averageGrades: avgGrades, retention, popularCourses, profitableGroups };
+}
+
+// ─── Teacher daily operations board ─────────────────────────────
+// The single page a teacher opens each day: today's lessons, lessons with
+// missing attendance, at-risk students, due payments, and homework awaiting
+// review. All scoping is inherited from getRLSData (teacher group/student
+// scope), so a teacher only ever sees their own groups.
+export type TeacherDailyOps = {
+  todayKey: string;
+  todaysLessons: Array<{
+    id: string;
+    groupId: string;
+    groupName: string | null;
+    courseName: string | null;
+    date: string;
+    startTime: string | null;
+    endTime: string | null;
+    status: string | null;
+    attendanceRecorded: boolean;
+    presentCount: number;
+    totalStudents: number;
+  }>;
+  attendanceMissing: Array<{
+    id: string;
+    groupId: string;
+    groupName: string | null;
+    date: string;
+    startTime: string | null;
+    totalStudents: number;
+  }>;
+  atRiskStudents: Array<{
+    studentId: string;
+    name: string;
+    riskCategory: string;
+    riskScore: number;
+    groupName: string | null;
+  }>;
+  duePayments: Array<{
+    id: string;
+    studentId: string;
+    studentName: string;
+    groupName: string | null;
+    remaining: number;
+    month: string;
+  }>;
+  homeworkToReview: Array<{
+    id: string;
+    homeworkId: string;
+    title: string;
+    studentId: string;
+    studentName: string;
+    groupName: string | null;
+    submittedAt: string | null;
+  }>;
+  counts: {
+    todaysLessons: number;
+    attendanceMissing: number;
+    atRisk: number;
+    duePayments: number;
+    homeworkToReview: number;
+  };
+};
+
+export async function getTeacherDailyOps(academyId?: string): Promise<TeacherDailyOps> {
+  const d = await getRLSData(academyId);
+  const { students, groups, exams, lessons, attendance, grades, homework, submissions, groupStudents, payments, scopedGroupIds } = d;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+  const groupName = (gid: string) => groups.find((g: any) => g.id === gid)?.name ?? null;
+  const courseName = (gid: string) => {
+    const g = groups.find((x: any) => x.id === gid);
+    if (!g?.course_id) return null;
+    return d.courses.find((c: any) => c.id === g.course_id)?.name ?? null;
+  };
+  const studentName = (sid: string) => {
+    const s = students.find((x: any) => x.id === sid);
+    return s ? fullName(s) : (d.students.find((x: any) => x.id === sid)?.first_name ?? "—");
+  };
+  const studentsInGroup = (gid: string) => groupStudents.filter((gs: any) => gs.group_id === gid).length;
+
+  // Today's lessons (active only).
+  const todaysLessons = lessons
+    .filter((l: any) => d.scopedLessonIds.has(l.id) && activeLesson(l) && String(l.date ?? "").slice(0, 10) === todayKey)
+    .sort((a: any, b: any) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time))
+    .map((l: any) => {
+      const recs = attendance.filter((a: any) => a.lesson_id === l.id);
+      return {
+        id: l.id,
+        groupId: l.group_id,
+        groupName: groupName(l.group_id),
+        courseName: courseName(l.group_id),
+        date: l.date,
+        startTime: l.start_time ?? null,
+        endTime: l.end_time ?? null,
+        status: l.status ?? null,
+        attendanceRecorded: recs.length > 0,
+        presentCount: recs.filter((r: any) => r.status !== "ABSENT").length,
+        totalStudents: studentsInGroup(l.group_id),
+      };
+    });
+
+  // Lessons without attendance (any active lesson up to today, not yet recorded).
+  const attendanceMissing = lessons
+    .filter((l: any) => d.scopedLessonIds.has(l.id) && activeLesson(l) && l.status !== "canceled")
+    .filter((l: any) => {
+      const dt = +new Date(String(l.date ?? ""));
+      return Number.isFinite(dt) && dt <= today.getTime() + 86_400_000;
+    })
+    .filter((l: any) => attendance.filter((a: any) => a.lesson_id === l.id).length === 0)
+    .sort((a: any, b: any) => +new Date(b.date) - +new Date(a.date))
+    .slice(0, 10)
+    .map((l: any) => ({
+      id: l.id,
+      groupId: l.group_id,
+      groupName: groupName(l.group_id),
+      date: l.date,
+      startTime: l.start_time ?? null,
+      totalStudents: studentsInGroup(l.group_id),
+    }));
+
+  // At-risk students (reuses the same risk model as the admin dashboard).
+  const activeStudents = students.filter((s: any) => s.status === "ACTIVE" && s.is_active !== false);
+  const atRiskStudents = activeStudents
+    .map((s: any) => {
+      const risk = calculateRiskScore({
+        attendance: attendance.filter((a: any) => a.student_id === s.id),
+        grades: grades.filter((g: any) => g.student_id === s.id),
+        exams,
+      });
+      return { studentId: s.id, name: fullName(s), riskCategory: risk.category, riskScore: risk.score ?? 0, groupName: groupName(groupStudents.find((gs: any) => gs.student_id === s.id)?.group_id) };
+    })
+    .filter((x) => x.riskCategory !== "safe")
+    .sort((a, b) => b.riskScore - a.riskScore)
+    .slice(0, 10)
+    .map((x) => ({ ...x, groupName: x.groupName ?? null }));
+
+  // Due payments (current month, not fully paid).
+  const currentMonth = currentMonthKey();
+  const duePayments = payments
+    .filter((p: any) => !p.deleted_at && (p.month ?? p.month_year) === currentMonth && p.status !== "PAID")
+    .map((p: any) => ({
+      id: p.id,
+      studentId: p.student_id,
+      studentName: studentName(p.student_id),
+      groupName: groupName(p.group_id),
+      remaining: Math.max(0, Number(p.amount_due ?? 0) - Number(p.amount_paid ?? 0)),
+      month: p.month ?? p.month_year ?? currentMonth,
+    }))
+    .filter((x: any) => x.remaining > 0)
+    .sort((a: any, b: any) => b.remaining - a.remaining)
+    .slice(0, 12);
+
+  // Homework awaiting review (submitted but not reviewed).
+  const reviewStatuses = new Set(["pending", "submitted", "PENDING", "SUBMITTED"]);
+  const hwById = new Map<string, any>(homework.map((h: any) => [h.id, h]));
+  const homeworkToReview = submissions
+    .filter((s: any) => reviewStatuses.has(String(s.status ?? "").toLowerCase()))
+    .map((s: any) => {
+      const hw = hwById.get(s.homework_id);
+      return {
+        id: s.id,
+        homeworkId: s.homework_id,
+        title: hw?.title ?? "—",
+        studentId: s.student_id,
+        studentName: studentName(s.student_id),
+        groupName: hw ? groupName(hw.group_id) : null,
+        submittedAt: s.submitted_at ?? null,
+      };
+    })
+    .sort((a, b) => +new Date(b.submittedAt ?? 0) - +new Date(a.submittedAt ?? 0))
+    .slice(0, 12);
+
+  return {
+    todayKey,
+    todaysLessons,
+    attendanceMissing,
+    atRiskStudents,
+    duePayments,
+    homeworkToReview,
+    counts: {
+      todaysLessons: todaysLessons.length,
+      attendanceMissing: attendanceMissing.length,
+      atRisk: atRiskStudents.length,
+      duePayments: duePayments.length,
+      homeworkToReview: homeworkToReview.length,
+    },
+  };
 }

@@ -5,6 +5,7 @@ import { CalendarCheck, ScanLine } from "lucide-react";
 import { AttendanceWorkshop } from "@/components/attendance/attendance-workshop";
 import { GroupsService, LessonsService, StudentsService, requireAttendanceTeacher } from "@/services";
 import { collections } from "@/services/data/store";
+import { isSupabaseConfigured } from "@/services/supabase/config";
 import { cookies } from "next/headers";
 import { getLangFromCookie } from "@/lib/i18n";
 
@@ -23,11 +24,13 @@ export default async function AttendancePage() {
   const students = (await StudentsService.listStudents({ pageSize: 500 }, user.academy_id)).items;
   const allowedGroupIds = new Set(groups.map((group) => group.id));
   const scopedMemberships = allowedGroupIds.size
-    ? (await (await (await import("@/lib/supabase/server")).createServerSupabaseClient())
-      .from("group_students")
-      .select("group_id, student_id")
-      .in("group_id", Array.from(allowedGroupIds))
-      .limit(5000)).data
+    ? isSupabaseConfigured()
+      ? (await (await (await import("@/lib/supabase/server")).createServerSupabaseClient())
+        .from("group_students")
+        .select("group_id, student_id")
+        .in("group_id", Array.from(allowedGroupIds))
+        .limit(5000)).data
+      : collections().groupStudents.filter((gs) => allowedGroupIds.has(gs.group_id))
     : [];
   const enrollments = (scopedMemberships?.length ? scopedMemberships : collections().groupStudents
     .filter((gs) => allowedGroupIds.has(gs.group_id))

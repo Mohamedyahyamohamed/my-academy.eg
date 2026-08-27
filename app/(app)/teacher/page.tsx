@@ -12,8 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { HomeworkBadge } from "@/components/shared/badges";
-import { getTeacherDashboard, requireScopedRole } from "@/services";
+import { getTeacherDashboard, requireScopedRole, getTeacherDailyOps } from "@/services";
 import { formatDate, formatClockTime, formatSchedule } from "@/lib/utils";
+import { TeacherDailyOpsBoard } from "@/components/teacher/daily-ops-board";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export default async function TeacherDashboard() {
   const rawName = user.full_name?.trim() || user.email || "";
   const displayName = rawName ? rawName.split(/\s+/)[0] : (isRTL ? "المعلّم" : "Teacher");
   const d = await getTeacherDashboard(user);
+  const dailyOps = await getTeacherDailyOps(user.academy_id);
   if (!d) {
     return (
       <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>
@@ -120,6 +122,8 @@ export default async function TeacherDashboard() {
         <StatCard label={isRTL ? "حصص اليوم" : "Today's lessons"} value={d.todayCount ?? 0} hint={isRTL ? `${d.upcomingCount} حصة قادمة` : `${d.upcomingCount} upcoming`} icon={CalendarClock} accent="success" href="/lessons" />
         <StatCard label={t.attendanceRate} value={d.totalSessions === 0 ? (isRTL ? "—" : "N/A") : `${d.attendanceRate}%`} hint={d.totalSessions === 0 ? (isRTL ? "لم تُسجّل حصص بعد" : "No attendance recorded yet") : undefined} icon={CheckCircle2} accent="warning" href="/attendance" />
       </div>
+
+      <TeacherDailyOpsBoard ops={dailyOps} lang={lang === "en" ? "en" : "ar"} />
 
       {d.pendingReview > 0 && (
         <Card className="border-amber-200 bg-amber-50">

@@ -134,7 +134,13 @@ export async function loadCurrentUser(): Promise<SessionUser | null> {
  */
 async function hydrateTenantContext(user: SessionUser): Promise<SessionUser | null> {
   const client = nodeSupabaseClient();
-  if (!client) return user;
+  if (!client) {
+    // Demo / local mode: there is no Supabase tenant to reconcile against, so
+    // keep the locally-resolved identity. Fall back to the first seeded academy
+    // so scoped pages that call currentAcademyId() still render in demo mode.
+    const academyId = user.academy_id || (collections().academies[0] as any)?.id || "";
+    return { ...user, academy_id: academyId };
+  }
 
   try {
     const { data: profile, error } = await client
@@ -280,8 +286,16 @@ export function requireRole(...roles: Role[]): SessionUser {
  */
 export function currentAcademyId(): string {
   const academyId = getCurrentUser()?.academy_id;
-  if (!academyId) throw new Error("Missing authenticated academy context.");
-  return academyId;
+  if (academyId) return academyId;
+  // In demo / local mode there is no Supabase tenant to reconcile against, so
+  // fall back to the first seeded academy so scoped pages (attendance, payments,
+  // homework) render instead of throwing "Missing authenticated academy context".
+  // Production (Supabase configured) intentionally stays fail-closed above.
+  if (!isSupabaseConfigured()) {
+    const local = (collections().academies[0] as any)?.id;
+    if (local) return local;
+  }
+  throw new Error("Missing authenticated academy context.");
 }
 
 /**

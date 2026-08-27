@@ -1,11 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { isSupabaseConfigured, getSupabaseAnonKey, getSupabaseUrl } from "@/services/supabase/config";
+import { setRequestContext, getRequestId } from "@/services/request-context";
+import { traceError, newRequestId } from "@/lib/error-trace";
 
 /**
  * Health / readiness endpoint.
  * - 200 healthy: process alive + DB reachable.
  * - 503 degraded: process alive but a required dependency is unavailable.
  * - Never leaks credentials or provider internals.
+ *
+ * Every response carries a `request_id` (correlating with server-side error
+ * logs) so a failed health check can be traced to its exact log line. A client
+ * may send `x-request-id` to correlate its own telemetry.
  */
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -25,7 +31,11 @@ function classifyDatabaseError(error: unknown): Exclude<DbStatus, "ok" | "not-co
   return "query-failed";
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Thread a stable request id (prefer client-supplied for correlation).
+  const requestId = req.headers.get("x-request-id") || newRequestId();
+  setRequestContext(null, { requestId, path: "/api/health" });
+
   const started = Date.now();
   const checks: Record<string, string> = {
     app: "ok",
@@ -52,6 +62,8 @@ export async function GET() {
       }
     }
   } catch (error) {
+    // Log full context (request_id, path, error) — never echo it to the caller.
+    traceError(error, { scope: "health:db-check", severity: "warning", detail: { dbStatus: "unavailable" } });
     checks.db = classifyDatabaseError(error);
   }
 
@@ -59,6 +71,8 @@ export async function GET() {
   return NextResponse.json(
     {
       status: ok ? "healthy" : "degraded",
+      request_id: getRequestId() ?? requestId,
+      path: "/api/health",
       checks,
       timestamp: new Date().toISOString(),
       latency_ms: Date.now() - started,

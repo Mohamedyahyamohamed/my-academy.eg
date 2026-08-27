@@ -169,9 +169,9 @@ export async function POST(req: NextRequest) {
     const e2ePasswords: Record<string, string> = {
       "admin@myacademy.edu": "demo1234",
       "admin-b@test.com": "demo1234",
-      "teacher@myacademy.edu": "teacher1234",
-      "parent@myacademy.edu": "parent1234",
-      "student@myacademy.edu": "student1234",
+      "teacher@myacademy.edu": "demo1234",
+      "parent@myacademy.edu": "demo1234",
+      "student@myacademy.edu": "demo1234",
     };
     const expectedFixturePassword = e2ePasswords[email.toLowerCase()];
     const validPassword = password === DEMO_PASSWORD || (

@@ -64,6 +64,23 @@ export function GlobalSearch() {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
+  // P3: Ctrl+K / Cmd+K opens the global search palette from anywhere.
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setOpen(true);
+        const input = ref.current?.querySelector("input");
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
   const go = (r?: SearchResult) => {
     const target = r ?? results[active];
     if (!target) return;

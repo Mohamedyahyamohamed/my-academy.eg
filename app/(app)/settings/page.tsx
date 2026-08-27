@@ -15,6 +15,7 @@ import { DirectAccountManager } from "@/components/settings/direct-account-manag
 import { listAcademyInvites } from "@/app/actions/invites";
 import { ChangePasswordForm } from "@/components/settings/change-password";
 import { UserPasswordManagement } from "@/components/settings/user-password-management";
+import { UserDeleteButton } from "@/components/settings/user-delete-button";
 import { GroupsService, MiscService, requireScopedRole } from "@/services";
 import { initials } from "@/lib/utils";
 import { PAYMENT_METHODS, paymentMethodLabel } from "@/lib/constants";
@@ -131,6 +132,7 @@ export default async function SettingsPage({
                     <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{u.full_name}</p><p className="truncate text-xs text-muted-foreground">{u.email}</p></div>
                     <RoleBadge role={u.role} />
                     <Badge variant={u.is_active ? "success" : "secondary"}>{u.is_active ? text.active : text.inactive}</Badge>
+                    <UserDeleteButton userId={u.id} userName={u.full_name} disabled={u.id === user.id} />
                   </div>
                 ))}
               </div>}

@@ -113,3 +113,35 @@ export async function fixParentAccountsAction() {
   revalidatePath("/students");
   return { ok: true, updated, created, errors };
 }
+
+/** Delete a parent record and unlink their students (students are kept). */
+export async function deleteParentAction(id: string) {
+  try {
+    const user = await requireScopedRole("ADMIN");
+    await requireNonAssistantTeacher(user);
+    const aid = user.academy_id ?? currentAcademyId();
+    const { nodeSupabaseClient } = await import("@/lib/supabase/node-client");
+    const client = nodeSupabaseClient();
+    if (!client) return { ok: false as const, error: "Supabase غير مهيأ." };
+
+    // Unlink students first so we don't violate FK constraints.
+    const { error: unlinkErr } = await client
+      .from("students")
+      .update({ parent_id: null })
+      .eq("academy_id", aid)
+      .eq("parent_id", id);
+    if (unlinkErr) return { ok: false as const, error: `تعذر فك ارتباط الطلاب: ${unlinkErr.message}` };
+
+    const { error } = await client.from("parents").delete().eq("id", id).eq("academy_id", aid);
+    if (error) return { ok: false as const, error: `تعذر حذف ولي الأمر: ${error.message}` };
+
+    void audit({ action: "parent.delete", entity_type: "parent", entity_id: id }, user);
+    revalidatePath("/parents");
+    revalidatePath("/students");
+    return { ok: true as const };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    console.error("[deleteParentAction] FAILED:", message);
+    return { ok: false as const, error: "تعذّر حذف ولي الأمر. حاول مرة أخرى." };
+  }
+}

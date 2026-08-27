@@ -8,6 +8,10 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { deleteStudentAction } from "@/app/actions/students";
 import { deleteGroupAction } from "@/app/actions/groups";
+import { deleteLessonAction } from "@/app/actions/lessons";
+import { deleteHomeworkAction } from "@/app/actions/homework";
+import { deletePaymentAction } from "@/app/actions/payments";
+import { deleteParentAction } from "@/app/actions/parents";
 import { useClientLang } from "@/lib/i18n-client";
 import { isActionFailure } from "@/lib/action-result";
 
@@ -19,7 +23,7 @@ export function DeleteEntityButton({
   name,
   redirectTo,
 }: {
-  entity: "student" | "group";
+  entity: "student" | "group" | "lesson" | "homework" | "payment" | "parent";
   id: string;
   name: string;
   redirectTo: string;
@@ -28,32 +32,38 @@ export function DeleteEntityButton({
   const router = useRouter();
 
   const onConfirm = async () => {
-    const result = entity === "student" ? await deleteStudentAction(id) : await deleteGroupAction(id);
+    let result: any;
+    if (entity === "student") result = await deleteStudentAction(id);
+    else if (entity === "group") result = await deleteGroupAction(id);
+    else if (entity === "lesson") result = await deleteLessonAction(id);
+    else if (entity === "homework") result = await deleteHomeworkAction(id);
+    else if (entity === "payment") result = await deletePaymentAction(id);
+    else result = await deleteParentAction(id);
     if (isActionFailure(result)) return result;
-    const deleteResult = result as DeleteResult;
-    if (deleteResult.mode === "archived") {
-      toast.success(en
-        ? `${entity === "student" ? "Student" : "Group"} archived. ${deleteResult.relationCount} related record${deleteResult.relationCount === 1 ? "" : "s"} were retained.`
-        : `${entity === "student" ? "تمت أرشفة الطالب" : "تمت أرشفة المجموعة"} مع الاحتفاظ بـ ${deleteResult.relationCount} سجل مرتبط.`);
-    } else {
-      toast.success(en
-        ? `${entity === "student" ? "Student" : "Group"} permanently deleted.`
-        : `${entity === "student" ? "تم حذف الطالب نهائيًا" : "تم حذف المجموعة نهائيًا"}.`);
-    }
+    const archived = result && typeof result === "object" && result.mode === "archived";
+    toast.success(en
+      ? `${entity.charAt(0).toUpperCase() + entity.slice(1)} ${archived ? "archived" : "deleted"}.`
+      : `تم ${archived ? "أرشفة" : "حذف"} ${name}.`);
     router.push(redirectTo);
     router.refresh();
-    return deleteResult;
+    return result;
   };
 
-  const label = entity === "student" ? (en ? "Delete student" : "حذف الطالب") : (en ? "Delete group" : "حذف المجموعة");
-  const title = entity === "student" ? (en ? "Delete this student?" : "حذف الطالب؟") : (en ? "Delete this group?" : "حذف المجموعة؟");
-  const description = entity === "group"
-    ? (en
-      ? `This will permanently delete ${name}, all its generated lessons, and related attendance records. Students will not be deleted but will be unassigned from this group.`
-      : `سيتم حذف ${name} نهائيًا مع جميع الحصص المُنشأة وسجلات الحضور المرتبطة به. لن يتم حذف الطلاب، بل سيتم فك ارتباطهم بهذه المجموعة.`)
-    : (en
-      ? `Delete ${name}. If related attendance, grades, payments, homework, notes, or memberships exist, the record will be archived instead so history is preserved.`
-      : `سيتم حذف ${name}. إذا كانت هناك سجلات حضور أو درجات أو مدفوعات أو واجبات أو ملاحظات أو عضويات مرتبطة، ستتم أرشفته بدلًا من حذفه للحفاظ على السجل التاريخي.`);
+  const label = entity === "student"
+    ? (en ? "Delete student" : "حذف الطالب")
+    : entity === "group"
+      ? (en ? "Delete group" : "حذف المجموعة")
+      : entity === "lesson"
+        ? (en ? "Delete lesson" : "حذف الحصة")
+        : entity === "homework"
+          ? (en ? "Delete homework" : "حذف الواجب")
+          : entity === "payment"
+            ? (en ? "Delete payment" : "حذف الدفعة")
+            : (en ? "Delete parent" : "حذف ولي الأمر");
+  const title = en ? `Delete this ${entity}?` : `حذف ${label.replace(/^حذف /, "")}؟`;
+  const description = en
+    ? `Delete ${name}. This action cannot be undone.`
+    : `سيتم حذف ${name}. لا يمكن التراجع عن هذا الإجراء.`;
 
   return (
     <ConfirmDialog

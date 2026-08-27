@@ -12,6 +12,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
+import { ExportExcel } from "@/components/shared/export-excel";
+import { DeleteEntityButton } from "@/components/shared/delete-entity-button";
 import { PaymentsService, StudentsService, GroupsService, requireScopedRole } from "@/services";
 import type { PaymentFilters } from "@/services/payments";
 import { formatCurrency } from "@/lib/utils";
@@ -56,6 +58,7 @@ export default async function PaymentsPage(
         description={en ? "Track school fees, record payments, and monitor outstanding balances." : "تابع المصاريف المدرسية، سجّل المدفوعات، وتابع المتأخرات."}
       >
         <CreatePaymentDialog students={students} groups={groups} />
+        <ExportExcel type="payments" label={en ? "Export Excel" : "تصدير Excel"} />
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -118,7 +121,15 @@ export default async function PaymentsPage(
                     <TableCell className={p.remaining > 0 ? "font-medium text-rose-600" : ""}>{formatCurrency(p.remaining, "EGP", en ? "en-EG" : "ar-EG")}</TableCell>
                     <TableCell><PaymentStatusBadge status={p.status} /></TableCell>
                     <TableCell className="text-left">
-                      <RecordPaymentDialog payment={p} students={students} />
+                      <div className="flex items-center gap-2">
+                        <RecordPaymentDialog payment={p} students={students} />
+                        <DeleteEntityButton
+                          entity="payment"
+                          id={p.id}
+                          name={`${p.student ? `${p.student.first_name} ${p.student.last_name}` : "—"} — ${p.month}`}
+                          redirectTo="/payments"
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

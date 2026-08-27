@@ -13,6 +13,7 @@ import { StudentAvatar } from "@/components/shared/student-avatar";
 import { AttendanceBadge } from "@/components/shared/badges";
 import { AttendanceStatusEditor } from "@/components/attendance/attendance-status-editor";
 import { LessonExceptionDialog } from "@/components/lessons/lesson-exception-dialog";
+import { DeleteEntityButton } from "@/components/shared/delete-entity-button";
 import { EmptyState } from "@/components/shared/empty-state";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -65,6 +66,14 @@ export default async function LessonDetailPage(
           </Button>
         )}
         <LessonExceptionDialog lesson={lesson} />
+        {!lessonCanceled && !lessonCompleted && (
+          <DeleteEntityButton
+            entity="lesson"
+            id={lesson.id}
+            name={lesson.topic}
+            redirectTo="/lessons"
+          />
+        )}
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

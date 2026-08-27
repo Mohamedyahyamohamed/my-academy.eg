@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SubmissionReview } from "@/components/homework/submission-review";
+import { DeleteEntityButton } from "@/components/shared/delete-entity-button";
 import { HomeworkService, requireScopedRole } from "@/services";
 import { formatDate } from "@/lib/utils";
 
@@ -32,6 +33,12 @@ export default async function HomeworkDetailPage(props: { params: Promise<{ id: 
         <Button asChild variant="outline">
           <Link href="/homework"><ArrowLeft className="me-2 h-4 w-4" /> {en ? "Back" : "رجوع"}</Link>
         </Button>
+        <DeleteEntityButton
+          entity="homework"
+          id={hw.id}
+          name={hw.title}
+          redirectTo="/homework"
+        />
       </PageHeader>
 
       <Card>

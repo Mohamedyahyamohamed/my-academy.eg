@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StudentAvatar } from "@/components/shared/student-avatar";
 import { StudentStatusBadge } from "@/components/shared/badges";
+import { DeleteEntityButton } from "@/components/shared/delete-entity-button";
 import { requireScopedRole } from "@/services";
 import { teacherStudentScope } from "@/services/_shared";
 import { StudentsService } from "@/services";
@@ -58,7 +59,16 @@ export default async function ParentDetailPage(
 
   return (
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
-      <PageHeader title={`${parent.first_name} ${parent.last_name}`} description={en ? "Parent profile" : "ملف ولي الأمر"} />
+      <PageHeader title={`${parent.first_name} ${parent.last_name}`} description={en ? "Parent profile" : "ملف ولي الأمر"}>
+        {user.role === "ADMIN" && (
+          <DeleteEntityButton
+            entity="parent"
+            id={parent.id}
+            name={`${parent.first_name} ${parent.last_name}`}
+            redirectTo="/parents"
+          />
+        )}
+      </PageHeader>
 
       <Card>
         <CardHeader>

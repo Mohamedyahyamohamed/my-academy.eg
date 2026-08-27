@@ -123,11 +123,108 @@ export function captureError(
       console.info(`[INFO] ${logLine}`);
   }
 
+  // Persist to the in-memory observatory (surfaced on /platform/monitoring).
+  try {
+    recordError(error, {
+      scope: ctx.scope,
+      severity,
+      requestId: ctx.requestId,
+      role: ctx.role,
+      path: ctx.path,
+    });
+  } catch {
+    /* observer must never break the request path */
+  }
+
   return ctx.publicMessage ?? "حدث خطأ غير متوقع. حاول مرة أخرى أو راجع سجلات النظام.";
 }
 
 export function newRequestId(): string {
   return randomUUID();
+}
+
+// ---------------------------------------------------------------------------
+// In-memory error & rate-limit ring buffer (server lifetime).
+// NOTE: in serverless (Vercel) this resets on cold start. For durable,
+// production-grade retention, persist to Supabase or an external log sink;
+// this buffer is the fast local observatory used by /platform/monitoring.
+// ---------------------------------------------------------------------------
+export type StoredError = {
+  requestId: string;
+  timestamp: string;
+  path?: string;
+  role?: string | null;
+  scope?: string;
+  severity: ErrorSeverity;
+  message: string;
+};
+
+const MAX_STORED = 200;
+const errorStore: StoredError[] = [];
+let rateLimitedHits = 0;
+let lastReset = Date.now();
+
+export function recordError(
+  error: unknown,
+  opts?: {
+    scope?: string;
+    severity?: ErrorSeverity;
+    requestId?: string;
+    role?: string | null;
+    path?: string;
+  },
+): void {
+  let requestId: string | null = null;
+  let role: string | null = null;
+  let path: string | null = null;
+  try {
+    const rc = require("@/services/request-context") as typeof import("@/services/request-context");
+    requestId = rc.getRequestId();
+    role = rc.getRequestUser()?.role ?? null;
+    path = rc.getRequestPath();
+  } catch {
+    /* ignore */
+  }
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+      ? error
+      : JSON.stringify(scrub(error));
+  const severity = opts?.severity ?? "error";
+  errorStore.push({
+    requestId: opts?.requestId ?? requestId ?? newRequestId(),
+    timestamp: new Date().toISOString(),
+    path: opts?.path ?? path ?? undefined,
+    role: opts?.role ?? role,
+    scope: opts?.scope,
+    severity,
+    message: message.slice(0, 500),
+  });
+  if (errorStore.length > MAX_STORED) errorStore.splice(0, errorStore.length - MAX_STORED);
+}
+
+/** Called by the rate-limit middleware when a request is rejected with 429. */
+export function recordRateLimited(): void {
+  rateLimitedHits += 1;
+}
+
+export function getObservabilitySnapshot() {
+  const uptimeMs = Date.now() - lastReset;
+  const now = Date.now();
+  const lastHour = errorStore.filter((e) => now - new Date(e.timestamp).getTime() < 3_600_000);
+  const bySeverity = lastHour.reduce<Record<string, number>>((acc, e) => {
+    acc[e.severity] = (acc[e.severity] ?? 0) + 1;
+    return acc;
+  }, {});
+  return {
+    uptime_ms: uptimeMs,
+    total_errors_stored: errorStore.length,
+    rate_limited_hits: rateLimitedHits,
+    errors_last_hour: lastHour.length,
+    by_severity: bySeverity,
+    recent: errorStore.slice(-50).reverse(),
+  };
 }
 
 /**

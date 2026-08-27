@@ -73,6 +73,14 @@ export async function rateLimit(
   }
   existing.count++;
   const allowed = existing.count <= maxRequests;
+  if (!allowed) {
+    try {
+      // Surface 429 rejections on the internal monitoring dashboard.
+      require("@/lib/error-trace").recordRateLimited();
+    } catch {
+      /* observer must never break the request path */
+    }
+  }
   return { allowed, remaining: Math.max(0, maxRequests - existing.count) };
 }
 

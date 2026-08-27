@@ -102,7 +102,7 @@ export default async function LessonsPage(
           icon={BookOpen}
           title={en ? "No lessons yet" : "لا توجد حصص بعد"}
           description={en ? "Add your first lesson to record attendance and assign homework." : "أضف أول حصة لتسجيل الحضور وتكليف الواجبات."}
-          action={limitedAssistant ? undefined : groups.length === 0 ? <Button asChild><Link href="/groups"><UsersRound className="h-4 w-4" /> {en ? "Create a group first" : "إنشاء مجموعة أولًا"}</Link></Button> : <Button asChild><Link href="/lessons/new"><Plus className="h-4 w-4" /> {en ? "Add lesson" : "إضافة حصة"}</Link></Button>}
+          action={limitedAssistant ? undefined : groups.length === 0 ? <Button asChild><Link href="/groups"><UsersRound className="h-4 w-4" /> {en ? "Create a group first" : "إنشاء مجموعة أولًا"}</Link></Button> : <Button asChild variant="premium"><Link href="/lessons/new"><Plus className="h-4 w-4" /> {en ? "Add lesson" : "إضافة حصة"}</Link></Button>}
         />
       ) : (
         <>

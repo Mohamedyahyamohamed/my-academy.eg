@@ -80,7 +80,7 @@ export function GradeEntry({ examId, maxScore, roster }: GradeEntryProps) {
         <Badge variant="secondary">{en ? "Group average" : "متوسط المجموعة"}</Badge>
         <span className="nums text-lg font-semibold">{avg}%</span>
         <Badge className={performanceColor(performanceLevel(avg))}>{performanceLabel(performanceLevel(avg))}</Badge>
-        <Button onClick={save} disabled={saving} className="ml-auto">
+        <Button onClick={save} disabled={saving} variant="premium" className="ml-auto">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {en ? "Save grades" : "حفظ الدرجات"}
         </Button>
       </div>

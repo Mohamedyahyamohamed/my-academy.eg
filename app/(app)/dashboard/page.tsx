@@ -24,6 +24,8 @@ import { PaymentStatusBadge } from "@/components/shared/badges";
 import { TrendArea, Donut, LineTrend, GroupedBars } from "@/components/charts";
 import { DashboardService, MiscService, requireScopedRole } from "@/services";
 import { atRiskStudents } from "@/services/insights";
+import { collections } from "@/services/data/store";
+import { OnboardingChecklist } from "@/components/shared/onboarding-checklist";
 import { formatClockTime, formatCurrency, formatDate, formatTime, initials } from "@/lib/utils";
 import type { DashboardPeriod } from "@/types";
 import { cookies } from "next/headers";
@@ -89,6 +91,16 @@ export default async function DashboardPage(
       : null,
   ].filter((step): step is { title: string; description: string; href: string } => Boolean(step));
 
+  // P3-addendum: full first-win onboarding checklist (group/students/QR/lesson/attendance/grade)
+  const c = collections();
+  const aid = user.academy_id;
+  const groupCount = c.groups.filter((g) => g.academy_id === aid).length;
+  const studentCount = c.students.filter((s) => s.academy_id === aid).length;
+  const lessonCount = c.lessons.filter((l) => l.academy_id === aid).length;
+  const attendanceCount = c.attendance.filter((a) => c.lessons.some((l) => l.id === a.lesson_id && l.academy_id === aid)).length;
+  const gradeCount = c.grades.length;
+  const qrCount = c.students.filter((s) => s.academy_id === aid && (s as any).qr_code).length;
+
   return (
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
       <PageHeader
@@ -105,6 +117,16 @@ export default async function DashboardPage(
           </Link>
         </Button>
       </PageHeader>
+
+      <OnboardingChecklist
+        academyId={user.academy_id}
+        groupCount={groupCount}
+        studentCount={studentCount}
+        lessonCount={lessonCount}
+        attendanceCount={attendanceCount}
+        gradeCount={gradeCount}
+        qrCount={qrCount}
+      />
 
       <Card className="border-border bg-card">
         <CardHeader className="pb-3">

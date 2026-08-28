@@ -63,6 +63,7 @@ export const ADMIN_NAV: NavSection[] = [
     titleAr: "الأشخاص والمالية", titleEn: "People & Finance",
     items: [
       { titleAr: "الطلاب", titleEn: "Students", href: "/students", icon: Users },
+      { titleAr: "أولياء الأمور", titleEn: "Parents", href: "/parents", icon: UsersRound },
       { titleAr: "المصاريف", titleEn: "Payments", href: "/payments", icon: Wallet },
     ],
   },
@@ -102,6 +103,7 @@ export const TEACHER_NAV: NavSection[] = [
       { titleAr: "المحتوى التعليمي", titleEn: "Educational Content", href: "/teacher/content", icon: BookOpen },
       { titleAr: "الدرجات", titleEn: "Grades", href: "/grades", icon: GraduationCap },
       { titleAr: "الطلاب", titleEn: "Students", href: "/students", icon: Users },
+      { titleAr: "أولياء الأمور", titleEn: "Parents", href: "/parents", icon: UsersRound },
       { titleAr: "الرسائل", titleEn: "Messages", href: "/messages", icon: Bell },
       { titleAr: "المساعدة والدعم", titleEn: "Help & Support", href: "/support", icon: CircleHelp },
     ],

@@ -23,7 +23,12 @@ export function StudentStatusBadge({ status }: { status: StudentStatus }) {
     ARCHIVED: { variant: "warning" as const, ar: "مؤرشف", en: "Archived" },
   } as const;
   const s = map[status];
-  return <Badge variant={s.variant}><span className="h-1.5 w-1.5 rounded-full bg-current" />{lang === "ar" ? s.ar : s.en}</Badge>;
+  return (
+    <Badge variant={s.variant} className={status === "ARCHIVED" ? "animate-pulse-soft" : undefined}>
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {lang === "ar" ? s.ar : s.en}
+    </Badge>
+  );
 }
 
 export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
@@ -34,7 +39,11 @@ export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
     UNPAID: { variant: "destructive" as const, ar: "غير مدفوع", en: "Unpaid" },
   } as const;
   const s = map[status];
-  return <Badge variant={s.variant}>{lang === "ar" ? s.ar : s.en}</Badge>;
+  return (
+    <Badge variant={s.variant} className={status === "UNPAID" ? "animate-pulse-soft" : undefined}>
+      {lang === "ar" ? s.ar : s.en}
+    </Badge>
+  );
 }
 
 export function AttendanceBadge({ status }: { status: AttendanceStatus }) {

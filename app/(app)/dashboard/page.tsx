@@ -203,6 +203,7 @@ export default async function DashboardPage(
           icon={Users}
           accent="primary"
           href="/students"
+          className="animate-fade-up stagger-1"
         />
         <StatCard
           label={en ? "Expected / collected revenue" : "الإيراد المتوقع / المحصّل"}
@@ -211,6 +212,7 @@ export default async function DashboardPage(
           icon={Wallet}
           accent="success"
           href="/payments"
+          className="animate-fade-up stagger-2"
         />
         <StatCard
           label={en ? "Academy attendance" : "نسبة حضور الأكاديمية"}
@@ -218,6 +220,7 @@ export default async function DashboardPage(
           hint={d.overallAttendanceSessionsThisMonth === 0 ? (en ? "No attendance recorded yet" : "لم تُسجّل حصص بعد") : (en ? "Current month, canceled lessons excluded" : "هذا الشهر مع استبعاد الحصص الملغاة")}
           icon={CalendarCheck}
           accent="info"
+          className="animate-fade-up stagger-3"
         />
         <StatCard
           label={en ? "At-risk students" : "الطلاب المعرضون للخطر"}
@@ -226,6 +229,7 @@ export default async function DashboardPage(
           icon={AlertTriangle}
           accent="destructive"
           href="#at-risk"
+          className="animate-fade-up stagger-4"
         />
       </div>
 

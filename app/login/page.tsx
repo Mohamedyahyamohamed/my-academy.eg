@@ -53,7 +53,7 @@ export default async function LoginPage() {
         <div className={`absolute top-4 ${en ? "right-4" : "left-4"}`}><LanguageToggle /></div>
         <div className="w-full max-w-sm">
           <div className="mb-8 lg:hidden"><Logo /></div>
-          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-2xl shadow-slate-900/10 sm:p-8 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/30">
+          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-2xl shadow-slate-900/10 sm:p-8 animate-fade-in dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/30">
             <h1 className="text-2xl font-semibold tracking-tight">{en ? "Welcome back" : "أهلاً بعودتك"}</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">{en ? `Sign in to your ${APP_CONFIG.name} account to continue.` : `سجّل دخولك لحساب ${APP_CONFIG.name} للمتابعة.`}</p>
             <div className="mt-6"><LoginForm /></div>

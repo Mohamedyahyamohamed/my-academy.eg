@@ -12,6 +12,7 @@ interface StatCardProps {
   trend?: { value: number; positive?: boolean; label?: string };
   accent?: "primary" | "success" | "warning" | "info" | "destructive";
   href?: string;
+  className?: string;
 }
 
 const accentMap = {
@@ -30,6 +31,7 @@ export function StatCard({
   trend,
   accent = "primary",
   href,
+  className,
 }: StatCardProps) {
   const content = (
     <CardContent className="p-5">
@@ -64,7 +66,7 @@ export function StatCard({
   };
 
   const card = (
-    <Card className={cn("group overflow-hidden rounded-2xl border-border/60 bg-gradient-to-b from-card to-muted/25 transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-lg", glowMap[accent])}>
+    <Card className={cn("group overflow-hidden rounded-2xl border-border/60 bg-gradient-to-b from-card to-muted/25 transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-lg", glowMap[accent], className)}>
       {content}
     </Card>
   );

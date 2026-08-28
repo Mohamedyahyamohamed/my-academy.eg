@@ -204,6 +204,7 @@ export default async function DashboardPage(
           accent="primary"
           href="/students"
           className="animate-fade-up stagger-1"
+          countUp
         />
         <StatCard
           label={en ? "Expected / collected revenue" : "الإيراد المتوقع / المحصّل"}
@@ -230,6 +231,7 @@ export default async function DashboardPage(
           accent="destructive"
           href="#at-risk"
           className="animate-fade-up stagger-4"
+          countUp
         />
       </div>
 

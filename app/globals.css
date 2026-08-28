@@ -385,8 +385,17 @@
     animation: fadeIn 0.45s ease both;
   }
 
+  @keyframes pulseSoft {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(0.94); }
+  }
+  .animate-pulse-soft {
+    animation: pulseSoft 1.8s ease-in-out infinite;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .hero-glow::before, .hero-glow::after { animation: none; }
     .premium-card, .premium-card:hover { transform: none; }
     .animate-fade-up, .animate-fade-in { animation: none; }
+    .animate-pulse-soft { animation: none; }
   }

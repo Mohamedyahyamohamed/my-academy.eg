@@ -5,6 +5,7 @@ import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { liveTeacherStudentScope } from "@/services/students";
 import { rateLimit, LIMITS } from "@/lib/rate-limit";
 import { setPortalSessionCookie, clearPortalSessionCookie, type PortalRole } from "@/lib/portal-session";
+import { decryptPortalPassword, encryptPortalPassword } from "@/lib/portal-credentials";
 import type { SessionUser } from "@/types";
 
 const READABLE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
@@ -33,6 +34,7 @@ export async function generatePortalCredentials(
   user: SessionUser,
   studentId: string,
   preferredEmail?: string | null,
+  options: { forceReset?: boolean } = {},
 ): Promise<GeneratedPortalCredentials> {
   if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN" && user.role !== "TEACHER") throw new Error("لا تملك صلاحية إنشاء بيانات دخول البوابة.");
   const client = nodeSupabaseClient();
@@ -50,6 +52,17 @@ export async function generatePortalCredentials(
   const { data: student, error: studentError } = await query.maybeSingle();
   if (studentError || !student) throw new Error("الطالب غير موجود في نطاق الأكاديمية.");
 
+  const { data: stored } = await client
+    .from("students")
+    .select("portal_password_encrypted")
+    .eq("id", student.id)
+    .eq("academy_id", student.academy_id)
+    .maybeSingle();
+  const savedPassword = !options.forceReset ? decryptPortalPassword(stored?.portal_password_encrypted) : null;
+  if (student.portal_email && savedPassword) {
+    return { ok: true, email: student.portal_email, password: savedPassword, mode: "created" };
+  }
+
   const requestedEmail = preferredEmail?.trim().toLowerCase() || "";
   const email = student.portal_email || requestedEmail || virtualEmail(student.id, student.first_name, student.last_name);
   const password = createReadablePassword();
@@ -65,7 +78,7 @@ export async function generatePortalCredentials(
   }
   const { error } = await client
     .from("students")
-    .update({ portal_email: email, portal_password: hash })
+    .update({ portal_email: email, portal_password: hash, portal_password_encrypted: encryptPortalPassword(password) })
     .eq("id", student.id)
     .eq("academy_id", student.academy_id);
   if (error) {

@@ -6,10 +6,10 @@ import { generatePortalCredentials, portalLogin, portalLogout, type PortalLoginS
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { setRequestContext } from "@/services/request-context";
 
-export async function generatePortalCredentialsAction(studentId: string) {
+export async function generatePortalCredentialsAction(studentId: string, options: { forceReset?: boolean } = {}) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
   if (await isLimitedAssistant(user)) throw new Error("المساعد المحدود لا يملك صلاحية إنشاء بيانات الدخول.");
-  const result = await generatePortalCredentials(user, studentId);
+  const result = await generatePortalCredentials(user, studentId, null, options);
   revalidatePath("/students");
   revalidatePath(`/students/${studentId}`);
   return result;

@@ -23,16 +23,16 @@ export async function createStudentAction(input: StudentInput, options: { allowD
     const student = await StudentsService.createStudent(input, user.academy_id, user.id, user, options);
     // Every new student receives shared portal credentials for the student and
     // linked parent; each chooses their role on the public portal login page.
-    let portalEmail = student.portal_email ?? input.portal_email ?? null;
-    let portalPassword = input.portal_password ?? null;
-    if (!portalEmail) {
-      const parent = input.parent_id
-        ? ((await import("@/services/data/store")).collections().parents.find((item: any) => item.id === input.parent_id) as any)
-        : null;
-      const credentials = await generatePortalCredentials(user, student.id, input.email?.trim() || parent?.email || null);
-      portalEmail = credentials.email;
-      portalPassword = credentials.password;
-    }
+    const parent = input.parent_id
+      ? ((await import("@/services/data/store")).collections().parents.find((item: any) => item.id === input.parent_id) as any)
+      : null;
+    const credentials = await generatePortalCredentials(
+      user,
+      student.id,
+      input.portal_email?.trim() || input.email?.trim() || parent?.email || null,
+    );
+    const portalEmail = credentials.email;
+    const portalPassword = credentials.password;
     const notificationEmail = input.email?.trim() || (portalEmail && !portalEmail.endsWith(".local") ? portalEmail : null);
     // WhatsApp هو القناة الافتراضية بعد تفعيل الدفع في Meta.
     // يمكن استخدام البريد مؤقتًا عبر WHATSAPP_QR_CHANNEL=email.

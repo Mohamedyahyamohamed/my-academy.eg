@@ -34,11 +34,11 @@ export function StudentQrCard({
   const value = studentQrValue(studentId, typeof window !== "undefined" ? window.location.origin : undefined);
   const cardRef = React.useRef<HTMLDivElement>(null);
 
-  const loadCredentials = async () => {
+  const loadCredentials = async (forceReset = false) => {
     if (!canManageCredentials || loadingCredentials) return;
     setLoadingCredentials(true);
     try {
-      const result = await generatePortalCredentialsAction(studentId);
+      const result = await generatePortalCredentialsAction(studentId, { forceReset });
       setCredentials({ email: result.email, password: result.password });
       setShowPassword(true);
       toast.success(en ? "Portal credentials are ready." : "بيانات دخول الطالب وولي الأمر جاهزة.");
@@ -127,7 +127,7 @@ export function StudentQrCard({
           <div className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3 text-start">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-semibold text-primary">{en ? "Student & parent portal login" : "دخول الطالب وولي الأمر"}</p>
-              <Button type="button" variant="ghost" size="sm" onClick={() => void loadCredentials()} disabled={loadingCredentials}>
+              <Button type="button" variant="ghost" size="sm" onClick={() => void loadCredentials(true)} disabled={loadingCredentials}>
                 {loadingCredentials ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                 <span className="ms-1">{en ? "New password" : "كلمة مرور جديدة"}</span>
               </Button>

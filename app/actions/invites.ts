@@ -6,7 +6,8 @@ import { revalidatePath } from "next/cache";
 import { audit } from "@/services/audit";
 import { getCurrentUser, requireScopedRole, roleHome } from "@/services/session";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
-import { isSupabaseConfigured } from "@/services/supabase/config";
+import { getSupabaseAnonKey, isSupabaseConfigured } from "@/services/supabase/config";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { createSignedSession, sessionMaxAgeSeconds } from "@/lib/session-cookie";
 import { ACTIVE_ACADEMY_COOKIE, SESSION_COOKIE } from "@/lib/auth";
@@ -389,6 +390,24 @@ export async function acceptAcademyInviteAction(input: {
         consent_by: null, consent_version: null, enrolled_at: now, created_at: now, updated_at: now,
       });
       if (error) return { ok: false, error: "تم إنشاء الحساب، لكن تعذّر إكمال ملف الطالب." };
+    }
+  }
+
+  // A newly provisioned invite account must receive the normal Supabase SSR
+  // session before navigation. The signed app cookie alone is not enough for
+  // loadCurrentUser(), which verifies the Auth identity server-side.
+  if (!existingProfile) {
+    const anonKey = getSupabaseAnonKey();
+    if (!anonKey || !input.password) {
+      await client.auth.admin.deleteUser(userId);
+      return { ok: false, error: "تعذّر تفعيل جلسة الحساب. حاول مرة أخرى." };
+    }
+    const sessionClient = await createServerSupabaseClient(anonKey);
+    const { error: sessionError } = await sessionClient.auth.signInWithPassword({ email: invite.email, password: input.password });
+    if (sessionError) {
+      console.error("[invite] post-provision session failed:", sessionError.message);
+      await client.auth.admin.deleteUser(userId);
+      return { ok: false, error: "تعذّر تفعيل جلسة الحساب. حاول مرة أخرى." };
     }
   }
 

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { MiscService, requireScopedRole, requireNonAssistantTeacher, currentAcademyId } from "@/services";
 import { generatedParentEmail } from "@/services/misc";
 import { PARENT_DEFAULT_PASSWORD } from "@/lib/auth";
+import { setRequestContext } from "@/services/request-context";
 
 /** Quick-create a parent record (no login) so it can be linked to a student. */
 export async function createParentAction(input: {
@@ -16,6 +17,7 @@ export async function createParentAction(input: {
 }) {
   try {
     const user = await requireScopedRole("ADMIN", "TEACHER");
+    setRequestContext(user);
     await requireNonAssistantTeacher(user);
     if (!input.first_name?.trim() || !input.last_name?.trim()) {
       return { ok: false, error: "First and last name are required." };
@@ -29,7 +31,7 @@ export async function createParentAction(input: {
       phone: input.phone?.trim() || null,
       occupation: input.occupation?.trim() || null,
       profile_id: null,
-    });
+    }, user.academy_id);
     void audit({ action: "parent.create", entity_type: "parent", entity_id: p.id, new_data: { name: `${p.first_name} ${p.last_name}` } }, user);
     revalidatePath("/students");
     return { ok: true, parent: p };

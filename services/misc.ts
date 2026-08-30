@@ -86,8 +86,8 @@ export function generatedParentEmail(firstName: string, lastName: string, nonce 
   return `${namePart}.${suffix}@parent.local`;
 }
 
-export async function createParent(input: Omit<Parent, "id" | "academy_id" | "created_at" | "updated_at"> & { academy_id?: string; email?: string | null }): Promise<Parent> {
-  const academyId = currentAcademyId();
+export async function createParent(input: Omit<Parent, "id" | "academy_id" | "created_at" | "updated_at"> & { academy_id?: string; email?: string | null }, academyIdOverride?: string): Promise<Parent> {
+  const academyId = academyIdOverride ?? currentAcademyId();
   if (!academyId) throw new Error("An authenticated academy scope is required.");
   if (input.academy_id && input.academy_id !== academyId) {
     throw new Error("The requested academy is outside the authenticated scope.");

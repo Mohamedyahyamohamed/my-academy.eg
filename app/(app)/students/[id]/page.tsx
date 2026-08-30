@@ -151,6 +151,7 @@ export default async function StudentProfilePage(
           name={`${detail.first_name} ${detail.last_name}`}
           grade={detail.grade}
           academyName={academy.name}
+          canManageCredentials={canManageStudentAccounts}
           trigger={<Button variant="outline">{en ? "QR card" : "بطاقة QR"}</Button>}
         />
         {!isPlatformOwner && <EditStudentDialog student={detail} parents={parents} groups={groups} />}

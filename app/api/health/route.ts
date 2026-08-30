@@ -35,6 +35,20 @@ function classifyDatabaseError(error: unknown): Exclude<DbStatus, "ok" | "not-co
 
 const STORAGE_BUCKETS = ["content", "homework"];
 
+async function withTimeout<T>(promise: Promise<T>, ms = 4000): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("timeout")), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export async function GET(req: NextRequest) {
   // Thread a stable request id (prefer client-supplied for correlation).
   const requestId = req.headers.get("x-request-id") || newRequestId();
@@ -77,18 +91,12 @@ export async function GET(req: NextRequest) {
     checks.auth = "not-configured";
   } else {
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 4000);
-      try {
-        const { data, error } = await client.auth.admin.listUsers({ page: 1, perPage: 1 }).abortSignal(controller.signal);
+        const { data, error } = await withTimeout<any>(client.auth.admin.listUsers({ page: 1, perPage: 1 }));
         if (error) {
           checks.auth = error.message?.toLowerCase().includes("api key") || error.status === 401 || error.status === 403 ? "invalid-credentials" : "auth-error";
         } else {
           checks.auth = "ok";
         }
-      } finally {
-        clearTimeout(timeout);
-      }
     } catch (error) {
       traceError(error, { scope: "health:auth-check", severity: "warning" });
       const message = (error as { message?: string })?.message?.toLowerCase() ?? "";
@@ -101,10 +109,7 @@ export async function GET(req: NextRequest) {
     checks.storage = "not-configured";
   } else {
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 4000);
-      try {
-        const { data, error } = await client.storage.listBuckets().abortSignal(controller.signal);
+        const { data, error } = await withTimeout<any>(client.storage.listBuckets());
         if (error) {
           checks.storage = error.message?.toLowerCase().includes("api key") || error.status === 401 || error.status === 403 ? "invalid-credentials" : "storage-error";
         } else {
@@ -112,9 +117,6 @@ export async function GET(req: NextRequest) {
           const missing = STORAGE_BUCKETS.filter((b: string) => !names.has(b));
           checks.storage = missing.length ? "degraded" : "ok";
         }
-      } finally {
-        clearTimeout(timeout);
-      }
     } catch (error) {
       traceError(error, { scope: "health:storage-check", severity: "warning" });
       const message = (error as { message?: string })?.message?.toLowerCase() ?? "";

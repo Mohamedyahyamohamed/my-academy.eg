@@ -81,6 +81,8 @@ export async function sendStudentQrEmail(input: {
   email: string;
   studentName: string;
   studentId: string;
+  portalEmail?: string | null;
+  portalPassword?: string | null;
 }): Promise<InviteEmailResult> {
   const qrValue = studentQrValue(input.studentId);
   const qrPng = await QRCode.toBuffer(qrValue, { type: "png", width: 600, margin: 2 });
@@ -91,8 +93,10 @@ export async function sendStudentQrEmail(input: {
     `كود QR الخاص بالطالب ${input.studentName} — ${APP_CONFIG.name}`,
     `<div dir="rtl" style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:24px;line-height:1.7;color:#0f172a">
       <h2>مرحبًا ${safeName}</h2>
-      <p>مرفق في هذه الرسالة كود QR الخاص بحسابك في <strong>${escapeHtml(APP_CONFIG.name)}</strong>.</p>
-      <p>احتفظ بالصورة لاستخدامها عند تسجيل الحضور.</p>
+      <p>مرفق في هذه الرسالة كود QR الخاص بالطالب في <strong>${escapeHtml(APP_CONFIG.name)}</strong>.</p>
+      <p>بيانات الدخول المشتركة للطالب وولي الأمر:</p>
+      <p style="background:#f1f5f9;border-radius:8px;padding:12px;direction:ltr;text-align:left"><strong>Email:</strong> ${escapeHtml(input.portalEmail || "—")}<br /><strong>Password:</strong> ${escapeHtml(input.portalPassword || "—")}</p>
+      <p>استخدم البيانات من صفحة دخول البوابة، واختر «طالب» أو «ولي أمر». واحتفظ بصورة QR لاستخدامها عند تسجيل الحضور.</p>
       <p style="color:#64748b;font-size:13px;margin-top:24px">إذا لم تتوقع هذه الرسالة، تواصل مع إدارة الأكاديمية.</p>
     </div>`,
     [{ filename: "my-academy-student-qr.png", content: qrPng }],

@@ -29,7 +29,11 @@ export interface GeneratedPortalCredentials {
   mode: "created" | "reset";
 }
 
-export async function generatePortalCredentials(user: SessionUser, studentId: string): Promise<GeneratedPortalCredentials> {
+export async function generatePortalCredentials(
+  user: SessionUser,
+  studentId: string,
+  preferredEmail?: string | null,
+): Promise<GeneratedPortalCredentials> {
   if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN" && user.role !== "TEACHER") throw new Error("لا تملك صلاحية إنشاء بيانات دخول البوابة.");
   const client = nodeSupabaseClient();
   if (!client) throw new Error("Supabase غير مهيأ.");
@@ -46,9 +50,19 @@ export async function generatePortalCredentials(user: SessionUser, studentId: st
   const { data: student, error: studentError } = await query.maybeSingle();
   if (studentError || !student) throw new Error("الطالب غير موجود في نطاق الأكاديمية.");
 
-  const email = student.portal_email || virtualEmail(student.id, student.first_name, student.last_name);
+  const requestedEmail = preferredEmail?.trim().toLowerCase() || "";
+  const email = student.portal_email || requestedEmail || virtualEmail(student.id, student.first_name, student.last_name);
   const password = createReadablePassword();
   const hash = await bcrypt.hash(password, 12);
+  if (!student.portal_email && requestedEmail) {
+    const { data: duplicate } = await client
+      .from("students")
+      .select("id")
+      .eq("portal_email", requestedEmail)
+      .neq("id", student.id)
+      .limit(1);
+    if (duplicate?.length) throw new Error("البريد الإلكتروني مستخدم بالفعل لحساب بوابة آخر.");
+  }
   const { error } = await client
     .from("students")
     .update({ portal_email: email, portal_password: hash })

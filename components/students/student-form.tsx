@@ -138,7 +138,9 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
       }
       if (!("id" in result)) return;
       toast.success(
-        en ? `Student ${result.first_name} added ✅ — Shared portal account: ${result.portal_email ?? result.email}` : `تم إضافة ${result.first_name} ✅ — تم إنشاء حساب البوابة المشترك: ${result.portal_email ?? result.email}`,
+        en
+          ? `Student ${result.first_name} added ✅ — Login: ${result.portal_email ?? result.email} / ${result.portal_password ?? "already set"}`
+          : `تم إضافة ${result.first_name} ✅ — دخول الطالب وولي الأمر: ${result.portal_email ?? result.email} / ${result.portal_password ?? "تم ضبطه مسبقًا"}`,
         { duration: 10000 },
       );
     }
@@ -152,10 +154,6 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
     setSaving(true);
     try {
       if (!student) {
-        if (!values.portal_email?.trim() || !values.portal_password?.trim()) {
-          toast.error(en ? "Portal email and password are required for the first login." : "بريد وكلمة مرور البوابة مطلوبان عند إضافة الطالب لأول مرة.");
-          return;
-        }
         const candidates = await findStudentDuplicatesAction({ ...values, parent_id: values.parent_id ?? null });
         if (candidates.length > 0) {
           setDuplicatePrompt({ values, candidates });
@@ -203,21 +201,11 @@ export function StudentForm({ student, parents: initialParents, groups, onDone }
           <Input type="email" {...register("email")} placeholder="student@email.com" />
         </Field>
         {!student && (
-          <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4 sm:col-span-2">
-            <div>
-              <p className="text-sm font-semibold text-primary">{en ? "Shared student & parent portal account" : "حساب البوابة المشترك للطالب وولي الأمر"}</p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                {en ? "These credentials are used from the public portal. The student or parent chooses the correct role after signing in. The password is stored securely and is never displayed again." : "بيانات الدخول دي تُستخدم من بوابة الدخول العامة. الطالب أو ولي الأمر يختار الدور المناسب بعد الدخول. كلمة المرور تُحفظ بشكل آمن ولن يتم عرضها مرة أخرى."}
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label={en ? "Portal email" : "بريد دخول البوابة"} error={errors.portal_email?.message ?? serverFieldErrors.portal_email} required>
-                <Input type="email" {...register("portal_email")} placeholder="parent@example.com" autoComplete="email" />
-              </Field>
-              <Field label={en ? "Portal password" : "كلمة مرور البوابة"} error={errors.portal_password?.message ?? serverFieldErrors.portal_password} required>
-                <Input type="password" {...register("portal_password")} placeholder={en ? "At least 8 characters" : "8 أحرف على الأقل"} autoComplete="new-password" />
-              </Field>
-            </div>
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 sm:col-span-2">
+            <p className="text-sm font-semibold text-primary">{en ? "Automatic student & parent portal access" : "دخول تلقائي مشترك للطالب وولي الأمر"}</p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              {en ? "A unique email and password will be generated automatically. Both the student and linked parent can use them and choose their role on the portal login page." : "سيتم إنشاء بريد وكلمة مرور تلقائيًا. يستطيع الطالب وولي الأمر المرتبط استخدام نفس البيانات، ثم اختيار الدور من صفحة دخول البوابة."}
+            </p>
           </div>
         )}
         <Field label={en ? "Date of birth" : "تاريخ الميلاد"} error={serverFieldErrors.date_of_birth}>

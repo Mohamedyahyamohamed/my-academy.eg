@@ -8,6 +8,7 @@ import { audit } from "@/services/audit";
 import { safeAction } from "@/lib/server-action-result";
 import { setRequestContext } from "@/services/request-context";
 import { studentSchema } from "@/schemas/students";
+import { generatePortalCredentials } from "@/services/portal-auth";
 
 export async function findStudentDuplicatesAction(input: StudentInput) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
@@ -20,6 +21,19 @@ export async function createStudentAction(input: StudentInput, options: { allowD
     const user = await requireScopedRole("ADMIN", "TEACHER");
     if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage students.");
     const student = await StudentsService.createStudent(input, user.academy_id, user.id, user, options);
+    // Every new student receives shared portal credentials for the student and
+    // linked parent; each chooses their role on the public portal login page.
+    let portalEmail = student.portal_email ?? input.portal_email ?? null;
+    let portalPassword = input.portal_password ?? null;
+    if (!portalEmail) {
+      const parent = input.parent_id
+        ? ((await import("@/services/data/store")).collections().parents.find((item: any) => item.id === input.parent_id) as any)
+        : null;
+      const credentials = await generatePortalCredentials(user, student.id, input.email?.trim() || parent?.email || null);
+      portalEmail = credentials.email;
+      portalPassword = credentials.password;
+    }
+    const notificationEmail = input.email?.trim() || (portalEmail && !portalEmail.endsWith(".local") ? portalEmail : null);
     // WhatsApp هو القناة الافتراضية بعد تفعيل الدفع في Meta.
     // يمكن استخدام البريد مؤقتًا عبر WHATSAPP_QR_CHANNEL=email.
     try {
@@ -31,12 +45,27 @@ export async function createStudentAction(input: StudentInput, options: { allowD
           ),
           new Promise<void>((resolve) => setTimeout(resolve, 8_000)),
         ]);
-      } else if (student.email) {
+        // WhatsApp may be unavailable or may not expose the credentials; email
+        // is always sent when a real address was supplied.
+        if (notificationEmail) {
+          const { sendStudentQrEmail } = await import("@/lib/email");
+          const result = await sendStudentQrEmail({
+            email: notificationEmail,
+            studentName: `${student.first_name} ${student.last_name}`,
+            studentId: student.id,
+            portalEmail,
+            portalPassword,
+          });
+          if (!result.sent) console.error("student portal email:", result.errorCode);
+        }
+      } else if (notificationEmail) {
         const { sendStudentQrEmail } = await import("@/lib/email");
         const result = await sendStudentQrEmail({
-          email: student.email,
+          email: notificationEmail,
           studentName: `${student.first_name} ${student.last_name}`,
           studentId: student.id,
+          portalEmail,
+          portalPassword,
         });
         if (!result.sent) console.error("student QR email:", result.errorCode);
       } else {
@@ -51,7 +80,7 @@ export async function createStudentAction(input: StudentInput, options: { allowD
     ));
     revalidatePath("/students");
     revalidatePath("/dashboard");
-    return student;
+    return { ...student, portal_email: portalEmail, portal_password: portalPassword };
   } catch (e) {
     if (e instanceof DuplicateStudentError) {
       return { ok: false as const, duplicate: true as const, candidates: e.candidates };

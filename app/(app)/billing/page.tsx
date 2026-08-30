@@ -29,7 +29,7 @@ export default async function BillingPage() {
   const isTeacherWorkspace = workspaceType === "TEACHER";
   const plans = listPlans(workspaceType);
   const currentPlan = getPlan(currentUser.academy_id);
-  const usage = getUsage(currentUser.academy_id);
+  const usage = await getUsage(currentUser.academy_id);
   const sub = getSubscriptionStatus(currentUser.academy_id);
   const storageResult = nodeSupabaseClient()
     ? await measureStorageUsage(nodeSupabaseClient()!, "homework", currentUser.academy_id)

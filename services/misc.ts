@@ -102,7 +102,9 @@ export async function createParent(input: Omit<Parent, "id" | "academy_id" | "cr
     updated_at: now,
   };
   collections().parents.push(p);
-  await persistInsert("parents", p);
+  // Pass the trusted academy_id explicitly so the write fails closed instead
+  // of relying on the request-context (which can be lost across async boundaries).
+  await persistInsert("parents", p, academyId);
   return p;
 }
 

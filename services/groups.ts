@@ -196,7 +196,7 @@ export async function createGroup(input: GroupInput, academyIdOverride?: string)
   }
   if (!course) throw new Error("The selected course was not found inside the authenticated academy.");
   if (!teacher) throw new Error("The selected teacher was not found inside the authenticated academy.");
-  const check = canCreate("groups", academyId);
+  const check = await canCreate("groups", academyId);
   if (!check.allowed) {
     throw new Error(`Limit reached: ${check.current}/${check.limit} groups. Upgrade your plan.`);
   }
@@ -249,7 +249,7 @@ export async function createGroupWithLessons(
   }
   if (!course) throw new Error("The selected course was not found inside the authenticated academy.");
   if (!teacher) throw new Error("The selected teacher was not found inside the authenticated academy.");
-  const check = canCreate("groups", academyId);
+  const check = await canCreate("groups", academyId);
   if (!check.allowed) throw new Error(`Limit reached: ${check.current}/${check.limit} groups. Upgrade your plan.`);
 
   const now = new Date().toISOString();

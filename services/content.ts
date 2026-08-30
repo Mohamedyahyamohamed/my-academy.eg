@@ -161,7 +161,7 @@ export async function createCourse(input: CreateCourseInput, user: SessionUser):
   assertContentPermission(user, "write");
   if (user.role !== "TEACHER" && !hasAcademyWideScope(user.role)) throw new Error("Only teachers or academy administrators can create content.");
   const group = await assertGroupAccess(user, input.group_id, true);
-  const courseLimit = canCreate("courses", user.academy_id);
+  const courseLimit = await canCreate("courses", user.academy_id);
   if (!courseLimit.allowed) throw new Error(`Course limit reached for the current plan (${courseLimit.limit}).`);
   const resolvedTeacher = user.role === "TEACHER"
     ? await resolveTeacherForGroups(user.academy_id, user.id, user.email)
@@ -206,7 +206,7 @@ export async function createLesson(input: CreateLessonInput, user: SessionUser):
   await assertGroupAccess(user, course.group_id, true);
   const title = normalizeText(input.title);
   if (!title) throw new Error("A lesson title is required.");
-  const lessonLimit = canCreate("lessons", user.academy_id);
+  const lessonLimit = await canCreate("lessons", user.academy_id);
   if (!lessonLimit.allowed) throw new Error(`Lesson limit reached for the current plan (${lessonLimit.limit}).`);
   const lesson: ContentLesson = {
     id: crypto.randomUUID(),

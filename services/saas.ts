@@ -4,6 +4,8 @@
  */
 import { collections } from "./data/store";
 import { currentAcademyId } from "./session";
+import { isSupabaseConfigured } from "./supabase/config";
+import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
 export type WorkspaceType = "ACADEMY" | "TEACHER";
 export type PlanAudience = WorkspaceType;
@@ -237,26 +239,78 @@ export interface UsageCounts {
   lessons: number;
 }
 
-/** Count current usage for the workspace. */
-export function getUsage(academyId?: string): UsageCounts {
+/**
+ * Count current usage for the workspace.
+ *
+ * When Supabase is configured we read the live count with a server-only
+ * (service-role) client narrowed by the trusted academy_id. This avoids the
+ * stale tenant snapshot (TTL 60s) that previously let usage drift after a
+ * write and either blocked a valid action or let a limit be exceeded.
+ *
+ * If the Supabase read fails we do NOT treat the action as allowed: we fall
+ * back to the snapshot count but log loudly, so a transient DB error cannot
+ * silently lift a plan limit.
+ */
+export async function getUsage(academyId?: string): Promise<UsageCounts> {
   const aid = academyId ?? currentAcademyId();
   const c = collections();
-  return {
+  const snapshotCounts: UsageCounts = {
     students: c.students.filter((s: any) => s.academy_id === aid).length,
     teachers: c.teachers.filter((t: any) => t.academy_id === aid).length,
     groups: c.groups.filter((g: any) => g.academy_id === aid).length,
     courses: ((c as any).contentCourses ?? []).filter((item: any) => item.academy_id === aid).length,
     lessons: ((c as any).contentLessons ?? []).filter((item: any) => item.academy_id === aid).length,
   };
+
+  if (!isSupabaseConfigured() || !aid) return snapshotCounts;
+
+  const client = nodeSupabaseClient();
+  if (!client) return snapshotCounts;
+
+  const tableFor = (type: keyof UsageCounts): string | null => {
+    switch (type) {
+      case "students": return "students";
+      case "teachers": return "teachers";
+      case "groups": return "groups";
+      case "courses": return "content_courses";
+      case "lessons": return "content_lessons";
+    }
+  };
+
+  let usedSnapshotFallback = false;
+  const counts = { ...snapshotCounts };
+  for (const type of Object.keys(snapshotCounts) as (keyof UsageCounts)[]) {
+    const table = tableFor(type);
+    if (!table) continue;
+    try {
+      const { count, error } = await client
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .eq("academy_id", aid);
+      if (error) {
+        usedSnapshotFallback = true;
+        console.error(`[saas] getUsage ${table} count failed for ${aid}: ${error.message}`);
+        continue;
+      }
+      counts[type] = count ?? snapshotCounts[type];
+    } catch (error) {
+      usedSnapshotFallback = true;
+      console.error(`[saas] getUsage ${table} count threw for ${aid}:`, (error as Error)?.message);
+    }
+  }
+  if (usedSnapshotFallback) {
+    console.warn(`[saas] getUsage fell back to stale snapshot for ${aid}; limit check is best-effort.`);
+  }
+  return counts;
 }
 
-/** Check if the workspace can add more of an entity type. */
-export function canCreate(
+/** Check if the workspace can add more of an entity type (server-enforced). */
+export async function canCreate(
   type: "students" | "teachers" | "groups" | "courses" | "lessons",
   academyId?: string,
-): { allowed: boolean; limit: number; current: number } {
+): Promise<{ allowed: boolean; limit: number; current: number }> {
   const plan = getPlan(academyId);
-  const usage = getUsage(academyId);
+  const usage = await getUsage(academyId);
   const limit = type === "students" ? plan.maxStudents : type === "teachers" ? plan.maxTeachers : type === "groups" ? plan.maxGroups : type === "courses" ? plan.maxCourses : plan.maxLessons;
   const current = usage[type];
   return { allowed: current < limit, limit, current };

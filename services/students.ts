@@ -841,7 +841,7 @@ export async function createStudent(
     if (!parent) throw new Error("Parent is outside the authenticated academy.");
   }
   // SaaS usage limit check (server-enforced).
-  const check = canCreate("students");
+  const check = await canCreate("students", academyId);
   if (!check.allowed) {
     throw new Error(`Limit reached: ${check.current}/${check.limit} students. Upgrade your plan.`);
   }

@@ -837,8 +837,10 @@ export async function createStudent(
   const groupIdsForAuthorization = input.groupIds ?? [];
   await assertRequestedGroupScope(groupIdsForAuthorization, academyId, authenticatedUser);
   if (input.parent_id) {
-    const parent = collections().parents.find((item) => item.id === input.parent_id && item.academy_id === academyId);
-    if (!parent) throw new Error("Parent is outside the authenticated academy.");
+    // The parent may have been created in the immediately preceding server
+    // action, while this request still has a stale tenant snapshot. Validate
+    // against the live, academy-scoped database row instead.
+    await assertParentMutationScope(input.parent_id, academyId);
   }
   // SaaS usage limit check (server-enforced).
   const check = canCreate("students");

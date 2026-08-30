@@ -13,13 +13,16 @@ export function isSupabaseConfigured(): boolean {
   // prevents a developer machine's Supabase variables from making tests use a
   // hybrid data path while production continues to use Supabase normally.
   if (process.env.E2E_DEMO_MODE === "true") return false;
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  // Vercel may expose the non-public server variable while a redeployment is
+  // still using an older public-variable snapshot. Prefer the public value,
+  // but accept the server-only alias as a runtime fallback.
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL)?.trim();
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
   return Boolean(url && url.startsWith("http") && anonKey);
 }
 
 export function getSupabaseUrl(): string | undefined {
-  return process.env.NEXT_PUBLIC_SUPABASE_URL;
+  return process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
 }
 
 export function getSupabaseAnonKey(): string | undefined {

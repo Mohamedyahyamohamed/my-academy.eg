@@ -19,7 +19,9 @@ export function isSupabaseConfigured(): boolean {
 }
 
 export function getSupabaseUrl(): string | undefined {
-  return process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "https://fpcdaiyktnoiwaulbhcn.supabase.co";
+  const fallback = "https://fpcdaiyktnoiwaulbhcn.supabase.co";
+  const configured = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  return configured?.includes("fpcdaiyktnoiwaulbhcn.supabase.co") ? configured : fallback;
 }
 
 export function getSupabaseAnonKey(): string | undefined {

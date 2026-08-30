@@ -331,7 +331,11 @@ async function assertRelationshipTenantScope(table: string, inputRows: any): Pro
   for (const [column, parentTable] of relations) {
     const ids = [...new Set(rows.map((row) => row?.[column]).filter((id): id is string => typeof id === "string" && id.length > 0))];
     if (!ids.length) continue;
-    const { data, error } = await getAdminClient().from(parentTable).select("id, academy_id").in("id", ids);
+    const admin = getAdminClient();
+    if (!admin) {
+      throw new Error("Supabase service-role client is not configured for relationship scope validation.");
+    }
+    const { data, error } = await admin.from(parentTable).select("id, academy_id").in("id", ids);
     if (error) throw new Error(`Could not validate ${table} tenant scope: ${error.message}`);
     const scopes = new Map((data ?? []).map((parent: any) => [parent.id, parent.academy_id]));
     for (const id of ids) {

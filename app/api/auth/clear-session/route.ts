@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { SESSION_COOKIE } from "@/lib/auth";
+import { ACTIVE_ACADEMY_COOKIE, SESSION_COOKIE } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE);
+  cookieStore.delete(ACTIVE_ACADEMY_COOKIE);
 
   // Supabase may split its auth session across multiple cookies.
   for (const cookie of cookieStore.getAll()) {

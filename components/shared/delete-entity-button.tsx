@@ -61,9 +61,13 @@ export function DeleteEntityButton({
             ? (en ? "Delete payment" : "حذف الدفعة")
             : (en ? "Delete parent" : "حذف ولي الأمر");
   const title = en ? `Delete this ${entity}?` : `حذف ${label.replace(/^حذف /, "")}؟`;
-  const description = en
-    ? `Delete ${name}. This action cannot be undone.`
-    : `سيتم حذف ${name}. لا يمكن التراجع عن هذا الإجراء.`;
+  const description = entity === "group"
+    ? (en
+      ? `This will permanently delete ${name}, all its generated lessons, and related attendance records. Students will not be deleted; they will be unassigned from this group.`
+      : `سيتم حذف ${name} نهائيًا وكل الحصص المُنشأة وسجلات الحضور المرتبطة بها. لن يتم حذف الطلاب، وسيتم إلغاء إسنادهم من هذه المجموعة.`)
+    : (en
+      ? `Delete ${name}. This action cannot be undone.`
+      : `سيتم حذف ${name}. لا يمكن التراجع عن هذا الإجراء.`);
 
   return (
     <ConfirmDialog

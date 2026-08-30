@@ -88,7 +88,8 @@ export async function fetchStudentGroupIds(studentId: string, academyId: string)
     return (groups ?? []).map((group: any) => group.id).filter(Boolean);
   } catch (error) {
     console.error("fetchStudentGroupIds error:", error instanceof Error ? error.message : String(error));
-    return collections().groupStudents.filter((row) => row.student_id === studentId).map((row) => row.group_id);
+    // In Supabase mode a failed read must fail closed; never mix demo/cache data into a live tenant request.
+    return [];
   }
 }
 
@@ -128,7 +129,8 @@ export async function fetchGroupStudentIds(groupId: string, academyId?: string):
     return (finalResult.data ?? []).map((row: any) => row.student_id).filter(Boolean);
   } catch (error) {
     console.error("fetchGroupStudentIds error:", error instanceof Error ? error.message : String(error));
-    return cached;
+    // In Supabase mode a failed read must fail closed; never mix demo/cache data into a live tenant request.
+    return [];
   }
 }
 
@@ -152,7 +154,8 @@ export async function fetchTeacherAssistantGroupIds(teacherId: string, academyId
     return (groups ?? []).map((group: any) => group.id).filter(Boolean);
   } catch (error) {
     console.error("fetchTeacherAssistantGroupIds error:", error instanceof Error ? error.message : String(error));
-    return cached;
+    // In Supabase mode a failed read must fail closed; never mix demo/cache data into a live tenant request.
+    return [];
   }
 }
 

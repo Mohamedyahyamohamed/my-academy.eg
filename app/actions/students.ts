@@ -20,6 +20,9 @@ export async function createStudentAction(input: StudentInput, options: { allowD
   try {
     const user = await requireScopedRole("ADMIN", "TEACHER");
     if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage students.");
+    // Keep the request context available across every nested persistence call,
+    // including group and parent scope validation.
+    setRequestContext(user);
     const student = await StudentsService.createStudent(input, user.academy_id, user.id, user, options);
     // Every new student receives shared portal credentials for the student and
     // linked parent; each chooses their role on the public portal login page.

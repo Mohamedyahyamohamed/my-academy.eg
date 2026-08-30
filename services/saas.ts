@@ -51,7 +51,7 @@ export const PLANS: Record<string, Plan> = {
     nameEn: "Teacher Free",
     description: "لبدء تنظيم طلابك ومجموعاتك دون تكلفة.",
     descriptionEn: "Start organizing your students and groups at no cost.",
-    maxStudents: 100,
+    maxStudents: Number.MAX_SAFE_INTEGER,
     maxTeachers: 1,
     maxGroups: 5,
     maxAcademies: 1,

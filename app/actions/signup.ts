@@ -50,7 +50,10 @@ export async function signupAction(input: SignupInput) {
     .insert({ name: effectiveAcademyName, slug, workspace_type: workspaceType, currency: "EGP", timezone: "Africa/Cairo" })
     .select("id")
     .single();
-  if (academyError || !academy) return { ok: false, error: "تعذّر إنشاء الأكاديمية. حاول مرة أخرى." };
+  if (academyError || !academy) {
+    console.error("[signup] academy insert failed:", academyError?.message, academyError?.details, academyError?.hint);
+    return { ok: false, error: "تعذّر إنشاء الأكاديمية. حاول مرة أخرى." };
+  }
 
   const { data: userData, error: userError } = await client.auth.admin.createUser({
     email,

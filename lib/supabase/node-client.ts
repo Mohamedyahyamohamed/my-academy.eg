@@ -25,12 +25,12 @@ function polyfillWs() {
  * Bypasses RLS — only use server-side for trusted admin operations.
  */
 export function nodeSupabaseClient() {
-  if (!isSupabaseConfigured()) return null;
   const serviceKey = getSupabaseServiceRoleKey();
-  if (!serviceKey) return null;
+  const url = getSupabaseUrl();
+  if (!url || !serviceKey?.trim()) return null;
   polyfillWs();
   const { createClient } = require("@supabase/supabase-js");
-  return createClient(getSupabaseUrl()!, serviceKey, {
+  return createClient(url, serviceKey.trim(), {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }

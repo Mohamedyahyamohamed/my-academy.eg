@@ -4,6 +4,7 @@ import { ACTIVE_ACADEMY_COOKIE, SESSION_COOKIE, DEMO_PASSWORD } from "@/lib/auth
 import { ensureStoreLoaded } from "@/services/data/store";
 import { getSupabaseAnonKey, isSupabaseConfigured } from "@/services/supabase/config";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import type { SessionUser } from "@/types";
 import { createSignedSession, sessionMaxAgeSeconds } from "@/lib/session-cookie";
@@ -67,25 +68,38 @@ export async function POST(req: NextRequest) {
         );
       }
       const client = await createServerSupabaseClient(anonKey);
+      const normalizedEmail = String(email).trim().toLowerCase();
       const { data: authData, error: authError } = await client.auth.signInWithPassword({
-        email,
-        password,
+        email: normalizedEmail,
+        password: String(password),
       });
-      if (authError) {
+      if (authError || !authData.user) {
+        console.error("[auth/login] Supabase password authentication failed:", authError?.message ?? "missing user");
         return NextResponse.json(
           { ok: false, error: "Invalid email or password." },
           { status: 401 },
         );
       }
 
-      // Resolve profile from Supabase (RLS-backed, per-request).
-      // This fixes the bug where new academies/users created after server
-      // start weren't in the in-memory cache → login failed.
-      const { data: profile, error: profileErr } = await client
+      // The sign-in call is verified with the public key. Profile and
+      // membership lookup must not depend on an RLS policy seeing the newly
+      // issued access token during the same response; use the server-only
+      // service-role client for these two authorization lookups when present.
+      // The service key is never sent to the browser.
+      const profileClient = nodeSupabaseClient() ?? client;
+      const { data: profile, error: profileErr } = await profileClient
         .from("profiles")
         .select("id,email,role,full_name,avatar_url,academy_id")
         .eq("id", authData.user.id)
-        .single();
+        .maybeSingle();
+
+      if (profileErr) {
+        console.error("[auth/login] profile lookup failed:", profileErr.message);
+        return NextResponse.json(
+          { ok: false, error: "Account configuration is incomplete. Please contact the platform administrator." },
+          { status: 503 },
+        );
+      }
 
       if (profileErr || !profile) {
         return NextResponse.json(
@@ -97,14 +111,21 @@ export async function POST(req: NextRequest) {
       // Use the explicit SaaS membership as the authorization source. During
       // rollout, profile.academy_id is a deliberate primary-tenant preference,
       // never an implicit first-row fallback.
-      const { data: memberships, error: membershipErr } = await client
+      const { data: memberships, error: membershipErr } = await profileClient
         .from("academy_memberships")
         .select("id,academy_id,role,status,joined_at,academies(name,slug)")
         .eq("profile_id", profile.id)
         .eq("status", "ACTIVE")
         .order("joined_at", { ascending: true })
         .limit(20);
-      if (membershipErr || !memberships?.length) {
+      if (membershipErr) {
+        console.error("[auth/login] membership lookup failed:", membershipErr.message);
+        return NextResponse.json(
+          { ok: false, error: "Account configuration is incomplete. Please contact the platform administrator." },
+          { status: 503 },
+        );
+      }
+      if (!memberships?.length) {
         return NextResponse.json(
           { ok: false, error: "This account has no active academy membership." },
           { status: 403 },
@@ -156,10 +177,11 @@ export async function POST(req: NextRequest) {
       });
 
       return NextResponse.json({ ok: true, user });
-    } catch {
+    } catch (error) {
+      console.error("[auth/login] unexpected Supabase error:", error instanceof Error ? error.message : String(error));
       return NextResponse.json(
-        { ok: false, error: "Invalid email or password." },
-        { status: 401 },
+        { ok: false, error: "Account service is temporarily unavailable. Please try again." },
+        { status: 503 },
       );
     }
   } else {

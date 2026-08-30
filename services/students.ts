@@ -843,7 +843,7 @@ export async function createStudent(
     await assertParentMutationScope(input.parent_id, academyId);
   }
   // SaaS usage limit check (server-enforced).
-  const check = canCreate("students");
+  const check = canCreate("students", academyId);
   if (!check.allowed) {
     throw new Error(`Limit reached: ${check.current}/${check.limit} students. Upgrade your plan.`);
   }

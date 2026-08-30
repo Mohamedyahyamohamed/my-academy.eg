@@ -111,7 +111,8 @@ export async function transferStudentGroupAction(studentId: string, fromGroupId:
 export async function removeStudentFromGroupAction(groupId: string, studentId: string) {
   const user = await requireScopedRole("ADMIN", "TEACHER");
   if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot manage group membership.");
-  await GroupsService.removeStudent(groupId, studentId);
+  setRequestContext(user);
+  await GroupsService.removeStudent(groupId, studentId, user.academy_id);
     void audit({ action: "group.remove_student" });
   revalidatePath(`/groups/${groupId}`);
 }

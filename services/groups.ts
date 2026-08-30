@@ -554,8 +554,8 @@ export async function deleteGroup(
   return { ok: true, mode: "hard_deleted", relationCount };
 }
 
-async function verifyGroupStudentScope(groupId: string, studentId: string): Promise<boolean> {
-  const academyId = currentAcademyId();
+async function verifyGroupStudentScope(groupId: string, studentId: string, academyIdOverride?: string): Promise<boolean> {
+  const academyId = academyIdOverride ?? currentAcademyId();
   if (!academyId) return false;
 
   if (!isSupabaseConfigured()) {
@@ -803,13 +803,14 @@ export async function transferStudentGroup(
   return { ok: true, fromGroupId: fromGroup.id, toGroupId: toGroup.id };
 }
 
-export async function removeStudent(groupId: string, studentId: string): Promise<boolean> {
-  if (!(await verifyGroupStudentScope(groupId, studentId))) return false;
+export async function removeStudent(groupId: string, studentId: string, academyIdOverride?: string): Promise<boolean> {
+  const academyId = academyIdOverride ?? currentAcademyId();
+  if (!(await verifyGroupStudentScope(groupId, studentId, academyId))) return false;
   const before = collections().groupStudents.length;
   collections().groupStudents = collections().groupStudents.filter(
     (gs) => !(gs.group_id === groupId && gs.student_id === studentId),
   );
-  await persistDelete("group_students", { group_id: groupId, student_id: studentId });
+  await persistDelete("group_students", { group_id: groupId, student_id: studentId }, academyId ?? undefined);
   return collections().groupStudents.length < before;
 }
 

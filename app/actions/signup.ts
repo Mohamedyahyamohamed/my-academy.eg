@@ -5,7 +5,9 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { SESSION_COOKIE } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/services/supabase/config";
+import { getSupabaseAnonKey } from "@/services/supabase/config";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { invalidateStore } from "@/services/data/store";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { sendWelcomeEmail } from "@/lib/email";
@@ -113,6 +115,25 @@ export async function signupAction(input: SignupInput) {
       await client.from("academies").delete().eq("id", academy.id);
       return { ok: false, error: "تعذّر تجهيز مساحة المدرس. حاول مرة أخرى." };
     }
+  }
+
+  // Admin-created users do not receive a browser session automatically.
+  // Establish the normal SSR Supabase session before redirecting, otherwise
+  // the protected teacher page immediately sends the newly-created user back
+  // to login even though the account was created successfully.
+  const anonKey = getSupabaseAnonKey();
+  if (!anonKey) {
+    await client.auth.admin.deleteUser(userId);
+    await client.from("academies").delete().eq("id", academy.id);
+    return { ok: false, error: "تعذّر تفعيل جلسة الحساب. حاول مرة أخرى." };
+  }
+  const sessionClient = await createServerSupabaseClient(anonKey);
+  const { error: sessionError } = await sessionClient.auth.signInWithPassword({ email, password: input.password });
+  if (sessionError) {
+    console.error("[signup] post-signup session failed:", sessionError.message);
+    await client.auth.admin.deleteUser(userId);
+    await client.from("academies").delete().eq("id", academy.id);
+    return { ok: false, error: "تعذّر تفعيل جلسة الحساب. حاول مرة أخرى." };
   }
 
   invalidateStore();

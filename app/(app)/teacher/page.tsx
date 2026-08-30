@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   Users, UsersRound, CalendarClock, ClipboardList, CheckCircle2,
   ArrowLeft, AlertCircle, Inbox, GraduationCap, BookOpen,
@@ -29,17 +30,13 @@ export default async function TeacherDashboard() {
     dashboard: "Dashboard", noTeacher: "No teacher profile linked", noTeacherDesc: "Your account is not linked to a teacher record. Ask an administrator to assign groups to you.", welcome: "Welcome", overview: "A quick view of your groups, students, and lessons only.", groups: "My groups", students: "My students", upcoming: "Upcoming lessons", attendanceRate: "Average attendance", pending: "homework submissions are waiting for your review.", review: "Review now", noUpcoming: "No upcoming lessons.", all: "View all", attendanceMissing: "Attendance not recorded", recordAttendance: "Record attendance", allRecorded: "All attendance is recorded", groupsAssigned: "No groups are assigned to you.", submissions: "Recent submissions", noSubmissions: "No submissions yet."
   };
   const user = await requireScopedRole("TEACHER");
+  // A platform owner is allowed through the shared auth guard, but the
+  // teacher portal has no teacher scope for that account. Send it to the
+  // platform portal instead of trying to hydrate an unrelated dashboard.
+  if (user.role === "SUPER_ADMIN") redirect("/platform");
   const rawName = user.full_name?.trim() || user.email || "";
   const displayName = rawName ? rawName.split(/\s+/)[0] : (isRTL ? "المعلّم" : "Teacher");
   const d = await getTeacherDashboard(user);
-  const dailyOps = await getTeacherDailyOps(user.academy_id);
-  // P2: generate + surface actionable teacher alerts
-  await generateTeacherAlerts(user.id);
-  const allNotifs = await listNotifications(user.id);
-  const ALERT_TYPES: NotificationType[] = ["absence_repeat", "low_grade", "payment_overdue", "homework_assigned"];
-  const alerts: AppNotification[] = allNotifs.filter(
-    (n) => ALERT_TYPES.includes(n.type) && !n.read,
-  );
   if (!d) {
     return (
       <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>
@@ -69,6 +66,34 @@ export default async function TeacherDashboard() {
       </div>
     );
   }
+
+  // These are secondary widgets. They must never take down the whole portal
+  // when a brand-new academy has no operational rows yet or a legacy optional
+  // table is unavailable.
+  const dailyOps = await getTeacherDailyOps(user.academy_id).catch((error) => {
+    console.error("Teacher daily ops unavailable:", error);
+    return {
+      todayKey: new Date().toISOString().slice(0, 10),
+      todaysLessons: [],
+      attendanceMissing: [],
+      atRiskStudents: [],
+      duePayments: [],
+      homeworkToReview: [],
+      counts: { todaysLessons: 0, attendanceMissing: 0, atRisk: 0, duePayments: 0, homeworkToReview: 0 },
+    };
+  });
+  // P2: generate + surface actionable teacher alerts
+  await generateTeacherAlerts(user.id).catch((error) => {
+    console.error("Teacher alerts unavailable:", error);
+  });
+  const allNotifs = await listNotifications(user.id).catch((error) => {
+    console.error("Teacher notifications unavailable:", error);
+    return [] as AppNotification[];
+  });
+  const ALERT_TYPES: NotificationType[] = ["absence_repeat", "low_grade", "payment_overdue", "homework_assigned"];
+  const alerts: AppNotification[] = allNotifs.filter(
+    (n) => ALERT_TYPES.includes(n.type) && !n.read,
+  );
 
   return (
     <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>

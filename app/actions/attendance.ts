@@ -28,8 +28,16 @@ export async function checkinAction(lessonId: string) {
 
 /** Teacher scans a student's personal QR → records them present for an explicit or active lesson. */
 export async function scanCheckinAction(lessonId: string | null | undefined, studentId: string) {
-  const user = await requireAttendanceTeacher();
+  let user: Awaited<ReturnType<typeof requireAttendanceTeacher>>;
+  try {
+    user = await requireAttendanceTeacher();
+  } catch (error) {
+    console.error("[attendance] QR teacher authentication failed:", error instanceof Error ? error.message : error);
+    return { ok: false, errorCode: "TEACHER_LOGIN_REQUIRED" as const, error: "Teacher login is required before scanning." };
+  }
 
+  // Keep every QR operation inside a stable result boundary so a server-action
+  // rejection never becomes the generic client "Something went wrong" toast.
   // Keep redirects/authentication outside the boundary, but make every remaining
   // QR operation return a stable result. A thrown Server Action becomes a generic
   // client "Network error" and hides whether the scan was actually persisted.

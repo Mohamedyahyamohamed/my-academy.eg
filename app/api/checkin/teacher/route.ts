@@ -6,7 +6,10 @@ import { setRequestContext } from "@/services/request-context";
 import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { requestIpKey } from "@/lib/request-identity";
 import { attendanceErrorCode, isDuplicateAttendanceError } from "@/lib/attendance-errors";
-import { isLessonActive, lessonWallClockMinute } from "@/services/lessons";
+import { isLessonActive, isLessonCanceled, lessonWallClockMinute } from "@/services/lessons";
+import { fetchStudentGroupIds } from "@/services/_shared";
+import { isSupabaseConfigured } from "@/services/supabase/config";
+import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { fullName } from "@/lib/utils";
 
 const GROUP_CONTEXT_COOKIE = "teacher_checkin_group";
@@ -23,14 +26,34 @@ function jsonError(error: string, status = 400) {
   return NextResponse.json({ ok: false, error }, { status });
 }
 
-function activeLessonForGroup(groupId: string, academyId: string) {
-  return collections().lessons
-    .filter((lesson) => lesson.academy_id === academyId && lesson.group_id === groupId)
+async function activeLessonForGroup(groupId: string, academyId: string) {
+  let lessons = collections().lessons
+    .filter((lesson) => lesson.academy_id === academyId && lesson.group_id === groupId);
+
+  // QR attendance must not rely on the stale-while-revalidate navigation
+  // snapshot. Read this group's lessons live when the server client is
+  // available, then fall back to the already hydrated tenant data only if the
+  // live read fails.
+  if (isSupabaseConfigured()) {
+    const admin = nodeSupabaseClient();
+    if (admin) {
+      const { data, error } = await admin
+        .from("lessons")
+        .select("id,academy_id,group_id,teacher_id,date,start_time,end_time,topic,status,is_cancelled")
+        .eq("academy_id", academyId)
+        .eq("group_id", groupId)
+        .limit(2000);
+      if (!error && data) lessons = data as any[];
+    }
+  }
+
+  return lessons
+    .filter((lesson) => !isLessonCanceled(lesson))
     .filter((lesson) => isLessonActive(lesson))
     .sort((a, b) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time))[0] ?? null;
 }
 
-async function scopedOptions(): Promise<GroupOption[]> {
+async function scopedOptions(studentId = ""): Promise<GroupOption[]> {
   const user = await loadCurrentUser();
   if (!user || user.role !== "TEACHER") return [];
   // The QR flow authenticates with the app session cookie. Do not rely on
@@ -43,18 +66,22 @@ async function scopedOptions(): Promise<GroupOption[]> {
     (item) => item.academy_id === user.academy_id &&
       (item.profile_id === user.id || item.email.toLowerCase() === user.email.toLowerCase()),
   );
+  const enrolledGroupIds = studentId
+    ? new Set(await fetchStudentGroupIds(studentId, user.academy_id))
+    : null;
   const groups: Group[] = teacher
     ? collections().groups.filter(
         (group) => group.academy_id === user.academy_id &&
+          (!enrolledGroupIds || enrolledGroupIds.has(group.id)) &&
           (group.teacher_id === teacher.id || collections().groupAssistants.some(
             (assistant) => assistant.teacher_id === teacher.id && assistant.group_id === group.id,
           )),
       )
     : [];
-  return groups
+  const options = await Promise.all(groups
     .filter((group) => group.status !== "INACTIVE")
-    .map((group) => {
-      const lesson = activeLessonForGroup(group.id, user.academy_id);
+    .map(async (group) => {
+      const lesson = await activeLessonForGroup(group.id, user.academy_id);
       return {
         id: group.id,
         name: group.name,
@@ -63,7 +90,8 @@ async function scopedOptions(): Promise<GroupOption[]> {
           ? { lesson: { id: lesson.id, topic: lesson.topic, startTime: lesson.start_time, endTime: lesson.end_time } }
           : {}),
       };
-    });
+    }));
+  return options;
 }
 
 export async function GET(req: NextRequest) {
@@ -74,8 +102,8 @@ export async function GET(req: NextRequest) {
   // Re-bind the authenticated tenant after every async boundary. QR redirects
   // can cross a request context boundary on mobile browsers.
   setRequestContext(user);
-  const groups = await scopedOptions();
   const requestedStudentId = req.nextUrl.searchParams.get("studentId") || req.nextUrl.searchParams.get("student") || "";
+  const groups = await scopedOptions(requestedStudentId);
   const preferredGroupId = req.cookies.get(GROUP_CONTEXT_COOKIE)?.value ?? null;
   const preferred = preferredGroupId ? groups.find((group) => group.id === preferredGroupId) : undefined;
   const active = groups.find((group) => group.lesson);
@@ -106,7 +134,7 @@ export async function POST(req: NextRequest) {
   const requestedGroupId = typeof body.groupId === "string" ? body.groupId : "";
   if (!studentId) return jsonError("STUDENT_REQUIRED");
 
-  const groups = await scopedOptions();
+  const groups = await scopedOptions(studentId);
   setRequestContext(user);
   if (requestedGroupId && !groups.some((item) => item.id === requestedGroupId)) {
     return jsonError("GROUP_NOT_ASSIGNED", 403);
@@ -118,7 +146,7 @@ export async function POST(req: NextRequest) {
     ?? (activeGroup?.lesson ? activeGroup : undefined);
   if (!group) return jsonError("NO_ASSIGNED_GROUP", 403);
 
-  const lesson = activeLessonForGroup(group.id, user.academy_id);
+  const lesson = await activeLessonForGroup(group.id, user.academy_id);
   if (!lesson) return jsonError("NO_ACTIVE_LESSON", 409);
 
   const duplicate = collections().attendance.some(

@@ -5,6 +5,7 @@ import { APP_CONFIG } from "@/lib/constants";
 import { getLangFromCookie, isRTL } from "@/lib/i18n";
 import { PwaRegister } from "@/components/layout/pwa-register";
 import { GlobalErrorMonitor } from "@/components/layout/global-error-monitor";
+import { PublicBackButton } from "@/components/shared/public-back-button";
 import "@fontsource/cairo/400.css";
 import "@fontsource/cairo/500.css";
 import "@fontsource/cairo/600.css";
@@ -79,6 +80,7 @@ export default async function RootLayout({
       <body className="font-sans">
         <PwaRegister />
         <GlobalErrorMonitor />
+        <PublicBackButton />
         {children}
         <Toaster
           position="top-center"

@@ -8,6 +8,8 @@ import { LanguageToggle } from "./language-toggle";
 import { PushNotifications } from "./push-notifications";
 import { InstallApp } from "./install-app";
 import { AcademySwitcher } from "./academy-switcher";
+import { BackButton } from "@/components/shared/back-button";
+import { roleHome } from "@/lib/auth";
 import type { SessionUser } from "@/types";
 import type { NavSection } from "@/lib/nav";
 
@@ -20,6 +22,7 @@ interface TopbarProps {
 export function Topbar({ user, sections }: TopbarProps) {
   return (
     <header className="print-shell-topbar sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border/70 bg-background/75 px-4 shadow-[0_8px_24px_-20px_hsl(var(--primary)/0.8)] backdrop-blur-xl md:px-6">
+      <BackButton fallback={roleHome(user.role)} />
       <MobileNav sections={sections} />
       <div className="flex-1">
         <GlobalSearch />

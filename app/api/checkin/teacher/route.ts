@@ -66,11 +66,26 @@ async function scopedOptions(studentId = ""): Promise<GroupOption[]> {
   // authenticated teacher record and academy.
   await ensureStoreLoaded(user.academy_id);
   setRequestContext(user);
-  const teacher = collections().teachers.find(
+  const admin = isSupabaseConfigured() ? nodeSupabaseClient() : null;
+  let teacher = collections().teachers.find(
     (item) => item.academy_id === user.academy_id &&
       (item.profile_id === user.id || item.email.toLowerCase() === user.email.toLowerCase()),
   );
-  const admin = isSupabaseConfigured() ? nodeSupabaseClient() : null;
+  // The local snapshot can lag behind a newly-created teacher record on mobile.
+  if (!teacher && admin) {
+    try {
+      const result = await withReadTimeout<any>(admin
+        .from("teachers")
+        .select("id,academy_id,profile_id,email")
+        .eq("academy_id", user.academy_id)
+        .limit(2000));
+      teacher = (result?.data ?? []).find((item: any) =>
+        item.profile_id === user.id || String(item.email ?? "").toLowerCase() === user.email.toLowerCase(),
+      ) ?? null;
+    } catch {
+      // Fall back to the hydrated snapshot.
+    }
+  }
   let enrolledGroupIds: Set<string> | null = null;
   if (studentId) {
     if (admin) {
@@ -90,7 +105,7 @@ async function scopedOptions(studentId = ""): Promise<GroupOption[]> {
       if (fallback.size) enrolledGroupIds = fallback;
     }
   }
-  const groups: Group[] = teacher
+  let groups: Group[] = teacher
     ? collections().groups.filter(
         (group) => group.academy_id === user.academy_id &&
           (!enrolledGroupIds || enrolledGroupIds.has(group.id)) &&
@@ -99,6 +114,27 @@ async function scopedOptions(studentId = ""): Promise<GroupOption[]> {
           )),
       )
     : [];
+  // Read current assignments too; this removes the stale-group window that was
+  // causing the phone flow to show "No active lesson" during a live lesson.
+  if (admin && teacher) {
+    try {
+      const [groupResult, assistantResult] = await Promise.all([
+        withReadTimeout<any>(admin.from("groups").select("*").eq("academy_id", user.academy_id).limit(2000)),
+        withReadTimeout<any>(admin.from("group_assistants").select("group_id,teacher_id").eq("teacher_id", teacher.id).limit(2000)),
+      ]);
+      const liveGroups = (groupResult?.data ?? []) as Group[];
+      const liveAssistants = (assistantResult?.data ?? []) as { group_id: string; teacher_id: string }[];
+      if (!groupResult?.error && liveGroups.length) {
+        const assistedIds = new Set(liveAssistants.map((item) => item.group_id));
+        groups = liveGroups.filter((group) =>
+          (!enrolledGroupIds || enrolledGroupIds.has(group.id)) &&
+          (group.teacher_id === teacher!.id || assistedIds.has(group.id)),
+        );
+      }
+    } catch {
+      // Keep the hydrated snapshot if live assignment reads are unavailable.
+    }
+  }
   const groupIds = groups.filter((group) => group.status !== "INACTIVE").map((group) => group.id);
   let lessons = collections().lessons.filter(
     (lesson) => lesson.academy_id === user.academy_id && groupIds.includes(lesson.group_id),

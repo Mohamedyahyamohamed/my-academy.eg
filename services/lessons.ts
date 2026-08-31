@@ -8,6 +8,8 @@ import { persistInsert, persistUpdate, persistDelete } from "./data/store";
 import { getGroup, getTeacher, byAcademy, teacherGroupScope, fetchTableRLS } from "./_shared";
 import { resolveTeacherForGroups } from "./groups";
 import { parseSchedule } from "@/lib/utils";
+import { nodeSupabaseClient } from "@/lib/supabase/node-client";
+import { isSupabaseConfigured } from "./supabase/config";
 
 export function lessonStatus(lesson: Pick<Lesson, "status" | "is_cancelled">): "scheduled" | "canceled" | "completed" {
   if (lesson.status === "canceled" || lesson.is_cancelled === true) return "canceled";
@@ -196,12 +198,28 @@ function assertNoLessonConflict(candidate: Pick<Lesson, "id" | "group_id" | "tea
 }
 
 /** Return the single lesson currently in progress for the authenticated teacher. */
-export function getActiveLessonForTeacher(now = new Date()): Lesson | null {
+export async function getActiveLessonForTeacher(now = new Date()): Promise<Lesson | null> {
   const academyId = currentAcademyId();
   const teacherId = currentTeacherId();
   const scope = teacherId ? teacherGroupScope() : null;
-  if (!teacherId || !scope?.size) return null;
-  const active = collections().lessons
+  if (!academyId || !teacherId || !scope?.size) return null;
+
+  let lessons = collections().lessons;
+  // Attendance is time-sensitive: bypass the stale navigation snapshot when
+  // a durable Supabase read is available.
+  if (isSupabaseConfigured()) {
+    const admin = nodeSupabaseClient();
+    if (admin) {
+      const { data, error } = await admin
+        .from("lessons")
+        .select("*")
+        .eq("academy_id", academyId)
+        .limit(5000);
+      if (!error && data) lessons = data as Lesson[];
+    }
+  }
+
+  const active = lessons
     .filter((lesson) => lesson.academy_id === academyId && !isLessonCanceled(lesson) && scope.has(lesson.group_id))
     .filter((lesson) => isLessonActive(lesson, now))
     .sort((a, b) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time));

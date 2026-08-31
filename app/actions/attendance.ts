@@ -68,7 +68,7 @@ export async function scanCheckinAction(lessonId: string | null | undefined, stu
     const student = resolvedStudent ? { id: resolvedStudent.id, name: fullName(resolvedStudent) } : null;
 
     const { LessonsService } = await import("@/services");
-    const lesson = lessonId ? await LessonsService.getLesson(lessonId) : LessonsService.getActiveLessonForTeacher();
+    const lesson = lessonId ? await LessonsService.getLesson(lessonId) : await LessonsService.getActiveLessonForTeacher();
     if (!lesson) {
       return {
         ok: false,

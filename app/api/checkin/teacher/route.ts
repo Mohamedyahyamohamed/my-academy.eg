@@ -7,10 +7,10 @@ import { rateLimit, LIMITS } from "@/lib/rate-limit-redis";
 import { requestIpKey } from "@/lib/request-identity";
 import { attendanceErrorCode, isDuplicateAttendanceError } from "@/lib/attendance-errors";
 import { isLessonActive, isLessonCanceled, lessonWallClockMinute } from "@/services/lessons";
-import { fetchStudentGroupIds } from "@/services/_shared";
 import { isSupabaseConfigured } from "@/services/supabase/config";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { fullName } from "@/lib/utils";
+import { withReadTimeout } from "@/services/_shared";
 
 const GROUP_CONTEXT_COOKIE = "teacher_checkin_group";
 const GROUP_CONTEXT_TTL = 30 * 60;
@@ -37,13 +37,17 @@ async function activeLessonForGroup(groupId: string, academyId: string) {
   if (isSupabaseConfigured()) {
     const admin = nodeSupabaseClient();
     if (admin) {
-      const { data, error } = await admin
-        .from("lessons")
-        .select("id,academy_id,group_id,teacher_id,date,start_time,end_time,topic,status,is_cancelled")
-        .eq("academy_id", academyId)
-        .eq("group_id", groupId)
-        .limit(2000);
-      if (!error && data) lessons = data as any[];
+      try {
+        const result = await withReadTimeout<any>(admin
+          .from("lessons")
+          .select("id,academy_id,group_id,teacher_id,date,start_time,end_time,topic,status,is_cancelled")
+          .eq("academy_id", academyId)
+          .eq("group_id", groupId)
+          .limit(2000));
+        if (result && !result.error && result.data) lessons = result.data as any[];
+      } catch {
+        // Fall back to the hydrated snapshot when the live read is unavailable.
+      }
     }
   }
 
@@ -66,33 +70,65 @@ async function scopedOptions(studentId = ""): Promise<GroupOption[]> {
     (item) => item.academy_id === user.academy_id &&
       (item.profile_id === user.id || item.email.toLowerCase() === user.email.toLowerCase()),
   );
-  const enrolledGroupIds = studentId
-    ? await fetchStudentGroupIds(studentId, user.academy_id)
-    : [];
-  const hasKnownMembership = enrolledGroupIds.length > 0;
+  const admin = isSupabaseConfigured() ? nodeSupabaseClient() : null;
+  let enrolledGroupIds: Set<string> | null = null;
+  if (studentId) {
+    if (admin) {
+      try {
+        const result = await withReadTimeout<any>(admin
+          .from("group_students")
+          .select("group_id")
+          .eq("student_id", studentId)
+          .limit(1000));
+        if (result && !result.error) enrolledGroupIds = new Set((result.data ?? []).map((row: any) => row.group_id).filter(Boolean));
+      } catch {
+        // Use the hydrated membership snapshot if the live read is unavailable.
+      }
+    }
+    if (!enrolledGroupIds) {
+      const fallback = new Set(collections().groupStudents.filter((row) => row.student_id === studentId).map((row) => row.group_id));
+      if (fallback.size) enrolledGroupIds = fallback;
+    }
+  }
   const groups: Group[] = teacher
     ? collections().groups.filter(
         (group) => group.academy_id === user.academy_id &&
-          (!hasKnownMembership || enrolledGroupIds.includes(group.id)) &&
+          (!enrolledGroupIds || enrolledGroupIds.has(group.id)) &&
           (group.teacher_id === teacher.id || collections().groupAssistants.some(
             (assistant) => assistant.teacher_id === teacher.id && assistant.group_id === group.id,
           )),
       )
     : [];
-  const options = await Promise.all(groups
-    .filter((group) => group.status !== "INACTIVE")
-    .map(async (group) => {
-      const lesson = await activeLessonForGroup(group.id, user.academy_id);
-      return {
-        id: group.id,
-        name: group.name,
-        teacherId: group.teacher_id,
-        ...(lesson
-          ? { lesson: { id: lesson.id, topic: lesson.topic, startTime: lesson.start_time, endTime: lesson.end_time } }
-          : {}),
-      };
-    }));
-  return options;
+  const groupIds = groups.filter((group) => group.status !== "INACTIVE").map((group) => group.id);
+  let lessons = collections().lessons.filter(
+    (lesson) => lesson.academy_id === user.academy_id && groupIds.includes(lesson.group_id),
+  );
+  if (admin && groupIds.length) {
+    try {
+      const result = await withReadTimeout<any>(admin
+        .from("lessons")
+        .select("id,academy_id,group_id,teacher_id,date,start_time,end_time,topic,status,is_cancelled")
+        .eq("academy_id", user.academy_id)
+        .in("group_id", groupIds)
+        .limit(5000));
+      if (result && !result.error && result.data) lessons = result.data as any[];
+    } catch {
+      // Use the hydrated lesson snapshot if the live read is unavailable.
+    }
+  }
+  return groups.filter((group) => group.status !== "INACTIVE").map((group) => {
+    const lesson = lessons
+      .filter((item) => item.group_id === group.id && !isLessonCanceled(item) && isLessonActive(item))
+      .sort((a, b) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time))[0] ?? null;
+    return {
+      id: group.id,
+      name: group.name,
+      teacherId: group.teacher_id,
+      ...(lesson
+        ? { lesson: { id: lesson.id, topic: lesson.topic, startTime: lesson.start_time, endTime: lesson.end_time } }
+        : {}),
+    };
+  });
 }
 
 export async function GET(req: NextRequest) {

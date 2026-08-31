@@ -22,6 +22,7 @@ export function AddGroupDialog({
   lockedTeacher,
   disabled,
   label,
+  existingGroups,
 }: {
   courses: Course[];
   teachers: Teacher[];
@@ -29,6 +30,7 @@ export function AddGroupDialog({
   lockedTeacher?: boolean;
   disabled?: boolean;
   label?: string;
+  existingGroups?: Group[];
 }) {
   const en = useClientLang() === "en";
   const [open, setOpen] = React.useState(false);
@@ -47,6 +49,7 @@ export function AddGroupDialog({
           teachers={teachers}
           defaultTeacherId={defaultTeacherId}
           lockedTeacher={lockedTeacher}
+          existingGroups={existingGroups}
           onDone={() => setOpen(false)}
         />
       </DialogContent>

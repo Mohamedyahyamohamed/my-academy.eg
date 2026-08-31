@@ -3,15 +3,20 @@
 import { revalidatePath } from "next/cache";
 import { requireScopedRole, GroupsService, isLimitedAssistant } from "@/services";
 import type { GroupInput } from "@/services/groups";
+import { groupSchema } from "@/schemas/groups";
 import { audit } from "@/services/audit";
 import { safeAction } from "@/lib/server-action-result";
 import { setRequestContext } from "@/services/request-context";
 
 export async function createGroupAction(input: GroupInput) {
+  const parsed = groupSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "راجع بيانات المجموعة قبل الحفظ.");
+  }
   const user = await requireScopedRole("ADMIN", "TEACHER");
   if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot create groups.");
   const { group: g, lessonCount } = await GroupsService.createGroupWithLessons(
-    { ...input, academy_id: user.academy_id },
+    { ...parsed.data, academy_id: user.academy_id },
     user.academy_id,
     user.id,
   );
@@ -24,10 +29,14 @@ export async function createGroupAction(input: GroupInput) {
 }
 
 export async function updateGroupAction(id: string, input: Partial<GroupInput>) {
+  const parsed = groupSchema.partial().safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "راجع بيانات المجموعة قبل الحفظ.");
+  }
   const user = await requireScopedRole("ADMIN", "TEACHER");
   if (await isLimitedAssistant(user)) throw new Error("Assistant accounts cannot edit group settings.");
   setRequestContext(user);
-  const g = await GroupsService.updateGroup(id, input, user.academy_id, user);
+  const g = await GroupsService.updateGroup(id, parsed.data, user.academy_id, user);
     void audit({ action: "group.update" });
   revalidatePath("/groups");
   revalidatePath(`/groups/${id}`);

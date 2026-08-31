@@ -38,7 +38,17 @@ export default async function GroupsPage() {
               <p className="mt-0.5 text-sm text-slate-400">{ en ? "Organize students by subject, teacher, and schedule." : "نظّم الطلاب في مجموعات حسب المادة والمدرّس والجدول." }</p>
             </div>
           </div>
-
+          {groups.length > 0 && (
+            <AddGroupDialog
+              courses={courses}
+              teachers={teachers}
+              defaultTeacherId={tid}
+              lockedTeacher={isTeacher}
+              disabled={groupCreationBlocked}
+              existingGroups={groups}
+              label={en ? "Add group" : "إضافة مجموعة"}
+            />
+          )}
         </div>
       </div>
 
@@ -75,6 +85,7 @@ export default async function GroupsPage() {
               defaultTeacherId={tid}
               lockedTeacher={isTeacher}
                 disabled={groupCreationBlocked}
+                existingGroups={groups}
                 label={en ? "Create your first group" : "إنشاء أول مجموعة"}
               />
           }

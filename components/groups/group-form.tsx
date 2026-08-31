@@ -24,7 +24,7 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 
 const COLORS = ["#7c5cfc", "#0ea5e9", "#10b981", "#f59e0b", "#f43f5e", "#8b5cf6", "#14b8a6", "#ec4899"];
 const DAYS = [{ key: "sat", ar: "السبت", en: "Saturday" }, { key: "sun", ar: "الأحد", en: "Sunday" }, { key: "mon", ar: "الإثنين", en: "Monday" }, { key: "tue", ar: "الثلاثاء", en: "Tuesday" }, { key: "wed", ar: "الأربعاء", en: "Wednesday" }, { key: "thu", ar: "الخميس", en: "Thursday" }, { key: "fri", ar: "الجمعة", en: "Friday" }];
-const TIME_OPTIONS = Array.from({ length: 29 }, (_, index) => { const minutes = 6 * 60 + index * 30; return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`; });
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => { const minutes = index * 30; return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`; });
 
 interface GroupFormProps {
   group?: Group;

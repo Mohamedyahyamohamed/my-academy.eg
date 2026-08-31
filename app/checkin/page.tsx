@@ -85,7 +85,7 @@ function CheckInInner() {
       const loadStaffFlow = async () => {
         setState("staff_loading");
         try {
-          const response = await fetch(`/api/checkin/teacher?studentId=${encodeURIComponent(studentId)}`, { cache: "no-store" });
+          const response = await fetch(`/api/checkin/teacher?studentId=${encodeURIComponent(studentId)}&_=${Date.now()}`, { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
           const result = await response.json();
           if (cancelled) return;
           if (response.status === 401) {

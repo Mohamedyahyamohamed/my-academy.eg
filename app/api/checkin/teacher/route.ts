@@ -180,7 +180,7 @@ export async function GET(req: NextRequest) {
   const preferredGroupId = req.cookies.get(GROUP_CONTEXT_COOKIE)?.value ?? null;
   const preferred = preferredGroupId ? groups.find((group) => group.id === preferredGroupId) : undefined;
   const active = groups.find((group) => group.lesson);
-  return NextResponse.json({
+  const response = NextResponse.json({
     ok: true,
     role: user.role,
     staffName: user.full_name,
@@ -189,6 +189,8 @@ export async function GET(req: NextRequest) {
     preferredGroupId: preferred?.id ?? null,
     groups,
   });
+  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  return response;
 }
 
 export async function POST(req: NextRequest) {

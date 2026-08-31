@@ -5,6 +5,7 @@
 import { describe, it, expect } from "vitest";
 import { percentage, round, clamp, formatClockTime, parseSchedule } from "@/lib/utils";
 import { isLessonActive, isLessonUpcoming, lessonEndWallClockMinute, lessonWallClockMinute } from "@/services/lessons";
+import { buildRecurringLessonRows } from "@/lib/lesson-generation";
 import {
   MAX_CONTENT_UPLOAD_BYTES,
   MAX_HOMEWORK_UPLOAD_BYTES,
@@ -147,6 +148,20 @@ describe("Lesson time classification", () => {
       start: "02:30",
       end: "16:30",
     });
+  });
+
+  it("materializes the current lesson from the user's weekly schedule", () => {
+    const rows = buildRecurringLessonRows(
+      { id: "group-now", name: "Computer", teacher_id: "teacher-now", schedule: "السبت، الخميس، الأحد، الأربعاء، الإثنين، الجمعة، الثلاثاء · ٢:٣٠ ص – ٤:٣٠ م" },
+      "academy-now",
+      1,
+      new Date("2026-08-31T01:16:00Z"),
+    );
+    const current = rows.find((lesson) => isLessonActive(lesson, new Date("2026-08-31T01:16:00Z")));
+    expect(current).toBeDefined();
+    expect(current?.date).toBe("2026-08-31");
+    expect(current?.start_time).toBe("02:30");
+    expect(current?.end_time).toBe("16:30");
   });
 
   it("carries an overnight lesson end into the next wall-clock day", () => {

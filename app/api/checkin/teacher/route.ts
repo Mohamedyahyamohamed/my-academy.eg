@@ -11,6 +11,8 @@ import { isSupabaseConfigured } from "@/services/supabase/config";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 import { fullName } from "@/lib/utils";
 import { withReadTimeout } from "@/services/_shared";
+import { buildRecurringLessonRows } from "@/lib/lesson-generation";
+import { persistInsert } from "@/services/data/store";
 
 const GROUP_CONTEXT_COOKIE = "teacher_checkin_group";
 const GROUP_CONTEXT_TTL = 30 * 60;
@@ -19,6 +21,8 @@ type GroupOption = {
   id: string;
   name: string;
   teacherId: string;
+  teacher_id: string;
+  schedule?: string | null;
   lesson?: { id: string; topic: string; startTime: string; endTime: string };
 };
 
@@ -26,7 +30,7 @@ function jsonError(error: string, status = 400) {
   return NextResponse.json({ ok: false, error }, { status });
 }
 
-async function activeLessonForGroup(groupId: string, academyId: string) {
+async function activeLessonForGroup(groupId: string, academyId: string, group?: { id: string; name: string; teacher_id: string; schedule?: string | null }) {
   let lessons = collections().lessons
     .filter((lesson) => lesson.academy_id === academyId && lesson.group_id === groupId);
 
@@ -51,10 +55,26 @@ async function activeLessonForGroup(groupId: string, academyId: string) {
     }
   }
 
-  return lessons
+  const active = lessons
     .filter((lesson) => !isLessonCanceled(lesson))
     .filter((lesson) => isLessonActive(lesson))
-    .sort((a, b) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time))[0] ?? null;
+    .sort((a, b) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time))[0];
+  if (active) return active;
+
+  // Older groups may have a weekly schedule but no generated lesson row for
+  // today. Materialize today's lesson once, so QR attendance uses a real FK.
+  const scheduled = group ? buildRecurringLessonRows(group, academyId, 1, new Date()).find((lesson) => isLessonActive(lesson)) : null;
+  if (scheduled) {
+    try {
+      await persistInsert("lessons", scheduled, academyId);
+      collections().lessons.push(scheduled);
+      return scheduled;
+    } catch {
+      // A concurrent request may have created today's row; the next request
+      // will read it from the live lessons query.
+    }
+  }
+  return null;
 }
 
 async function scopedOptions(studentId = ""): Promise<GroupOption[]> {
@@ -160,6 +180,8 @@ async function scopedOptions(studentId = ""): Promise<GroupOption[]> {
       id: group.id,
       name: group.name,
       teacherId: group.teacher_id,
+      teacher_id: group.teacher_id,
+      schedule: group.schedule,
       ...(lesson
         ? { lesson: { id: lesson.id, topic: lesson.topic, startTime: lesson.start_time, endTime: lesson.end_time } }
         : {}),
@@ -225,7 +247,7 @@ export async function POST(req: NextRequest) {
     ?? (activeGroup?.lesson ? activeGroup : undefined);
   if (!group) return jsonError("NO_ASSIGNED_GROUP", 403);
 
-  const lesson = await activeLessonForGroup(group.id, user.academy_id);
+  const lesson = await activeLessonForGroup(group.id, user.academy_id, group);
   if (!lesson) return jsonError("NO_ACTIVE_LESSON", 409);
 
   const duplicate = collections().attendance.some(

@@ -178,8 +178,12 @@ export async function POST(req: NextRequest) {
   }
   const cookieGroupId = req.cookies.get(GROUP_CONTEXT_COOKIE)?.value ?? "";
   const activeGroup = groups.find((group) => group.lesson);
+  // A remembered group is only a preference. It may be stale after the
+  // schedule changes, so never let it shadow another group whose lesson is
+  // active right now. An explicitly requested group remains authoritative.
+  const rememberedGroup = groups.find((item) => item.id === cookieGroupId && item.lesson);
   const group = groups.find((item) => item.id === requestedGroupId)
-    ?? groups.find((item) => item.id === cookieGroupId)
+    ?? rememberedGroup
     ?? (activeGroup?.lesson ? activeGroup : undefined);
   if (!group) return jsonError("NO_ASSIGNED_GROUP", 403);
 

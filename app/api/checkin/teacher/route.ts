@@ -67,12 +67,13 @@ async function scopedOptions(studentId = ""): Promise<GroupOption[]> {
       (item.profile_id === user.id || item.email.toLowerCase() === user.email.toLowerCase()),
   );
   const enrolledGroupIds = studentId
-    ? new Set(await fetchStudentGroupIds(studentId, user.academy_id))
-    : null;
+    ? await fetchStudentGroupIds(studentId, user.academy_id)
+    : [];
+  const hasKnownMembership = enrolledGroupIds.length > 0;
   const groups: Group[] = teacher
     ? collections().groups.filter(
         (group) => group.academy_id === user.academy_id &&
-          (!enrolledGroupIds || enrolledGroupIds.has(group.id)) &&
+          (!hasKnownMembership || enrolledGroupIds.includes(group.id)) &&
           (group.teacher_id === teacher.id || collections().groupAssistants.some(
             (assistant) => assistant.teacher_id === teacher.id && assistant.group_id === group.id,
           )),

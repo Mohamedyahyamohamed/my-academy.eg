@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { scanCheckinAction } from "@/app/actions/attendance";
 import { formatTime, fullName } from "@/lib/utils";
+import { isLessonActive } from "@/lib/lesson-time";
 import type { Group, Lesson, Student } from "@/types";
 import { useClientLang } from "@/lib/i18n-client";
 import { studentIdFromQrValue } from "@/lib/student-qr";
@@ -62,6 +63,7 @@ export function ScanWorkshop({
     const list = scanLessonsRef.current;
     const todayKey = new Date().toLocaleDateString("en-CA");
     const target =
+      list.find((l) => isLessonActive(l)) ??
       list.find((l) => String(l.date).slice(0, 10) === todayKey) ??
       [...list].sort((a, b) => +new Date(a.date) - +new Date(b.date)).find((l) => +new Date(`${l.date}T${l.start_time ?? "23:59"}`) >= Date.now()) ??
       list[0];

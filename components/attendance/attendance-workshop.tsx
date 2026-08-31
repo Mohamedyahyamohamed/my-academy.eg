@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { StudentAvatar } from "@/components/shared/student-avatar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { cn, formatClockTime, fullName, percentage } from "@/lib/utils";
+import { isLessonActive } from "@/lib/lesson-time";
 import type { AttendanceStatus, Group, Lesson, Student } from "@/types";
 import { saveAttendanceAction } from "@/app/actions/attendance";
 import { QrCheckin } from "@/components/attendance/qr-checkin";
@@ -63,6 +64,7 @@ export function AttendanceWorkshop({
     const list = groupLessonsRef.current;
     const todayKey = new Date().toLocaleDateString("en-CA");
     const target =
+      list.find((l) => isLessonActive(l)) ??
       list.find((l) => String(l.date).slice(0, 10) === todayKey) ??
       [...list].sort((a, b) => +new Date(a.date) - +new Date(b.date)).find((l) => +new Date(`${l.date}T${l.start_time ?? "23:59"}`) >= Date.now()) ??
       list[0];

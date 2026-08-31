@@ -11,7 +11,7 @@ import {
 import { useClientLang } from "@/lib/i18n-client";
 
 /** Teacher shows a signed, short-lived QR for student self check-in. */
-export function QrCheckin({ lessonId }: { lessonId: string }) {
+export function QrCheckin({ lessonId, groupId }: { lessonId: string; groupId?: string }) {
   const en = useClientLang() === "en";
   const [open, setOpen] = React.useState(false);
   const [origin, setOrigin] = React.useState("");
@@ -28,7 +28,7 @@ export function QrCheckin({ lessonId }: { lessonId: string }) {
       const response = await fetch("/api/qr-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lessonId }),
+        body: JSON.stringify({ lessonId, groupId }),
       });
       const res = await response.json().catch(() => null);
       if (!response.ok || !res?.token) {

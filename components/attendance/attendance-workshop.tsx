@@ -207,7 +207,7 @@ export function AttendanceWorkshop({
               <Badge variant="info">{en ? "Rate" : "النسبة"} {counts.rate}%</Badge>
             </div>
             <div className="flex gap-2">
-              <QrCheckin lessonId={lessonId} />
+              <QrCheckin lessonId={lessonId} groupId={groupId} />
               <Button variant="outline" size="sm" onClick={() => setAll("PRESENT")}>
                 <CheckCheck className="h-4 w-4 text-emerald-600" /> {en ? "Mark all present" : "تسجيل الكل حاضرًا"}
               </Button>

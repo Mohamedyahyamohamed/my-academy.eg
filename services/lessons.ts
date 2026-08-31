@@ -139,11 +139,24 @@ export function wallClockMinute(date: Date, timeZone = process.env.ACADEMY_TIMEZ
   return daySerial * 24 * 60 + value("hour") * 60 + value("minute");
 }
 
+function clockMinute(time: string) {
+  const value = String(time ?? "").trim().toUpperCase();
+  const match = value.match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?/);
+  if (!match) return 0;
+  let hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const meridiem = match[3];
+  if (meridiem) {
+    if (hour === 12) hour = 0;
+    if (meridiem === "PM") hour += 12;
+  }
+  return hour * 60 + minute;
+}
+
 export function lessonWallClockMinute(date: string, time: string) {
-  const [year, month, day] = date.slice(0, 10).split("-").map(Number);
-  const [hour, minute] = time.slice(0, 5).split(":").map(Number);
+  const [year, month, day] = String(date ?? "").slice(0, 10).split("-").map(Number);
   const daySerial = Math.floor(Date.UTC(year, month - 1, day) / 86_400_000);
-  return daySerial * 24 * 60 + hour * 60 + minute;
+  return daySerial * 24 * 60 + clockMinute(time);
 }
 
 /**

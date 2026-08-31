@@ -135,6 +135,12 @@ describe("Lesson time classification", () => {
     )).toBe(false);
   });
 
+  it("normalizes legacy 12-hour lesson times", () => {
+    const afternoon = lessonWallClockMinute("2026-08-22", "4:00 PM");
+    const midnight = lessonWallClockMinute("2026-08-22", "12:30 AM");
+    expect(afternoon - midnight).toBe(15 * 60 + 30);
+  });
+
   it("carries an overnight lesson end into the next wall-clock day", () => {
     const start = lessonWallClockMinute("2026-08-22", "23:00");
     const end = lessonEndWallClockMinute("2026-08-22", "23:00", "01:00");

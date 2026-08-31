@@ -14,6 +14,7 @@ import { playQrResultSound, primeQrSound } from "@/lib/qr-sound";
 type QuickGroup = {
   id: string;
   name: string;
+  schedule?: string | null;
   lesson?: { id: string; topic: string; startTime: string; endTime: string };
 };
 
@@ -35,7 +36,11 @@ function CheckInInner() {
   const [studentLabel, setStudentLabel] = React.useState("");
   const autoStarted = React.useRef(false);
   const selectedGroup = groups.find((group) => group.id === selectedGroupId);
+  // A group with a valid weekly schedule can still be missing today's lesson
+  // row. Let the server materialize it on the explicit Record action instead
+  // of disabling the only recovery path on mobile.
   const hasActiveLesson = Boolean(selectedGroup?.lesson);
+  const canAttemptAttendance = hasActiveLesson || Boolean(selectedGroup?.schedule);
 
   React.useEffect(() => {
     const primeFromTouch = () => primeQrSound();
@@ -193,7 +198,7 @@ function CheckInInner() {
             <select dir={en ? "ltr" : "rtl"} className="w-full rounded-md border bg-background px-3 py-3 text-sm" value={selectedGroupId} onChange={(event) => setSelectedGroupId(event.target.value)}>
               {groups.map((group) => <option key={group.id} value={group.id}>{group.name}{group.lesson ? ` — ${group.lesson.topic}` : ` — ${en ? "No active lesson" : "لا توجد حصة جارية"}`}</option>)}
             </select>
-            <Button className="w-full" disabled={!selectedGroupId || !hasActiveLesson} onClick={() => void recordForGroup(selectedGroupId)}>{en ? "Record attendance" : "تسجيل الحضور"}</Button>
+            <Button className="w-full" disabled={!selectedGroupId || !canAttemptAttendance} onClick={() => void recordForGroup(selectedGroupId)}>{en ? "Record attendance" : "تسجيل الحضور"}</Button>
           </>
         )}
         {state === "err" && (

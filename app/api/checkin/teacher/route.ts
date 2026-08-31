@@ -172,21 +172,26 @@ async function scopedOptions(studentId = ""): Promise<GroupOption[]> {
       // Use the hydrated lesson snapshot if the live read is unavailable.
     }
   }
-  return groups.filter((group) => group.status !== "INACTIVE").map((group) => {
-    const lesson = lessons
-      .filter((item) => item.group_id === group.id && !isLessonCanceled(item) && isLessonActive(item))
-      .sort((a, b) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time))[0] ?? null;
-    return {
-      id: group.id,
-      name: group.name,
-      teacherId: group.teacher_id,
-      teacher_id: group.teacher_id,
-      schedule: group.schedule,
-      ...(lesson
-        ? { lesson: { id: lesson.id, topic: lesson.topic, startTime: lesson.start_time, endTime: lesson.end_time } }
-        : {}),
-    };
-  });
+  const options = await Promise.all(groups
+    .filter((group) => group.status !== "INACTIVE")
+    .map(async (group) => {
+      // Resolve the lesson through the same live/fallback path used by POST.
+      // This is important because the button is disabled until GET exposes an
+      // active lesson; resolving only from the initial lesson array created a
+      // deadlock for groups with a schedule but no row for today.
+      const lesson = await activeLessonForGroup(group.id, user.academy_id, group);
+      return {
+        id: group.id,
+        name: group.name,
+        teacherId: group.teacher_id,
+        teacher_id: group.teacher_id,
+        schedule: group.schedule,
+        ...(lesson
+          ? { lesson: { id: lesson.id, topic: lesson.topic, startTime: lesson.start_time, endTime: lesson.end_time } }
+          : {}),
+      };
+    }));
+  return options;
 }
 
 export async function GET(req: NextRequest) {

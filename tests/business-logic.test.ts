@@ -3,7 +3,7 @@
  * Run: npx vitest run
  */
 import { describe, it, expect } from "vitest";
-import { percentage, round, clamp, formatClockTime } from "@/lib/utils";
+import { percentage, round, clamp, formatClockTime, parseSchedule } from "@/lib/utils";
 import { isLessonActive, isLessonUpcoming, lessonEndWallClockMinute, lessonWallClockMinute } from "@/services/lessons";
 import {
   MAX_CONTENT_UPLOAD_BYTES,
@@ -139,6 +139,14 @@ describe("Lesson time classification", () => {
     const afternoon = lessonWallClockMinute("2026-08-22", "4:00 PM");
     const midnight = lessonWallClockMinute("2026-08-22", "12:30 AM");
     expect(afternoon - midnight).toBe(15 * 60 + 30);
+  });
+
+  it("parses legacy Arabic weekly schedules", () => {
+    expect(parseSchedule("السبت، الخميس، الأحد، الأربعاء، الإثنين، الجمعة، الثلاثاء · ٢:٣٠ ص – ٤:٣٠ م")).toEqual({
+      days: ["sat", "sun", "mon", "tue", "wed", "thu", "fri"],
+      start: "02:30",
+      end: "16:30",
+    });
   });
 
   it("carries an overnight lesson end into the next wall-clock day", () => {

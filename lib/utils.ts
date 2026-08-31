@@ -98,11 +98,53 @@ export function buildSchedule(days: string[], start: string, end: string) {
   return `SCHEDULE_V1|days=${days.join(",")}\u007cstart=${start}\u007cend=${end}`;
 }
 
+function normalizeScheduleDigits(value: string) {
+  return value.replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)));
+}
+
+function parseScheduleClock(value: string, meridiem?: string) {
+  let hour = Number(value);
+  if (meridiem) {
+    const marker = meridiem.toLowerCase();
+    if (hour === 12) hour = 0;
+    if (marker === "pm" || marker.startsWith("م") || marker.startsWith("مساء")) hour += 12;
+  }
+  return hour;
+}
+
+function formatScheduleClock(hour: number, minute: number) {
+  return `${String(hour % 24).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
 export function parseSchedule(schedule: string | null | undefined): StructuredSchedule | null {
   if (!schedule) return null;
-  const match = schedule.match(/^SCHEDULE_V1\|days=([^|]*)\|start=([^|]+)\|end=([^|]+)$/);
-  if (!match) return null;
-  return { days: match[1] ? match[1].split(",").filter(Boolean) : [], start: match[2], end: match[3] };
+  const value = normalizeScheduleDigits(schedule).trim();
+  const structured = value.match(/^SCHEDULE_V1\|days=([^|]*)\|start=([^|]+)\|end=([^|]+)$/);
+  if (structured) {
+    return { days: structured[1] ? structured[1].split(",").filter(Boolean) : [], start: structured[2], end: structured[3] };
+  }
+
+  // Backward-compatible parser for schedules saved before SCHEDULE_V1, e.g.
+  // "السبت، الخميس · ٢:٣٠ ص – ٤:٣٠ م" or "Sun, Tue, Thu — 4:00 PM".
+  const dayAliases: Array<[string, string[]]> = [
+    ["sat", ["sat", "saturday", "السبت"]], ["sun", ["sun", "sunday", "الأحد", "الاحد"]],
+    ["mon", ["mon", "monday", "الإثنين", "الاثنين"]], ["tue", ["tue", "tuesday", "الثلاثاء"]],
+    ["wed", ["wed", "wednesday", "الأربعاء", "الاربعاء"]], ["thu", ["thu", "thursday", "الخميس"]],
+    ["fri", ["fri", "friday", "الجمعة"]],
+  ];
+  const lower = value.toLowerCase();
+  const days = dayAliases.filter(([, aliases]) => aliases.some((alias) => lower.includes(alias))).map(([key]) => key);
+  const timePattern = /(\d{1,2})(?::(\d{2}))?\s*(AM|PM|صباحًا|صباحا|مساءً|مساءا|ص|م)?/gi;
+  const times: Array<{ hour: number; minute: number; marker?: string }> = [];
+  for (const match of value.matchAll(timePattern)) {
+    const hour = parseScheduleClock(match[1], match[3]);
+    const minute = Number(match[2] ?? 0);
+    if (hour <= 23 && minute <= 59) times.push({ hour, minute, marker: match[3] });
+  }
+  if (!days.length || !times.length) return null;
+  const start = formatScheduleClock(times[0].hour, times[0].minute);
+  const endMinutes = (times[1] ? times[1].hour * 60 + times[1].minute : times[0].hour * 60 + times[0].minute + 90);
+  return { days, start, end: formatScheduleClock(Math.floor(endMinutes / 60), endMinutes % 60) };
 }
 
 const DAY_LABELS: Record<string, { ar: string; en: string }> = {

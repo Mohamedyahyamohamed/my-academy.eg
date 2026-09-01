@@ -13,10 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { HomeworkBadge } from "@/components/shared/badges";
-import { getTeacherDashboard, requireScopedRole, getTeacherDailyOps } from "@/services";
+import { DashboardService, getTeacherDashboard, requireScopedRole, getTeacherDailyOps } from "@/services";
 import { generateTeacherAlerts, listNotifications } from "@/services/notifications";
 import type { AppNotification, NotificationType } from "@/types";
-import { formatDate, formatClockTime, formatSchedule } from "@/lib/utils";
+import { formatDate, formatClockTime, formatSchedule, formatCurrency } from "@/lib/utils";
 import { TeacherDailyOpsBoard } from "@/components/teacher/daily-ops-board";
 
 export const dynamic = "force-dynamic";
@@ -66,6 +66,8 @@ export default async function TeacherDashboard() {
       </div>
     );
   }
+
+  const finance = await DashboardService.getDashboardData("month", user.academy_id).catch(() => null);
 
   // These are secondary widgets. They must never take down the whole portal
   // when a brand-new academy has no operational rows yet or a legacy optional
@@ -156,6 +158,28 @@ export default async function TeacherDashboard() {
         <StatCard label={isRTL ? "حصص اليوم" : "Today's lessons"} value={d.todayCount ?? 0} hint={isRTL ? `${d.upcomingCount} حصة قادمة` : `${d.upcomingCount} upcoming`} icon={CalendarClock} accent="success" href="/lessons" />
         <StatCard label={t.attendanceRate} value={d.totalSessions === 0 ? (isRTL ? "—" : "N/A") : `${d.attendanceRate}%`} hint={d.totalSessions === 0 ? (isRTL ? "لم تُسجّل حصص بعد" : "No attendance recorded yet") : undefined} icon={CheckCircle2} accent="warning" href="/attendance" />
       </div>
+
+      {finance && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{isRTL ? "الملخص المالي" : "Financial overview"}</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border bg-muted/30 p-4">
+              <p className="text-sm text-muted-foreground">{isRTL ? "الإيراد المتوقع" : "Expected revenue"}</p>
+              <p className="mt-2 text-xl font-bold text-primary">{formatCurrency(finance.expectedRevenueThisMonth, "EGP", isRTL ? "ar-EG" : "en-EG")}</p>
+            </div>
+            <div className="rounded-xl border bg-muted/30 p-4">
+              <p className="text-sm text-muted-foreground">{isRTL ? "المحصّل" : "Collected"}</p>
+              <p className="mt-2 text-xl font-bold text-emerald-600">{formatCurrency(finance.collectedRevenueThisMonth, "EGP", isRTL ? "ar-EG" : "en-EG")}</p>
+            </div>
+            <div className="rounded-xl border bg-muted/30 p-4">
+              <p className="text-sm text-muted-foreground">{isRTL ? "المتبقي للتحصيل" : "Remaining"}</p>
+              <p className="mt-2 text-xl font-bold text-amber-600">{formatCurrency(finance.outstanding, "EGP", isRTL ? "ar-EG" : "en-EG")}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <TeacherDailyOpsBoard ops={dailyOps} lang={lang === "en" ? "en" : "ar"} />
 

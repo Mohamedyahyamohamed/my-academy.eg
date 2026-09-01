@@ -136,9 +136,16 @@ export function CreatePaymentDialog({
   const [studentId, setStudentId] = React.useState(defaultStudentId ?? "");
   const [groupId, setGroupId] = React.useState("");
   const [month, setMonth] = React.useState(new Date().toISOString().slice(0, 7));
+  const [feeType, setFeeType] = React.useState<"monthly" | "half_month">("monthly");
   const [amountDue, setAmountDue] = React.useState(0);
   const [amountPaid, setAmountPaid] = React.useState(0);
   const [method, setMethod] = React.useState("Cash");
+
+  const chooseFeeType = (type: "monthly" | "half_month") => {
+    setFeeType(type);
+    const group = groups.find((g) => g.id === groupId);
+    if (group) setAmountDue(type === "half_month" ? group.monthly_fee / 2 : group.monthly_fee);
+  };
 
   const submit = async () => {
     if (!studentId) { toast.error(en ? "Select a student first." : "اختر طالبًا أولًا."); return; }
@@ -149,6 +156,7 @@ export function CreatePaymentDialog({
         student_id: studentId,
         group_id: groupId || null,
         month,
+        fee_type: feeType,
         amount_due: amountDue,
         amount_paid: amountPaid,
         method,
@@ -186,7 +194,7 @@ export function CreatePaymentDialog({
             </div>
             <div className="space-y-1.5">
               <Label>{en ? "Group" : "المجموعة"}</Label>
-              <select value={groupId} onChange={(e) => { setGroupId(e.target.value); const g = groups.find((x) => x.id === e.target.value); if (g) setAmountDue(g.monthly_fee); }} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+              <select value={groupId} onChange={(e) => { setGroupId(e.target.value); const g = groups.find((x) => x.id === e.target.value); if (g) setAmountDue(feeType === "half_month" ? g.monthly_fee / 2 : g.monthly_fee); }} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="">{en ? "None" : "لا يوجد"}</option>
                 {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
@@ -194,6 +202,20 @@ export function CreatePaymentDialog({
             <div className="space-y-1.5">
               <Label>{en ? "Month" : "الشهر"}</Label>
               <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>{en ? "Fee period" : "نوع الاشتراك"}</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button type="button" variant={feeType === "monthly" ? "default" : "outline"} onClick={() => chooseFeeType("monthly")}>
+                  {en ? "Full month" : "شهر كامل"}
+                </Button>
+                <Button type="button" variant={feeType === "half_month" ? "default" : "outline"} onClick={() => chooseFeeType("half_month")}>
+                  {en ? "Half month" : "نصف شهر"}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {en ? "The due amount is calculated automatically, but you can edit it before saving." : "سيُحسب المبلغ تلقائيًا، ويمكنك تعديله يدويًا قبل التسجيل."}
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label>{en ? "Payment method" : "طريقة الدفع"}</Label>

@@ -23,7 +23,10 @@ export default async function AttendancePage() {
   const lessons = (await LessonsService.listLessons({ pageSize: 500 }, user.academy_id, teacherProfileId)).items;
   const students = (await StudentsService.listStudents({ pageSize: 500 }, user.academy_id)).items;
   const currentMonth = new Date().toISOString().slice(0, 7);
-  const currentPayments = (await PaymentsService.listPayments({ month: currentMonth, pageSize: 500 }, user.academy_id)).items;
+  const currentPayments = (await PaymentsService.listPayments({ month: currentMonth, pageSize: 500 }, user.academy_id).catch((error) => {
+    console.error("Attendance payment status unavailable:", error);
+    return { items: [], pagination: { page: 1, pageSize: 500, total: 0, totalPages: 1 } } as Awaited<ReturnType<typeof PaymentsService.listPayments>>;
+  })).items;
   const paidThisMonth: Record<string, boolean> = {};
   currentPayments.forEach((payment) => {
     paidThisMonth[payment.student_id] = (paidThisMonth[payment.student_id] ?? false) || payment.remaining <= 0;

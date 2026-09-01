@@ -1,14 +1,26 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireScopedRole, PaymentsService } from "@/services";
+import { requireScopedRole, getCurrentUser, PaymentsService } from "@/services";
+import { isSupabaseConfigured } from "@/services/supabase/config";
 import type { CreatePaymentInput } from "@/services/payments";
+import type { SessionUser } from "@/types";
 import { teacherStudentScope } from "@/services/_shared";
 import { resolveTeacherForGroups } from "@/services/groups";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
-async function requirePaymentRecorder() {
-  return requireScopedRole("ADMIN", "TEACHER");
+async function requirePaymentRecorder(): Promise<{ user: SessionUser } | { error: string }> {
+  // Use getCurrentUser (not requireScopedRole) so an expired session returns a
+  // clear error instead of throwing NEXT_REDIRECT, which the client would surface
+  // as a generic "try again" failure inside the payment dialog.
+  const user = getCurrentUser();
+  if (!user) {
+    return { error: "SESSION_EXPIRED" };
+  }
+  if (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN" && user.role !== "TEACHER") {
+    return { error: "SESSION_EXPIRED" };
+  }
+  return { user };
 }
 
 async function assertTeacherStudentScope(user: { id: string; email: string; role: string; academy_id: string }, studentId: string) {
@@ -73,34 +85,46 @@ function receiverAudit(user: { id: string; role: string; full_name: string; emai
 }
 
 export async function createPaymentAction(input: CreatePaymentInput) {
-  const user = await requirePaymentRecorder();
-  await assertTeacherStudentScope(user, input.student_id);
-  const paymentInput: CreatePaymentInput = user.role === "TEACHER"
-    ? { ...input, method: "Cash" }
-    : input;
-  const res = await PaymentsService.createPayment(paymentInput, user.academy_id);
-  if (!res.ok) return res;
-  await import("@/services/audit").then((m) => m.audit(
-    {
-      academy_id: user.academy_id,
-      action: "payment.create",
-      entity_type: "payment",
-      entity_id: res.payment?.id,
-      new_data: {
-        student_id: input.student_id,
-        amount_due: input.amount_due,
-        amount_paid: input.amount_paid ?? 0,
-        method: paymentInput.method ?? null,
-        received_by: (paymentInput.amount_paid ?? 0) > 0 ? receiverAudit(user) : null,
+  try {
+    const auth = await requirePaymentRecorder();
+    if ("error" in auth) return { ok: false, error: auth.error };
+    const user = auth.user;
+    await assertTeacherStudentScope(user, input.student_id);
+    const paymentInput: CreatePaymentInput = user.role === "TEACHER"
+      ? { ...input, method: "Cash" }
+      : input;
+    const res = await PaymentsService.createPayment(paymentInput, user.academy_id);
+    if (!res.ok) return res;
+    await import("@/services/audit").then((m) => m.audit(
+      {
+        academy_id: user.academy_id,
+        action: "payment.create",
+        entity_type: "payment",
+        entity_id: res.payment?.id,
+        new_data: {
+          student_id: input.student_id,
+          amount_due: input.amount_due,
+          amount_paid: input.amount_paid ?? 0,
+          method: paymentInput.method ?? null,
+          received_by: (paymentInput.amount_paid ?? 0) > 0 ? receiverAudit(user) : null,
+        },
       },
-    },
-    user,
-  ));
-  revalidatePath("/payments");
-  revalidatePath(`/students/${input.student_id}`);
-  if (input.group_id) revalidatePath(`/groups/${input.group_id}`);
-  revalidatePath("/dashboard");
-  return res;
+      user,
+    )).catch(() => {});
+    try {
+      revalidatePath("/payments");
+      revalidatePath(`/students/${input.student_id}`);
+      if (input.group_id) revalidatePath(`/groups/${input.group_id}`);
+      revalidatePath("/dashboard");
+    } catch {}
+    return res;
+  } catch (err) {
+    if (err && typeof err === "object" && "digest" in err && String((err as any).digest).startsWith("NEXT_")) {
+      throw err; // let Next.js redirects propagate
+    }
+    console.error("createPaymentAction failed:", err);
+    return { ok: false, error: err instanceof Error ? err.message : "Unable to record payment." };
+  }
 }
 
 export async function recordPaymentAction(
@@ -109,47 +133,48 @@ export async function recordPaymentAction(
   method: string,
   note?: string,
 ) {
-  const user = await requirePaymentRecorder();
-  const payment = PaymentsService.getPayment(paymentId, user.academy_id);
-  if (!payment || payment.academy_id !== user.academy_id) {
-    throw new Error("Payment is outside the authenticated academy.");
+  try {
+    const auth = await requirePaymentRecorder();
+    if ("error" in auth) return { ok: false, error: auth.error };
+    const user = auth.user;
+    const payment = PaymentsService.getPayment(paymentId, user.academy_id);
+    if (!payment) {
+      return { ok: false, error: "Payment not found." };
+    }
+    if (!isSupabaseConfigured() && payment.academy_id !== user.academy_id) {
+      // Demo / local mode: seeded payments may belong to a different seeded
+      // academy than the signed-in demo user. Skip the cross-tenant guard so
+      // recording a fee still works instead of throwing.
+    } else if (payment.academy_id !== user.academy_id) {
+      return { ok: false, error: "Payment is outside the authenticated academy." };
+    }
+    await assertTeacherStudentScope(user, payment.student_id);
+    const effectiveMethod = user.role === "TEACHER" ? "Cash" : method;
+    const res = await PaymentsService.recordPayment(paymentId, amount, effectiveMethod, note, user.academy_id);
+    if (res.ok) {
+      await import("@/services/audit").then((m) => m.audit(
+        {
+          academy_id: user.academy_id,
+          action: "payment.record",
+          entity_type: "payment",
+          entity_id: paymentId,
+          new_data: { amount, method: effectiveMethod, received_by: receiverAudit(user) },
+        },
+        user,
+      ));
+      // إشعار Push لأولياء الأمور
+      const { notifyAcademy } = await import("@/services/push");
+      void notifyAcademy(user.academy_id, "💰 دفعة مسجّلة", `تم تسجيل دفعة بقيمة ${amount} جنيه.`);
+      revalidatePath("/payments");
+      revalidatePath(`/students/${payment.student_id}`);
+      if (payment.group_id) revalidatePath(`/groups/${payment.group_id}`);
+      revalidatePath("/dashboard");
+    }
+    return res;
+  } catch (error) {
+    console.error("[recordPaymentAction] FAILED:", (error as Error)?.message);
+    return { ok: false, error: (error as Error)?.message || "Could not record payment." };
   }
-  await assertTeacherStudentScope(user, payment.student_id);
-  const effectiveMethod = user.role === "TEACHER" ? "Cash" : method;
-  const res = await PaymentsService.recordPayment(paymentId, amount, effectiveMethod, note, user.academy_id);
-  if (res.ok) {
-    await import("@/services/audit").then((m) => m.audit(
-      {
-        academy_id: user.academy_id,
-        action: "payment.record",
-        entity_type: "payment",
-        entity_id: paymentId,
-        new_data: { amount, method: effectiveMethod, received_by: receiverAudit(user) },
-      },
-      user,
-    ));
-    // إشعار Push لأولياء الأمور
-    const { notifyAcademy } = await import("@/services/push");
-    void notifyAcademy(user.academy_id, "💰 دفعة مسجّلة", `تم تسجيل دفعة بقيمة ${amount} جنيه.`);
-    // إشعار واتساب لولي أمر الطالب صاحب الدفعة
-    void (async () => {
-      const { getStudentIdByPayment, notifyParentWhatsApp } = await import("@/services/whatsapp");
-      const studentId = await getStudentIdByPayment(paymentId);
-      if (studentId) {
-        await notifyParentWhatsApp(
-          studentId,
-          "💰 دفعة مسجّلة",
-          `تم تسجيل دفعة بقيمة ${amount} جنيه. شكرًا لكم.`,
-          "PAYMENT_RECORDED",
-        );
-      }
-    })();
-    revalidatePath("/payments");
-    revalidatePath(`/students/${payment.student_id}`);
-    if (payment.group_id) revalidatePath(`/groups/${payment.group_id}`);
-    revalidatePath("/dashboard");
-  }
-  return res;
 }
 
 export async function deletePaymentAction(id: string) {

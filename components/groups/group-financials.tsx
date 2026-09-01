@@ -134,10 +134,16 @@ function CollectPaymentDialog({
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [period, setPeriod] = React.useState<"monthly" | "half_month">("monthly");
-  const [amount, setAmount] = React.useState("");
+  const [amount, setAmount] = React.useState(() => String(amountDue));
   const [note, setNote] = React.useState("");
   const periodFee = period === "half_month" ? Math.round((amountDue / 2) * 100) / 100 : amountDue;
   const [saving, setSaving] = React.useState(false);
+
+  const choosePeriod = (nextPeriod: "monthly" | "half_month") => {
+    setPeriod(nextPeriod);
+    const nextFee = nextPeriod === "half_month" ? Math.round((amountDue / 2) * 100) / 100 : amountDue;
+    setAmount(String(nextFee));
+  };
 
   const submit = async () => {
     const paid = Number(amount);
@@ -189,7 +195,7 @@ function CollectPaymentDialog({
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>{en ? "Payment period" : "فترة الدفع"}</Label>
-            <select value={period} onChange={(event) => setPeriod(event.target.value as "monthly" | "half_month")} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm">
+            <select value={period} onChange={(event) => choosePeriod(event.target.value as "monthly" | "half_month")} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm">
               <option value="monthly">{en ? "Full month" : "شهر كامل"}</option>
               <option value="half_month">{en ? "Half month" : "نصف شهر"}</option>
             </select>

@@ -156,6 +156,27 @@ export async function getDashboardData(
   const collectedRevenueThisMonth = payments
     .filter((payment: any) => paymentMonth(payment) === currentMonth)
     .reduce((sum: number, payment: any) => sum + Math.max(0, Number(payment.amount_paid ?? 0)), 0);
+  const currentMonthPayments = payments.filter((payment: any) => paymentMonth(payment) === currentMonth);
+  const paidStudentIdsThisMonth = new Set(currentMonthPayments
+    .filter((payment: any) => Number(payment.amount_paid ?? 0) >= Number(payment.amount_due ?? 0))
+    .map((payment: any) => payment.student_id));
+  const paidStudentCountThisMonth = paidStudentIdsThisMonth.size;
+  const unpaidStudentCountThisMonth = Math.max(0, activeStudentsSet.size - paidStudentCountThisMonth);
+  const newStudentsByMonth = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date();
+    date.setDate(1);
+    date.setMonth(date.getMonth() - (5 - index));
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    return {
+      month: key,
+      count: students.filter((student: any) => String(student.created_at ?? "").slice(0, 7) === key).length,
+    };
+  });
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const overduePaymentCount = payments.filter((payment: any) =>
+    payment.status !== "PAID" && Number(payment.amount_due ?? 0) > Number(payment.amount_paid ?? 0)
+    && payment.due_date && String(payment.due_date).slice(0, 10) < todayKey,
+  ).length;
   const currentMonthLessonIds = new Set(lessons
     .filter((lesson: any) => activeLesson(lesson) && !isAcademyHoliday(lesson.date, academyId ?? currentAcademyId()) && String(lesson.date ?? "").slice(0, 7) === currentMonth)
     .map((lesson: any) => lesson.id));
@@ -304,6 +325,11 @@ export async function getDashboardData(
     studentsNeedingAttention: needing.slice(0, 5),
     expectedRevenueThisMonth,
     collectedRevenueThisMonth,
+    currentMonthPaymentCount: currentMonthPayments.length,
+    paidStudentCountThisMonth,
+    unpaidStudentCountThisMonth,
+    newStudentsByMonth,
+    overduePaymentCount,
     overallAttendanceThisMonth,
     overallAttendanceSessionsThisMonth: currentMonthAttendance.length,
     atRiskCount: riskStudents.length,

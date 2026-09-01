@@ -279,7 +279,7 @@ export default async function DashboardPage(
             [en ? "Expected this month" : "المتوقع هذا الشهر", formatCurrency(d.expectedRevenueThisMonth, "EGP", en ? "en-EG" : "ar-EG"), "text-primary"],
             [en ? "Collected this month" : "المحصّل هذا الشهر", formatCurrency(d.collectedRevenueThisMonth, "EGP", en ? "en-EG" : "ar-EG"), "text-emerald-600"],
             [en ? "Outstanding balance" : "المتبقي للتحصيل", formatCurrency(d.outstanding, "EGP", en ? "en-EG" : "ar-EG"), "text-amber-600"],
-            [en ? "Overdue payments" : "مدفوعات متأخرة", `${d.overduePaymentCount} · ${d.currentMonthPaymentCount} ${en ? "this month" : "دفعة هذا الشهر"}`, "text-destructive"],
+            [en ? "Outstanding payments" : "مدفوعات غير محصلة", formatCurrency(d.outstanding, "EGP", en ? "en-EG" : "ar-EG"), "text-destructive"],
             [en ? "Total fees due" : "إجمالي المصروفات المستحقة", formatCurrency(d.monthlyRevenue, "EGP", en ? "en-EG" : "ar-EG"), "text-sky-600"],
             [en ? "Net remaining to collect" : "صافي المتبقي للتحصيل", formatCurrency(Math.max(0, d.monthlyRevenue - d.collectedThisMonth), "EGP", en ? "en-EG" : "ar-EG"), "text-orange-600"],
           ].map(([label, value, tone]) => (

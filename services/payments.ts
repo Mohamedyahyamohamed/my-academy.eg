@@ -111,6 +111,20 @@ export interface CreatePaymentInput {
 }
 
 async function validStudent(id: string, academyId: string) {
+  const client = nodeSupabaseClient();
+  if (client) {
+    const { data, error } = await client
+      .from("students")
+      .select("id, academy_id")
+      .eq("id", id)
+      .eq("academy_id", academyId)
+      .maybeSingle();
+    if (error) {
+      console.error("Unable to validate payment student:", error.message);
+      return false;
+    }
+    return Boolean(data);
+  }
   const students = await fetchTableRLS<{ id: string; academy_id: string }>("students", academyId);
   return students.some((student) => student.id === id && student.academy_id === academyId);
 }

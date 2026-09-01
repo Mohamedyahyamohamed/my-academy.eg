@@ -7,6 +7,7 @@ import type { CreatePaymentInput } from "@/services/payments";
 import type { SessionUser } from "@/types";
 import { teacherStudentScope } from "@/services/_shared";
 import { resolveTeacherForGroups } from "@/services/groups";
+import { setRequestContext } from "@/services/request-context";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
 async function requirePaymentRecorder(): Promise<{ user: SessionUser } | { error: string }> {
@@ -90,6 +91,8 @@ export async function createPaymentAction(input: CreatePaymentInput) {
     if ("error" in auth) return { ok: false, error: auth.error };
     const user = auth.user;
     await assertTeacherStudentScope(user, input.student_id);
+    // Re-bind after awaited scope checks; AsyncLocalStorage may be lost in Server Actions.
+    setRequestContext(user);
     const paymentInput: CreatePaymentInput = user.role === "TEACHER"
       ? { ...input, method: "Cash" }
       : input;

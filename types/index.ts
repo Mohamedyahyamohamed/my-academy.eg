@@ -473,6 +473,11 @@ export interface DashboardMetrics {
   gradePerformance: { level: string; count: number }[];
   expectedRevenueThisMonth: number;
   collectedRevenueThisMonth: number;
+  currentMonthPaymentCount: number;
+  paidStudentCountThisMonth: number;
+  unpaidStudentCountThisMonth: number;
+  newStudentsByMonth: { month: string; count: number }[];
+  overduePaymentCount: number;
   overallAttendanceThisMonth: number;
   /** Number of current-month attendance records included in the overall rate. */
   overallAttendanceSessionsThisMonth: number;

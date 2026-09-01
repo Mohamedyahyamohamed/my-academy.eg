@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireScopedRole, getCurrentUser, PaymentsService } from "@/services";
+import { loadCurrentUser, requireScopedRole, PaymentsService } from "@/services";
 import { isSupabaseConfigured } from "@/services/supabase/config";
 import type { CreatePaymentInput } from "@/services/payments";
 import type { SessionUser } from "@/types";
@@ -10,10 +10,10 @@ import { resolveTeacherForGroups } from "@/services/groups";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
 async function requirePaymentRecorder(): Promise<{ user: SessionUser } | { error: string }> {
-  // Use getCurrentUser (not requireScopedRole) so an expired session returns a
-  // clear error instead of throwing NEXT_REDIRECT, which the client would surface
-  // as a generic "try again" failure inside the payment dialog.
-  const user = getCurrentUser();
+  // Resolve the session from cookies directly so a fresh Server Action does not
+  // depend on AsyncLocalStorage context; return a clear error instead of a
+  // redirect that the payment dialog would surface as a generic failure.
+  const user = await loadCurrentUser();
   if (!user) {
     return { error: "SESSION_EXPIRED" };
   }

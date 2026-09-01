@@ -145,6 +145,14 @@ function CollectPaymentDialog({
     setAmount(String(nextFee));
   };
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (nextOpen) {
+      setPeriod("monthly");
+      setAmount(String(amountDue));
+    }
+  };
+
   const submit = async () => {
     const paid = Number(amount);
     if (!Number.isFinite(paid) || paid <= 0) {
@@ -183,7 +191,7 @@ function CollectPaymentDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button type="button" size="sm" variant="soft"><Wallet className="h-3.5 w-3.5" /> {en ? "Collect payment" : "تحصيل رسوم"}</Button>
       </DialogTrigger>
@@ -204,7 +212,7 @@ function CollectPaymentDialog({
             <div className="flex justify-between"><span className="text-muted-foreground">{en ? "Expected fee" : "الرسوم المستحقة"}</span><span className="font-semibold">{formatCurrency(periodFee, "EGP", en ? "en-EG" : "ar-EG")}</span></div>
           </div>
           <div className="space-y-1.5">
-            <Label>{en ? "Amount paid" : "المبلغ المدفوع"}</Label>
+            <Label>{en ? "Amount paid (automatic)" : "المبلغ المدفوع (تلقائي)"}</Label>
             <Input type="number" min={0.01} max={periodFee} step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} autoFocus />
           </div>
           <div className="space-y-1.5">

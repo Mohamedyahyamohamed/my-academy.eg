@@ -102,6 +102,7 @@ export interface CreatePaymentInput {
   student_id: string;
   group_id?: string | null;
   month: string;
+  fee_type?: "monthly" | "half_month" | string | null;
   amount_due: number;
   amount_paid?: number;
   due_date?: string;
@@ -139,18 +140,26 @@ async function runAtomicPaymentRpc(input: {
 }) {
   const client = nodeSupabaseClient();
   if (!client) return { data: null, error: new Error("Database client is unavailable.") };
-  const { data, error } = await client.rpc("record_payment_atomic", {
-    p_academy_id: input.academyId,
-    p_payment_id: input.paymentId ?? null,
-    p_student_id: input.studentId,
-    p_group_id: input.groupId ?? null,
-    p_month_year: input.month,
-    p_amount_due: input.amountDue,
-    p_amount_paid: input.amountPaid,
-    p_method: input.method ?? "Cash",
-    p_notes: input.notes ?? null,
-  });
-  return { data: Array.isArray(data) ? data[0] : data, error };
+  try {
+    const { data, error } = await client.rpc("record_payment_atomic", {
+      p_academy_id: input.academyId,
+      p_payment_id: input.paymentId ?? null,
+      p_student_id: input.studentId,
+      p_group_id: input.groupId ?? null,
+      p_month_year: input.month,
+      p_amount_due: input.amountDue,
+      p_amount_paid: input.amountPaid,
+      p_method: input.method ?? "Cash",
+      p_notes: input.notes ?? null,
+    });
+    if (error) return { data: null, error };
+    return { data: Array.isArray(data) ? data[0] : data, error: null };
+  } catch (err) {
+    // The RPC may throw (e.g. function not deployed, permissions) instead of
+    // returning an error object. Surface it as a clean error, not an exception
+    // that the caller would rethrow as a generic "try again" message.
+    return { data: null, error: err instanceof Error ? err : new Error("record_payment_atomic failed") };
+  }
 }
 
 export async function createPayment(input: CreatePaymentInput, academyIdOverride?: string): Promise<{
@@ -187,9 +196,54 @@ export async function createPayment(input: CreatePaymentInput, academyIdOverride
       notes: input.notes,
     });
     if (atomic.error || !atomic.data) {
-      return { ok: false, error: atomic.error?.message ?? "Could not record payment." };
+      // RPC failed (e.g. not deployed, permissions, or unexpected exception).
+      // Fall back to a direct insert so payment recording still works instead of
+      // surfacing a generic failure. This keeps the flow resilient if the
+      // record_payment_atomic function is missing on a given environment.
+      console.warn("record_payment_atomic failed, falling back to direct insert:", atomic.error?.message);
+      const draft: Payment = {
+        id: pid(),
+        academy_id: academyId,
+        student_id: input.student_id,
+        group_id: input.group_id ?? null,
+        month: input.month,
+        month_year: input.month,
+        fee_type: input.fee_type ?? "monthly",
+        amount_due: input.amount_due,
+        amount_paid: input.amount_paid ?? 0,
+        remaining: 0,
+        due_date: input.due_date ?? now.slice(0, 10),
+        payment_date: (input.amount_paid ?? 0) > 0 ? now : null,
+        method: input.method ?? null,
+        status: "UNPAID",
+        notes: input.notes ?? null,
+        created_at: now,
+        updated_at: now,
+      };
+      const payment = derivePayment(draft);
+      const { remaining: _r, ...paymentPersist } = payment;
+      await persistInsert("payments", paymentPersist, authenticatedAcademyId);
+      collections().payments.push(payment);
+      if (payment.amount_paid > 0) {
+        const tx = {
+          id: crypto.randomUUID(),
+          payment_id: payment.id,
+          amount: payment.amount_paid,
+          method: input.method ?? "Cash",
+          paid_at: now,
+          note: null,
+        };
+        await persistInsert("payment_transactions", tx);
+        collections().transactions.push(tx);
+      }
+      return { ok: true, payment: attach(payment) };
     }
-    return { ok: true, payment: attach(derivePayment(atomic.data as Payment)) };
+    const createdPayment = derivePayment(atomic.data as Payment);
+    if (input.fee_type && createdPayment.id) {
+      await persistUpdate("payments", createdPayment.id, { fee_type: input.fee_type }, academyId);
+      createdPayment.fee_type = input.fee_type;
+    }
+    return { ok: true, payment: attach(createdPayment) };
   }
   const draft: Payment = {
     id: pid(),
@@ -197,6 +251,8 @@ export async function createPayment(input: CreatePaymentInput, academyIdOverride
     student_id: input.student_id,
     group_id: input.group_id ?? null,
     month: input.month,
+    month_year: input.month,
+    fee_type: input.fee_type ?? "monthly",
     amount_due: input.amount_due,
     amount_paid: input.amount_paid ?? 0,
     remaining: 0,

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Camera, CameraOff, CheckCircle2, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,13 +15,15 @@ import { studentIdFromQrValue } from "@/lib/student-qr";
 import { playQrResultSound, primeQrSound } from "@/lib/qr-sound";
 
 export function ScanWorkshop({
-  groups, lessons, students,
+  groups, lessons, students, paidThisMonth,
 }: {
   groups: Group[];
   lessons: Lesson[];
   students: Student[];
+  paidThisMonth: Record<string, boolean>;
 }) {
   const en = useClientLang() === "en";
+  const router = useRouter();
   const [mode, setMode] = React.useState<"quick" | "manual">("quick");
   const [groupId, setGroupId] = React.useState("");
   const [lessonId, setLessonId] = React.useState("");
@@ -81,12 +84,11 @@ export function ScanWorkshop({
     setScanning(true);
     try {
       const { Html5Qrcode } = await import("html5-qrcode");
-      await new Promise((r) => setTimeout(r, 100));
       const html5 = new Html5Qrcode("qr-reader");
       scannerRef.current = html5;
       await html5.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 240, height: 240 } },
+        { fps: 15, qrbox: { width: 240, height: 240 } },
         (text) => { void handleScan(text); },
         () => {},
       );
@@ -160,9 +162,13 @@ export function ScanWorkshop({
       if (res.ok) {
         setLastFailedScan(null);
         playQrResultSound("success");
+        router.refresh();
       } else playQrResultSound("error");
+      const paymentStatus = paidThisMonth[studentId]
+        ? (en ? "Paid this month" : "دفع الشهر")
+        : (en ? "Not paid this month" : "لم يدفع الشهر");
       const status = res.ok
-        ? (en ? `Attendance recorded ✓${res.lesson?.topic ? ` · ${res.lesson.topic}` : ""}` : `تم تسجيل الحضور ✓${res.lesson?.topic ? ` · ${res.lesson.topic}` : ""}`)
+        ? (en ? `Attendance recorded ✓ · ${paymentStatus}${res.lesson?.topic ? ` · ${res.lesson.topic}` : ""}` : `تم تسجيل الحضور ✓ · ${paymentStatus}${res.lesson?.topic ? ` · ${res.lesson.topic}` : ""}`)
         : (en
           ? (res.errorCode === "NO_ACTIVE_LESSON" ? "No active lesson" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "Student is not in this lesson" : res.errorCode === "GROUP_NOT_ASSIGNED" ? "This group is not assigned to you" : res.errorCode === "ATTENDANCE_ALREADY_RECORDED" ? "Already recorded" : res.errorCode === "TOO_MANY_SCANS" || res.errorCode === "RATE_LIMITED" ? "Too many scans — wait and retry" : res.errorCode === "TEACHER_LOGIN_REQUIRED" ? "Teacher login is required — sign in and retry" : res.errorCode === "REQUEST_FAILED" ? "Unable to process — retry the scan" : "Failed")
           : (res.errorCode === "NO_ACTIVE_LESSON" ? "لا يوجد درس جارٍ الآن" : res.errorCode === "STUDENT_NOT_ENROLLED" ? "الطالب غير مسجل في المجموعة" : res.errorCode === "GROUP_NOT_ASSIGNED" ? "هذه المجموعة غير مسندة إليك" : res.errorCode === "ATTENDANCE_ALREADY_RECORDED" ? "تم تسجيل الحضور من قبل" : res.errorCode === "TOO_MANY_SCANS" || res.errorCode === "RATE_LIMITED" ? "عدد محاولات المسح كبير — انتظر ثم أعد المحاولة" : res.errorCode === "TEACHER_LOGIN_REQUIRED" ? "يجب تسجيل دخول المدرس ثم إعادة المسح" : res.errorCode === "REQUEST_FAILED" ? "تعذر معالجة المسح — أعد المحاولة" : "فشل تسجيل الحضور"));

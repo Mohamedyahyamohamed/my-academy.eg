@@ -100,6 +100,9 @@ export async function scanCheckinAction(lessonId: string | null | undefined, stu
     // unavailable in the current runtime.
     try {
       revalidatePath(`/lessons/${lesson.id}`);
+      revalidatePath(`/attendance?group=${lesson.group_id}&lesson=${lesson.id}`);
+      revalidatePath("/attendance");
+      revalidatePath("/dashboard");
     } catch (error) {
       console.warn("[attendance] QR cache refresh skipped:", error instanceof Error ? error.message : error);
     }

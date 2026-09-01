@@ -31,6 +31,7 @@ type GroupPayment = {
   student_id: string;
   group_id: string | null;
   month: string;
+  fee_type?: "monthly" | "half_month" | string | null;
   amount_due: number;
   amount_paid: number;
   remaining: number;
@@ -127,8 +128,10 @@ function CollectPaymentDialog({
   const en = useClientLang() === "en";
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
+  const [period, setPeriod] = React.useState<"monthly" | "half_month">("monthly");
   const [amount, setAmount] = React.useState("");
   const [note, setNote] = React.useState("");
+  const periodFee = period === "half_month" ? Math.round((amountDue / 2) * 100) / 100 : amountDue;
   const [saving, setSaving] = React.useState(false);
 
   const submit = async () => {
@@ -137,8 +140,8 @@ function CollectPaymentDialog({
       toast.error(en ? "Enter a positive amount." : "أدخل مبلغًا أكبر من صفر.");
       return;
     }
-    if (paid > amountDue) {
-      toast.error(en ? "Paid amount cannot exceed the expected fee." : "لا يمكن أن يتجاوز المدفوع الرسوم المستحقة.");
+    if (paid > periodFee) {
+      toast.error(en ? "Paid amount cannot exceed the selected period fee." : "لا يمكن أن يتجاوز المدفوع رسوم الفترة المختارة.");
       return;
     }
     setSaving(true);
@@ -147,7 +150,8 @@ function CollectPaymentDialog({
         student_id: student.id,
         group_id: groupId,
         month,
-        amount_due: amountDue,
+        fee_type: period,
+        amount_due: periodFee,
         amount_paid: paid,
         notes: note.trim() || null,
       });
@@ -170,7 +174,7 @@ function CollectPaymentDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="soft"><Wallet className="h-3.5 w-3.5" /> {en ? "Collect payment" : "تحصيل رسوم"}</Button>
+        <Button type="button" size="sm" variant="soft"><Wallet className="h-3.5 w-3.5" /> {en ? "Collect payment" : "تحصيل رسوم"}</Button>
       </DialogTrigger>
       <DialogContent className="max-w-sm">
         <DialogHeader>
@@ -178,12 +182,19 @@ function CollectPaymentDialog({
           <DialogDescription>{student.first_name} {student.last_name} · {month}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>{en ? "Payment period" : "فترة الدفع"}</Label>
+            <select value={period} onChange={(event) => setPeriod(event.target.value as "monthly" | "half_month")} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm">
+              <option value="monthly">{en ? "Full month" : "شهر كامل"}</option>
+              <option value="half_month">{en ? "Half month" : "نصف شهر"}</option>
+            </select>
+          </div>
           <div className="rounded-lg bg-muted p-3 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">{en ? "Expected fee" : "الرسوم المستحقة"}</span><span className="font-semibold">{formatCurrency(amountDue, "EGP", en ? "en-EG" : "ar-EG")}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">{en ? "Expected fee" : "الرسوم المستحقة"}</span><span className="font-semibold">{formatCurrency(periodFee, "EGP", en ? "en-EG" : "ar-EG")}</span></div>
           </div>
           <div className="space-y-1.5">
             <Label>{en ? "Amount paid" : "المبلغ المدفوع"}</Label>
-            <Input type="number" min={0.01} max={amountDue} step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} autoFocus />
+            <Input type="number" min={0.01} max={periodFee} step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} autoFocus />
           </div>
           <div className="space-y-1.5">
             <Label>{en ? "Note (optional)" : "ملاحظة (اختياري)"}</Label>
@@ -193,7 +204,7 @@ function CollectPaymentDialog({
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>{en ? "Cancel" : "إلغاء"}</Button>
-          <Button onClick={submit} disabled={saving || amountDue <= 0}>{saving && <Loader2 className="h-4 w-4 animate-spin" />} {en ? "Save" : "حفظ"}</Button>
+          <Button onClick={submit} disabled={saving || periodFee <= 0}>{saving && <Loader2 className="h-4 w-4 animate-spin" />} {en ? "Save" : "حفظ"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

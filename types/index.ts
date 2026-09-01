@@ -299,6 +299,8 @@ export interface Payment {
   month: string; // legacy canonical field: "2026-08"
   /** Canonical billing period; synchronized with month in Production. */
   month_year?: string;
+  /** Billing period: full month or half month. Legacy rows default to monthly. */
+  fee_type?: "monthly" | "half_month" | string | null;
   amount_due: number;
   amount_paid: number;
   remaining: number;

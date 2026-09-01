@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { CalendarCheck, ScanLine } from "lucide-react";
 import { AttendanceWorkshop } from "@/components/attendance/attendance-workshop";
-import { GroupsService, LessonsService, StudentsService, requireAttendanceTeacher } from "@/services";
+import { GroupsService, LessonsService, StudentsService, PaymentsService, requireAttendanceTeacher } from "@/services";
 import { collections } from "@/services/data/store";
 import { isSupabaseConfigured } from "@/services/supabase/config";
 import { cookies } from "next/headers";
@@ -22,6 +22,12 @@ export default async function AttendancePage() {
   const groups = await GroupsService.listGroups("", user.academy_id, teacherProfileId, user.email);
   const lessons = (await LessonsService.listLessons({ pageSize: 500 }, user.academy_id, teacherProfileId)).items;
   const students = (await StudentsService.listStudents({ pageSize: 500 }, user.academy_id)).items;
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentPayments = (await PaymentsService.listPayments({ month: currentMonth, pageSize: 500 }, user.academy_id)).items;
+  const paidThisMonth: Record<string, boolean> = {};
+  currentPayments.forEach((payment) => {
+    paidThisMonth[payment.student_id] = (paidThisMonth[payment.student_id] ?? false) || payment.remaining <= 0;
+  });
   const allowedGroupIds = new Set(groups.map((group) => group.id));
   const scopedMemberships = allowedGroupIds.size
     ? isSupabaseConfigured()
@@ -66,6 +72,7 @@ export default async function AttendancePage() {
         lessons={lessons}
         students={students}
         enrollments={enrollments}
+        paidThisMonth={paidThisMonth}
       />
     </div>
   );

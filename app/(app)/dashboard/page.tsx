@@ -266,6 +266,31 @@ export default async function DashboardPage(
         />
       </div>
 
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle>{en ? "Financial overview" : "الملخص المالي"}</CardTitle>
+            <CardDescription>{en ? "Track collections and outstanding payments at a glance." : "تابع التحصيل والمدفوعات المتأخرة من مكان واحد."}</CardDescription>
+          </div>
+          <Button asChild variant="outline" size="sm"><Link href="/payments">{en ? "Open payments" : "فتح المدفوعات"}</Link></Button>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            [en ? "Expected this month" : "المتوقع هذا الشهر", formatCurrency(d.expectedRevenueThisMonth, "EGP", en ? "en-EG" : "ar-EG"), "text-primary"],
+            [en ? "Collected this month" : "المحصّل هذا الشهر", formatCurrency(d.collectedRevenueThisMonth, "EGP", en ? "en-EG" : "ar-EG"), "text-emerald-600"],
+            [en ? "Outstanding balance" : "المتبقي للتحصيل", formatCurrency(d.outstanding, "EGP", en ? "en-EG" : "ar-EG"), "text-amber-600"],
+            [en ? "Overdue payments" : "مدفوعات متأخرة", `${d.overduePaymentCount} · ${d.currentMonthPaymentCount} ${en ? "this month" : "دفعة هذا الشهر"}`, "text-destructive"],
+            [en ? "Total fees due" : "إجمالي المصروفات المستحقة", formatCurrency(d.monthlyRevenue, "EGP", en ? "en-EG" : "ar-EG"), "text-sky-600"],
+            [en ? "Net remaining to collect" : "صافي المتبقي للتحصيل", formatCurrency(Math.max(0, d.monthlyRevenue - d.collectedThisMonth), "EGP", en ? "en-EG" : "ar-EG"), "text-orange-600"],
+          ].map(([label, value, tone]) => (
+            <div key={label} className="rounded-xl border bg-muted/30 p-4">
+              <p className="text-sm text-muted-foreground">{label}</p>
+              <p className={`mt-2 text-lg font-bold ${tone}`}>{value}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
       {/* BI charts */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

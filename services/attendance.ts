@@ -14,6 +14,7 @@ import { percentage } from "@/lib/utils";
 import { currentAcademyId, getCurrentUser } from "./session";
 import { can, hasAcademyWideScope } from "@/lib/permissions";
 import { isLessonCanceled } from "./lessons";
+import { nodeSupabaseClient } from "@/lib/supabase/node-client";
 
 export interface AttendanceEntry {
   student: Student;
@@ -234,6 +235,19 @@ export async function recordCheckin(
     }
   } else {
     assertAttendanceManager(lessonId);
+  }
+  const admin = nodeSupabaseClient();
+  if (admin) {
+    const { data: existing } = await admin
+      .from("attendance")
+      .select("id")
+      .eq("lesson_id", lessonId)
+      .eq("student_id", studentId)
+      .eq("academy_id", currentAcademyId())
+      .maybeSingle();
+    if (existing) throw new Error("Attendance already recorded for this lesson.");
+  } else if (collections().attendance.some((a) => a.lesson_id === lessonId && a.student_id === studentId)) {
+    throw new Error("Attendance already recorded for this lesson.");
   }
   const now = new Date().toISOString();
   // Persist first. If the durable write fails, do not mutate the request snapshot

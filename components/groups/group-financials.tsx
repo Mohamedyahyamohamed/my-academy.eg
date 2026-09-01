@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PaymentStatusBadge } from "@/components/shared/badges";
 import { EmptyState } from "@/components/shared/empty-state";
 import { RecordPaymentDialog } from "@/components/payments/payment-dialogs";
 import { createPaymentAction } from "@/app/actions/payments";
@@ -80,7 +79,7 @@ export function GroupFinancials({
                 <TableHead>{en ? "Student" : "الطالب"}</TableHead>
                 <TableHead>{en ? "Expected" : "المستحق"}</TableHead>
                 <TableHead>{en ? "Paid" : "المدفوع"}</TableHead>
-                <TableHead>{en ? "Status" : "الحالة"}</TableHead>
+                <TableHead>{en ? "Period" : "الفترة"}</TableHead>
                 <TableHead className="text-left">{en ? "Action" : "إجراء"}</TableHead>
               </TableRow>
             </TableHeader>
@@ -95,7 +94,13 @@ export function GroupFinancials({
                     </TableCell>
                     <TableCell>{formatCurrency(payment?.amount_due ?? expectedFee, "EGP", en ? "en-EG" : "ar-EG")}</TableCell>
                     <TableCell>{formatCurrency(payment?.amount_paid ?? 0, "EGP", en ? "en-EG" : "ar-EG")}</TableCell>
-                    <TableCell>{payment ? <PaymentStatusBadge status={payment.status} /> : <Badge variant="warning">{en ? "Unpaid" : "غير مدفوع"}</Badge>}</TableCell>
+                    <TableCell>
+                      {payment ? (
+                        <Badge variant="outline">{payment.fee_type === "half_month" ? (en ? "Half month" : "نصف شهر") : (en ? "Full month" : "شهر كامل")}</Badge>
+                      ) : (
+                        <Badge variant="warning">{en ? "Not recorded" : "لم يسجل"}</Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="text-left">
                       {payment ? (
                         <RecordPaymentDialog payment={payment as any} students={students as unknown as Student[]} cashOnly />

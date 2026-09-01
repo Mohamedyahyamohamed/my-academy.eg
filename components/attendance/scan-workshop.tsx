@@ -141,6 +141,13 @@ export function ScanWorkshop({
     // retry rows must not accumulate until the operator deliberately rescans.
     if (lastScan.current.id === studentId && now - lastScan.current.t < 10000) {
       playQrResultSound("error");
+      const duplicateMessage = en ? "Already recorded for this lesson" : "تم تسجيل الطالب لهذه الحصة من قبل";
+      const duplicateStudent = students.find((s) => s.id === studentId);
+      addLog(`${studentId}:duplicate`, {
+        name: duplicateStudent ? fullName(duplicateStudent) : (en ? "Student" : "الطالب"),
+        status: duplicateMessage,
+        at: formatTime(new Date(), en ? "en-US" : "ar-EG"),
+      });
       return;
     }
     lastScan.current = { id: studentId, t: now };
@@ -150,7 +157,11 @@ export function ScanWorkshop({
     // This is especially important after a mobile refresh or when the teacher's
     // roster snapshot was loaded before a student enrollment became visible.
     const student = students.find((s) => s.id === studentId);
-    if (pendingScans.current.has(studentId)) return;
+    if (pendingScans.current.has(studentId)) {
+      const duplicateMessage = en ? "Already being recorded" : "جارٍ تسجيل الطالب بالفعل";
+      addLog(`${studentId}:pending`, { name: student ? fullName(student) : (en ? "Student" : "الطالب"), status: duplicateMessage, at: formatTime(new Date(), en ? "en-US" : "ar-EG") });
+      return;
+    }
     pendingScans.current.add(studentId);
 
     try {

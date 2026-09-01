@@ -106,7 +106,10 @@ export function AttendanceWorkshop({
       present: vals.filter((v) => v === "PRESENT").length,
       late: vals.filter((v) => v === "LATE").length,
       absent: vals.filter((v) => v === "ABSENT").length,
-      rate: roster.length ? percentage(vals.filter((v) => v !== "ABSENT").length, roster.length) : 0,
+      // لا نعرض 100% قبل تسجيل كل الطلاب؛ الحضور يبدأ من 0 حتى تكتمل القائمة.
+      rate: vals.length === roster.length && roster.length > 0
+        ? percentage(vals.filter((v) => v !== "ABSENT").length, roster.length)
+        : 0,
     };
   }, [statuses, roster.length]);
 

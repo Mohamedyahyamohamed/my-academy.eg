@@ -1,419 +1,253 @@
-/**
- * Payments service.
- * Enforces: no negative amounts, no invalid student references,
- * automatic remaining + status computation.
- */
-import type { PaginatedResult, Payment, PaymentStatus } from "@/types";
-import { collections } from "./data/store";
-import { currentAcademyId } from "./session";
-import { nodeSupabaseClient } from "@/lib/supabase/node-client";
-import { isSupabaseConfigured } from "./supabase/config";
-import { persistInsert, persistUpdate, persistDelete } from "./data/store";
-import { derivePayment, getGroup, getParent, byAcademy, fetchTableRLS } from "./_shared";
-import { fullName } from "./_shared";
+"use client";
 
-function attach(p: Payment): Payment {
-  const d = derivePayment(p);
-  const student = collections().students.find((s) => s.id === p.student_id);
-  const safeStudent = student
-    ? (({ access_token: _accessToken, ...withoutToken }) => withoutToken)(student)
-    : undefined;
-  return {
-    ...d,
-    student: safeStudent
-      ? { ...safeStudent, parent: getParent(safeStudent.parent_id) ?? null }
-      : undefined,
-    group: getGroup(p.group_id) ?? undefined,
-  };
-}
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2, Wallet, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { recordPaymentSchema, type RecordPaymentValues, paymentSchema, type PaymentValues } from "@/schemas";
+import { recordPaymentAction, createPaymentAction } from "@/app/actions/payments";
+import { PAYMENT_METHODS, paymentMethodLabel } from "@/lib/constants";
+import { formatCurrency } from "@/lib/utils";
+import type { Group, Payment, Student } from "@/types";
+import { useClientLang } from "@/lib/i18n-client";
 
-export interface PaymentFilters {
-  search?: string;
-  status?: PaymentStatus | "ALL";
-  month?: string | "ALL";
-  groupId?: string | "ALL";
-  studentId?: string | "ALL";
-  page?: number;
-  pageSize?: number;
-}
-
-export async function listPayments(
-  filters: PaymentFilters = {},
-  academyId?: string,
-): Promise<PaginatedResult<Payment>> {
-  const {
-    search = "",
-    status = "ALL",
-    month = "ALL",
-    groupId = "ALL",
-    studentId = "ALL",
-    page = 1,
-    pageSize = 10,
-  } = filters;
-
-  const authenticatedAcademyId = currentAcademyId();
-  const requestedAcademyId = academyId ?? authenticatedAcademyId;
-  if (!authenticatedAcademyId || requestedAcademyId !== authenticatedAcademyId) {
-    return { items: [], pagination: { page, pageSize, total: 0, totalPages: 1 } };
-  }
-  let items = (await fetchTableRLS<Payment>("payments", authenticatedAcademyId)).filter((p: any) => !p.deleted_at).map(derivePayment);
-
-  if (status !== "ALL") items = items.filter((p) => p.status === status);
-  if (month !== "ALL") items = items.filter((p) => (p.month_year ?? p.month) === month);
-  if (groupId !== "ALL") items = items.filter((p) => p.group_id === groupId);
-  if (studentId !== "ALL")
-    items = items.filter((p) => p.student_id === studentId);
-  if (search.trim()) {
-    const q = search.toLowerCase();
-    items = items.filter((p) => {
-      const s = collections().students.find((x) => x.id === p.student_id);
-      return s && fullName(s).toLowerCase().includes(q);
-    });
-  }
-
-  items.sort((a, b) =>
-    (a.month_year ?? a.month) === (b.month_year ?? b.month)
-      ? (b.amount_due - b.amount_paid) - (a.amount_due - a.amount_paid)
-      : a.month < b.month
-        ? 1
-        : -1,
-  );
-
-  const total = items.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const start = (page - 1) * pageSize;
-  return {
-    items: items.slice(start, start + pageSize).map(attach),
-    pagination: { page, pageSize, total, totalPages },
-  };
-}
-
-export function getPayment(id: string, academyId?: string): Payment | null {
-  const authenticatedAcademyId = currentAcademyId();
-  const requestedAcademyId = academyId ?? authenticatedAcademyId;
-  // A caller may provide an explicit scope for filtering, but it can never
-  // widen the authenticated tenant. Fail closed on missing or mismatched scope.
-  if (!authenticatedAcademyId || requestedAcademyId !== authenticatedAcademyId) return null;
-  const p = collections().payments.find((x) => x.id === id && x.academy_id === authenticatedAcademyId);
-  return p ? attach(p) : null;
-}
-
-export interface CreatePaymentInput {
-  student_id: string;
-  group_id?: string | null;
-  month: string;
-  fee_type?: "monthly" | "half_month" | string | null;
-  amount_due: number;
-  amount_paid?: number;
-  due_date?: string;
-  method?: string | null;
-  notes?: string | null;
-}
-
-async function validStudent(id: string, academyId: string) {
-  const client = nodeSupabaseClient();
-  if (client) {
-    const { data, error } = await client
-      .from("students")
-      .select("id, academy_id")
-      .eq("id", id)
-      .eq("academy_id", academyId)
-      .maybeSingle();
-    if (error) {
-      console.error("Unable to validate payment student:", error.message);
-      return false;
-    }
-    return Boolean(data);
-  }
-  const students = await fetchTableRLS<{ id: string; academy_id: string }>("students", academyId);
-  return students.some((student) => student.id === id && student.academy_id === academyId);
-}
-
-async function validPaymentGroup(studentId: string, groupId: string | null | undefined, academyId: string) {
-  if (!groupId) return true;
-  const groups = await fetchTableRLS<{ id: string; academy_id: string }>("groups", academyId);
-  if (!groups.some((group) => group.id === groupId && group.academy_id === academyId)) return false;
-  const memberships = await fetchTableRLS<{ group_id: string; student_id: string }>("group_students", academyId);
-  return memberships.some((membership) => membership.group_id === groupId && membership.student_id === studentId);
-}
-
-function pid() {
-  return crypto.randomUUID();
-}
-
-async function runAtomicPaymentRpc(input: {
-  academyId: string;
-  paymentId?: string | null;
-  studentId: string;
-  groupId?: string | null;
-  month: string;
-  amountDue: number;
-  amountPaid: number;
-  method?: string | null;
-  notes?: string | null;
+export function RecordPaymentDialog({
+  payment,
+  students,
+  cashOnly = false,
+}: {
+  payment: Payment;
+  students: Student[];
+  cashOnly?: boolean;
 }) {
-  const client = nodeSupabaseClient();
-  if (!client) return { data: null, error: new Error("Database client is unavailable.") };
-  try {
-    const { data, error } = await client.rpc("record_payment_atomic", {
-      p_academy_id: input.academyId,
-      p_payment_id: input.paymentId ?? null,
-      p_student_id: input.studentId,
-      p_group_id: input.groupId ?? null,
-      p_month_year: input.month,
-      p_amount_due: input.amountDue,
-      p_amount_paid: input.amountPaid,
-      p_method: input.method ?? "Cash",
-      p_notes: input.notes ?? null,
-    });
-    if (error) return { data: null, error };
-    return { data: Array.isArray(data) ? data[0] : data, error: null };
-  } catch (err) {
-    // The RPC may throw (e.g. function not deployed, permissions) instead of
-    // returning an error object. Surface it as a clean error, not an exception
-    // that the caller would rethrow as a generic "try again" message.
-    return { data: null, error: err instanceof Error ? err : new Error("record_payment_atomic failed") };
-  }
-}
+  const [open, setOpen] = React.useState(false);
+  const en = useClientLang() === "en";
+  const router = useRouter();
+  const student = students.find((s) => s.id === payment.student_id);
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<RecordPaymentValues>({
+    resolver: zodResolver(recordPaymentSchema),
+    defaultValues: { amount: payment.remaining, method: "Cash" },
+  });
+  const [saving, setSaving] = React.useState(false);
+  const amount = watch("amount");
 
-export async function createPayment(input: CreatePaymentInput, academyIdOverride?: string): Promise<{
-  ok: boolean;
-  error?: string;
-  payment?: Payment;
-}> {
-  // Capture the tenant before any await. Next Server Actions can lose the
-  // AsyncLocalStorage request context across multiple awaited reads.
-  const authenticatedAcademyId = currentAcademyId();
-  const academyId = academyIdOverride ?? authenticatedAcademyId;
-  if (!authenticatedAcademyId || academyId !== authenticatedAcademyId) {
-    return { ok: false, error: "Payment academy scope mismatch." };
-  }
-  if (!(await validStudent(input.student_id, authenticatedAcademyId)))
-    return { ok: false, error: "Invalid student." };
-  if (!(await validPaymentGroup(input.student_id, input.group_id, authenticatedAcademyId)))
-    return { ok: false, error: "Student is not enrolled in this academy group." };
-  if (input.amount_due < 0 || (input.amount_paid ?? 0) < 0)
-    return { ok: false, error: "Amounts cannot be negative." };
-  if ((input.amount_paid ?? 0) > input.amount_due)
-    return { ok: false, error: "Paid amount cannot exceed amount due." };
-
-  const now = new Date().toISOString();
-  if (isSupabaseConfigured()) {
-    const atomic = await runAtomicPaymentRpc({
-      academyId,
-      studentId: input.student_id,
-      groupId: input.group_id,
-      month: input.month,
-      amountDue: input.amount_due,
-      amountPaid: input.amount_paid ?? 0,
-      method: input.method,
-      notes: input.notes,
-    });
-    if (atomic.error || !atomic.data) {
-      // RPC failed (e.g. not deployed, permissions, or unexpected exception).
-      // Fall back to a direct insert so payment recording still works instead of
-      // surfacing a generic failure. This keeps the flow resilient if the
-      // record_payment_atomic function is missing on a given environment.
-      console.warn("record_payment_atomic failed, falling back to direct insert:", atomic.error?.message);
-      const draft: Payment = {
-        id: pid(),
-        academy_id: academyId,
-        student_id: input.student_id,
-        group_id: input.group_id ?? null,
-        month: input.month,
-        month_year: input.month,
-        fee_type: input.fee_type ?? "monthly",
-        amount_due: input.amount_due,
-        amount_paid: input.amount_paid ?? 0,
-        remaining: 0,
-        due_date: input.due_date ?? now.slice(0, 10),
-        payment_date: (input.amount_paid ?? 0) > 0 ? now : null,
-        method: input.method ?? null,
-        status: "UNPAID",
-        notes: input.notes ?? null,
-        created_at: now,
-        updated_at: now,
-      };
-      const payment = derivePayment(draft);
-      const { remaining: _r, ...paymentPersist } = payment;
-      await persistInsert("payments", paymentPersist, authenticatedAcademyId);
-      collections().payments.push(payment);
-      if (payment.amount_paid > 0) {
-        const tx = {
-          id: crypto.randomUUID(),
-          payment_id: payment.id,
-          amount: payment.amount_paid,
-          method: input.method ?? "Cash",
-          paid_at: now,
-          note: null,
-        };
-        await persistInsert("payment_transactions", tx);
-        collections().transactions.push(tx);
+  const onSubmit = async (values: RecordPaymentValues) => {
+    if (values.amount > payment.remaining) {
+      toast.error(en ? `Amount exceeds the outstanding balance (${formatCurrency(payment.remaining, "EGP", "en-EG")}).` : `المبلغ أكبر من الرصيد المتبقي (${formatCurrency(payment.remaining, "EGP", "ar-EG")}).`);
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await recordPaymentAction(payment.id, values.amount, values.method, values.note);
+      if (!res.ok) {
+        toast.error(res.error ?? (en ? "Unable to complete the operation." : "تعذّر إتمام العملية."));
+        return;
       }
-      return { ok: true, payment: attach(payment) };
+      toast.success(en ? `Recorded ${formatCurrency(values.amount, "EGP", "en-EG")}` : `تم تسجيل ${formatCurrency(values.amount, "EGP", "ar-EG")}`);
+      setOpen(false);
+      router.refresh();
+    } catch (error) {
+      console.error("async action failed:", error);
+      toast.error(en ? "Something went wrong. Please try again." : "حدث خطأ، حاول مرة أخرى.");
+    } finally {
+      setSaving(false);
     }
-    const createdPayment = derivePayment(atomic.data as Payment);
-    if (input.fee_type && createdPayment.id) {
-      await persistUpdate("payments", createdPayment.id, { fee_type: input.fee_type }, academyId);
-      createdPayment.fee_type = input.fee_type;
-    }
-    return { ok: true, payment: attach(createdPayment) };
-  }
-  const draft: Payment = {
-    id: pid(),
-    academy_id: academyId,
-    student_id: input.student_id,
-    group_id: input.group_id ?? null,
-    month: input.month,
-    month_year: input.month,
-    fee_type: input.fee_type ?? "monthly",
-    amount_due: input.amount_due,
-    amount_paid: input.amount_paid ?? 0,
-    remaining: 0,
-    due_date: input.due_date ?? now.slice(0, 10),
-    payment_date: (input.amount_paid ?? 0) > 0 ? now : null,
-    method: input.method ?? null,
-    status: "UNPAID",
-    notes: input.notes ?? null,
-    created_at: now,
-    updated_at: now,
   };
-  const payment = derivePayment(draft);
-  // `remaining` is a GENERATED column in Postgres — never insert it.
-  const { remaining: _r, ...paymentPersist } = payment;
-  await persistInsert("payments", paymentPersist, authenticatedAcademyId);
-  collections().payments.push(payment);
-  if (payment.amount_paid > 0) {
-    const tx = {
-      id: crypto.randomUUID(),
-      payment_id: payment.id,
-      amount: payment.amount_paid,
-      method: input.method ?? "Cash",
-      paid_at: now,
-      note: null,
-    };
-    await persistInsert("payment_transactions", tx);
-    collections().transactions.push(tx);
-  }
-  return { ok: true, payment: attach(payment) };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="soft" disabled={payment.remaining <= 0}>
+          <Wallet className="h-3.5 w-3.5" /> {en ? "Record" : "تسجيل"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{en ? "Record payment" : "تسجيل دفعة"}</DialogTitle>
+          <DialogDescription>
+            {student ? `${student.first_name} ${student.last_name} · ${payment.month}` : payment.month}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="rounded-lg bg-muted p-3 text-sm">
+          <div className="flex justify-between"><span className="text-muted-foreground">{en ? "Outstanding" : "المتبقي"}</span><span className="font-semibold text-rose-600">{formatCurrency(payment.remaining, "EGP", en ? "en-EG" : "ar-EG")}</span></div>
+        </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          <div className="space-y-1.5">
+            <Label>{en ? "Amount received" : "المبلغ المستلم"}</Label>
+            <Input type="number" min={1} max={payment.remaining} step="any" {...register("amount")} />
+            {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label>{en ? "Payment method" : "طريقة الدفع"}</Label>
+            {cashOnly ? (
+              <div className="flex h-9 items-center rounded-lg border bg-muted px-3 text-sm">{en ? "Cash" : "نقدي"}</div>
+            ) : (
+              <>
+                <Input defaultValue="Cash" {...register("method")} list="methods" />
+                <datalist id="methods">{PAYMENT_METHODS.map((m) => <option key={m} value={m} label={paymentMethodLabel(m, en)} />)}</datalist>
+              </>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <Label>{en ? "Note (optional)" : "ملاحظة (اختياري)"}</Label>
+            <Input {...register("note")} />
+          </div>
+          {amount > 0 && (
+            <p className="text-sm text-muted-foreground">{en ? "New outstanding: " : "المتبقي الجديد: "}<span className="font-medium text-foreground">{formatCurrency(Math.max(0, payment.remaining - amount), "EGP", en ? "en-EG" : "ar-EG")}</span></p>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>{en ? "Cancel" : "إلغاء"}</Button>
+            <Button type="submit" disabled={saving}>
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />} {en ? "Confirm" : "تأكيد"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
-/** Record an additional payment against an existing payment. */
-export async function recordPayment(
-  paymentId: string,
-  amount: number,
-  method: string,
-  note?: string,
-  academyId?: string,
-): Promise<{ ok: boolean; error?: string; payment?: Payment }> {
-  const authenticatedAcademyId = currentAcademyId();
-  if (!authenticatedAcademyId || (academyId && academyId !== authenticatedAcademyId)) return { ok: false, error: "Payment academy scope mismatch." };
-  const p = collections().payments.find((x) => x.id === paymentId && x.academy_id === authenticatedAcademyId);
-  if (!p) return { ok: false, error: "Payment not found." };
-  if (amount <= 0) return { ok: false, error: "Amount must be positive." };
-  const newPaid = p.amount_paid + amount;
-  if (newPaid > p.amount_due)
-    return { ok: false, error: "Payment exceeds remaining balance." };
-  const now = new Date().toISOString();
-  if (isSupabaseConfigured()) {
-    const atomic = await runAtomicPaymentRpc({
-      academyId: authenticatedAcademyId,
-      paymentId,
-      studentId: p.student_id,
-      groupId: p.group_id,
-      month: p.month_year ?? p.month,
-      amountDue: p.amount_due,
-      amountPaid: amount,
-      method,
-      notes: note ?? p.notes,
-    });
-    if (atomic.error || !atomic.data) {
-      return { ok: false, error: atomic.error?.message ?? "Could not record payment." };
-    }
-    return { ok: true, payment: attach(derivePayment(atomic.data as Payment)) };
-  }
-  p.amount_paid = newPaid;
-  p.payment_date = now;
-  p.method = method;
-  p.notes = note ?? p.notes;
-  p.status = derivePayment(p).status;
-  p.updated_at = now;
-  await persistUpdate("payments", paymentId, {
-    amount_paid: p.amount_paid, payment_date: now, method, status: p.status,
-    notes: note ?? p.notes, updated_at: now,
-  }, authenticatedAcademyId);
-  const tx = {
-    id: crypto.randomUUID(),
-    payment_id: paymentId,
-    amount,
-    method,
-    paid_at: now,
-    note: note ?? null,
+export function CreatePaymentDialog({
+  students,
+  groups,
+  cashOnly = false,
+  defaultStudentId,
+}: {
+  students: Student[];
+  groups: Group[];
+  cashOnly?: boolean;
+  defaultStudentId?: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const en = useClientLang() === "en";
+  const router = useRouter();
+  const [saving, setSaving] = React.useState(false);
+  const [studentId, setStudentId] = React.useState(defaultStudentId ?? "");
+  const [groupId, setGroupId] = React.useState("");
+  const [month, setMonth] = React.useState(new Date().toISOString().slice(0, 7));
+  const [feeType, setFeeType] = React.useState<"monthly" | "half_month">("monthly");
+  const [amountDue, setAmountDue] = React.useState(0);
+  const [amountPaid, setAmountPaid] = React.useState(0);
+  const [method, setMethod] = React.useState("Cash");
+
+  const chooseFeeType = (type: "monthly" | "half_month") => {
+    setFeeType(type);
+    const group = groups.find((g) => g.id === groupId);
+    if (group) setAmountDue(type === "half_month" ? group.monthly_fee / 2 : group.monthly_fee);
   };
-  collections().transactions.push(tx);
-  await persistInsert("payment_transactions", tx);
-  return { ok: true, payment: attach(p) };
-}
 
-export async function deletePayment(id: string, academyId?: string): Promise<boolean> {
-  // Soft delete — never hard-delete financial records.
-  const authenticatedAcademyId = currentAcademyId();
-  if (!authenticatedAcademyId || (academyId && academyId !== authenticatedAcademyId)) return false;
-  const p = collections().payments.find((x) => x.id === id && x.academy_id === authenticatedAcademyId);
-  if (!p) return false;
-  p.deleted_at = new Date().toISOString();
-  await persistUpdate("payments", id, { deleted_at: p.deleted_at });
-  // Remove from active list (still in DB with deleted_at).
-  collections().payments = collections().payments.filter((x) => x.id !== id);
-  return true;
-}
-
-/* ---------------- Metrics ---------------- */
-
-export interface PaymentMetrics {
-  monthlyRevenue: number; // potential revenue this month
-  collectedThisMonth: number;
-  outstanding: number;
-  collectedInRange: number; // collected over the requested range
-  revenueByMonth: { month: string; revenue: number; collected: number }[];
-}
-
-function currentMonthKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-export async function getPaymentMetrics(months = 6, academyId?: string): Promise<PaymentMetrics> {
-  const pays = (await fetchTableRLS<Payment>("payments", academyId)).map(derivePayment);
-  const cm = currentMonthKey();
-  const thisMonth = pays.filter((p) => p.month === cm);
-  const monthlyRevenue = thisMonth.reduce((s, p) => s + p.amount_due, 0);
-  const collectedThisMonth = thisMonth.reduce((s, p) => s + p.amount_paid, 0);
-  const outstanding = pays.reduce((s, p) => s + p.remaining, 0);
-
-  // last `months` months
-  const byMonth = new Map<string, { revenue: number; collected: number }>();
-  for (let i = months - 1; i >= 0; i--) {
-    const d = new Date();
-    d.setMonth(d.getMonth() - i);
-    byMonth.set(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, {
-      revenue: 0,
-      collected: 0,
-    });
-  }
-  for (const p of pays) {
-    const entry = byMonth.get(p.month);
-    if (entry) {
-      entry.revenue += p.amount_due;
-      entry.collected += p.amount_paid;
+  const submit = async () => {
+    if (!studentId) { toast.error(en ? "Select a student first." : "اختر طالبًا أولًا."); return; }
+    if (amountDue <= 0) { toast.error(en ? "The due amount must be greater than zero." : "يجب أن يكون المبلغ المستحق أكبر من صفر."); return; }
+    setSaving(true);
+    try {
+      const res = await createPaymentAction({
+        student_id: studentId,
+        group_id: groupId || null,
+        month,
+        fee_type: feeType,
+        amount_due: amountDue,
+        amount_paid: amountPaid,
+        method,
+      });
+      if (!res.ok) { toast.error(res.error ?? (en ? "Unable to complete the operation." : "تعذّر إتمام العملية.")); return; }
+      toast.success(en ? "Payment record created." : "تم إنشاء سجل الدفعة.");
+      setOpen(false);
+      router.refresh();
+    } catch (error) {
+      console.error("async action failed:", error);
+      toast.error(en ? "Something went wrong. Please try again." : "حدث خطأ، حاول مرة أخرى.");
+    } finally {
+      setSaving(false);
     }
-  }
-  const revenueByMonth = [...byMonth.entries()].map(([month, v]) => ({
-    month,
-    revenue: v.revenue,
-    collected: v.collected,
-  }));
-  const collectedInRange = revenueByMonth.reduce((s, r) => s + r.collected, 0);
+  };
 
-  return { monthlyRevenue, collectedThisMonth, outstanding, collectedInRange, revenueByMonth };
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button><Plus className="h-4 w-4" /> {en ? "Add payment" : "إضافة دفعة"}</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{en ? "Add payment record" : "إضافة سجل دفعة"}</DialogTitle>
+          <DialogDescription>{en ? "Create a payment record for a student." : "أنشئ سجل دفعة لطالب."}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>{en ? "Student *" : "الطالب *"}</Label>
+              <select value={studentId} onChange={(e) => setStudentId(e.target.value)} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                <option value="">{en ? "Select…" : "اختر…"}</option>
+                {students.map((s) => <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>{en ? "Group" : "المجموعة"}</Label>
+              <select value={groupId} onChange={(e) => { setGroupId(e.target.value); const g = groups.find((x) => x.id === e.target.value); if (g) setAmountDue(feeType === "half_month" ? g.monthly_fee / 2 : g.monthly_fee); }} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                <option value="">{en ? "None" : "لا يوجد"}</option>
+                {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>{en ? "Month" : "الشهر"}</Label>
+              <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>{en ? "Fee period" : "نوع الاشتراك"}</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button type="button" variant={feeType === "monthly" ? "default" : "outline"} onClick={() => chooseFeeType("monthly")}>
+                  {en ? "Full month" : "شهر كامل"}
+                </Button>
+                <Button type="button" variant={feeType === "half_month" ? "default" : "outline"} onClick={() => chooseFeeType("half_month")}>
+                  {en ? "Half month" : "نصف شهر"}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {en ? "The due amount is calculated automatically, but you can edit it before saving." : "سيُحسب المبلغ تلقائيًا، ويمكنك تعديله يدويًا قبل التسجيل."}
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>{en ? "Payment method" : "طريقة الدفع"}</Label>
+              {cashOnly ? (
+                <div className="flex h-9 items-center rounded-lg border bg-muted px-3 text-sm">{en ? "Cash" : "نقدي"}</div>
+              ) : (
+                <select value={method} onChange={(e) => setMethod(e.target.value)} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                  {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{paymentMethodLabel(m, en)}</option>)}
+                </select>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label>{en ? "Due amount *" : "المبلغ المستحق *"}</Label>
+              <Input type="number" min={0} step="any" value={amountDue || ""} onChange={(e) => setAmountDue(Number(e.target.value))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{en ? "Amount paid" : "المبلغ المدفوع"}</Label>
+              <Input type="number" min={0} max={amountDue} step="any" value={amountPaid || ""} onChange={(e) => setAmountPaid(Number(e.target.value))} />
+            </div>
+          </div>
+          <div className="flex items-center justify-between rounded-lg bg-muted p-3 text-sm">
+            <span className="text-muted-foreground">{en ? "Outstanding will be" : "المتبقي سيكون"}</span>
+            <span className="font-semibold">{formatCurrency(Math.max(0, amountDue - amountPaid), "EGP", en ? "en-EG" : "ar-EG")}</span>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>{en ? "Cancel" : "إلغاء"}</Button>
+          <Button onClick={submit} disabled={saving}>
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />} {en ? "Create" : "إنشاء"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }

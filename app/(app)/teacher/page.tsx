@@ -164,7 +164,7 @@ export default async function TeacherDashboard() {
           <CardHeader>
             <CardTitle>{isRTL ? "الملخص المالي" : "Financial overview"}</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-3">
+          <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <div className="rounded-xl border bg-muted/30 p-4">
               <p className="text-sm text-muted-foreground">{isRTL ? "الإيراد المتوقع" : "Expected revenue"}</p>
               <p className="mt-2 text-xl font-bold text-primary">{formatCurrency(finance.expectedRevenueThisMonth, "EGP", isRTL ? "ar-EG" : "en-EG")}</p>
@@ -176,6 +176,25 @@ export default async function TeacherDashboard() {
             <div className="rounded-xl border bg-muted/30 p-4">
               <p className="text-sm text-muted-foreground">{isRTL ? "المتبقي للتحصيل" : "Remaining"}</p>
               <p className="mt-2 text-xl font-bold text-amber-600">{formatCurrency(finance.outstanding, "EGP", isRTL ? "ar-EG" : "en-EG")}</p>
+            </div>
+            <div className="rounded-xl border bg-muted/30 p-4">
+              <p className="text-sm text-muted-foreground">{isRTL ? "طلاب دفعوا" : "Paid students"}</p>
+              <p className="mt-2 text-xl font-bold text-emerald-600">{finance.paidStudentCountThisMonth ?? 0}</p>
+            </div>
+            <div className="rounded-xl border bg-muted/30 p-4">
+              <p className="text-sm text-muted-foreground">{isRTL ? "طلاب لم يدفعوا" : "Unpaid students"}</p>
+              <p className="mt-2 text-xl font-bold text-rose-600">{finance.unpaidStudentCountThisMonth ?? 0}</p>
+            </div>
+          </CardContent>
+          <CardContent className="border-t pt-4">
+            <p className="mb-3 text-sm font-semibold">{isRTL ? "الطلاب الجدد خلال كل شهر" : "New students by month"}</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+              {(finance.newStudentsByMonth ?? []).map((item: { month: string; count: number }) => (
+                <div key={item.month} className="rounded-lg border bg-muted/20 p-3 text-center">
+                  <p className="text-xs text-muted-foreground">{new Date(`${item.month}-01T00:00:00`).toLocaleDateString(isRTL ? "ar-EG" : "en-EG", { month: "short", year: "numeric" })}</p>
+                  <p className="mt-1 text-lg font-bold text-primary">{item.count}</p>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>

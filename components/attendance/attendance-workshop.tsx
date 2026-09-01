@@ -26,6 +26,7 @@ interface AttendanceWorkshopProps {
   lessons: Lesson[];
   students: Student[];
   enrollments: { groupId: string; studentId: string }[];
+  paidThisMonth: Record<string, boolean>;
 }
 
 const STATUS_OPTS: { value: AttendanceStatus; ar: string; en: string; icon: any; active: string; idle: string }[] = [
@@ -35,7 +36,7 @@ const STATUS_OPTS: { value: AttendanceStatus; ar: string; en: string; icon: any;
 ];
 
 export function AttendanceWorkshop({
-  groups, lessons, students, enrollments,
+  groups, lessons, students, enrollments, paidThisMonth,
 }: AttendanceWorkshopProps) {
   const router = useRouter();
   const en = useClientLang() === "en";
@@ -229,6 +230,9 @@ export function AttendanceWorkshop({
                       <div>
                         <p className="text-sm font-medium">{fullName(s)}</p>
                         <p className="text-xs text-muted-foreground">{s.grade}</p>
+                        <Badge variant={paidThisMonth[s.id] ? "success" : "destructive"} className="mt-1">
+                          {paidThisMonth[s.id] ? (en ? "Paid this month" : "دفع الشهر") : (en ? "Not paid this month" : "لم يدفع الشهر")}
+                        </Badge>
                       </div>
                     </div>
                     <div className="flex gap-1.5">

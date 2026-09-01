@@ -838,7 +838,7 @@ export async function getGroupDetail(id: string, academyIdOverride?: string): Pr
   // after the group row itself was resolved. Hydrate only this tenant-scoped
   // group through the server client so the detail page never renders a false
   // empty state or 404-like result.
-  if (isSupabaseConfigured() && (!students.length || !lessons.length)) {
+  if (isSupabaseConfigured()) {
     const academyId = academyIdOverride ?? currentAcademyId();
     const admin = nodeSupabaseClient();
     if (admin && academyId) {
@@ -847,11 +847,11 @@ export async function getGroupDetail(id: string, academyIdOverride?: string): Pr
         admin.from("lessons").select("*").eq("group_id", id).eq("academy_id", academyId),
       ]);
       const studentIds = (memberships ?? []).map((row: any) => row.student_id).filter(Boolean);
-      if (studentIds.length) {
+      if (studentIds.length && !students.length) {
         const { data: studentRows } = await admin.from("students").select("*").in("id", studentIds).eq("academy_id", academyId);
         students = (studentRows ?? []) as any;
       }
-      if (lessonRows?.length) lessons = lessonRows as any;
+      if (lessonRows?.length && !lessons.length) lessons = lessonRows as any;
       if (lessons.length) {
         const { data: attendanceRowsFromDb } = await admin.from("attendance").select("*").in("lesson_id", lessons.map((l: any) => l.id)).eq("academy_id", academyId);
         attendanceRows = (attendanceRowsFromDb ?? []) as any;

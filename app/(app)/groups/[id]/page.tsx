@@ -110,7 +110,7 @@ export default async function GroupDetailPage(
   const stats = [
     { label: en ? "Students" : "الطلاب", value: detail.students.length, icon: Users },
     { label: en ? "Lessons" : "الحصص", value: detail.lessons.length, icon: BookOpen },
-    { label: en ? "Attendance" : "الحضور", value: `${detail.attendanceRate}%`, icon: CalendarCheck },
+    { label: en ? "Attendance" : "الحضور", value: detail.attendanceRecorded ? `${detail.attendanceRate}%` : (en ? "Not recorded" : "لم يُسجّل بعد"), icon: CalendarCheck },
     { label: en ? "Average grade" : "متوسط الدرجات", value: `${avgGrade}%`, icon: GraduationCap },
   ];
 

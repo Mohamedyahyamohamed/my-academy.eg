@@ -447,6 +447,8 @@ export interface StudentDetail extends Student {
 
 export interface StudentStats {
   attendanceRate: number;
+  /** Number of real attendance records behind the rate; zero means unrecorded. */
+  attendanceRecorded: number;
   averageGrade: number;
   monthlyFee: number;
   totalPaid: number;

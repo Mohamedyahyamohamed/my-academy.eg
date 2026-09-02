@@ -633,6 +633,7 @@ export async function getPlatformStudentDetail(id: string): Promise<StudentDetai
     groups: groupRows ?? [],
     stats: {
       attendanceRate: attendance.length ? percentage(present + late, attendance.length) : 0,
+      attendanceRecorded: attendance.length,
       averageGrade: gradePercentages.length ? round(gradePercentages.reduce((sum: number, value: number) => sum + value, 0) / gradePercentages.length, 1) : 0,
       monthlyFee: payments.length ? Math.max(...payments.map((row: { amount_due: number }) => row.amount_due)) : 0,
       totalPaid,
@@ -704,6 +705,7 @@ export function computeStudentStats(studentId: string): StudentStats {
 
   return {
     attendanceRate,
+    attendanceRecorded: att.length,
     averageGrade,
     monthlyFee,
     totalPaid,

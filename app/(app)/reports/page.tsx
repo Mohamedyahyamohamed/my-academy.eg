@@ -110,7 +110,7 @@ export default async function ReportsPage(
               <ReportStat label={en ? "Active groups" : "المجموعات النشطة"} value={String(d.totalGroups)} />
               <ReportStat label={en ? "Collected" : "المحصّل"} value={formatCurrency(collected, "EGP", en ? "en-EG" : "ar-EG")} />
               <ReportStat label={en ? "Outstanding" : "المتبقي"} value={formatCurrency(outstanding, "EGP", en ? "en-EG" : "ar-EG")} />
-              <ReportStat label={en ? "Attendance rate" : "نسبة الحضور"} value={`${d.attendanceRate}%`} />
+              <ReportStat label={en ? "Attendance rate" : "نسبة الحضور"} value={d.attendanceSessions ? `${d.attendanceRate}%` : (en ? "Not recorded" : "لم يُسجّل بعد")} />
               <ReportStat label={en ? "Average grade" : "متوسط الدرجات"} value={`${d.averageGrade}%`} />
               <ReportStat label={en ? "Monthly revenue" : "الإيراد الشهري"} value={formatCurrency(d.monthlyRevenue, "EGP", en ? "en-EG" : "ar-EG")} />
               <ReportStat label={en ? "Upcoming lessons" : "الحصص القادمة"} value={String(d.upcomingLessons.length)} />

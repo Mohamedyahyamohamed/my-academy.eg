@@ -8,15 +8,15 @@ describe("platform typography", () => {
   const layout = read("app/layout.tsx");
   const styles = read("app/globals.css");
 
-  it("bundles the Arabic-friendly Tajawal weights locally", () => {
-    expect(layout).toContain('@fontsource/tajawal/400.css');
-    expect(layout).toContain('@fontsource/tajawal/500.css');
-    expect(layout).toContain('@fontsource/tajawal/700.css');
-    expect(layout).toContain('@fontsource/tajawal/800.css');
+  it("bundles the Arabic-friendly Cairo weights locally", () => {
+    expect(layout).toContain('@fontsource/cairo/400.css');
+    expect(layout).toContain('@fontsource/cairo/500.css');
+    expect(layout).toContain('@fontsource/cairo/700.css');
+    expect(layout).toContain('@fontsource/cairo/800.css');
   });
 
-  it("uses Tajawal as the global sans font with a readable base rhythm", () => {
-    expect(styles).toContain('--font-sans: "Tajawal", "Geist"');
+  it("uses the Arabic-friendly global sans stack with a readable base rhythm", () => {
+    expect(styles).toContain('--font-sans: "Cairo", "Tajawal", "Geist"');
     expect(styles).toContain('font-family: var(--font-sans);');
     expect(styles).toContain('line-height: 1.6;');
   });

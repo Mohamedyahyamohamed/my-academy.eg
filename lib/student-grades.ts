@@ -18,12 +18,13 @@ export const GLOBAL_GRADE_OPTIONS = [
 export type GlobalGrade = (typeof GLOBAL_GRADE_OPTIONS)[number];
 
 /**
- * Normalizes known historical CSV spellings to the single UI vocabulary.
- * Unknown values are preserved rather than guessed, so no student data is lost.
+ * توحيد مسميات الصفوف القادمة من الإدخال أو الاستيراد.
+ * القيمة الأصلية للطالب لا تتغير؛ التوحيد للفلترة فقط.
  */
 export function normalizeGrade(value: string | null | undefined): string | null {
   const raw = (value ?? "").replace(/\u200f|\u200e/g, "").replace(/\s+/g, " ").trim();
   if (!raw) return null;
+
   const compact = raw
     .replace(/[أإآ]/g, "ا")
     .replace(/ى/g, "ي")
@@ -53,9 +54,20 @@ export function normalizeGrade(value: string | null | undefined): string | null 
     "جامعي": "مرحلة جامعية",
     "خريج": "خريج",
   };
+
   if (direct[compact]) return direct[compact];
 
-  // Handle the known descriptive suffix in imported Azhar entries.
+  // توحيد البكالوريا مع الصف الثانوي المقابل.
+  if (compact.includes("بكالوريا") && /(اولي|الاول)/.test(compact)) {
+    return "الصف الأول الثانوي";
+  }
+  if (compact.includes("بكالوريا") && /(ثانيه|الثاني)/.test(compact)) {
+    return "الصف الثاني الثانوي";
+  }
+  if (compact.includes("بكالوريا") && /(ثالثه|الثالث)/.test(compact)) {
+    return "الصف الثالث الثانوي";
+  }
+
   if (/الصف الاول الثانوي/.test(compact)) return "الصف الأول الثانوي";
   if (/الصف الثاني الثانوي/.test(compact)) return "الصف الثاني الثانوي";
   if (/الصف الثالث الثانوي/.test(compact)) return "الصف الثالث الثانوي";
@@ -72,7 +84,10 @@ export function normalizeGrade(value: string | null | undefined): string | null 
   return raw;
 }
 
-export function gradeMatches(studentGrade: string | null | undefined, selectedGrade: string): boolean {
+export function gradeMatches(
+  studentGrade: string | null | undefined,
+  selectedGrade: string,
+): boolean {
   if (!selectedGrade || selectedGrade === "ALL") return true;
   return normalizeGrade(studentGrade) === selectedGrade;
 }

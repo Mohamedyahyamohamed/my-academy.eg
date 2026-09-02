@@ -117,6 +117,7 @@ export function getMyChildren(
 
 export interface ChildSummary {
   attendanceRate: number;
+  attendanceRecorded: number;
   averageGrade: number;
   outstanding: number;
   upcomingLesson: string | null;
@@ -143,7 +144,7 @@ export async function childSummary(
     const lesson = lessons.find((item: any) => item.id === a.lesson_id);
     return Boolean(lesson && lesson.status !== "canceled" && lesson.is_cancelled !== true);
   });
-  const present = att.filter((a: any) => a.status !== "ABSENT").length;
+  const present = att.filter((a: any) => a.status === "PRESENT" || a.status === "LATE").length;
   const attendanceRate = att.length ? percentage(present, att.length) : 0;
 
   const grades = allGrades.filter((g: any) => g.student_id === studentId);
@@ -167,7 +168,7 @@ export async function childSummary(
   const hw = homework.filter((h: any) => h.student_id === studentId);
   const pendingHomework = hw.filter((h: any) => h.status === "PENDING").length;
 
-  return { attendanceRate, averageGrade, outstanding, upcomingLesson: upcoming ? `${upcoming.topic} · ${new Date(upcoming.date).toLocaleDateString()}` : null, pendingHomework };
+  return { attendanceRate, attendanceRecorded: att.length, averageGrade, outstanding, upcomingLesson: upcoming ? `${upcoming.topic} · ${new Date(upcoming.date).toLocaleDateString()}` : null, pendingHomework };
 }
 
 /** Lessons a student will attend (across their groups). */
@@ -369,7 +370,7 @@ export async function getTeacherDashboard(user: SessionUser): Promise<TeacherDas
     .slice(0, 6);
 
   const att = allAttendance.filter((a: any) => myLessons.some((l: any) => l.id === a.lesson_id));
-  const present = att.filter((a: any) => a.status !== "ABSENT").length;
+  const present = att.filter((a: any) => a.status === "PRESENT" || a.status === "LATE").length;
   const attendanceRate = att.length ? percentage(present, att.length) : 0;
 
   const needsAttendance = myLessons
@@ -462,6 +463,7 @@ export interface StudentDashboardData {
   student: Student;
   groups: ReturnType<typeof groupsForStudent>;
   attendanceRate: number;
+  attendanceRecorded: number;
   averageGrade: number;
   upcomingLessons: any[];
   recentGrades: any[];
@@ -498,6 +500,7 @@ export async function getStudentDashboard(user: SessionUser): Promise<StudentDas
     student,
     groups,
     attendanceRate: summary.attendanceRate,
+    attendanceRecorded: summary.attendanceRecorded,
     averageGrade: summary.averageGrade,
     upcomingLessons: myLessons.filter((l: any) => isLessonUpcoming(l)).slice(0, 5),
     recentGrades: grades.slice(-5),

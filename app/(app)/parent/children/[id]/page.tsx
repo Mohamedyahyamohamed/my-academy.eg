@@ -71,6 +71,7 @@ export default async function ParentChildPage(props: { params: Promise<{ id: str
   const groups = groupRows ?? [];
   const summary = await childSummary(child.id, user.academy_id, groups as any).catch(() => ({
     attendanceRate: 0,
+    attendanceRecorded: 0,
     averageGrade: 0,
     outstanding: 0,
     upcomingLesson: null,
@@ -119,7 +120,7 @@ export default async function ParentChildPage(props: { params: Promise<{ id: str
         <CardContent className="flex flex-col items-start gap-6 p-6 sm:flex-row sm:items-center">
           <StudentAvatar name={fullName(child)} size="lg" />
           <div className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
-            <Mini label={en ? "Attendance" : "الحضور"} value={`${summary.attendanceRate}%`} />
+            <Mini label={en ? "Attendance" : "الحضور"} value={summary.attendanceRecorded ? `${summary.attendanceRate}%` : (en ? "Not recorded" : "لم يُسجّل بعد")} />
             <Mini label={en ? "Average grade" : "متوسط الدرجات"} value={`${summary.averageGrade}%`} />
             <Mini label={en ? "Pending homework" : "واجبات معلّقة"} value={String(summary.pendingHomework)} />
             <Mini label={en ? "Outstanding" : "المتبقي"} value={formatCurrency(summary.outstanding)} />

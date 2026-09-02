@@ -43,12 +43,12 @@ export default async function StudentProgressPage() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-3xl font-semibold">{attendanceRate}%</p>
+                <p className="text-3xl font-semibold">{att.total ? `${attendanceRate}%` : (en ? "Not recorded" : "لم يُسجّل بعد")}</p>
                 <p className="text-sm text-muted-foreground">{att.present} {en ? "present" : "حاضر"} · {att.late} {en ? "late" : "متأخر"} · {att.absent} {en ? "absent" : "غائب"}</p>
               </div>
               <CalendarCheck className="h-8 w-8 text-emerald-500" />
             </div>
-            <Progress value={attendanceRate} indicatorClassName="bg-emerald-500" className="mt-4" />
+            <Progress value={att.total ? attendanceRate : 0} indicatorClassName="bg-emerald-500" className="mt-4" />
           </CardContent>
         </Card>
         <Card>

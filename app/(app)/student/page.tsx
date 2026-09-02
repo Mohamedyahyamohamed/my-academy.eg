@@ -53,7 +53,7 @@ export default async function StudentDashboard() {
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label={en ? "Attendance" : "الحضور"} value={`${d.attendanceRate}%`} icon={CalendarCheck} accent="success" />
+        <StatCard label={en ? "Attendance" : "الحضور"} value={d.attendanceRecorded ? `${d.attendanceRate}%` : (en ? "Not recorded" : "لم يُسجّل بعد")} icon={CalendarCheck} accent="success" />
         <StatCard label={en ? "Average grade" : "متوسط الدرجات"} value={`${d.averageGrade}%`} icon={GraduationCap} accent="primary" />
         <StatCard label={en ? "Active groups" : "المجموعات النشطة"} value={d.groups.length} icon={BookOpen} accent="info" />
         <StatCard label={en ? "Pending homework" : "الواجبات المعلّقة"} value={d.pendingHomework.length} icon={ClipboardList} accent="warning" />

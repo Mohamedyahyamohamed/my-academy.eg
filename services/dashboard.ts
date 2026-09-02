@@ -143,7 +143,7 @@ export async function getDashboardData(
     const recordedAt = +new Date(String(record.recorded_at ?? ""));
     return Number.isFinite(recordedAt) && recordedAt >= cutoff;
   });
-  const present = recentAtt.filter((a: any) => a.status !== "ABSENT").length;
+  const present = recentAtt.filter((a: any) => a.status === "PRESENT" || a.status === "LATE").length;
   const attendanceRate = recentAtt.length ? percentage(present, recentAtt.length) : 0;
   const currentMonth = currentMonthKey();
   const activeStudentsSet = new Set(students.filter((student: any) => student.status === "ACTIVE" && student.is_active !== false).map((student: any) => student.id));
@@ -181,7 +181,7 @@ export async function getDashboardData(
     .filter((lesson: any) => activeLesson(lesson) && !isAcademyHoliday(lesson.date, academyId ?? currentAcademyId()) && String(lesson.date ?? "").slice(0, 7) === currentMonth)
     .map((lesson: any) => lesson.id));
   const currentMonthAttendance = attendance.filter((record: any) => currentMonthLessonIds.has(record.lesson_id));
-  const currentMonthPresent = currentMonthAttendance.filter((record: any) => record.status !== "ABSENT").length;
+  const currentMonthPresent = currentMonthAttendance.filter((a: any) => a.status === "PRESENT" || a.status === "LATE").length;
   const overallAttendanceThisMonth = currentMonthAttendance.length
     ? percentage(currentMonthPresent, currentMonthAttendance.length)
     : 0;

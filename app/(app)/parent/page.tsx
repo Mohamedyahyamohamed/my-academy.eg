@@ -62,7 +62,7 @@ export default async function ParentDashboard() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {children.map((c) => {
-          const s = summaries[c.id] ?? { attendanceRate: 0, averageGrade: 0, outstanding: 0, upcomingLesson: null, pendingHomework: 0 };
+          const s = summaries[c.id] ?? { attendanceRate: 0, attendanceRecorded: 0, averageGrade: 0, outstanding: 0, upcomingLesson: null, pendingHomework: 0 };
           return (
             <Link key={c.id} href={`/parent/children/${c.id}`}>
               <Card className="h-full transition-shadow hover:shadow-elevated">
@@ -76,7 +76,7 @@ export default async function ParentDashboard() {
                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="mt-4 grid grid-cols-3 gap-3 text-center">
-                    <Metric icon={CalendarCheck} label={en ? "Attendance" : "الحضور"} value={`${s.attendanceRate}%`} />
+                    <Metric icon={CalendarCheck} label={en ? "Attendance" : "الحضور"} value={s.attendanceRecorded ? `${s.attendanceRate}%` : (en ? "Not recorded" : "لم يُسجّل بعد")} />
                     <Metric icon={GraduationCap} label={en ? "Average grade" : "متوسط الدرجات"} value={`${s.averageGrade}%`} />
                     <Metric icon={Wallet} label={en ? "Outstanding" : "المتبقي"} value={formatCurrency(s.outstanding)} />
                   </div>

@@ -41,7 +41,7 @@ export default async function ParentChildrenPage() {
                       {(c.groups ?? []).map((g) => <Badge key={g.id} variant="secondary">{g.name.split(" — ")[0]}</Badge>)}
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-3 border-t pt-3 text-sm">
-                      <div><p className="text-xs text-muted-foreground">{en ? "Attendance" : "الحضور"}</p><p className="font-semibold">{s.attendanceRate}%</p></div>
+                      <div><p className="text-xs text-muted-foreground">{en ? "Attendance" : "الحضور"}</p><p className="font-semibold">{s.attendanceRecorded ? `${s.attendanceRate}%` : (en ? "Not recorded" : "لم يُسجّل بعد")}</p></div>
                       <div><p className="text-xs text-muted-foreground">{en ? "Outstanding" : "المتبقي"}</p><p className="font-semibold">{formatCurrency(s.outstanding)}</p></div>
                     </div>
                   </CardContent>

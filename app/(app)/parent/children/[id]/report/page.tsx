@@ -80,7 +80,7 @@ export default async function ParentStudentReportPage(props: { params: Promise<{
       </section>
 
       <section className="mt-5 grid gap-3 text-center sm:grid-cols-4">
-        <Summary label={en ? "Attendance" : "الحضور"} value={`${attendanceRate}%`} />
+        <Summary label={en ? "Attendance" : "الحضور"} value={attendance.total ? `${attendanceRate}%` : (en ? "Not recorded" : "لم يُسجّل بعد")} />
         <Summary label={en ? "Average grade" : "متوسط الدرجات"} value={gradesPage.items.length ? `${averageGrade}%` : "—"} />
         <Summary label={en ? "Paid" : "المدفوع"} value={formatCurrency(totalPaid)} />
         <Summary label={en ? "Outstanding" : "المتبقي"} value={formatCurrency(Math.max(0, totalDue - totalPaid))} emphasis />

@@ -818,6 +818,7 @@ export interface GroupDetail extends Group {
   students: ReturnType<typeof studentsInGroup>;
   lessons: ReturnType<typeof lessonsForGroup>;
   attendanceRate: number;
+  attendanceRecorded: number;
 }
 
 export async function getGroupDetail(id: string, academyIdOverride?: string): Promise<GroupDetail | null> {
@@ -861,9 +862,9 @@ export async function getGroupDetail(id: string, academyIdOverride?: string): Pr
 
   // attendance rate across the group
   const att = attendanceRows.filter((a) => lessons.some((l) => l.id === a.lesson_id));
-  const present = att.filter((a) => a.status !== "ABSENT").length;
+  const present = att.filter((a) => a.status === "PRESENT" || a.status === "LATE").length;
   const rate = att.length ? percentage(present, att.length) : 0;
-  return { ...g, students, lessons, attendanceRate: rate };
+  return { ...g, students, lessons, attendanceRate: rate, attendanceRecorded: att.length };
 }
 
 /** Average grade for a group across its exams. */

@@ -225,7 +225,7 @@ export default async function StudentProfilePage(
 
       {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <MiniStat label={en ? "Attendance" : "الحضور"} value={`${stats.attendanceRate}%`} icon={CalendarCheck} />
+        <MiniStat label={en ? "Attendance" : "الحضور"} value={stats.attendanceRecorded ? `${stats.attendanceRate}%` : (en ? "Not recorded" : "لم يُسجّل بعد")} icon={CalendarCheck} />
         <MiniStat label={en ? "Average grade" : "متوسط الدرجات"} value={`${stats.averageGrade}%`} icon={GraduationCap} />
         <MiniStat label={en ? "Monthly fee" : "الرسوم الشهرية"} value={formatCurrency(stats.monthlyFee, "EGP", en ? "en-EG" : "ar-EG")} icon={Wallet} />
         <MiniStat label={en ? "Paid" : "مدفوع"} value={formatCurrency(stats.totalPaid, "EGP", en ? "en-EG" : "ar-EG")} icon={Wallet} accent="success" />

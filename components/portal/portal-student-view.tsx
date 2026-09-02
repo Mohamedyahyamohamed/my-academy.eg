@@ -8,7 +8,8 @@ import type { PortalDashboardData } from "@/services/portal-dashboard";
 
 export function PortalStudentView({ data }: { data: PortalDashboardData }) {
   const present = data.attendance.filter((row) => row.status === "PRESENT" || row.status === "LATE").length;
-  const attendanceRate = data.lessons.length ? Math.round((present / data.lessons.length) * 100) : 0;
+  const attendanceRate = data.attendance.length ? Math.round((present / data.attendance.length) * 100) : 0;
+  const attendanceLabel = data.attendance.length ? `${attendanceRate}%` : "غير مسجل بعد";
   const groupMap = new Map(data.groups.map((group) => [group.id, group.name]));
   const [homework, setHomework] = useState(data.homework);
   const [busy, setBusy] = useState<string | null>(null);
@@ -34,7 +35,7 @@ export function PortalStudentView({ data }: { data: PortalDashboardData }) {
             <div><p className="text-sm font-semibold text-violet-200">MYAcademy · {data.academyName}</p><h1 className="mt-2 text-3xl font-black">بوابة الطالب</h1><p className="mt-2 text-sm text-violet-100">مرحبًا {data.student.first_name} {data.student.last_name}</p></div>
             <form action={portalLogoutAction}><Button type="submit" variant="outline" className="border-white/20 bg-white/10 text-white hover:bg-white/20"><LogOut className="me-2 h-4 w-4" /> خروج</Button></form>
           </div>
-          <div className="mt-7 grid gap-3 sm:grid-cols-3"><div className="rounded-2xl bg-white/10 p-4"><p className="text-xs text-violet-200">الصف</p><p className="mt-1 font-bold">{data.student.grade || "غير محدد"}</p></div><div className="rounded-2xl bg-white/10 p-4"><p className="text-xs text-violet-200">المجموعات</p><p className="mt-1 font-bold">{data.groups.length}</p></div><div className="rounded-2xl bg-white/10 p-4"><p className="text-xs text-violet-200">نسبة الحضور</p><p className="mt-1 font-bold">{attendanceRate}%</p></div></div>
+          <div className="mt-7 grid gap-3 sm:grid-cols-3"><div className="rounded-2xl bg-white/10 p-4"><p className="text-xs text-violet-200">الصف</p><p className="mt-1 font-bold">{data.student.grade || "غير محدد"}</p></div><div className="rounded-2xl bg-white/10 p-4"><p className="text-xs text-violet-200">المجموعات</p><p className="mt-1 font-bold">{data.groups.length}</p></div><div className="rounded-2xl bg-white/10 p-4"><p className="text-xs text-violet-200">نسبة الحضور</p><p className="mt-1 font-bold">{attendanceLabel}</p></div></div>
         </header>
 
         <section className="grid gap-4 sm:grid-cols-3">

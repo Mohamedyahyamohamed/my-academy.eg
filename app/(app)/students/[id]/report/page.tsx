@@ -48,6 +48,7 @@ export default async function StudentReportPage(props: { params: Promise<{ id: s
   const grades = Array.isArray(gradeResult?.items) ? gradeResult.items : [];
   const stats = detail.stats ?? {
     attendanceRate: 0,
+    attendanceRecorded: 0,
     averageGrade: 0,
     monthlyFee: 0,
     totalPaid: 0,
@@ -88,7 +89,7 @@ export default async function StudentReportPage(props: { params: Promise<{ id: s
       {/* ملخص */}
       <div className="mt-4 grid grid-cols-4 gap-3 text-center">
         <div className="rounded-lg border border-gray-300 p-3">
-          <p className="text-2xl font-bold text-gray-800">{stats.attendanceRate}%</p>
+          <p className="text-2xl font-bold text-gray-800">{stats.attendanceRecorded ? `${stats.attendanceRate}%` : (en ? "Not recorded" : "لم يُسجّل بعد")}</p>
           <p className="text-xs text-gray-500">{en ? "Attendance rate" : "نسبة الحضور"}</p>
         </div>
         <div className="rounded-lg border border-gray-300 p-3">

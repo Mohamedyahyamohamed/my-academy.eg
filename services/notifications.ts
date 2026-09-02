@@ -6,8 +6,8 @@ import { collections } from "./data/store";
 import { byAcademy, fetchTableRLS } from "./_shared";
 import { currentAcademyId } from "./session";
 
-export async function listNotifications(userId: string): Promise<AppNotification[]> {
-  const items = await fetchTableRLS<AppNotification>("notifications");
+export async function listNotifications(userId: string, academyId?: string): Promise<AppNotification[]> {
+  const items = await fetchTableRLS<AppNotification>("notifications", academyId);
   return items
     .filter((n) => n.user_id === userId || n.user_id === null)
     .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
@@ -57,9 +57,9 @@ export interface TeacherAlertSummary {
   total: number;
 }
 
-export async function generateTeacherAlerts(teacherId: string): Promise<TeacherAlertSummary> {
+export async function generateTeacherAlerts(teacherId: string, academyIdOverride?: string): Promise<TeacherAlertSummary> {
   const c = collections();
-  const academyId = currentAcademyId();
+  const academyId = academyIdOverride ?? currentAcademyId();
 
   // Teacher's groups -> student ids
   const groupIds = c.groups
@@ -119,6 +119,7 @@ export async function generateTeacherAlerts(teacherId: string): Promise<TeacherA
         `غياب متكرر: ${nameOf(sid)}`,
         `تغيب الطالب ${count} مرات. يُنصح بالتواصل مع ولي الأمر.`,
         `student:${sid}`,
+        academyId,
       );
       summary.absenceRepeat++;
     }
@@ -146,6 +147,7 @@ export async function generateTeacherAlerts(teacherId: string): Promise<TeacherA
         `درجة منخفضة: ${nameOf(sid)}`,
         `متوسط درجات الطالب ${Math.round(pct)}% (أقل من ${LOW_GRADE_PCT}%).`,
         `student:${sid}`,
+        academyId,
       );
       summary.lowGrade++;
     }
@@ -163,6 +165,7 @@ export async function generateTeacherAlerts(teacherId: string): Promise<TeacherA
           `دفعة متأخرة: ${nameOf(p.student_id)}`,
           `متبقي ${p.remaining} مستحق من ${p.due_date}.`,
           `student:${p.student_id}`,
+          academyId,
         );
         summary.paymentOverdue++;
       }
@@ -183,6 +186,7 @@ export async function generateTeacherAlerts(teacherId: string): Promise<TeacherA
         `واجب جديد يحتاج تصحيح: ${nameOf(sub.student_id)}`,
         hw ? `سلّم واجب «${hw.title}» ويحتاج مراجعة.` : `سلّم واجب جديد ويحتاج مراجعة.`,
         `student:${sub.student_id}`,
+        academyId,
       );
       summary.homeworkNew++;
     }
@@ -210,10 +214,11 @@ export function pushNotification(
   title: string,
   message: string,
   link?: string,
+  academyIdOverride?: string,
 ): AppNotification {
   const n: AppNotification = {
     id: crypto.randomUUID(),
-    academy_id: currentAcademyId(),
+    academy_id: academyIdOverride ?? currentAcademyId(),
     user_id: userId,
     type,
     title,

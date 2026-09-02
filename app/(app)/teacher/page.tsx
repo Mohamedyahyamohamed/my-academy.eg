@@ -85,10 +85,10 @@ export default async function TeacherDashboard() {
     };
   });
   // P2: generate + surface actionable teacher alerts
-  await generateTeacherAlerts(user.id).catch((error) => {
+  await generateTeacherAlerts(user.id, user.academy_id).catch((error) => {
     console.error("Teacher alerts unavailable:", error);
   });
-  const allNotifs = await listNotifications(user.id).catch((error) => {
+  const allNotifs = await listNotifications(user.id, user.academy_id).catch((error) => {
     console.error("Teacher notifications unavailable:", error);
     return [] as AppNotification[];
   });

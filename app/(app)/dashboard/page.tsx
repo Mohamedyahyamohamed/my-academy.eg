@@ -235,61 +235,41 @@ export default async function DashboardPage(
         />
       </div>
 
-      {/* Secondary metrics */}
+      {/* Finance metrics */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label={en ? "Monthly revenue" : "الإيراد الشهري"}
+          label={en ? "Due this month" : "المطلوب تحصيله هذا الشهر"}
           value={formatCurrency(d.monthlyRevenue, "EGP", en ? "en-EG" : "ar-EG")}
+          hint={en ? "Expected payments" : "إجمالي المدفوعات المطلوبة"}
           icon={Wallet}
           accent="primary"
           href="/payments"
         />
         <StatCard
-          label={en ? "Active students" : "الطلاب النشطون"}
-          value={d.activeStudents}
-          icon={UserCheck}
+          label={en ? "Collected this month" : "المحصّل هذا الشهر"}
+          value={formatCurrency(d.collectedThisMonth, "EGP", en ? "en-EG" : "ar-EG")}
+          hint={en ? "Successfully received" : "المبالغ التي تم استلامها"}
+          icon={Wallet}
           accent="success"
-          href="/students"
+          href="/payments"
         />
         <StatCard
-          label={en ? "Attendance rate" : "نسبة الحضور"}
-          value={d.attendanceSessions === 0 ? (en ? "N/A" : "—") : `${d.attendanceRate}%`}
-          icon={CalendarCheck}
-          accent="info"
-        />
-        <StatCard
-          label={en ? "Average grade" : "متوسط الدرجات"}
-          value={`${d.averageGrade}%`}
-          icon={GraduationCap}
+          label={en ? "Outstanding" : "المتبقي للتحصيل"}
+          value={formatCurrency(d.outstanding, "EGP", en ? "en-EG" : "ar-EG")}
+          hint={en ? "All unpaid balances" : "كل الأرصدة غير المحصّلة"}
+          icon={TrendingDown}
           accent="warning"
-          href="/grades"
+          href="/payments"
+        />
+        <StatCard
+          label={en ? "Collection trend" : "اتجاه التحصيل"}
+          value={`${d.collectionTrend >= 0 ? "+" : ""}${d.collectionTrend}%`}
+          hint={en ? "Compared with last month" : "مقارنة بالشهر السابق"}
+          icon={TrendingDown}
+          accent={d.collectionTrend >= 0 ? "success" : "destructive"}
+          href="/reports"
         />
       </div>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle>{en ? "Financial overview" : "الملخص المالي"}</CardTitle>
-            <CardDescription>{en ? "Track collections and outstanding payments at a glance." : "تابع التحصيل والمدفوعات المتأخرة من مكان واحد."}</CardDescription>
-          </div>
-          <Button asChild variant="outline" size="sm"><Link href="/payments">{en ? "Open payments" : "فتح المدفوعات"}</Link></Button>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            [en ? "Expected this month" : "المتوقع هذا الشهر", formatCurrency(d.expectedRevenueThisMonth, "EGP", en ? "en-EG" : "ar-EG"), "text-primary"],
-            [en ? "Collected this month" : "المحصّل هذا الشهر", formatCurrency(d.collectedRevenueThisMonth, "EGP", en ? "en-EG" : "ar-EG"), "text-emerald-600"],
-            [en ? "Outstanding balance" : "المتبقي للتحصيل", formatCurrency(d.outstanding, "EGP", en ? "en-EG" : "ar-EG"), "text-amber-600"],
-            [en ? "Outstanding payments" : "مدفوعات غير محصلة", formatCurrency(d.outstanding, "EGP", en ? "en-EG" : "ar-EG"), "text-destructive"],
-            [en ? "Total fees due" : "إجمالي المصروفات المستحقة", formatCurrency(d.monthlyRevenue, "EGP", en ? "en-EG" : "ar-EG"), "text-sky-600"],
-            [en ? "Net remaining to collect" : "صافي المتبقي للتحصيل", formatCurrency(Math.max(0, d.monthlyRevenue - d.collectedThisMonth), "EGP", en ? "en-EG" : "ar-EG"), "text-orange-600"],
-          ].map(([label, value, tone]) => (
-            <div key={label} className="rounded-xl border bg-muted/30 p-4">
-              <p className="text-sm text-muted-foreground">{label}</p>
-              <p className={`mt-2 text-lg font-bold ${tone}`}>{value}</p>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
 
       {/* BI charts */}
       <div className="grid gap-4 lg:grid-cols-2">

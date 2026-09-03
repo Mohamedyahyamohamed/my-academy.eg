@@ -1,26 +1,60 @@
 import Link from "next/link";
-import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { CalendarCheck, ScanLine } from "lucide-react";
 import { AttendanceWorkshop } from "@/components/attendance/attendance-workshop";
 import { GroupsService, LessonsService, StudentsService, PaymentsService, requireAttendanceTeacher } from "@/services";
-import { collections } from "@/services/data/store";
+import { collections, persistInsert } from "@/services/data/store";
 import { isSupabaseConfigured } from "@/services/supabase/config";
 import { cookies } from "next/headers";
 import { getLangFromCookie } from "@/lib/i18n";
+import { buildRecurringLessonRows } from "@/lib/lesson-generation";
+import type { Lesson } from "@/types";
 
 export const dynamic = "force-dynamic";
+
+function lessonKey(lesson: Pick<Lesson, "group_id" | "date" | "start_time" | "end_time">) {
+  return [lesson.group_id, String(lesson.date).slice(0, 10), lesson.start_time, lesson.end_time].join("|");
+}
+
+/**
+ * Materialize the weekly group schedule into real lesson rows.
+ * The window includes recent lessons for attendance history and upcoming lessons
+ * for planning. Existing lessons are never duplicated.
+ */
+async function ensureScheduledLessons(groups: Awaited<ReturnType<typeof GroupsService.listGroups>>, academyId: string, existing: Lesson[]) {
+  const existingKeys = new Set(existing.map(lessonKey));
+  const seedDate = new Date();
+  seedDate.setDate(seedDate.getDate() - 14);
+  const generated = groups.flatMap((group) => buildRecurringLessonRows(group, academyId, 5, seedDate));
+  const missing = generated.filter((lesson) => {
+    const key = lessonKey(lesson);
+    if (existingKeys.has(key)) return false;
+    existingKeys.add(key);
+    return true;
+  });
+
+  if (!missing.length) return existing;
+
+  const inserted: Lesson[] = [];
+  for (const lesson of missing) {
+    try {
+      await persistInsert("lessons", lesson, academyId);
+      inserted.push(lesson);
+    } catch {
+      // Do not show a generated lesson as selectable unless it was persisted.
+    }
+  }
+  return [...existing, ...inserted];
+}
 
 export default async function AttendancePage() {
   const lang = getLangFromCookie((await cookies()).get("ma_lang")?.value);
   const en = lang === "en";
   const user = await requireAttendanceTeacher();
-  // Scope both groups and lessons with the authenticated profile id/email.
-  // Assistant records have a separate teachers.id, so passing currentTeacherId()
-  // here can show the group while filtering out all of its lessons.
   const teacherProfileId = user.id;
   const groups = await GroupsService.listGroups("", user.academy_id, teacherProfileId, user.email);
-  const lessons = (await LessonsService.listLessons({ pageSize: 500 }, user.academy_id, teacherProfileId)).items;
+  const loadedLessons = (await LessonsService.listLessons({ pageSize: 500 }, user.academy_id, teacherProfileId)).items;
+  const lessons = await ensureScheduledLessons(groups, user.academy_id, loadedLessons);
   const students = (await StudentsService.listStudents({ pageSize: 500 }, user.academy_id)).items;
   const currentMonth = new Date().toISOString().slice(0, 7);
   const currentPayments = (await PaymentsService.listPayments({ month: currentMonth, pageSize: 500 }, user.academy_id).catch((error) => {
@@ -64,10 +98,10 @@ export default async function AttendancePage() {
             </div>
           </div>
           <div className="flex gap-2">
-        <Button asChild variant="outline">
-          <Link href="/attendance/scan"><ScanLine className="h-4 w-4" /> {en ? "Scan student QR codes" : "امسح أكواد الطلاب (QR)"}</Link>
-        </Button>
-      </div>
+            <Button asChild variant="outline">
+              <Link href="/attendance/scan"><ScanLine className="h-4 w-4" /> {en ? "Scan student QR codes" : "امسح أكواد الطلاب (QR)"}</Link>
+            </Button>
+          </div>
         </div>
       </div>
       <AttendanceWorkshop
@@ -75,7 +109,6 @@ export default async function AttendancePage() {
         lessons={lessons}
         students={students}
         enrollments={enrollments}
-        paidThisMonth={paidThisMonth}
       />
     </div>
   );

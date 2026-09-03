@@ -419,7 +419,24 @@ export function derivePayment(p: Payment): Payment {
   return { ...p, amount_paid, amount_due, remaining, status };
 }
 
-/** Student full name. */
+/** Transliterate Arabic names for a consistent English display across the app. */
+export function transliterateName(value: string) {
+  const map: Record<string, string> = {
+    ا: "a", أ: "a", إ: "i", آ: "aa", ء: "a", ب: "b", ت: "t", ث: "th", ج: "g", ح: "h", خ: "kh",
+    د: "d", ذ: "th", ر: "r", ز: "z", س: "s", ش: "sh", ص: "s", ض: "d", ط: "t", ظ: "z", ع: "a", غ: "gh",
+    ف: "f", ق: "q", ك: "k", ل: "l", م: "m", ن: "n", ه: "h", و: "w", ي: "y", ى: "a", ة: "a", لا: "la",
+    ئ: "e", ؤ: "o", "َ": "a", "ِ": "i", "ُ": "u", "ّ": "", "ْ": "", "ً": "an", "ٍ": "in", "ٌ": "un",
+  };
+  return String(value ?? "")
+    .replace(/لا/g, "la")
+    .split("")
+    .map((char) => map[char] ?? char)
+    .join("")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Student full name, always displayed with Latin characters. */
 export function fullName(s: { first_name: string; last_name: string }) {
-  return `${s.first_name} ${s.last_name}`;
+  return `${transliterateName(s.first_name)} ${transliterateName(s.last_name)}`.trim();
 }

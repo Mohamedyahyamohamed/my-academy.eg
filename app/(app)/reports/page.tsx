@@ -39,21 +39,19 @@ export default async function ReportsPage(
     Array.isArray(searchParams[k]) ? (searchParams[k] as string[])[0] : searchParams[k];
   const groupId = sp("group") ?? "ALL";
 
-  const d = await DashboardService.getDashboardData("month", user.academy_id).catch(() => null);
-  const groups = (await GroupsService.listGroups("", user.academy_id).catch(() => [])) ?? [];
-  const academy = await MiscService.getAcademyAsync(user.academy_id).catch(() => null);
+  const d = await withTimeout(DashboardService.getDashboardData("month", user.academy_id));
+  const groups = (await withTimeout(GroupsService.listGroups("", user.academy_id))) ?? [];
+  const academy = await withTimeout(MiscService.getAcademyAsync(user.academy_id));
   const upcomingLessons = d?.upcomingLessons ?? [];
   const revenueByMonth = d?.revenueByMonth ?? [];
   const gradePerformance = d?.gradePerformance ?? [];
 
-  const studentResult = await StudentsService.listStudents({ status: "ACTIVE", pageSize: 500 }, user.academy_id)
-    .catch(() => ({ items: [] }));
-  const students = (studentResult.items ?? [])
+  const studentResult = await withTimeout(StudentsService.listStudents({ status: "ACTIVE", pageSize: 500 }, user.academy_id));
+  const students = (studentResult?.items ?? [])
     .filter((s) => groupId === "ALL" || (s.groups ?? []).some((g) => g.id === groupId));
 
-  const paymentResult = await PaymentsService.listPayments({ pageSize: 500 }, user.academy_id)
-    .catch(() => ({ items: [] }));
-  const payments = (paymentResult.items ?? [])
+  const paymentResult = await withTimeout(PaymentsService.listPayments({ pageSize: 500 }, user.academy_id));
+  const payments = (paymentResult?.items ?? [])
     .filter((p) => groupId === "ALL" || p.group_id === groupId);
 
   const collected = payments.reduce((s, p) => s + p.amount_paid, 0);
@@ -186,6 +184,13 @@ export default async function ReportsPage(
       </div>
     </div>
   );
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms = 8000): Promise<T | null> {
+  return Promise.race([
+    promise.catch(() => null),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
 }
 
 function ReportStat({ label, value }: { label: string; value: string }) {

@@ -40,16 +40,17 @@ export default async function ReportsPage(
   const groupId = sp("group") ?? "ALL";
 
   const d = await DashboardService.getDashboardData("month", user.academy_id);
-  const groups = await GroupsService.listGroups("", user.academy_id);
+  const groups = (await GroupsService.listGroups("", user.academy_id)) ?? [];
   const academy = await MiscService.getAcademyAsync(user.academy_id);
+  const upcomingLessons = d?.upcomingLessons ?? [];
+  const revenueByMonth = d?.revenueByMonth ?? [];
+  const gradePerformance = d?.gradePerformance ?? [];
 
-  const students = (await StudentsService.listStudents({ status: "ACTIVE", pageSize: 500 }, user.academy_id)).items
+  const students = ((await StudentsService.listStudents({ status: "ACTIVE", pageSize: 500 }, user.academy_id)).items ?? [])
     .filter((s) => groupId === "ALL" || (s.groups ?? []).some((g) => g.id === groupId));
 
-  const payments = (await PaymentsService.listPayments({ pageSize: 500 }, user.academy_id)).items
+  const payments = ((await PaymentsService.listPayments({ pageSize: 500 }, user.academy_id)).items ?? [])
     .filter((p) => groupId === "ALL" || p.group_id === groupId);
-
-  const grades = (await GradesService.listGrades({ pageSize: 500 }, user.academy_id)).items;
 
   const collected = payments.reduce((s, p) => s + p.amount_paid, 0);
   const outstanding = payments.reduce((s, p) => s + p.remaining, 0);
@@ -98,7 +99,7 @@ export default async function ReportsPage(
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{academy.name}</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{academy?.name ?? APP_CONFIG.name}</p>
                 <CardTitle>{en ? "Monthly academy report" : "تقرير الأكاديمية الشهري"}</CardTitle>
               </div>
               <p className="text-sm text-muted-foreground">{formatDate(new Date(), undefined, en ? "en-EG" : "ar-EG")}</p>
@@ -107,13 +108,13 @@ export default async function ReportsPage(
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <ReportStat label={en ? "Students" : "الطلاب"} value={String(students.length)} />
-              <ReportStat label={en ? "Active groups" : "المجموعات النشطة"} value={String(d.totalGroups)} />
+              <ReportStat label={en ? "Active groups" : "المجموعات النشطة"} value={String(d?.totalGroups ?? 0)} />
               <ReportStat label={en ? "Collected" : "المحصّل"} value={formatCurrency(collected, "EGP", en ? "en-EG" : "ar-EG")} />
               <ReportStat label={en ? "Outstanding" : "المتبقي"} value={formatCurrency(outstanding, "EGP", en ? "en-EG" : "ar-EG")} />
-              <ReportStat label={en ? "Attendance rate" : "نسبة الحضور"} value={d.attendanceSessions ? `${d.attendanceRate}%` : (en ? "Not recorded" : "لم يُسجّل بعد")} />
-              <ReportStat label={en ? "Average grade" : "متوسط الدرجات"} value={`${d.averageGrade}%`} />
-              <ReportStat label={en ? "Monthly revenue" : "الإيراد الشهري"} value={formatCurrency(d.monthlyRevenue, "EGP", en ? "en-EG" : "ar-EG")} />
-              <ReportStat label={en ? "Upcoming lessons" : "الحصص القادمة"} value={String(d.upcomingLessons.length)} />
+              <ReportStat label={en ? "Attendance rate" : "نسبة الحضور"} value={d?.attendanceSessions ? `${d.attendanceRate}%` : (en ? "Not recorded" : "لم يُسجّل بعد")} />
+              <ReportStat label={en ? "Average grade" : "متوسط الدرجات"} value={`${d?.averageGrade ?? 0}%`} />
+              <ReportStat label={en ? "Monthly revenue" : "الإيراد الشهري"} value={formatCurrency(d?.monthlyRevenue ?? 0, "EGP", en ? "en-EG" : "ar-EG")} />
+              <ReportStat label={en ? "Upcoming lessons" : "الحصص القادمة"} value={String(upcomingLessons.length)} />
             </div>
           </CardContent>
         </Card>
@@ -144,7 +145,7 @@ export default async function ReportsPage(
               <Table>
                 <TableHeader><TableRow><TableHead>{en ? "Month" : "الشهر"}</TableHead><TableHead>{en ? "Due" : "المستحق"}</TableHead><TableHead>{en ? "Collected" : "المحصّل"}</TableHead><TableHead>{en ? "Outstanding" : "المتبقي"}</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {d.revenueByMonth.map((r) => (
+                  {revenueByMonth.map((r) => (
                     <TableRow key={r.month}>
                       <TableCell className="font-medium">{r.month}</TableCell>
                       <TableCell>{formatCurrency(r.revenue, "EGP", en ? "en-EG" : "ar-EG")}</TableCell>
@@ -163,7 +164,7 @@ export default async function ReportsPage(
               <Table>
                 <TableHeader><TableRow><TableHead>{en ? "Level" : "المستوى"}</TableHead><TableHead>{en ? "Count" : "العدد"}</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {d.gradePerformance.map((g) => (
+                  {gradePerformance.map((g) => (
                     <TableRow key={g.level}>
                       <TableCell className="font-medium">{en ? g.level : (GRADE_LEVEL_AR[g.level] ?? g.level)}</TableCell>
                       <TableCell>{g.count}</TableCell>

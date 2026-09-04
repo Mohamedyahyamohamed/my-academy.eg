@@ -59,7 +59,7 @@ function assertStudentEnrolled(lessonId: string, studentId: string) {
   return { lesson, group, student };
 }
 
-/** Load a roster for a group/lesson with current attendance state. */
+/** Load a roster for a group/lesson with current attendance state (Optimized with Map O(1)). */
 export function getAttendanceSheet(
   groupId: string,
   lessonId: string,
@@ -68,11 +68,13 @@ export function getAttendanceSheet(
   const records = collections().attendance.filter(
     (a) => a.lesson_id === lessonId,
   );
+  const attendanceMap = new Map(records.map((r) => [r.student_id, r.status]));
+
   return students
     .sort((a, b) => fullName(a).localeCompare(fullName(b)))
     .map((student) => ({
       student,
-      status: records.find((r) => r.student_id === student.id)?.status ?? null,
+      status: attendanceMap.get(student.id) ?? null,
     }));
 }
 
@@ -107,7 +109,6 @@ export async function saveAttendance(
   const uniqueStudentIds = new Set(entries.map((entry) => entry.studentId));
   if (uniqueStudentIds.size !== entries.length) throw new Error("Duplicate student attendance entries are not allowed.");
   
-  // تحسين الأداء (O(N) بدلًا من O(N^2)) لتجنب البحث المتكرر لكل طالب
   const groupStudentsSet = new Set(
     collections().groupStudents.filter(item => item.group_id === group.id).map(item => item.student_id)
   );
@@ -126,7 +127,6 @@ export async function saveAttendance(
   collections().attendance = collections().attendance.filter(
     (a) => a.lesson_id !== lessonId,
   );
-  // Await delete BEFORE insert to avoid a fire-and-forget race.
   await persistDelete("attendance", { lesson_id: lessonId });
   const rows = entries.map((e) => ({
     lesson_id: lessonId,
@@ -268,15 +268,12 @@ export async function recordCheckin(
       .eq("student_id", studentId)
       .eq("academy_id", currentAcademyId())
       .maybeSingle();
-    // تم الالتزام الحرفي بالنص الإلزامي للـ QR
     if (existing) throw new Error("تم تسجيل الطالب لهذه الحصة من قبل");
   } else if (collections().attendance.some((a) => a.lesson_id === lessonId && a.student_id === studentId)) {
     throw new Error("تم تسجيل الطالب لهذه الحصة من قبل");
   }
   
   const now = new Date().toISOString();
-  // Persist first. If the durable write fails, do not mutate the request snapshot
-  // or return a false-success response to the QR client.
   await persistInsert("attendance", {
     lesson_id: lessonId,
     student_id: studentId,
@@ -312,7 +309,7 @@ export function isAcademyHoliday(date: string, academyId?: string): boolean {
   return holidays.includes(String(date).slice(0, 10));
 }
 
-/** Attendance summary for a single student. */
+/** Attendance summary for a single student (Optimized with Lessons Map O(1)). */
 export function studentAttendanceSummary(
   studentId: string,
   academyId?: string,
@@ -324,23 +321,25 @@ export function studentAttendanceSummary(
   }
   const student = collections().students.find((item) => item.id === studentId && item.academy_id === authenticatedAcademyId);
   if (!student) return { ...summarize([]), byLesson: [] };
+  
+  const lessonsMap = new Map(collections().lessons.map((item) => [item.id, item]));
   const recs = collections().attendance.filter((a) => {
     if (a.student_id !== studentId) return false;
-    const lesson = collections().lessons.find((item) => item.id === a.lesson_id);
+    const lesson = lessonsMap.get(a.lesson_id);
     return Boolean(lesson && lesson.academy_id === authenticatedAcademyId && !isLessonCanceled(lesson) && !isAcademyHoliday(lesson.date, authenticatedAcademyId));
   });
   return { ...summarize(recs), byLesson: recs };
 }
 
-/** Lessons for a group that still have no attendance taken. */
+/** Lessons for a group that still have no attendance taken (Optimized with Set O(1) Lookup). */
 export function lessonsNeedingAttendance(groupId?: string): Lesson[] {
   const todayString = getCairoDateString();
+  const takenLessonIds = new Set(collections().attendance.map((a) => a.lesson_id));
+  
   let lessons = collections().lessons.filter(
-    // تم تغيير Date.now() إلى توقيت القاهرة لضمان ظهور حصص اليوم بعد منتصف الليل
     (l) => String(l.date).slice(0, 10) <= todayString && !isLessonCanceled(l),
   );
   if (groupId) lessons = lessons.filter((l) => l.group_id === groupId);
-  return lessons.filter(
-    (l) => !collections().attendance.some((a) => a.lesson_id === l.id),
-  );
+  
+  return lessons.filter((l) => !takenLessonIds.has(l.id));
 }

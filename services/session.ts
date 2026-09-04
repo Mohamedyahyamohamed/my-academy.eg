@@ -199,28 +199,10 @@ export function getCurrentUser(): SessionUser | null {
 async function hydrateAssistantFlag(user: SessionUser): Promise<SessionUser> {
   if (user.role !== "TEACHER") return { ...user, is_assistant: false };
   try {
-    const client = nodeSupabaseClient();
-    if (client) {
-      const { data: teacher } = await client
-        .from("teachers")
-        .select("id")
-        .eq("academy_id", user.academy_id)
-        .or(`profile_id.eq.${user.id},email.eq.${user.email}`)
-        .maybeSingle();
-      if (!teacher?.id) return { ...user, is_assistant: false };
-      const [{ count: assigned }, { count: owned }] = await Promise.all([
-        client.from("group_assistants").select("group_id", { count: "exact", head: true }).eq("teacher_id", teacher.id),
-        client.from("groups").select("id", { count: "exact", head: true }).eq("academy_id", user.academy_id).eq("teacher_id", teacher.id),
-      ]);
-      return { ...user, is_assistant: (assigned ?? 0) > 0 && (owned ?? 0) === 0 };
-    }
-    const teacher = collections().teachers.find(
-      (t) => t.academy_id === user.academy_id && (t.profile_id === user.id || t.email.toLowerCase() === user.email.toLowerCase()),
-    );
-    if (!teacher) return { ...user, is_assistant: false };
-    const assigned = collections().groupAssistants.filter((row) => row.teacher_id === teacher.id).length;
-    const owned = collections().groups.filter((group: any) => group.academy_id === user.academy_id && group.teacher_id === teacher.id).length;
-    return { ...user, is_assistant: assigned > 0 && owned === 0 };
+    // Pass user with is_assistant undefined to force a fresh resolution 
+    // against the database instead of returning early.
+    const isAssistant = await isLimitedAssistant({ ...user, is_assistant: undefined });
+    return { ...user, is_assistant: isAssistant };
   } catch (error) {
     console.error("[session] unable to resolve assistant scope:", (error as Error).message);
     return { ...user, is_assistant: false };
@@ -357,25 +339,41 @@ export async function isLimitedAssistant(user: SessionUser): Promise<boolean> {
   if (user.role !== "TEACHER") return false;
   if (user.is_assistant === true) return true;
 
-  const teacher = collections().teachers.find(
+  const client = nodeSupabaseClient();
+  if (isSupabaseConfigured() && client) {
+    try {
+      // Fix: Don't rely on local collections for teacher lookup in Supabase mode
+      const { data: teacher } = await client
+        .from("teachers")
+        .select("id")
+        .eq("academy_id", user.academy_id)
+        .or(`profile_id.eq.${user.id},email.eq.${user.email}`)
+        .maybeSingle();
+
+      if (!teacher?.id) return false;
+
+      const [{ count: assigned }, { count: owned }] = await Promise.all([
+        client.from("group_assistants").select("group_id", { count: "exact", head: true }).eq("teacher_id", teacher.id),
+        client.from("groups").select("id", { count: "exact", head: true }).eq("academy_id", user.academy_id).eq("teacher_id", teacher.id),
+      ]);
+      return (assigned ?? 0) > 0 && (owned ?? 0) === 0;
+    } catch (error) {
+      console.error("[session] unable to resolve assistant scope from db:", (error as Error).message);
+      return false;
+    }
+  }
+
+  // Local/Demo Fallback
+  const local = collections();
+  const teacher = local.teachers.find(
     (t) => t.academy_id === user.academy_id && (t.profile_id === user.id || t.email.toLowerCase() === user.email.toLowerCase()),
   );
   if (!teacher) return false;
 
-  const local = collections();
-  if (!isSupabaseConfigured()) {
-    const assigned = local.groupAssistants.filter((row) => row.teacher_id === teacher.id).length;
-    const owned = local.groups.filter((group: any) => group.academy_id === user.academy_id && (group.teacher_id === teacher.id || group.teacher_id === user.id)).length;
-    return assigned > 0 && owned === 0;
-  }
-
-  const client = nodeSupabaseClient();
-  if (!client) return false;
-  const [{ count: assigned }, { count: owned }] = await Promise.all([
-    client.from("group_assistants").select("group_id", { count: "exact", head: true }).eq("teacher_id", teacher.id),
-    client.from("groups").select("id", { count: "exact", head: true }).eq("academy_id", user.academy_id).eq("teacher_id", teacher.id),
-  ]);
-  return (assigned ?? 0) > 0 && (owned ?? 0) === 0;
+  const assigned = local.groupAssistants.filter((row) => row.teacher_id === teacher.id).length;
+  // Fix logic alignment: check group.teacher_id === user.id to match existing local logic
+  const owned = local.groups.filter((group: any) => group.academy_id === user.academy_id && (group.teacher_id === teacher.id || group.teacher_id === user.id)).length;
+  return assigned > 0 && owned === 0;
 }
 
 /** Reject mutations that are reserved for academy teachers/admins, not assistants. */
@@ -435,9 +433,13 @@ export async function logout(): Promise<void> {
     if (isSupabaseConfigured()) {
       const { createServerSupabaseClient } = await import("@/lib/supabase/server");
       const client = await createServerSupabaseClient();
-      await client.auth.signOut();
+      const { error } = await client.auth.signOut();
+      if (error) throw error;
     }
-  } catch {}
+  } catch (error) {
+    // FIX: Removed empty catch block. Do not swallow errors silently.
+    console.error("[auth] error during supabase logout:", (error as Error).message);
+  }
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE);
   cookieStore.delete(ACTIVE_ACADEMY_COOKIE);

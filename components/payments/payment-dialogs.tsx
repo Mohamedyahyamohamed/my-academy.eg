@@ -22,6 +22,14 @@ import { formatCurrency } from "@/lib/utils";
 import type { Group, Payment, Student } from "@/types";
 import { useClientLang } from "@/lib/i18n-client";
 
+// دالة مساعدة لحساب الشهر الافتراضي بتوقيت القاهرة
+function getCairoMonthKey() {
+  const date = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Cairo" }));
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  return `${yyyy}-${mm}`;
+}
+
 export function RecordPaymentDialog({
   payment,
   students,
@@ -135,7 +143,7 @@ export function CreatePaymentDialog({
   const [saving, setSaving] = React.useState(false);
   const [studentId, setStudentId] = React.useState(defaultStudentId ?? "");
   const [groupId, setGroupId] = React.useState("");
-  const [month, setMonth] = React.useState(new Date().toISOString().slice(0, 7));
+  const [month, setMonth] = React.useState(getCairoMonthKey());
   const [feeType, setFeeType] = React.useState<"monthly" | "half_month">("monthly");
   const [amountDue, setAmountDue] = React.useState(0);
   const [amountPaid, setAmountPaid] = React.useState(0);
@@ -150,6 +158,17 @@ export function CreatePaymentDialog({
   const submit = async () => {
     if (!studentId) { toast.error(en ? "Select a student first." : "اختر طالبًا أولًا."); return; }
     if (amountDue <= 0) { toast.error(en ? "The due amount must be greater than zero." : "يجب أن يكون المبلغ المستحق أكبر من صفر."); return; }
+    
+    // فحص قيم الدفع برمجياً لمنع تجاوزات HTML Inputs
+    if (amountPaid < 0) {
+      toast.error(en ? "Amount paid cannot be negative." : "لا يمكن أن يكون المبلغ المدفوع سالبًا.");
+      return;
+    }
+    if (amountPaid > amountDue) {
+      toast.error(en ? "Paid amount cannot exceed the due amount." : "لا يمكن أن يتجاوز المبلغ المدفوع قيمة المستحق.");
+      return;
+    }
+
     setSaving(true);
     try {
       const res = await createPaymentAction({

@@ -52,7 +52,11 @@ export function GroupFinancials({
   payments: GroupPayment[];
 }) {
   const en = useClientLang() === "en";
-  const paymentByStudent = new Map(payments.map((payment) => [payment.student_id, payment]));
+  
+  const paymentByStudent = React.useMemo(() => {
+    return new Map(payments.map((payment) => [payment.student_id, payment]));
+  }, [payments]);
+  
   const expectedFee = Number.isFinite(monthlyFee) && monthlyFee > 0 ? monthlyFee : 0;
 
   return (
@@ -183,7 +187,8 @@ function CollectPaymentDialog({
       setAmount("");
       setNote("");
       router.refresh();
-    } catch {
+    } catch (error) {
+      console.error("Payment submission failed:", error);
       toast.error(en ? "Unable to record payment. Please try again." : "تعذّر تسجيل الدفعة. حاول مرة أخرى.");
     } finally {
       setSaving(false);

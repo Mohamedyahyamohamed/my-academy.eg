@@ -10,20 +10,28 @@ import { fullName } from "@/lib/utils";
 
 export async function checkinAction(lessonId: string) {
   const user = await requireScopedRole("STUDENT");
+  // ربط سياق الطلب (Tenant Context) قبل أي عملية لتجنب تسريب الأكاديميات
+  setRequestContext(user);
+
   // Resolve the student record by the logged-in email.
   const { resolveStudent } = await import("@/services/portals");
   const student = resolveStudent(user);
   if (!student) return { ok: false, error: "No student profile linked to your account." };
-  // Verify the student is enrolled in the lesson's group.
-  const lesson = (await import("@/services/data/store")).collections().lessons.find((l) => l.id === lessonId);
-  if (!lesson) return { ok: false, error: "Lesson not found." };
-  const enrolled = (await import("@/services/data/store")).collections().groupStudents.some(
-    (gs) => gs.group_id === lesson.group_id && gs.student_id === student.id,
-  );
-  if (!enrolled) return { ok: false, error: "You are not enrolled in this class." };
-  await AttendanceService.recordCheckin(lessonId, student.id, "PRESENT");
-  revalidatePath(`/lessons/${lessonId}`);
-  return { ok: true };
+
+  try {
+    // الاعتماد كلياً على `AttendanceService.recordCheckin` لأنه يحتوي بالفعل على
+    // تحقق صارم من الـ academy_id وتوفر الحصة والاشتراكات، بدلاً من الاعتماد
+    // على الـ Snapshot غير الآمن والذي كان يسمح بتخطي حماية الـ Multi-Tenant.
+    await AttendanceService.recordCheckin(lessonId, student.id, "PRESENT");
+    
+    revalidatePath(`/lessons/${lessonId}`);
+    return { ok: true };
+  } catch (error) {
+    // تغليف العملية بـ try/catch لمنع انهيار الـ Server Action في حال كان
+    // الطالب مسجلاً مسبقاً، وإرجاع الرسالة الصحيحة للمستخدم.
+    const message = error instanceof Error ? error.message : "تعذر تسجيل الحضور.";
+    return { ok: false, error: message };
+  }
 }
 
 /** Teacher scans a student's personal QR → records them present for an explicit or active lesson. */

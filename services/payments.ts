@@ -240,7 +240,7 @@ export async function createPayment(input: CreatePaymentInput, academyIdOverride
     console.warn("record_payment_atomic failed, falling back to direct insert:", atomic.error?.message);
   }
 
-  // Fallback Logic (DRY) - يُنفذ في حالة الفشل أو إذا كان Supabase غير مفعل
+  // Fallback Logic (DRY)
   const draft: Payment = {
     id: pid(),
     academy_id: academyId,

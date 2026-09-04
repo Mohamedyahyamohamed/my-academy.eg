@@ -83,8 +83,10 @@ export async function listPayments(
   
   if (search.trim()) {
     const q = search.toLowerCase();
-    // تحسين الأداء: بناء Map للطلاب بدلاً من البحث داخل المصفوفة في كل لفة (O(1) بدل O(N^2))
-    const studentsMap = new Map(collections().students.map(s => [s.id, fullName(s).toLowerCase()]));
+    // جلب قائمة الطلاب من قاعدة البيانات مباشرة لتفادي مشكلة الـ Snapshot القديم
+    const studentsList = await fetchTableRLS<any>("students", authenticatedAcademyId);
+    const studentsMap = new Map(studentsList.map(s => [s.id, fullName(s).toLowerCase()]));
+    
     items = items.filter((p) => {
       const studentName = studentsMap.get(p.student_id);
       return studentName && studentName.includes(q);
@@ -186,9 +188,13 @@ async function runAtomicPaymentRpc(input: {
       p_method: input.method ?? "Cash",
       p_notes: input.notes ?? null,
     });
-    if (error) return { data: null, error };
+    if (error) {
+      console.error("runAtomicPaymentRpc database error:", error.message, error.details);
+      return { data: null, error };
+    }
     return { data: Array.isArray(data) ? data[0] : data, error: null };
   } catch (err) {
+    console.error("runAtomicPaymentRpc exception:", err);
     return { data: null, error: err instanceof Error ? err : new Error("record_payment_atomic failed") };
   }
 }
@@ -294,8 +300,11 @@ export async function recordPayment(
   if (!authenticatedAcademyId || (academyId && academyId !== authenticatedAcademyId)) 
     return { ok: false, error: "Payment academy scope mismatch." };
     
-  const p = collections().payments.find((x) => x.id === paymentId && x.academy_id === authenticatedAcademyId);
-  if (!p) return { ok: false, error: "Payment not found." };
+  // جلب السجل الحالي من قاعدة البيانات مباشرة لتجنب الاعتماد على Snapshot قديم
+  const payments = await fetchTableRLS<Payment & { deleted_at?: string }>("payments", authenticatedAcademyId);
+  const p = payments.find((x) => x.id === paymentId);
+  
+  if (!p || p.deleted_at) return { ok: false, error: "Payment not found." };
   if (amount <= 0) return { ok: false, error: "Amount must be positive." };
   
   const newPaid = p.amount_paid + amount;
@@ -316,6 +325,7 @@ export async function recordPayment(
       notes: note ?? p.notes,
     });
     if (atomic.error || !atomic.data) {
+      console.error("Atomic RPC failed in recordPayment:", atomic.error);
       return { ok: false, error: atomic.error?.message ?? "Could not record payment." };
     }
     return { ok: true, payment: attach(derivePayment(atomic.data as Payment)) };
@@ -346,7 +356,11 @@ export async function recordPayment(
     note: note ?? null,
   };
   
+  // تحديث الـ Snapshot الداخلي لتزامن العرض
+  const index = collections().payments.findIndex(x => x.id === paymentId);
+  if (index !== -1) collections().payments[index] = p;
   collections().transactions.push(tx);
+  
   await persistInsert("payment_transactions", tx);
   return { ok: true, payment: attach(p) };
 }
@@ -355,11 +369,13 @@ export async function deletePayment(id: string, academyId?: string): Promise<boo
   const authenticatedAcademyId = currentAcademyId();
   if (!authenticatedAcademyId || (academyId && academyId !== authenticatedAcademyId)) return false;
   
-  const p = collections().payments.find((x) => x.id === id && x.academy_id === authenticatedAcademyId);
-  if (!p) return false;
+  // جلب السجل الحالي من قاعدة البيانات مباشرة لتجنب الاعتماد على Snapshot قديم
+  const payments = await fetchTableRLS<Payment & { deleted_at?: string }>("payments", authenticatedAcademyId);
+  const p = payments.find((x) => x.id === id);
+  
+  if (!p || p.deleted_at) return false;
   
   p.deleted_at = new Date().toISOString();
-  // تم إضافة authenticatedAcademyId لدالة الحذف لضمان أمان الـ RLS
   await persistUpdate("payments", id, { deleted_at: p.deleted_at }, authenticatedAcademyId);
   
   collections().payments = collections().payments.filter((x) => x.id !== id);
@@ -378,7 +394,6 @@ export interface PaymentMetrics {
 
 export async function getPaymentMetrics(months = 6, academyId?: string): Promise<PaymentMetrics> {
   const authenticatedAcademyId = academyId ?? currentAcademyId();
-  // تم تمرير الـ Academy ID بشكل صريح لضمان عدم حدوث تسريب في البيانات
   const pays = (await fetchTableRLS<Payment>("payments", authenticatedAcademyId)).map(derivePayment);
   
   const cm = getCairoMonthKey();

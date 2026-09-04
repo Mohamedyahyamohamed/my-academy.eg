@@ -25,7 +25,7 @@ export default async function TeacherDashboard() {
   const lang = getLangFromCookie((await cookies()).get(LANG_COOKIE)?.value);
   const isRTL = lang === "ar";
   const t = lang === "ar" ? {
-    dashboard: "لوحة التحكم", noTeacher: "لا يوجد ملف معلّم مرتبط", noTeacherDesc: "حسابك غير مرتبط بسجل معلّم. اطلب من المدير إسناد المجموعات إليك.", welcome: "أهلاً", overview: "نظرة سريعة على مجموعاتك وطلابك وحصصك فقط.", groups: "مجموعاتي", students: "طلابي", upcoming: "الحصص القادمة", attendanceRate: "متوسط الحضور", pending: "تسليم واجبات بانتظار مراجعتك.", review: "راجع الآن", noUpcoming: "لا توجد حصص قادمة.", all: "عرض الكل", attendanceMissing: "حضور لم يُسجَّل", recordAttendance: "سجّل الحضور", allRecorded: "تم تسجيل كل الحضور", groupsAssigned: "لا توجد مجموعات مسندة إليك.", submissions: "أحدث التسليمات", noSubmissions: "لا توجد تسليمات بعد."
+    dashboard: "لوحة التحكم", noTeacher: "لا يوجد ملف معلّم مرتبط", noTeacherDesc: "حسابك غير مرتبط بسجل معلّم. اطلب من المدير إسناد المجموعات إليك.", welcome: "أهلاً", overview: "نظرة سريعة على مجموعاتك وطلابك وحصصك فقط.", groups: "مجموعاتي", students: "طلابي", upcoming: "الحصص القادمة", attendanceRate: "متوسط الحضور", pending: "تسليم واجبات بانتظار مراجعتك.", review: "راجع الآن", noUpcoming: "لا توجد حصص قادمة.", all: "عرض الكل", attendanceMissing: "حضور لم يُسجَّل", recordAttendance: "سجّل الحضور", allRecorded: "تم تسجيل كل الحضور", groupsAssigned: "لا توجد مجموعات مسندة إليك.", submissions: "أحدث التسليمات", noSubmissions: "لا توجد تسليمات بعد."
   } : {
     dashboard: "Dashboard", noTeacher: "No teacher profile linked", noTeacherDesc: "Your account is not linked to a teacher record. Ask an administrator to assign groups to you.", welcome: "Welcome", overview: "A quick view of your groups, students, and lessons only.", groups: "My groups", students: "My students", upcoming: "Upcoming lessons", attendanceRate: "Average attendance", pending: "homework submissions are waiting for your review.", review: "Review now", noUpcoming: "No upcoming lessons.", all: "View all", attendanceMissing: "Attendance not recorded", recordAttendance: "Record attendance", allRecorded: "All attendance is recorded", groupsAssigned: "No groups are assigned to you.", submissions: "Recent submissions", noSubmissions: "No submissions yet."
   };
@@ -75,7 +75,7 @@ export default async function TeacherDashboard() {
   const dailyOps = await getTeacherDailyOps(user.academy_id).catch((error) => {
     console.error("Teacher daily ops unavailable:", error);
     return {
-      todayKey: new Date().toISOString().slice(0, 10),
+      todayKey: new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" }),
       todaysLessons: [],
       attendanceMissing: [],
       atRiskStudents: [],

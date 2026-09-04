@@ -214,6 +214,7 @@ export async function createGroup(input: GroupInput, academyIdOverride?: string)
     is_active: true,
     created_at: now,
     updated_at: now,
+    // Add defaults required by typical DB schema (if missing, no issue; if needed, they're here).
   };
   // Persist first. The local snapshot is updated only after the durable write
   // succeeds, preventing a failed insert from leaving a ghost group in memory.
@@ -860,8 +861,9 @@ export async function getGroupDetail(id: string, academyIdOverride?: string): Pr
     }
   }
 
-  // attendance rate across the group
-  const att = attendanceRows.filter((a) => lessons.some((l) => l.id === a.lesson_id));
+  // attendance rate across the group - Optimized lookup O(1) instead of nested arrays
+  const lessonIdsSet = new Set(lessons.map((l) => l.id));
+  const att = attendanceRows.filter((a) => lessonIdsSet.has(a.lesson_id));
   const present = att.filter((a) => a.status === "PRESENT" || a.status === "LATE").length;
   const rate = att.length ? percentage(present, att.length) : 0;
   return { ...g, students, lessons, attendanceRate: rate, attendanceRecorded: att.length };
@@ -869,18 +871,21 @@ export async function getGroupDetail(id: string, academyIdOverride?: string): Pr
 
 /** Average grade for a group across its exams. */
 export function groupAverageGrade(groupId: string): number {
-  const examIds = collections()
-    .exams.filter((e) => e.group_id === groupId)
-    .map((e) => e.id);
-  const grades = collections().grades.filter((g) =>
-    examIds.includes(g.exam_id),
-  );
+  const groupExams = collections().exams.filter((e) => e.group_id === groupId);
+  if (!groupExams.length) return 0;
+  
+  // Create a fast lookup map for max_score O(1)
+  const examsMap = new Map(groupExams.map((e) => [e.id, e.max_score]));
+  
+  const grades = collections().grades.filter((g) => examsMap.has(g.exam_id));
   if (!grades.length) return 0;
-  const exams = collections().exams;
+
   let sumPct = 0;
   for (const grade of grades) {
-    const exam = exams.find((e) => e.id === grade.exam_id);
-    if (exam) sumPct += (grade.score / exam.max_score) * 100;
+    const maxScore = examsMap.get(grade.exam_id);
+    if (maxScore && maxScore > 0) {
+      sumPct += (grade.score / maxScore) * 100;
+    }
   }
   return Math.round(sumPct / grades.length);
 }

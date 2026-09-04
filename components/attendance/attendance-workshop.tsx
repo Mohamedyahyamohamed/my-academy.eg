@@ -44,13 +44,15 @@ export function AttendanceWorkshop({
   const groupId = params.get("group") ?? "";
   const lessonId = params.get("lesson") ?? "";
 
-  const groupLessons = lessons
-    .filter((l) => l.group_id === groupId)
-    .sort((a, b) => {
-      const da = `${a.date} ${a.start_time ?? ""}`;
-      const db = `${b.date} ${b.start_time ?? ""}`;
-      return +new Date(db) - +new Date(da);
-    });
+  const groupLessons = React.useMemo(() => {
+    return lessons
+      .filter((l) => l.group_id === groupId)
+      .sort((a, b) => {
+        const da = `${a.date} ${a.start_time ?? ""}`;
+        const db = `${b.date} ${b.start_time ?? ""}`;
+        return +new Date(db) - +new Date(da);
+      });
+  }, [lessons, groupId]);
 
   // Auto-select the best lesson when a group is picked and no lesson chosen yet:
   // today's lesson first, then the nearest upcoming one, else the most recent past.
@@ -63,7 +65,7 @@ export function AttendanceWorkshop({
   React.useEffect(() => {
     if (!groupId || lessonId || !groupKey) return;
     const list = groupLessonsRef.current;
-    const todayKey = new Date().toLocaleDateString("en-CA");
+    const todayKey = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" });
     const todayLessons = list.filter(
       (l) => String(l.date).slice(0, 10) === todayKey,
     );
@@ -102,7 +104,10 @@ export function AttendanceWorkshop({
         return r.json();
       })
       .then((data) => setStatuses(data.statuses ?? {}))
-      .catch(() => setStatuses({}));
+      .catch((err) => {
+        console.error("Failed to fetch attendance statuses:", err);
+        setStatuses({});
+      });
   }, [lessonId]);
 
   const counts = React.useMemo(() => {

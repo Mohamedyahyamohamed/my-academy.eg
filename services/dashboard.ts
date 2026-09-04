@@ -1,6 +1,7 @@
 /**
  * Dashboard, Analytics & Reports service.
  * ALL data access is RLS-backed via fetchTableRLS (user session).
+ * No in-memory cache as security boundary.
  * Optimized for Serverless Environments (Vercel) & O(1) Lookups.
  */
 import type {
@@ -31,7 +32,6 @@ import { calculateRiskScore } from "./insights";
 import { notifyRiskAlerts } from "./whatsapp";
 
 // ─── Timezone Helpers (Africa/Cairo) ────────────────────────────
-// يضمن هذا الجزء أن "اليوم" يُحسب بتوقيت مصر وليس بتوقيت سيرفر Vercel (UTC)
 function getCairoTodayKey() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" }); // Returns YYYY-MM-DD
 }
@@ -56,8 +56,7 @@ function averageGradePercent(
   exams: { id: string; max_score: number }[],
 ): number {
   if (!grades.length) return 0;
-  
-  // تحسين الأداء باستخدام Map للوصول المباشر O(1)
+  // تحسين بـ Map لسرعة الوصول
   const examsMap = new Map(exams.map(e => [e.id, Number(e.max_score)]));
   
   const sum = grades.reduce((s, g) => {
@@ -65,6 +64,10 @@ function averageGradePercent(
     return s + (maxScore > 0 ? (Number(g.score) / maxScore) * 100 : 0);
   }, 0);
   return round(sum / grades.length, 0);
+}
+
+function currentMonthKey() {
+  return getCairoMonthKey();
 }
 
 function paymentMonth(payment: any): string {
@@ -134,7 +137,6 @@ export async function getDashboardData(
   const totalStudents = students.length;
   const activeStudentsList = students.filter((s: any) => s.status === "ACTIVE" && s.is_active !== false);
   const activeStudents = activeStudentsList.length;
-  const activeStudentsSet = new Set(activeStudentsList.map((s: any) => s.id));
   const totalGroups = groups.filter((g: any) => g.status === "ACTIVE" && g.is_active !== false).length;
 
   const chartRange = period === "year" ? 12 : 6;
@@ -144,11 +146,7 @@ export async function getDashboardData(
     .slice(-collectedPeriodMonths)
     .reduce((s, r) => s + r.collected, 0);
 
-  const currentMonth = getCairoMonthKey();
-  const todayKey = getCairoTodayKey();
   const cutoff = getCairoDateObj().getTime() - 30 * 86_400_000;
-  
-  // تحسين الأداء: بناء Hash Map للدروس لتجنب عمليات البحث المتكررة داخل الـ array
   const lessonsMap = new Map(lessons.map((l: any) => [l.id, l]));
 
   const activeAttendance = attendance
@@ -160,16 +158,18 @@ export async function getDashboardData(
       ...record,
       recorded_at: record.recorded_at ?? lessonsMap.get(record.lesson_id)?.date,
     }));
-
+    
   const recentAtt = activeAttendance.filter((record: any) => {
     const recordedAt = +new Date(String(record.recorded_at ?? ""));
     return Number.isFinite(recordedAt) && recordedAt >= cutoff;
   });
-
   const present = recentAtt.filter((a: any) => a.status !== "ABSENT").length;
   const attendanceRate = recentAtt.length ? percentage(present, recentAtt.length) : 0;
-
-  // تحسين الأداء: تجميع أعداد الطلاب في كل مجموعة مسبقاً (O(N) بدل O(N^2))
+  
+  const currentMonth = currentMonthKey();
+  const activeStudentsSet = new Set(activeStudentsList.map((s: any) => s.id));
+  
+  // تجميع Enrollments للسرعة
   const groupEnrollments = new Map<string, number>();
   for (const membership of groupStudents) {
     if (activeStudentsSet.has(membership.student_id)) {
@@ -183,17 +183,16 @@ export async function getDashboardData(
       const enrolled = groupEnrollments.get(group.id) || 0;
       return sum + Math.max(0, Number(group.monthly_fee ?? 0)) * enrolled;
     }, 0);
-
+    
   const currentMonthPayments = payments.filter((payment: any) => paymentMonth(payment) === currentMonth);
   const collectedRevenueThisMonth = currentMonthPayments.reduce((sum: number, payment: any) => sum + Math.max(0, Number(payment.amount_paid ?? 0)), 0);
   
   const paidStudentIdsThisMonth = new Set(currentMonthPayments
     .filter((payment: any) => Number(payment.amount_paid ?? 0) >= Number(payment.amount_due ?? 0))
     .map((payment: any) => payment.student_id));
-    
   const paidStudentCountThisMonth = paidStudentIdsThisMonth.size;
   const unpaidStudentCountThisMonth = Math.max(0, activeStudentsSet.size - paidStudentCountThisMonth);
-
+  
   const newStudentsByMonth = Array.from({ length: 6 }, (_, index) => {
     const date = getCairoDateObj();
     date.setDate(1);
@@ -204,22 +203,22 @@ export async function getDashboardData(
       count: students.filter((student: any) => String(student.created_at ?? "").slice(0, 7) === key).length,
     };
   });
-
+  
+  const todayKey = getCairoTodayKey();
   const overduePaymentCount = payments.filter((payment: any) =>
     payment.status !== "PAID" && Number(payment.amount_due ?? 0) > Number(payment.amount_paid ?? 0)
     && payment.due_date && String(payment.due_date).slice(0, 10) < todayKey,
   ).length;
-
+  
   const currentMonthLessonIds = new Set(lessons
     .filter((lesson: any) => activeLesson(lesson) && !isAcademyHoliday(lesson.date, academyId ?? currentAcademyId()) && String(lesson.date ?? "").slice(0, 7) === currentMonth)
     .map((lesson: any) => lesson.id));
-    
   const currentMonthAttendance = attendance.filter((record: any) => currentMonthLessonIds.has(record.lesson_id));
   const currentMonthPresent = currentMonthAttendance.filter((record: any) => record.status !== "ABSENT").length;
   const overallAttendanceThisMonth = currentMonthAttendance.length
     ? percentage(currentMonthPresent, currentMonthAttendance.length)
     : 0;
-
+    
   const revenueByGroup = groups
     .filter((group: any) => group.status === "ACTIVE" && group.is_active !== false)
     .map((group: any) => {
@@ -232,10 +231,8 @@ export async function getDashboardData(
     })
     .sort((a, b) => b.expected - a.expected || a.name.localeCompare(b.name));
 
-  // تحسين فصل الدرجات والحضور لكل طالب مسبقاً قبل عملية حساب الخطر (Risk Calculation)
   const studentAttendanceMap = new Map<string, any[]>();
   const studentGradesMap = new Map<string, any[]>();
-  
   for (const record of activeAttendance) {
     if (!studentAttendanceMap.has(record.student_id)) studentAttendanceMap.set(record.student_id, []);
     studentAttendanceMap.get(record.student_id)!.push(record);
@@ -256,16 +253,15 @@ export async function getDashboardData(
     }))
     .filter((item) => item.risk.category !== "safe");
 
-  // ملاحظة هامة: في بيئة Next.js (Serverless) يجب استخدام await لضمان إرسال الرسائل قبل إغلاق الـ function
-  // إذا كنت تستخدم Next.js 14+ يمكنك استبدالها بـ: unstable_after(() => notifyRiskAlerts(...))
-  await notifyRiskAlerts(academyId ?? currentAcademyId(), riskStudents.map((item) => item.studentId));
-
+  // NOTE: kept void to avoid blocking dashboard UI (Speed Feature). 
+  // For Vercel, if notifications sometimes fail to send, wrap in unstable_after(() => { notifyRiskAlerts(...) }) (Next.js 14+)
+  void notifyRiskAlerts(academyId ?? currentAcademyId(), riskStudents.map((item) => item.studentId));
+  
   const today = getCairoDateObj();
   today.setHours(0, 0, 0, 0);
   const mondayOffset = (today.getDay() + 6) % 7;
   const currentWeekStart = new Date(today);
   currentWeekStart.setDate(today.getDate() - mondayOffset);
-  
   const attendanceTrend4Weeks = Array.from({ length: 4 }, (_, index) => {
     const startDate = new Date(currentWeekStart);
     startDate.setDate(currentWeekStart.getDate() - (3 - index) * 7);
@@ -279,7 +275,6 @@ export async function getDashboardData(
     return { week: `الأسبوع ${index + 1}`, rate: records.length ? percentage(attended, records.length) : 0 };
   });
 
-  // students by course (Optimized $O(N)$)
   const courseMapById = new Map(d.courses.map((c: any) => [c.id, c]));
   const courseMap = new Map<string, { students: number; color: string }>();
   for (const g of groups) {
@@ -291,7 +286,6 @@ export async function getDashboardData(
   }
   const studentsByCourse = [...courseMap.entries()].map(([course, v]) => ({ course, students: v.students, color: v.color }));
 
-  // attendance trend
   const lessonsSorted = d.lessons
     .filter((l: any) => d.scopedLessonIds.has(l.id) && l.status !== "canceled" && l.is_cancelled !== true)
     .slice().sort((a: any, b: any) => +new Date(a.date) - +new Date(b.date));
@@ -302,7 +296,6 @@ export async function getDashboardData(
     return { week: `L${i + 1}`, rate: recs.length ? percentage(p, recs.length) : 0 };
   });
 
-  // grade performance (Optimized)
   const perfBuckets: Record<string, number> = { Excellent: 0, "Very Good": 0, Good: 0, "Needs Improvement": 0 };
   const examsMap = new Map(exams.map((e: any) => [e.id, Number(e.max_score)]));
   for (const g of grades) {
@@ -312,8 +305,8 @@ export async function getDashboardData(
   }
   const gradePerformance = Object.entries(perfBuckets).map(([level, count]) => ({ level, count }));
 
-  // حصص اليوم والغد فقط، مع إخفاء الحصة فور انتهاء وقتها.
-  const nowWallClock = wallClockMinute(getCairoDateObj(), "Africa/Cairo");
+  // wallClockMinute already handles timezone inside it, so we pass new Date() directly.
+  const nowWallClock = wallClockMinute(new Date(), "Africa/Cairo");
   const todayStart = nowWallClock - (nowWallClock % (24 * 60));
   const tomorrowEnd = todayStart + (2 * 24 * 60);
   const upcomingLessons = d.lessons
@@ -331,19 +324,16 @@ export async function getDashboardData(
       teacher: d.teachers.find((t: any) => t.id === l.teacher_id),
     })) as any[];
 
-  // recent payments
   const recentPayments = payments
     .slice().sort((a: any, b: any) => +new Date(b.updated_at) - +new Date(a.updated_at))
     .slice(0, 5)
     .map((p: any) => ({ ...p, student: students.find((s: any) => s.id === p.student_id) })) as any[];
 
-  // outstanding
   const outstandingStudents = payments
     .filter((p: any) => p.month === currentMonth && p.status !== "PAID" && p.amount_due - p.amount_paid > 0)
     .slice(0, 6)
     .map((p: any) => ({ ...p, remaining: p.amount_due - p.amount_paid, student: students.find((s: any) => s.id === p.student_id) })) as any[];
 
-  // needing attention
   const needing: any[] = [];
   const overdueStudentIds = new Set(payments.filter((p: any) => p.status !== "PAID" && p.month === currentMonth).map((p: any) => p.student_id));
   
@@ -420,7 +410,6 @@ export async function getAnalytics(academyId?: string): Promise<AnalyticsData> {
 
   const attTrend: { month: string; rate: number }[] = [];
   const lessonsMapByMonth = new Map<string, Set<string>>();
-  
   for (const l of d.lessons) {
     if (d.scopedLessonIds.has(l.id) && l.status !== "canceled" && l.is_cancelled !== true) {
       const monthKey = l.date.slice(0, 7);
@@ -433,7 +422,6 @@ export async function getAnalytics(academyId?: string): Promise<AnalyticsData> {
     const dt = getCairoDateObj(); dt.setMonth(dt.getMonth() - i);
     const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
     const lessonIds = lessonsMapByMonth.get(key) || new Set();
-    
     const recs = attendance.filter((a: any) => lessonIds.has(a.lesson_id));
     const p = recs.filter((r: any) => r.status !== "ABSENT").length;
     attTrend.push({ month: monthLabel(key), rate: percentage(p, recs.length) });
@@ -481,15 +469,61 @@ export async function getAnalytics(academyId?: string): Promise<AnalyticsData> {
   return { studentGrowth: growth, monthlyRevenue, attendanceTrend: attTrend, averageGrades: avgGrades, retention, popularCourses, profitableGroups };
 }
 
+// ─── Teacher daily operations board ─────────────────────────────
 export type TeacherDailyOps = {
-  // ... (نفس الـ Types السابقة لم تتغير)
   todayKey: string;
-  todaysLessons: Array<any>;
-  attendanceMissing: Array<any>;
-  atRiskStudents: Array<any>;
-  duePayments: Array<any>;
-  homeworkToReview: Array<any>;
-  counts: any;
+  todaysLessons: Array<{
+    id: string;
+    groupId: string;
+    groupName: string | null;
+    courseName: string | null;
+    date: string;
+    startTime: string | null;
+    endTime: string | null;
+    status: string | null;
+    attendanceRecorded: boolean;
+    presentCount: number;
+    totalStudents: number;
+  }>;
+  attendanceMissing: Array<{
+    id: string;
+    groupId: string;
+    groupName: string | null;
+    date: string;
+    startTime: string | null;
+    totalStudents: number;
+  }>;
+  atRiskStudents: Array<{
+    studentId: string;
+    name: string;
+    riskCategory: string;
+    riskScore: number;
+    groupName: string | null;
+  }>;
+  duePayments: Array<{
+    id: string;
+    studentId: string;
+    studentName: string;
+    groupName: string | null;
+    remaining: number;
+    month: string;
+  }>;
+  homeworkToReview: Array<{
+    id: string;
+    homeworkId: string;
+    title: string;
+    studentId: string;
+    studentName: string;
+    groupName: string | null;
+    submittedAt: string | null;
+  }>;
+  counts: {
+    todaysLessons: number;
+    attendanceMissing: number;
+    atRisk: number;
+    duePayments: number;
+    homeworkToReview: number;
+  };
 };
 
 export async function getTeacherDailyOps(academyId?: string): Promise<TeacherDailyOps> {
@@ -498,9 +532,8 @@ export async function getTeacherDailyOps(academyId?: string): Promise<TeacherDai
 
   const today = getCairoDateObj();
   today.setHours(0, 0, 0, 0);
-  const todayKey = getCairoTodayKey(); // إصلاح التوقيت
+  const todayKey = getCairoTodayKey();
 
-  // تحسين الأداء بإنشاء Maps للحصول على قيم بـ O(1)
   const groupsMap = new Map(groups.map((g: any) => [g.id, g]));
   const coursesMap = new Map(d.courses.map((c: any) => [c.id, c]));
   const studentsMap = new Map(students.map((s: any) => [s.id, s]));
@@ -518,7 +551,6 @@ export async function getTeacherDailyOps(academyId?: string): Promise<TeacherDai
   
   const studentName = (sid: string) => {
     const s = studentsMap.get(sid);
-    // تم إصلاح المنطق هنا بحيث لا نبحث في array مرتين بلا فائدة
     return s ? fullName(s) : (s?.first_name ?? "—");
   };
   const studentsInGroup = (gid: string) => groupStudentCounts.get(gid) || 0;
@@ -597,7 +629,7 @@ export async function getTeacherDailyOps(academyId?: string): Promise<TeacherDai
     .slice(0, 10)
     .map((x) => ({ ...x, groupName: x.groupName ?? null }));
 
-  const currentMonth = getCairoMonthKey();
+  const currentMonth = currentMonthKey();
   const duePayments = payments
     .filter((p: any) => !p.deleted_at && (p.month ?? p.month_year) === currentMonth && p.status !== "PAID")
     .map((p: any) => ({

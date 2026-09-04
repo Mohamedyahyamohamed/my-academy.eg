@@ -26,7 +26,7 @@ interface AttendanceWorkshopProps {
   lessons: Lesson[];
   students: Student[];
   enrollments: { groupId: string; studentId: string }[];
-  paidThisMonth: Record<string, boolean>;
+  paidThisMonth?: Record<string, boolean>;
 }
 
 const STATUS_OPTS: { value: AttendanceStatus; ar: string; en: string; icon: any; active: string; idle: string }[] = [
@@ -36,7 +36,7 @@ const STATUS_OPTS: { value: AttendanceStatus; ar: string; en: string; icon: any;
 ];
 
 export function AttendanceWorkshop({
-  groups, lessons, students, enrollments, paidThisMonth,
+  groups, lessons, students, enrollments, paidThisMonth = {},
 }: AttendanceWorkshopProps) {
   const router = useRouter();
   const en = useClientLang() === "en";

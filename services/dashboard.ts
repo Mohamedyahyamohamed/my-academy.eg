@@ -257,14 +257,17 @@ export async function getDashboardData(
   const gradePerformance = Object.entries(perfBuckets).map(([level, count]) => ({ level, count }));
 
   // حصص اليوم والغد فقط، مع إخفاء الحصة فور انتهاء وقتها.
-  const nowWallClock = wallClockMinute(new Date());
+  const nowWallClock = wallClockMinute(new Date(), "Africa/Cairo");
   const todayStart = nowWallClock - (nowWallClock % (24 * 60));
   const tomorrowEnd = todayStart + (2 * 24 * 60);
   const upcomingLessons = d.lessons
     .filter((l: any) => {
       if (!d.scopedLessonIds.has(l.id) || l.status === "canceled" || l.is_cancelled === true) return false;
       const start = lessonWallClockMinute(l.date, l.start_time);
-      const end = lessonEndWallClockMinute(l.date, l.start_time, l.end_time);
+      // بعض الحصص القديمة لا تحتوي end_time؛ نعتبر مدتها ساعتين بدل إبقائها حتى منتصف الليل.
+      const end = l.end_time
+        ? lessonEndWallClockMinute(l.date, l.start_time, l.end_time)
+        : start + 120;
       return end > nowWallClock && start < tomorrowEnd;
     })
     .sort((a: any, b: any) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time))

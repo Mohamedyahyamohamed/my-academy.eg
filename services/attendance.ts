@@ -25,7 +25,8 @@ function lessonInCurrentAcademy(lessonId: string) {
   const academyId = currentAcademyId();
   const lesson = collections().lessons.find((item) => item.id === lessonId);
   const group = lesson ? collections().groups.find((item) => item.id === lesson.group_id) : null;
-  if (!lesson || !group || lesson.academy_id !== academyId || group.academy_id !== academyId) {
+  const lessonAcademyId = lesson?.academy_id ?? group?.academy_id;
+  if (!academyId || !lesson || !group || lessonAcademyId !== academyId || group.academy_id !== academyId) {
     throw new Error("Lesson is outside the authenticated academy.");
   }
   return { lesson, group };

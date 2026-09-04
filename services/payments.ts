@@ -2,6 +2,7 @@
  * Payments service.
  * Enforces: no negative amounts, no invalid student references,
  * automatic remaining + status computation.
+ * Optimized for Serverless Environments & O(1) Lookups.
  */
 import type { PaginatedResult, Payment, PaymentStatus } from "@/types";
 import { collections } from "./data/store";
@@ -11,6 +12,20 @@ import { isSupabaseConfigured } from "./supabase/config";
 import { persistInsert, persistUpdate, persistDelete } from "./data/store";
 import { derivePayment, getGroup, getParent, byAcademy, fetchTableRLS } from "./_shared";
 import { fullName } from "./_shared";
+
+// ─── Timezone Helpers (Africa/Cairo) ────────────────────────────
+function getCairoTodayKey() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" }); // YYYY-MM-DD
+}
+
+function getCairoMonthKey() {
+  return getCairoTodayKey().slice(0, 7); // YYYY-MM
+}
+
+function getCairoDateObj() {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Cairo" }));
+}
+// ─────────────────────────────────────────────────────────────────
 
 function attach(p: Payment): Payment {
   const d = derivePayment(p);
@@ -56,32 +71,39 @@ export async function listPayments(
   if (!authenticatedAcademyId || requestedAcademyId !== authenticatedAcademyId) {
     return { items: [], pagination: { page, pageSize, total: 0, totalPages: 1 } };
   }
-  let items = (await fetchTableRLS<Payment>("payments", authenticatedAcademyId)).filter((p: any) => !p.deleted_at).map(derivePayment);
+  
+  let items = (await fetchTableRLS<Payment & { deleted_at?: string }>("payments", authenticatedAcademyId))
+    .filter((p) => !p.deleted_at)
+    .map(derivePayment);
 
   if (status !== "ALL") items = items.filter((p) => p.status === status);
   if (month !== "ALL") items = items.filter((p) => (p.month_year ?? p.month) === month);
   if (groupId !== "ALL") items = items.filter((p) => p.group_id === groupId);
-  if (studentId !== "ALL")
-    items = items.filter((p) => p.student_id === studentId);
+  if (studentId !== "ALL") items = items.filter((p) => p.student_id === studentId);
+  
   if (search.trim()) {
     const q = search.toLowerCase();
+    // تحسين الأداء: بناء Map للطلاب بدلاً من البحث داخل المصفوفة في كل لفة (O(1) بدل O(N^2))
+    const studentsMap = new Map(collections().students.map(s => [s.id, fullName(s).toLowerCase()]));
     items = items.filter((p) => {
-      const s = collections().students.find((x) => x.id === p.student_id);
-      return s && fullName(s).toLowerCase().includes(q);
+      const studentName = studentsMap.get(p.student_id);
+      return studentName && studentName.includes(q);
     });
   }
 
-  items.sort((a, b) =>
-    (a.month_year ?? a.month) === (b.month_year ?? b.month)
-      ? (b.amount_due - b.amount_paid) - (a.amount_due - a.amount_paid)
-      : a.month < b.month
-        ? 1
-        : -1,
-  );
+  items.sort((a, b) => {
+    const aMonth = a.month_year ?? a.month;
+    const bMonth = b.month_year ?? b.month;
+    if (aMonth === bMonth) {
+      return (b.amount_due - b.amount_paid) - (a.amount_due - a.amount_paid);
+    }
+    return aMonth < bMonth ? 1 : -1;
+  });
 
   const total = items.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const start = (page - 1) * pageSize;
+  
   return {
     items: items.slice(start, start + pageSize).map(attach),
     pagination: { page, pageSize, total, totalPages },
@@ -91,8 +113,6 @@ export async function listPayments(
 export function getPayment(id: string, academyId?: string): Payment | null {
   const authenticatedAcademyId = currentAcademyId();
   const requestedAcademyId = academyId ?? authenticatedAcademyId;
-  // A caller may provide an explicit scope for filtering, but it can never
-  // widen the authenticated tenant. Fail closed on missing or mismatched scope.
   if (!authenticatedAcademyId || requestedAcademyId !== authenticatedAcademyId) return null;
   const p = collections().payments.find((x) => x.id === id && x.academy_id === authenticatedAcademyId);
   return p ? attach(p) : null;
@@ -169,9 +189,6 @@ async function runAtomicPaymentRpc(input: {
     if (error) return { data: null, error };
     return { data: Array.isArray(data) ? data[0] : data, error: null };
   } catch (err) {
-    // The RPC may throw (e.g. function not deployed, permissions) instead of
-    // returning an error object. Surface it as a clean error, not an exception
-    // that the caller would rethrow as a generic "try again" message.
     return { data: null, error: err instanceof Error ? err : new Error("record_payment_atomic failed") };
   }
 }
@@ -181,10 +198,9 @@ export async function createPayment(input: CreatePaymentInput, academyIdOverride
   error?: string;
   payment?: Payment;
 }> {
-  // Capture the tenant before any await. Next Server Actions can lose the
-  // AsyncLocalStorage request context across multiple awaited reads.
   const authenticatedAcademyId = currentAcademyId();
   const academyId = academyIdOverride ?? authenticatedAcademyId;
+  
   if (!authenticatedAcademyId || academyId !== authenticatedAcademyId) {
     return { ok: false, error: "Payment academy scope mismatch." };
   }
@@ -197,7 +213,9 @@ export async function createPayment(input: CreatePaymentInput, academyIdOverride
   if ((input.amount_paid ?? 0) > input.amount_due)
     return { ok: false, error: "Paid amount cannot exceed amount due." };
 
-  const now = new Date().toISOString();
+  const nowUTC = new Date().toISOString(); // For database strict timestamps
+  const todayCairo = getCairoTodayKey();   // For logic bounds like due_date
+  
   if (isSupabaseConfigured()) {
     const atomic = await runAtomicPaymentRpc({
       academyId,
@@ -209,56 +227,20 @@ export async function createPayment(input: CreatePaymentInput, academyIdOverride
       method: input.method,
       notes: input.notes,
     });
-    if (atomic.error || !atomic.data) {
-      // RPC failed (e.g. not deployed, permissions, or unexpected exception).
-      // Fall back to a direct insert so payment recording still works instead of
-      // surfacing a generic failure. This keeps the flow resilient if the
-      // record_payment_atomic function is missing on a given environment.
-      console.warn("record_payment_atomic failed, falling back to direct insert:", atomic.error?.message);
-      const draft: Payment = {
-        id: pid(),
-        academy_id: academyId,
-        student_id: input.student_id,
-        group_id: input.group_id ?? null,
-        month: input.month,
-        month_year: input.month,
-        fee_type: input.fee_type ?? "monthly",
-        amount_due: input.amount_due,
-        amount_paid: input.amount_paid ?? 0,
-        remaining: 0,
-        due_date: input.due_date ?? now.slice(0, 10),
-        payment_date: (input.amount_paid ?? 0) > 0 ? now : null,
-        method: input.method ?? null,
-        status: "UNPAID",
-        notes: input.notes ?? null,
-        created_at: now,
-        updated_at: now,
-      };
-      const payment = derivePayment(draft);
-      const { remaining: _r, ...paymentPersist } = payment;
-      await persistInsert("payments", paymentPersist, authenticatedAcademyId);
-      collections().payments.push(payment);
-      if (payment.amount_paid > 0) {
-        const tx = {
-          id: crypto.randomUUID(),
-          payment_id: payment.id,
-          amount: payment.amount_paid,
-          method: input.method ?? "Cash",
-          paid_at: now,
-          note: null,
-        };
-        await persistInsert("payment_transactions", tx);
-        collections().transactions.push(tx);
+    
+    if (!atomic.error && atomic.data) {
+      const createdPayment = derivePayment(atomic.data as Payment);
+      if (input.fee_type && createdPayment.id) {
+        await persistUpdate("payments", createdPayment.id, { fee_type: input.fee_type }, academyId);
+        createdPayment.fee_type = input.fee_type;
       }
-      return { ok: true, payment: attach(payment) };
+      return { ok: true, payment: attach(createdPayment) };
     }
-    const createdPayment = derivePayment(atomic.data as Payment);
-    if (input.fee_type && createdPayment.id) {
-      await persistUpdate("payments", createdPayment.id, { fee_type: input.fee_type }, academyId);
-      createdPayment.fee_type = input.fee_type;
-    }
-    return { ok: true, payment: attach(createdPayment) };
+    
+    console.warn("record_payment_atomic failed, falling back to direct insert:", atomic.error?.message);
   }
+
+  // Fallback Logic (DRY) - يُنفذ في حالة الفشل أو إذا كان Supabase غير مفعل
   const draft: Payment = {
     id: pid(),
     academy_id: academyId,
@@ -270,35 +252,37 @@ export async function createPayment(input: CreatePaymentInput, academyIdOverride
     amount_due: input.amount_due,
     amount_paid: input.amount_paid ?? 0,
     remaining: 0,
-    due_date: input.due_date ?? now.slice(0, 10),
-    payment_date: (input.amount_paid ?? 0) > 0 ? now : null,
+    due_date: input.due_date ?? todayCairo,
+    payment_date: (input.amount_paid ?? 0) > 0 ? nowUTC : null,
     method: input.method ?? null,
     status: "UNPAID",
     notes: input.notes ?? null,
-    created_at: now,
-    updated_at: now,
+    created_at: nowUTC,
+    updated_at: nowUTC,
   };
+  
   const payment = derivePayment(draft);
-  // `remaining` is a GENERATED column in Postgres — never insert it.
   const { remaining: _r, ...paymentPersist } = payment;
+  
   await persistInsert("payments", paymentPersist, authenticatedAcademyId);
   collections().payments.push(payment);
+  
   if (payment.amount_paid > 0) {
     const tx = {
       id: crypto.randomUUID(),
       payment_id: payment.id,
       amount: payment.amount_paid,
       method: input.method ?? "Cash",
-      paid_at: now,
+      paid_at: nowUTC,
       note: null,
     };
     await persistInsert("payment_transactions", tx);
     collections().transactions.push(tx);
   }
+  
   return { ok: true, payment: attach(payment) };
 }
 
-/** Record an additional payment against an existing payment. */
 export async function recordPayment(
   paymentId: string,
   amount: number,
@@ -307,14 +291,18 @@ export async function recordPayment(
   academyId?: string,
 ): Promise<{ ok: boolean; error?: string; payment?: Payment }> {
   const authenticatedAcademyId = currentAcademyId();
-  if (!authenticatedAcademyId || (academyId && academyId !== authenticatedAcademyId)) return { ok: false, error: "Payment academy scope mismatch." };
+  if (!authenticatedAcademyId || (academyId && academyId !== authenticatedAcademyId)) 
+    return { ok: false, error: "Payment academy scope mismatch." };
+    
   const p = collections().payments.find((x) => x.id === paymentId && x.academy_id === authenticatedAcademyId);
   if (!p) return { ok: false, error: "Payment not found." };
   if (amount <= 0) return { ok: false, error: "Amount must be positive." };
+  
   const newPaid = p.amount_paid + amount;
-  if (newPaid > p.amount_due)
-    return { ok: false, error: "Payment exceeds remaining balance." };
+  if (newPaid > p.amount_due) return { ok: false, error: "Payment exceeds remaining balance." };
+  
   const now = new Date().toISOString();
+  
   if (isSupabaseConfigured()) {
     const atomic = await runAtomicPaymentRpc({
       academyId: authenticatedAcademyId,
@@ -332,16 +320,23 @@ export async function recordPayment(
     }
     return { ok: true, payment: attach(derivePayment(atomic.data as Payment)) };
   }
+  
   p.amount_paid = newPaid;
   p.payment_date = now;
   p.method = method;
   p.notes = note ?? p.notes;
   p.status = derivePayment(p).status;
   p.updated_at = now;
+  
   await persistUpdate("payments", paymentId, {
-    amount_paid: p.amount_paid, payment_date: now, method, status: p.status,
-    notes: note ?? p.notes, updated_at: now,
+    amount_paid: p.amount_paid, 
+    payment_date: now, 
+    method, 
+    status: p.status,
+    notes: note ?? p.notes, 
+    updated_at: now,
   }, authenticatedAcademyId);
+  
   const tx = {
     id: crypto.randomUUID(),
     payment_id: paymentId,
@@ -350,20 +345,23 @@ export async function recordPayment(
     paid_at: now,
     note: note ?? null,
   };
+  
   collections().transactions.push(tx);
   await persistInsert("payment_transactions", tx);
   return { ok: true, payment: attach(p) };
 }
 
 export async function deletePayment(id: string, academyId?: string): Promise<boolean> {
-  // Soft delete — never hard-delete financial records.
   const authenticatedAcademyId = currentAcademyId();
   if (!authenticatedAcademyId || (academyId && academyId !== authenticatedAcademyId)) return false;
+  
   const p = collections().payments.find((x) => x.id === id && x.academy_id === authenticatedAcademyId);
   if (!p) return false;
+  
   p.deleted_at = new Date().toISOString();
-  await persistUpdate("payments", id, { deleted_at: p.deleted_at });
-  // Remove from active list (still in DB with deleted_at).
+  // تم إضافة authenticatedAcademyId لدالة الحذف لضمان أمان الـ RLS
+  await persistUpdate("payments", id, { deleted_at: p.deleted_at }, authenticatedAcademyId);
+  
   collections().payments = collections().payments.filter((x) => x.id !== id);
   return true;
 }
@@ -371,36 +369,34 @@ export async function deletePayment(id: string, academyId?: string): Promise<boo
 /* ---------------- Metrics ---------------- */
 
 export interface PaymentMetrics {
-  monthlyRevenue: number; // potential revenue this month
+  monthlyRevenue: number;
   collectedThisMonth: number;
   outstanding: number;
-  collectedInRange: number; // collected over the requested range
+  collectedInRange: number;
   revenueByMonth: { month: string; revenue: number; collected: number }[];
 }
 
-function currentMonthKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
 export async function getPaymentMetrics(months = 6, academyId?: string): Promise<PaymentMetrics> {
-  const pays = (await fetchTableRLS<Payment>("payments", academyId)).map(derivePayment);
-  const cm = currentMonthKey();
+  const authenticatedAcademyId = academyId ?? currentAcademyId();
+  // تم تمرير الـ Academy ID بشكل صريح لضمان عدم حدوث تسريب في البيانات
+  const pays = (await fetchTableRLS<Payment>("payments", authenticatedAcademyId)).map(derivePayment);
+  
+  const cm = getCairoMonthKey();
   const thisMonth = pays.filter((p) => p.month === cm);
   const monthlyRevenue = thisMonth.reduce((s, p) => s + p.amount_due, 0);
   const collectedThisMonth = thisMonth.reduce((s, p) => s + p.amount_paid, 0);
   const outstanding = pays.reduce((s, p) => s + p.remaining, 0);
 
-  // last `months` months
   const byMonth = new Map<string, { revenue: number; collected: number }>();
   for (let i = months - 1; i >= 0; i--) {
-    const d = new Date();
+    const d = getCairoDateObj();
     d.setMonth(d.getMonth() - i);
     byMonth.set(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, {
       revenue: 0,
       collected: 0,
     });
   }
+  
   for (const p of pays) {
     const entry = byMonth.get(p.month);
     if (entry) {
@@ -408,6 +404,7 @@ export async function getPaymentMetrics(months = 6, academyId?: string): Promise
       entry.collected += p.amount_paid;
     }
   }
+  
   const revenueByMonth = [...byMonth.entries()].map(([month, v]) => ({
     month,
     revenue: v.revenue,

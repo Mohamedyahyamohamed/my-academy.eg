@@ -64,11 +64,16 @@ export function AttendanceWorkshop({
     if (!groupId || lessonId || !groupKey) return;
     const list = groupLessonsRef.current;
     const todayKey = new Date().toLocaleDateString("en-CA");
+    const todayLessons = list.filter(
+      (l) => String(l.date).slice(0, 10) === todayKey,
+    );
     const target =
+      todayLessons.find((l) => isLessonActive(l)) ??
+      todayLessons[0] ??
       list.find((l) => isLessonActive(l)) ??
-      list.find((l) => String(l.date).slice(0, 10) === todayKey) ??
-      [...list].sort((a, b) => +new Date(a.date) - +new Date(b.date)).find((l) => +new Date(`${l.date}T${l.start_time ?? "23:59"}`) >= Date.now()) ??
+      list.find((l) => +new Date(`${l.date}T${l.start_time ?? "23:59"}`) >= Date.now()) ??
       list[0];
+    if (!target) return;
     const next = new URLSearchParams(params.toString());
     next.set("lesson", target.id);
     router.replace(`/attendance?${next.toString()}`, { scroll: false });

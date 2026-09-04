@@ -255,7 +255,8 @@ export async function getDashboardData(
 
   // NOTE: kept void to avoid blocking dashboard UI (Speed Feature). 
   // For Vercel, if notifications sometimes fail to send, wrap in unstable_after(() => { notifyRiskAlerts(...) }) (Next.js 14+)
-  void notifyRiskAlerts(academyId ?? currentAcademyId(), riskStudents.map((item) => item.studentId));
+  void notifyRiskAlerts(academyId ?? currentAcademyId(), riskStudents.map((item) => item.studentId))
+    .catch((e) => console.error("[Dashboard] Failed to notify risk alerts:", e));
   
   const today = getCairoDateObj();
   today.setHours(0, 0, 0, 0);

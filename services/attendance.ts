@@ -29,8 +29,9 @@ function getCairoDateString() {
 
 function lessonInCurrentAcademy(lessonId: string) {
   const academyId = currentAcademyId();
-  const lesson = collections().lessons.find((item) => item.id === lessonId);
-  const group = lesson ? collections().groups.find((item) => item.id === lesson.group_id) : null;
+  const store = collections();
+  const lesson = store.lessons.find((item) => item.id === lessonId);
+  const group = lesson ? store.groups.find((item) => item.id === lesson.group_id) : null;
   const lessonAcademyId = lesson?.academy_id ?? group?.academy_id;
   if (!academyId || !lesson || !group || lessonAcademyId !== academyId || group.academy_id !== academyId) {
     throw new Error("Lesson is outside the authenticated academy.");
@@ -53,19 +54,21 @@ function assertAttendanceManager(lessonId: string) {
 
 function assertStudentEnrolled(lessonId: string, studentId: string) {
   const { lesson, group } = lessonInCurrentAcademy(lessonId);
-  const student = collections().students.find((item) => item.id === studentId && item.academy_id === group.academy_id);
-  const enrolled = collections().groupStudents.some((item) => item.group_id === group.id && item.student_id === studentId);
+  const store = collections();
+  const student = store.students.find((item) => item.id === studentId && item.academy_id === group.academy_id);
+  const enrolled = store.groupStudents.some((item) => item.group_id === group.id && item.student_id === studentId);
   if (!student || !enrolled) throw new Error("Student is not enrolled in this lesson group.");
   return { lesson, group, student };
 }
 
-/** Load a roster for a group/lesson with current attendance state (Optimized with Map O(1)). */
+/** Load a roster for a group/lesson with current attendance state (Optimized). */
 export function getAttendanceSheet(
   groupId: string,
   lessonId: string,
 ): AttendanceEntry[] {
   const students = studentsInGroup(groupId);
-  const records = collections().attendance.filter(
+  const store = collections();
+  const records = store.attendance.filter(
     (a) => a.lesson_id === lessonId,
   );
   const attendanceMap = new Map(records.map((r) => [r.student_id, r.status]));
@@ -109,11 +112,12 @@ export async function saveAttendance(
   const uniqueStudentIds = new Set(entries.map((entry) => entry.studentId));
   if (uniqueStudentIds.size !== entries.length) throw new Error("Duplicate student attendance entries are not allowed.");
   
+  const store = collections();
   const groupStudentsSet = new Set(
-    collections().groupStudents.filter(item => item.group_id === group.id).map(item => item.student_id)
+    store.groupStudents.filter(item => item.group_id === group.id).map(item => item.student_id)
   );
   const validAcademyStudentsSet = new Set(
-    collections().students.filter(item => item.academy_id === group.academy_id).map(item => item.id)
+    store.students.filter(item => item.academy_id === group.academy_id).map(item => item.id)
   );
   
   for (const entry of entries) {
@@ -123,8 +127,7 @@ export async function saveAttendance(
   }
 
   const now = new Date().toISOString();
-  // remove existing
-  collections().attendance = collections().attendance.filter(
+  store.attendance = store.attendance.filter(
     (a) => a.lesson_id !== lessonId,
   );
   await persistDelete("attendance", { lesson_id: lessonId });
@@ -138,7 +141,7 @@ export async function saveAttendance(
     recorded_at: now,
   }));
   for (const r of rows) {
-    collections().attendance.push({ id: `att-${lessonId}-${r.student_id}`, ...r });
+    store.attendance.push({ id: `att-${lessonId}-${r.student_id}`, ...r });
   }
   if (rows.length) await persistInsert("attendance", rows);
 }
@@ -185,7 +188,8 @@ export async function updateAttendanceStatus(
       };
     }
     const { student } = assertStudentEnrolled(lessonId, studentId);
-    const existing = collections().attendance.find(
+    const store = collections();
+    const existing = store.attendance.find(
       (record) => record.lesson_id === lessonId && record.student_id === student.id,
     );
     const previousStatus = existing?.status ?? null;
@@ -207,7 +211,7 @@ export async function updateAttendanceStatus(
     } else await persistInsert("attendance", row);
 
     if (existing) Object.assign(existing, row);
-    else collections().attendance.push(row);
+    else store.attendance.push(row);
     return { ok: true, attendanceId, previousStatus, status, note: row.note };
   } catch (error) {
     const raw = error instanceof Error ? error.message : "تعذر تعديل الحضور.";
@@ -235,7 +239,8 @@ export function attendanceForLessonExport(
   lessonId: string,
 ): Record<string, AttendanceStatus> {
   const out: Record<string, AttendanceStatus> = {};
-  for (const a of collections().attendance.filter((x) => x.lesson_id === lessonId)) {
+  const store = collections();
+  for (const a of store.attendance.filter((x) => x.lesson_id === lessonId)) {
     out[a.student_id] = a.status;
   }
   return out;
@@ -260,6 +265,7 @@ export async function recordCheckin(
   }
   
   const admin = nodeSupabaseClient();
+  const store = collections();
   if (admin) {
     const { data: existing } = await admin
       .from("attendance")
@@ -269,7 +275,7 @@ export async function recordCheckin(
       .eq("academy_id", currentAcademyId())
       .maybeSingle();
     if (existing) throw new Error("تم تسجيل الطالب لهذه الحصة من قبل");
-  } else if (collections().attendance.some((a) => a.lesson_id === lessonId && a.student_id === studentId)) {
+  } else if (store.attendance.some((a) => a.lesson_id === lessonId && a.student_id === studentId)) {
     throw new Error("تم تسجيل الطالب لهذه الحصة من قبل");
   }
   
@@ -283,14 +289,14 @@ export async function recordCheckin(
     recorded_at: now,
   });
   
-  const existing = collections().attendance.find(
+  const existing = store.attendance.find(
     (a) => a.lesson_id === lessonId && a.student_id === studentId,
   );
   if (existing) {
     existing.status = status;
     existing.recorded_at = now;
   } else {
-    collections().attendance.push({
+    store.attendance.push({
       id: crypto.randomUUID(),
       lesson_id: lessonId,
       student_id: studentId,
@@ -309,7 +315,7 @@ export function isAcademyHoliday(date: string, academyId?: string): boolean {
   return holidays.includes(String(date).slice(0, 10));
 }
 
-/** Attendance summary for a single student (Optimized with Lessons Map O(1)). */
+/** Attendance summary for a single student. */
 export function studentAttendanceSummary(
   studentId: string,
   academyId?: string,
@@ -319,11 +325,12 @@ export function studentAttendanceSummary(
   if (!authenticatedAcademyId || requestedAcademyId !== authenticatedAcademyId) {
     return { ...summarize([]), byLesson: [] };
   }
-  const student = collections().students.find((item) => item.id === studentId && item.academy_id === authenticatedAcademyId);
+  const store = collections();
+  const student = store.students.find((item) => item.id === studentId && item.academy_id === authenticatedAcademyId);
   if (!student) return { ...summarize([]), byLesson: [] };
   
-  const lessonsMap = new Map(collections().lessons.map((item) => [item.id, item]));
-  const recs = collections().attendance.filter((a) => {
+  const lessonsMap = new Map(store.lessons.map((item) => [item.id, item]));
+  const recs = store.attendance.filter((a) => {
     if (a.student_id !== studentId) return false;
     const lesson = lessonsMap.get(a.lesson_id);
     return Boolean(lesson && lesson.academy_id === authenticatedAcademyId && !isLessonCanceled(lesson) && !isAcademyHoliday(lesson.date, authenticatedAcademyId));
@@ -331,12 +338,13 @@ export function studentAttendanceSummary(
   return { ...summarize(recs), byLesson: recs };
 }
 
-/** Lessons for a group that still have no attendance taken (Optimized with Set O(1) Lookup). */
+/** Lessons for a group that still have no attendance taken. */
 export function lessonsNeedingAttendance(groupId?: string): Lesson[] {
   const todayString = getCairoDateString();
-  const takenLessonIds = new Set(collections().attendance.map((a) => a.lesson_id));
+  const store = collections();
+  const takenLessonIds = new Set(store.attendance.map((a) => a.lesson_id));
   
-  let lessons = collections().lessons.filter(
+  let lessons = store.lessons.filter(
     (l) => String(l.date).slice(0, 10) <= todayString && !isLessonCanceled(l),
   );
   if (groupId) lessons = lessons.filter((l) => l.group_id === groupId);

@@ -25,7 +25,7 @@ import { getPaymentMetrics } from "./payments";
 import { performanceLevel } from "@/lib/constants";
 import { percentage, round } from "@/lib/utils";
 import { currentAcademyId } from "./session";
-import { isLessonUpcoming, lessonWallClockMinute } from "./lessons";
+import { lessonEndWallClockMinute, lessonWallClockMinute, wallClockMinute } from "./lessons";
 import { isAcademyHoliday } from "./attendance";
 import { calculateRiskScore } from "./insights";
 import { notifyRiskAlerts } from "./whatsapp";
@@ -143,7 +143,7 @@ export async function getDashboardData(
     const recordedAt = +new Date(String(record.recorded_at ?? ""));
     return Number.isFinite(recordedAt) && recordedAt >= cutoff;
   });
-  const present = recentAtt.filter((a: any) => a.status === "PRESENT" || a.status === "LATE").length;
+  const present = recentAtt.filter((a: any) => a.status !== "ABSENT").length;
   const attendanceRate = recentAtt.length ? percentage(present, recentAtt.length) : 0;
   const currentMonth = currentMonthKey();
   const activeStudentsSet = new Set(students.filter((student: any) => student.status === "ACTIVE" && student.is_active !== false).map((student: any) => student.id));
@@ -181,7 +181,7 @@ export async function getDashboardData(
     .filter((lesson: any) => activeLesson(lesson) && !isAcademyHoliday(lesson.date, academyId ?? currentAcademyId()) && String(lesson.date ?? "").slice(0, 7) === currentMonth)
     .map((lesson: any) => lesson.id));
   const currentMonthAttendance = attendance.filter((record: any) => currentMonthLessonIds.has(record.lesson_id));
-  const currentMonthPresent = currentMonthAttendance.filter((a: any) => a.status === "PRESENT" || a.status === "LATE").length;
+  const currentMonthPresent = currentMonthAttendance.filter((record: any) => record.status !== "ABSENT").length;
   const overallAttendanceThisMonth = currentMonthAttendance.length
     ? percentage(currentMonthPresent, currentMonthAttendance.length)
     : 0;
@@ -256,9 +256,17 @@ export async function getDashboardData(
   }
   const gradePerformance = Object.entries(perfBuckets).map(([level, count]) => ({ level, count }));
 
-  // upcoming lessons
+  // حصص اليوم والغد فقط، مع إخفاء الحصة فور انتهاء وقتها.
+  const nowWallClock = wallClockMinute(new Date());
+  const todayStart = nowWallClock - (nowWallClock % (24 * 60));
+  const tomorrowEnd = todayStart + (2 * 24 * 60);
   const upcomingLessons = d.lessons
-    .filter((l: any) => d.scopedLessonIds.has(l.id) && l.status !== "canceled" && l.is_cancelled !== true && isLessonUpcoming(l))
+    .filter((l: any) => {
+      if (!d.scopedLessonIds.has(l.id) || l.status === "canceled" || l.is_cancelled === true) return false;
+      const start = lessonWallClockMinute(l.date, l.start_time);
+      const end = lessonEndWallClockMinute(l.date, l.start_time, l.end_time);
+      return end > nowWallClock && start < tomorrowEnd;
+    })
     .sort((a: any, b: any) => lessonWallClockMinute(a.date, a.start_time) - lessonWallClockMinute(b.date, b.start_time))
     .slice(0, 5)
     .map((l: any) => ({

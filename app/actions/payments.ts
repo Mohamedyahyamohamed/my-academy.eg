@@ -121,8 +121,8 @@ export async function createPaymentAction(input: CreatePaymentInput) {
       revalidatePath("/dashboard");
     } catch {}
     return res;
-  } catch (err) {
-    if (err && typeof err === "object" && "digest" in err && String((err as any).digest).startsWith("NEXT_")) {
+  } catch (err: any) {
+    if (err && typeof err === "object" && "digest" in err && String(err.digest).startsWith("NEXT_")) {
       throw err; // let Next.js redirects propagate
     }
     console.error("createPaymentAction failed:", err);
@@ -152,6 +152,10 @@ export async function recordPaymentAction(
       return { ok: false, error: "Payment is outside the authenticated academy." };
     }
     await assertTeacherStudentScope(user, payment.student_id);
+    
+    // Re-bind after awaited scope checks; AsyncLocalStorage may be lost in Server Actions.
+    setRequestContext(user);
+    
     const effectiveMethod = user.role === "TEACHER" ? "Cash" : method;
     const res = await PaymentsService.recordPayment(paymentId, amount, effectiveMethod, note, user.academy_id);
     if (res.ok) {
@@ -174,9 +178,12 @@ export async function recordPaymentAction(
       revalidatePath("/dashboard");
     }
     return res;
-  } catch (error) {
-    console.error("[recordPaymentAction] FAILED:", (error as Error)?.message);
-    return { ok: false, error: (error as Error)?.message || "Could not record payment." };
+  } catch (error: any) {
+    if (error && typeof error === "object" && "digest" in error && String(error.digest).startsWith("NEXT_")) {
+      throw error; // let Next.js redirects propagate
+    }
+    console.error("[recordPaymentAction] FAILED:", error?.message);
+    return { ok: false, error: error?.message || "Could not record payment." };
   }
 }
 

@@ -21,6 +21,12 @@ export interface AttendanceEntry {
   status: AttendanceStatus | null;
 }
 
+// ─── Timezone Helpers (Africa/Cairo) ────────────────────────────
+function getCairoDateString() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" }); // YYYY-MM-DD
+}
+// ─────────────────────────────────────────────────────────────────
+
 function lessonInCurrentAcademy(lessonId: string) {
   const academyId = currentAcademyId();
   const lesson = collections().lessons.find((item) => item.id === lessonId);
@@ -100,7 +106,21 @@ export async function saveAttendance(
   const { group } = assertAttendanceManager(lessonId);
   const uniqueStudentIds = new Set(entries.map((entry) => entry.studentId));
   if (uniqueStudentIds.size !== entries.length) throw new Error("Duplicate student attendance entries are not allowed.");
-  for (const entry of entries) assertStudentEnrolled(lessonId, entry.studentId);
+  
+  // تحسين الأداء (O(N) بدلًا من O(N^2)) لتجنب البحث المتكرر لكل طالب
+  const groupStudentsSet = new Set(
+    collections().groupStudents.filter(item => item.group_id === group.id).map(item => item.student_id)
+  );
+  const validAcademyStudentsSet = new Set(
+    collections().students.filter(item => item.academy_id === group.academy_id).map(item => item.id)
+  );
+  
+  for (const entry of entries) {
+    if (!groupStudentsSet.has(entry.studentId) || !validAcademyStudentsSet.has(entry.studentId)) {
+      throw new Error("Student is not enrolled in this lesson group.");
+    }
+  }
+
   const now = new Date().toISOString();
   // remove existing
   collections().attendance = collections().attendance.filter(
@@ -238,6 +258,7 @@ export async function recordCheckin(
   } else {
     assertAttendanceManager(lessonId);
   }
+  
   const admin = nodeSupabaseClient();
   if (admin) {
     const { data: existing } = await admin
@@ -247,10 +268,12 @@ export async function recordCheckin(
       .eq("student_id", studentId)
       .eq("academy_id", currentAcademyId())
       .maybeSingle();
-    if (existing) throw new Error("Attendance already recorded for this lesson.");
+    // تم الالتزام الحرفي بالنص الإلزامي للـ QR
+    if (existing) throw new Error("تم تسجيل الطالب لهذه الحصة من قبل");
   } else if (collections().attendance.some((a) => a.lesson_id === lessonId && a.student_id === studentId)) {
-    throw new Error("Attendance already recorded for this lesson.");
+    throw new Error("تم تسجيل الطالب لهذه الحصة من قبل");
   }
+  
   const now = new Date().toISOString();
   // Persist first. If the durable write fails, do not mutate the request snapshot
   // or return a false-success response to the QR client.
@@ -258,10 +281,11 @@ export async function recordCheckin(
     lesson_id: lessonId,
     student_id: studentId,
     status,
-        note: null,
+    note: null,
     notes: null,
     recorded_at: now,
   });
+  
   const existing = collections().attendance.find(
     (a) => a.lesson_id === lessonId && a.student_id === studentId,
   );
@@ -274,12 +298,13 @@ export async function recordCheckin(
       lesson_id: lessonId,
       student_id: studentId,
       status,
-            note: null,
+      note: null,
       notes: null,
       recorded_at: now,
     });
   }
 }
+
 /** Return true when the academy configured the lesson date as a holiday. */
 export function isAcademyHoliday(date: string, academyId?: string): boolean {
   const academy = collections().academies.find((item: any) => item.id === academyId);
@@ -309,8 +334,10 @@ export function studentAttendanceSummary(
 
 /** Lessons for a group that still have no attendance taken. */
 export function lessonsNeedingAttendance(groupId?: string): Lesson[] {
+  const todayString = getCairoDateString();
   let lessons = collections().lessons.filter(
-    (l) => +new Date(l.date) <= Date.now() && !isLessonCanceled(l),
+    // تم تغيير Date.now() إلى توقيت القاهرة لضمان ظهور حصص اليوم بعد منتصف الليل
+    (l) => String(l.date).slice(0, 10) <= todayString && !isLessonCanceled(l),
   );
   if (groupId) lessons = lessons.filter((l) => l.group_id === groupId);
   return lessons.filter(

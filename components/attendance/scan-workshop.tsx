@@ -46,13 +46,15 @@ export function ScanWorkshop({
     setLog((entries) => [{ ...entry }, ...entries]);
   }, []);
 
-  const groupLessons = lessons
-    .filter((l) => l.group_id === groupId)
-    .sort((a, b) => {
-      const da = `${a.date} ${a.start_time ?? ""}`;
-      const db = `${b.date} ${b.start_time ?? ""}`;
-      return +new Date(db) - +new Date(da);
-    });
+  const groupLessons = React.useMemo(() => {
+    return lessons
+      .filter((l) => l.group_id === groupId)
+      .sort((a, b) => {
+        const da = `${a.date} ${a.start_time ?? ""}`;
+        const db = `${b.date} ${b.start_time ?? ""}`;
+        return +new Date(db) - +new Date(da);
+      });
+  }, [lessons, groupId]);
 
   // Auto-pick today's lesson of the chosen group; else nearest upcoming; else most recent.
   const scanLessonsRef = React.useRef(groupLessons);
@@ -64,14 +66,14 @@ export function ScanWorkshop({
   React.useEffect(() => {
     if (!groupId || lessonId || !scanKey) return;
     const list = scanLessonsRef.current;
-    const todayKey = new Date().toLocaleDateString("en-CA");
+    const todayKey = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" });
     const target =
       list.find((l) => isLessonActive(l)) ??
       list.find((l) => String(l.date).slice(0, 10) === todayKey) ??
       [...list].sort((a, b) => +new Date(a.date) - +new Date(b.date)).find((l) => +new Date(`${l.date}T${l.start_time ?? "23:59"}`) >= Date.now()) ??
       list[0];
     setLessonId(target.id);
-     
+      
   }, [groupId, lessonId, scanKey]);
 
   const startCamera = async () => {
@@ -92,7 +94,8 @@ export function ScanWorkshop({
         (text) => { void handleScan(text); },
         () => {},
       );
-    } catch {
+    } catch (e) {
+      console.error("Camera start failed:", e);
       scannerRef.current = null;
       setError(en ? "Could not start the camera. Allow camera access, use HTTPS, and try again." : "تعذّر تشغيل الكاميرا. اسمح باستخدام الكاميرا وتأكد من HTTPS ثم حاول مرة أخرى.");
       setScanning(false);
@@ -102,7 +105,12 @@ export function ScanWorkshop({
   const stopCamera = async () => {
     const s = scannerRef.current;
     if (s) {
-      try { await s.stop(); await s.clear(); } catch {}
+      try { 
+        await s.stop(); 
+        await s.clear(); 
+      } catch (e) {
+        console.error("Camera stop failed:", e);
+      }
     }
     scannerRef.current = null;
     setScanning(false);
@@ -188,7 +196,8 @@ export function ScanWorkshop({
         setLastFailedScan({ text, studentId });
         setError(status);
       }
-    } catch {
+    } catch (e) {
+      console.error("Scan processing failed:", e);
       playQrResultSound("error");
       const status = en ? "Network error — retry the scan" : "خطأ في الشبكة — أعد المسح";
       setLastFailedScan({ text, studentId });

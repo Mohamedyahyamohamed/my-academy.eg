@@ -449,7 +449,11 @@ export async function persistUpdate(table: string, id: string, patch: any, acade
   try {
     let query = client.from(table).update(patch).eq("id", id);
     if (academyId) query = query.eq("academy_id", academyId);
-    const { error } = await query;
+    
+    // استخدام Timeout لحماية الخادم من تعليق الاتصال
+    const result: any = await withWriteTimeout<any>(query, table);
+    const { error } = result;
+    
     if (error) {
       console.error(
         `persistUpdate ${table} FAILED [${error.code}]: ${error.message} (id=${id})`,
@@ -495,7 +499,11 @@ export async function persistDelete(
     let query = client.from(table).delete();
     for (const [column, value] of Object.entries(filters)) query = query.eq(column, value);
     if (academyId) query = query.eq("academy_id", academyId);
-    const { error } = await query;
+    
+    // استخدام Timeout لحماية الخادم من تعليق الاتصال
+    const result: any = await withWriteTimeout<any>(query, table);
+    const { error } = result;
+    
     if (error) {
       console.error(
         `persistDelete ${table} FAILED [${error.code}]: ${error.message}`,

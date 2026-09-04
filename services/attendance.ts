@@ -96,7 +96,7 @@ export async function saveAttendance(
   lessonId: string,
   entries: { studentId: string; status: AttendanceStatus }[],
 ): Promise<void> {
-  assertAttendanceManager(lessonId);
+  const { group } = assertAttendanceManager(lessonId);
   const uniqueStudentIds = new Set(entries.map((entry) => entry.studentId));
   if (uniqueStudentIds.size !== entries.length) throw new Error("Duplicate student attendance entries are not allowed.");
   for (const entry of entries) assertStudentEnrolled(lessonId, entry.studentId);
@@ -109,6 +109,7 @@ export async function saveAttendance(
   await persistDelete("attendance", { lesson_id: lessonId });
   const rows = entries.map((e) => ({
     lesson_id: lessonId,
+    academy_id: group.academy_id,
     student_id: e.studentId,
     status: e.status,
     note: null,

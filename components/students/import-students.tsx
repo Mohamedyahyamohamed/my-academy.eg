@@ -13,11 +13,11 @@ import { importStudentsAction, type ImportDuplicateMode, type ImportDuplicateRes
 import { useClientLang } from "@/lib/i18n-client";
 
 const HEADER =
-  "first_name,last_name,phone,grade,school,parent_name,parent_phone";
+  "first_name,last_name,gender,phone,grade,school,parent_name,parent_phone";
 const EXAMPLE_AR =
-  "first_name,last_name,phone,grade,school,parent_name,parent_phone\nأحمد,محمود,01012345678,الصف الثالث,النور,سارة محمود,01012345678\nمريم,علي,01098765432,الصف الثاني,السلام,فاطمة علي,01098765432";
+  "first_name,last_name,gender,phone,grade,school,parent_name,parent_phone\nأحمد,محمود,ذكر,01012345678,الصف الثالث,النور,سارة محمود,01012345678\nمريم,علي,أنثى,01098765432,الصف الثاني,السلام,فاطمة علي,01098765432";
 const EXAMPLE_EN =
-  "first_name,last_name,phone,grade,school,parent_name,parent_phone\nAhmed,Mahmoud,01012345678,Grade 3,Al Noor,Sara Mahmoud,01012345678\nMaryem,Ali,01098765432,Grade 2,Al Salam,Fatima Ali,01098765432";
+  "first_name,last_name,gender,phone,grade,school,parent_name,parent_phone\nAhmed,Mahmoud,male,01012345678,Grade 3,Al Noor,Sara Mahmoud,01012345678\nMaryem,Ali,female,01098765432,Grade 2,Al Salam,Fatima Ali,01098765432";
 
 type ImportAcademy = { id: string; name: string };
 
@@ -50,11 +50,12 @@ function parseCSV(text: string): ImportRow[] {
     rows.push({
       first_name: cells[0] ?? "",
       last_name: cells[1] ?? "",
-      phone: cells[2] ?? "",
-      grade: cells[3] ?? "",
-      school: cells[4] ?? "",
-      parent_name: cells[5] ?? "",
-      parent_phone: cells[6] ?? "",
+      gender: cells[2] ?? "",
+      phone: cells[3] ?? "",
+      grade: cells[4] ?? "",
+      school: cells[5] ?? "",
+      parent_name: cells[6] ?? "",
+      parent_phone: cells[7] ?? "",
     });
   }
   return rows;

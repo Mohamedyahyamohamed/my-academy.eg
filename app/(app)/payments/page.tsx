@@ -101,6 +101,7 @@ export default async function PaymentsPage(
           <Table>
             <TableHeader><TableRow>
               <TableHead>{en ? "Student" : "الطالب"}</TableHead>
+              <TableHead>{en ? "Registration date" : "تاريخ التسجيل"}</TableHead>
               <TableHead>{en ? "Due" : "المستحق"}</TableHead>
               <TableHead>{en ? "Paid" : "المدفوع"}</TableHead>
               <TableHead>{en ? "Remaining" : "المتبقي"}</TableHead>
@@ -109,6 +110,7 @@ export default async function PaymentsPage(
             <TableBody>{monthStatus.map(({ student, due, paid, remaining, status }) => (
               <TableRow key={student.id}>
                 <TableCell><Link href={`/students/${student.id}`} className="font-medium">{student.first_name} {student.last_name}</Link></TableCell>
+                <TableCell className="text-sm">{student.enrolled_at ? new Date(student.enrolled_at).toLocaleDateString(en ? "en-GB" : "ar-EG") : "—"}</TableCell>
                 <TableCell className="nums">{due ? formatCurrency(due, "EGP", en ? "en-EG" : "ar-EG") : "—"}</TableCell>
                 <TableCell className="nums">{formatCurrency(paid, "EGP", en ? "en-EG" : "ar-EG")}</TableCell>
                 <TableCell className="nums">{remaining ? formatCurrency(remaining, "EGP", en ? "en-EG" : "ar-EG") : "—"}</TableCell>

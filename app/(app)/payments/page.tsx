@@ -48,8 +48,17 @@ export default async function PaymentsPage(
   const metrics = await PaymentsService.getPaymentMetrics(6, user.academy_id);
   const students = (await StudentsService.listStudents({ pageSize: 500 }, user.academy_id)).items;
   const groups = await GroupsService.listGroups("", user.academy_id);
-
-  const months = Array.from(new Set((await PaymentsService.listPayments({ pageSize: 500 }, user.academy_id)).items.map((p) => p.month))).sort().reverse();
+  const allPayments = (await PaymentsService.listPayments({ pageSize: 5000 }, user.academy_id)).items;
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const selectedMonth = sp("month") && sp("month") !== "ALL" ? sp("month")! : currentMonth;
+  const months = Array.from(new Set([currentMonth, ...allPayments.map((p) => p.month)])).sort().reverse();
+  const monthStatus = students.map((student) => {
+    const payment = allPayments.find((p) => p.student_id === student.id && p.month === selectedMonth);
+    const due = Number(payment?.amount_due ?? 0);
+    const paid = Number(payment?.amount_paid ?? 0);
+    const status: PaymentStatus = !payment || paid <= 0 ? "UNPAID" : paid >= due ? "PAID" : "PARTIAL";
+    return { student, payment, due, paid, remaining: Math.max(0, due - paid), status };
+  });
 
   return (
     <div className="space-y-6" dir={en ? "ltr" : "rtl"}>
@@ -81,6 +90,33 @@ export default async function PaymentsPage(
             ...months.map((m) => ({ value: m, label: m })),
           ]} />
         </ToolbarRoot>
+      </div>
+
+      <div className="card-surface overflow-hidden">
+        <div className="border-b px-4 py-3">
+          <h2 className="font-semibold">{en ? `Monthly status: ${selectedMonth}` : `حالة الطلاب لشهر ${selectedMonth}`}</h2>
+          <p className="text-xs text-muted-foreground">{en ? "Paid, partially paid, or unpaid for the selected month." : "اعرف مين دفع الشهر ومين مدفعش أو دفع جزءًا منه."}</p>
+        </div>
+        <div className="max-h-[28rem] overflow-auto">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>{en ? "Student" : "الطالب"}</TableHead>
+              <TableHead>{en ? "Due" : "المستحق"}</TableHead>
+              <TableHead>{en ? "Paid" : "المدفوع"}</TableHead>
+              <TableHead>{en ? "Remaining" : "المتبقي"}</TableHead>
+              <TableHead>{en ? "Status" : "الحالة"}</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>{monthStatus.map(({ student, due, paid, remaining, status }) => (
+              <TableRow key={student.id}>
+                <TableCell><Link href={`/students/${student.id}`} className="font-medium">{student.first_name} {student.last_name}</Link></TableCell>
+                <TableCell className="nums">{due ? formatCurrency(due, "EGP", en ? "en-EG" : "ar-EG") : "—"}</TableCell>
+                <TableCell className="nums">{formatCurrency(paid, "EGP", en ? "en-EG" : "ar-EG")}</TableCell>
+                <TableCell className="nums">{remaining ? formatCurrency(remaining, "EGP", en ? "en-EG" : "ar-EG") : "—"}</TableCell>
+                <TableCell><PaymentStatusBadge status={status} /></TableCell>
+              </TableRow>
+            ))}</TableBody>
+          </Table>
+        </div>
       </div>
 
       {result.items.length === 0 ? (

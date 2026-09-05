@@ -8,7 +8,6 @@ import type { PaginatedResult, Payment, PaymentStatus } from "@/types";
 import { collections } from "./data/store";
 import { currentAcademyId } from "./session";
 import { nodeSupabaseClient } from "@/lib/supabase/node-client";
-import { isSupabaseConfigured } from "./supabase/config";
 import { persistInsert, persistUpdate, persistDelete } from "./data/store";
 import { derivePayment, getGroup, getParent, byAcademy, fetchTableRLS } from "./_shared";
 import { fullName } from "./_shared";
@@ -163,41 +162,6 @@ function pid() {
   return crypto.randomUUID();
 }
 
-async function runAtomicPaymentRpc(input: {
-  academyId: string;
-  paymentId?: string | null;
-  studentId: string;
-  groupId?: string | null;
-  month: string;
-  amountDue: number;
-  amountPaid: number;
-  method?: string | null;
-  notes?: string | null;
-}) {
-  const client = nodeSupabaseClient();
-  if (!client) return { data: null, error: new Error("Database client is unavailable.") };
-  try {
-    const { data, error } = await client.rpc("record_payment_atomic", {
-      p_academy_id: input.academyId,
-      p_payment_id: input.paymentId ?? null,
-      p_student_id: input.studentId,
-      p_group_id: input.groupId ?? null,
-      p_month_year: input.month,
-      p_amount_due: input.amountDue,
-      p_amount_paid: input.amountPaid,
-      p_method: input.method ?? "Cash",
-      p_notes: input.notes ?? null,
-    });
-    if (error) {
-      console.error("runAtomicPaymentRpc database error:", error.message, error.details);
-      return { data: null, error };
-    }
-    return { data: Array.isArray(data) ? data[0] : data, error: null };
-  } catch (err) {
-    console.error("runAtomicPaymentRpc exception:", err);
-    return { data: null, error: err instanceof Error ? err : new Error("record_payment_atomic failed") };
-  }
-}
 
 export async function createPayment(input: CreatePaymentInput, academyIdOverride?: string): Promise<{
   ok: boolean;
@@ -222,29 +186,7 @@ export async function createPayment(input: CreatePaymentInput, academyIdOverride
   const nowUTC = new Date().toISOString(); // For database strict timestamps
   const todayCairo = getCairoTodayKey();   // For logic bounds like due_date
   
-  if (isSupabaseConfigured()) {
-    const atomic = await runAtomicPaymentRpc({
-      academyId,
-      studentId: input.student_id,
-      groupId: input.group_id,
-      month: input.month,
-      amountDue: input.amount_due,
-      amountPaid: input.amount_paid ?? 0,
-      method: input.method,
-      notes: input.notes,
-    });
-    
-    if (!atomic.error && atomic.data) {
-      const createdPayment = derivePayment(atomic.data as Payment);
-      if (input.fee_type && createdPayment.id) {
-        await persistUpdate("payments", createdPayment.id, { fee_type: input.fee_type }, academyId);
-        createdPayment.fee_type = input.fee_type;
-      }
-      return { ok: true, payment: attach(createdPayment) };
-    }
-    
-    console.warn("record_payment_atomic failed, falling back to direct insert:", atomic.error?.message);
-  }
+  // الحفظ المباشر هو المسار الأساسي؛ يمنع تعليق زر الحفظ إذا كانت RPC غير منشورة أو بطيئة.
 
   // Fallback Logic (DRY)
   const draft: Payment = {
@@ -312,9 +254,7 @@ export async function recordPayment(
   
   const now = new Date().toISOString();
   
-  // Use the same direct, academy-scoped persistence path in production and local mode.
-  // The optional RPC is intentionally not used here because a missing/slow function
-  // previously left the payment dialog waiting or returning SESSION_EXPIRED.
+  // Persist directly with academy scope; do not depend on the optional payment RPC.
   p.amount_paid = newPaid;
   p.payment_date = now;
   p.method = method;

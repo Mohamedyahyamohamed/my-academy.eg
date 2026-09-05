@@ -312,25 +312,9 @@ export async function recordPayment(
   
   const now = new Date().toISOString();
   
-  if (isSupabaseConfigured()) {
-    const atomic = await runAtomicPaymentRpc({
-      academyId: authenticatedAcademyId,
-      paymentId,
-      studentId: p.student_id,
-      groupId: p.group_id,
-      month: p.month_year ?? p.month,
-      amountDue: p.amount_due,
-      amountPaid: amount,
-      method,
-      notes: note ?? p.notes,
-    });
-    if (atomic.error || !atomic.data) {
-      console.error("Atomic RPC failed in recordPayment:", atomic.error);
-      return { ok: false, error: atomic.error?.message ?? "Could not record payment." };
-    }
-    return { ok: true, payment: attach(derivePayment(atomic.data as Payment)) };
-  }
-  
+  // Use the same direct, academy-scoped persistence path in production and local mode.
+  // The optional RPC is intentionally not used here because a missing/slow function
+  // previously left the payment dialog waiting or returning SESSION_EXPIRED.
   p.amount_paid = newPaid;
   p.payment_date = now;
   p.method = method;

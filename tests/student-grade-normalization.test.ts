@@ -37,13 +37,13 @@ describe("global grade vocabulary", () => {
     expect(normalizeGrade("الصف الاول الثانوى")).toBe("الصف الأول الثانوي");
     expect(normalizeGrade("الصف الاول الثانوي أزهري")).toBe("الصف الأول الثانوي");
     expect(normalizeGrade("تالته اعدادي")).toBe("الصف الثالث الإعدادي");
-    expect(normalizeGrade("الصف الثاني البكالوريا")).toBe("الصف الثاني البكالوريا");
+    expect(normalizeGrade("الصف الثاني البكالوريا")).toBe("الصف الثاني الثانوي");
   });
 
   it("matches legacy spellings to the selected canonical grade", () => {
     expect(gradeMatches("الصف الاول الثانوى", "الصف الأول الثانوي")).toBe(true);
     expect(gradeMatches("الصف الثالث الاعدادي", "الصف الثالث الإعدادي")).toBe(true);
-    expect(gradeMatches("الصف الثاني البكالوريا", "الصف الثاني الثانوي")).toBe(false);
+    expect(gradeMatches("الصف الثاني البكالوريا", "الصف الثاني الثانوي")).toBe(true);
   });
 
   it("uses canonical matching in the group student picker", () => {

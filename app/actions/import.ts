@@ -12,6 +12,7 @@ export interface ImportRow {
   first_name: string;
   last_name: string;
   phone?: string;
+  gender?: string;
   grade?: string;
   school?: string;
   parent_name?: string;
@@ -281,6 +282,11 @@ export async function importStudentsAction(
       if (pending && parentFailures.has(pending.id)) continue;
     }
 
+    const normalizedGender = /^(ذكر|male|m)$/i.test(item.row.gender?.trim() ?? "")
+      ? "male"
+      : /^(انثى|أنثى|female|f)$/i.test(item.row.gender?.trim() ?? "")
+        ? "female"
+        : null;
     const editableFields: Record<string, unknown> = {
       first_name: item.row.first_name.trim(),
       last_name: item.row.last_name.trim(),
@@ -290,6 +296,7 @@ export async function importStudentsAction(
       grade: item.row.grade?.trim() || null,
       updated_at: now,
     };
+    if (normalizedGender) editableFields.gender = normalizedGender;
     if (item.mode === "update" && item.existingId) {
       // Updating a match never changes its identity, ownership, consent audit,
       // login, or created_at fields.
@@ -306,7 +313,7 @@ export async function importStudentsAction(
           ...editableFields,
           email: null,
           date_of_birth: null,
-          gender: null,
+          gender: normalizedGender,
           notes: null,
           // Per the owner's explicit setting, importing by a teacher is treated as
           // an attestation that guardian consent already exists. Keep an audit trail
